@@ -1,0 +1,220 @@
+/* ─────────────────────────────────────────────────────────────────────────
+   Landing page styles — KusShoes "Editorial / Brutalist" design system.
+
+   Tailwind v4 is imported WITHOUT the global preflight reset, and every base
+   rule is scoped to `.kus-landing`, so the existing customizer (818 lines of
+   plain global CSS in styles.css) is left completely untouched.
+
+   Layer order matters: utilities must win over the scoped base reset, so
+   `border-2` (sets border-width) overrides the reset's `border-width:0` while
+   the reset's `border-style:solid` survives — that combination is what makes
+   the brutalist black borders actually render without preflight.
+   ──────────────────────────────────────────────────────────────────────── */
+@layer customizer, theme, base, components, utilities;
+
+@import "tailwindcss/theme.css" layer(theme);
+@import "tailwindcss/utilities.css" layer(utilities);
+@import "tw-animate-css";
+
+@theme inline {
+  --radius-sm: 0;
+  --radius-md: 0;
+  --radius-lg: 0;
+  --radius-xl: 0;
+  --radius-2xl: 0;
+  --radius-3xl: 0;
+  --color-background: var(--background);
+  --color-foreground: var(--foreground);
+  --color-card: var(--card);
+  --color-card-foreground: var(--card-foreground);
+  --color-popover: var(--popover);
+  --color-popover-foreground: var(--popover-foreground);
+  --color-primary: var(--primary);
+  --color-primary-foreground: var(--primary-foreground);
+  --color-primary-glow: var(--primary-glow);
+  --color-secondary: var(--secondary);
+  --color-secondary-foreground: var(--secondary-foreground);
+  --color-muted: var(--muted);
+  --color-muted-foreground: var(--muted-foreground);
+  --color-accent: var(--accent);
+  --color-accent-foreground: var(--accent-foreground);
+  --color-destructive: var(--destructive);
+  --color-destructive-foreground: var(--destructive-foreground);
+  --color-border: var(--border);
+  --color-input: var(--input);
+  --color-ring: var(--ring);
+
+  --font-sans: "Manrope", ui-sans-serif, system-ui, -apple-system, sans-serif;
+  --font-mono: "DM Mono", ui-monospace, SFMono-Regular, monospace;
+}
+
+/* Brutalist token values. Global at :root is harmless — the customizer uses
+   literal colors and never references these custom-property names. Keeping
+   them here lets opacity modifiers (bg-primary/10, border-primary/30, …)
+   resolve reliably. */
+:root {
+  --radius: 0;
+  --background: oklch(0.985 0 0);
+  --foreground: oklch(0.15 0 0);
+  --card: oklch(0.96 0 0);
+  --card-foreground: oklch(0.15 0 0);
+  --popover: oklch(0.985 0 0);
+  --popover-foreground: oklch(0.15 0 0);
+  --primary: oklch(0.65 0.25 35);
+  --primary-foreground: oklch(0.985 0 0);
+  --primary-glow: oklch(0.6 0.25 35);
+  --secondary: oklch(0.9 0 0);
+  --secondary-foreground: oklch(0.15 0 0);
+  --muted: oklch(0.92 0 0);
+  --muted-foreground: oklch(0.45 0 0);
+  --accent: oklch(0.15 0 0);
+  --accent-foreground: oklch(0.985 0 0);
+  --destructive: oklch(0.55 0.24 25);
+  --destructive-foreground: oklch(0.985 0 0);
+  --border: oklch(0.15 0 0);
+  --input: oklch(0.15 0 0 / 20%);
+  --ring: oklch(0.15 0 0);
+  --shadow-glow: 4px 4px 0px 0px oklch(0.15 0 0);
+  --shadow-glow-lg: 8px 8px 0px 0px oklch(0.15 0 0);
+  --gradient-radial-orange: radial-gradient(circle at center, oklch(0.65 0.25 35 / 0.15) 0%, transparent 60%);
+  --gradient-primary: linear-gradient(135deg, oklch(0.65 0.25 35), oklch(0.55 0.25 35));
+  --grid-line: oklch(0.15 0 0 / 0.15);
+}
+
+@layer base {
+  /* Scoped preflight replacement — applies ONLY inside the landing subtree.
+     `border-width:0; border-style:solid` is the key: Tailwind's `border-2`
+     only sets width, so without a solid baseline every border is invisible. */
+  .kus-landing *,
+  .kus-landing *::before,
+  .kus-landing *::after {
+    box-sizing: border-box;
+    border-width: 0;
+    border-style: solid;
+    border-color: var(--color-border, currentColor);
+  }
+  .kus-landing :where(h1, h2, h3, h4, h5, h6) {
+    margin: 0;
+    font-size: inherit;
+    font-weight: inherit;
+  }
+  .kus-landing :where(p, figure, blockquote, dl, dd) {
+    margin: 0;
+  }
+  .kus-landing :where(ul, ol) {
+    margin: 0;
+    padding: 0;
+    list-style: none;
+  }
+  .kus-landing :where(button) {
+    min-height: 0;
+    padding: 0;
+    border-radius: 0;
+    background: transparent;
+    color: inherit;
+    font: inherit;
+    line-height: inherit;
+    cursor: pointer;
+  }
+  .kus-landing :where(a) {
+    color: inherit;
+    text-decoration: none;
+  }
+  .kus-landing :where(img, svg, video, canvas) {
+    display: block;
+    vertical-align: middle;
+  }
+  /* Preflight parity: keep image aspect ratio. Without this, the HTML
+     `height` attribute (e.g. height={1024}) sticks while Tailwind `w-[…]`
+     shrinks the width, vertically stretching every sneaker image. */
+  .kus-landing :where(img, video) {
+    max-width: 100%;
+    height: auto;
+  }
+  .kus-landing :where(input, textarea, select) {
+    font: inherit;
+    color: inherit;
+    border-radius: 0;
+    min-height: 0;
+  }
+
+  /* Brutalist base — scoped to the landing root instead of body/global. */
+  .kus-landing {
+    background-color: var(--color-background);
+    color: var(--color-foreground);
+    font-family: var(--font-sans);
+    -webkit-font-smoothing: antialiased;
+    overflow-x: hidden;
+    scroll-behavior: smooth;
+    /* Subtle noise texture */
+    background-image: url("data:image/svg+xml,%3Csvg viewBox='0 0 400 400' xmlns='http://www.w3.org/2000/svg'%3E%3Cfilter id='noiseFilter'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.8' numOctaves='3' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23noiseFilter)' opacity='0.03'/%3E%3C/svg%3E");
+  }
+  .kus-landing :where(h1, h2, h3, h4, h5, h6),
+  .kus-landing .font-heading {
+    font-family: "Bricolage Grotesque", var(--font-sans);
+    font-weight: 700;
+    text-transform: uppercase;
+    letter-spacing: -0.02em;
+  }
+}
+
+@layer utilities {
+  .glow-orange {
+    box-shadow: var(--shadow-glow);
+    transition: transform 0.2s, box-shadow 0.2s;
+  }
+  .glow-orange:active {
+    box-shadow: 0px 0px 0px 0px oklch(0.15 0 0);
+    transform: translate(4px, 4px);
+  }
+  .glow-orange-lg {
+    box-shadow: var(--shadow-glow-lg);
+    transition: transform 0.2s, box-shadow 0.2s;
+  }
+  .glow-orange-lg:active {
+    box-shadow: 0px 0px 0px 0px oklch(0.15 0 0);
+    transform: translate(8px, 8px);
+  }
+  .text-glow {
+    text-shadow: 2px 2px 0px oklch(0.15 0 0);
+    color: var(--color-primary);
+  }
+  .bg-radial-orange {
+    background-image: var(--gradient-radial-orange);
+  }
+  .bg-gradient-primary {
+    background-image: var(--gradient-primary);
+  }
+  .tech-grid {
+    background-image:
+      linear-gradient(var(--grid-line) 1px, transparent 1px),
+      linear-gradient(90deg, var(--grid-line) 1px, transparent 1px);
+    background-size: 64px 64px;
+  }
+  .orange-grid {
+    background-image:
+      linear-gradient(oklch(0.65 0.25 35 / 0.2) 1px, transparent 1px),
+      linear-gradient(90deg, oklch(0.65 0.25 35 / 0.2) 1px, transparent 1px);
+    background-size: 32px 32px;
+  }
+}
+
+@keyframes float-slow {
+  0%, 100% { transform: translateY(0) rotate(0deg); }
+  50% { transform: translateY(-16px) rotate(2deg); }
+}
+@keyframes spin-slow {
+  to { transform: rotateY(360deg); }
+}
+@keyframes pulse-glow {
+  0%, 100% { opacity: 0.5; transform: scale(1); }
+  50% { opacity: 1; transform: scale(1.05); }
+}
+@keyframes fade-up {
+  from { opacity: 0; transform: translateY(24px); }
+  to { opacity: 1; transform: translateY(0); }
+}
+.animate-float-slow { animation: float-slow 9s ease-in-out infinite; }
+.animate-spin-slow { animation: spin-slow 18s linear infinite; }
+.animate-pulse-glow { animation: pulse-glow 4s ease-in-out infinite; }
+.animate-fade-up { animation: fade-up 0.8s ease-out both; }
