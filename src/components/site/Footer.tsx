@@ -57,7 +57,7 @@ export function Footer() {
           <div className="lg:col-span-4">
             <img src={logo} alt="KusShoes" className="-ml-2 -my-6 h-[120px] w-auto object-contain" />
             <p className="mt-2 text-lg font-heading text-muted-foreground">
-              Shape your shoes. Show your style.
+              Thiết kế đôi giày của bạn. Ngay trên trình duyệt.
             </p>
           </div>
 

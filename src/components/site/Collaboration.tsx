@@ -1,10 +1,10 @@
-import { Users } from "lucide-react";
+import { TrendingUp } from "lucide-react";
 import sneakerHero from "@/assets/sneaker-hero.png";
 
 const cursors = [
-  { name: "User A", color: "oklch(0.72 0.22 45)", top: "22%", left: "30%", delay: "0s" },
-  { name: "User B", color: "oklch(0.985 0 0)", top: "58%", left: "62%", delay: "1.2s" },
-  { name: "User C", color: "oklch(0.78 0.21 55)", top: "70%", left: "22%", delay: "2.4s" },
+  { name: "Minh", color: "oklch(0.72 0.22 45)", top: "22%", left: "30%", delay: "0s" },
+  { name: "Linh", color: "oklch(0.985 0 0)", top: "58%", left: "62%", delay: "1.2s" },
+  { name: "An", color: "oklch(0.78 0.21 55)", top: "70%", left: "22%", delay: "2.4s" },
 ];
 
 export function Collaboration() {
@@ -13,22 +13,23 @@ export function Collaboration() {
       <div className="mx-auto max-w-7xl px-6 grid lg:grid-cols-2 gap-16 items-center">
         <div>
           <span className="text-xs uppercase font-mono font-bold tracking-[0.3em] text-primary">
-            04 — Real-time
+            04 · Nghiên cứu · Khảo sát
           </span>
           <h2 className="mt-4 text-5xl md:text-6xl font-heading tracking-tight leading-[0.9]">
-            The Whole Team
+            115 người khảo sát.
             <br />
-            On <span className="text-primary">One Canvas.</span>
+            <span className="text-primary">65% sẵn trả phí.</span>
           </h2>
           <p className="mt-6 max-w-lg text-foreground font-medium">
-            Invite designers, brand leads, and manufacturers into a single workspace. Every change syncs instantly — no exports, no emails, no lost versions.
+            Khảo sát thực hiện với 115 người dùng thuộc nhóm mục tiêu — không
+            phải con số tự đặt ra, không có bên thứ ba can thiệp.
           </p>
 
           <ul className="mt-8 space-y-3 text-sm">
             {[
-              "Live cursors + 3D spatial comments",
-              "Infinite version history & rollback",
-              "Roles & permissions for Team / Enterprise",
+              "65,2% sẵn sàng trả 200.000–500.000đ khi ra mắt",
+              "25,2% chấp nhận trả đến 1.000.000đ",
+              "Tính năng yêu cầu nhiều nhất: xem trước 3D và AI tách nền",
             ].map((t) => (
               <li key={t} className="flex items-center gap-3">
                 <span className="h-1.5 w-1.5 rounded-full bg-primary" />
@@ -38,14 +39,14 @@ export function Collaboration() {
           </ul>
 
           <a
-            href="#contact"
+            href="#studio"
             className="mt-10 inline-flex items-center gap-2 border-2 border-foreground bg-primary/10 px-6 py-3 text-sm font-bold uppercase text-foreground hover:bg-primary/20 transition-colors shadow-[4px_4px_0_oklch(0.15_0_0)]"
           >
-            <Users className="h-4 w-4" /> For Teams / Enterprise
+            <TrendingUp className="h-4 w-4" /> Tham gia danh sách chờ →
           </a>
         </div>
 
-        {/* Canvas mock */}
+        {/* Canvas mock — beta community */}
         <div className="relative h-[520px] border-2 border-foreground bg-card overflow-hidden shadow-[8px_8px_0_oklch(0.15_0_0)]">
           <div className="absolute inset-0 tech-grid opacity-60" />
           <div className="absolute inset-0 bg-radial-orange opacity-50" />
@@ -54,7 +55,7 @@ export function Collaboration() {
           <div className="absolute top-0 inset-x-0 flex items-center justify-between border-b border-border bg-background/40 backdrop-blur px-4 py-2.5 text-xs">
             <div className="flex items-center gap-2">
               <span className="h-2 w-2 rounded-full bg-primary animate-pulse" />
-              <span className="text-muted-foreground font-mono">project · sneaker-v07</span>
+              <span className="text-muted-foreground font-mono">cộng đồng · beta</span>
             </div>
             <div className="flex -space-x-2">
               {cursors.map((c) => (
@@ -63,7 +64,7 @@ export function Collaboration() {
                   className="h-6 w-6 border-2 border-foreground text-[10px] font-bold font-mono grid place-items-center"
                   style={{ backgroundColor: c.color, color: "#0a0a0a" }}
                 >
-                  {c.name.slice(-1)}
+                  {c.name.slice(0, 1)}
                 </span>
               ))}
             </div>
@@ -73,7 +74,7 @@ export function Collaboration() {
           <div className="absolute inset-0 grid place-items-center pt-8">
             <img
               src={sneakerHero}
-              alt="Real-time collaboration mock on a 3D sneaker canvas"
+              alt="Cộng đồng beta người dùng cùng thiết kế giày trên canvas 3D"
               width={1024}
               height={1024}
               loading="lazy"

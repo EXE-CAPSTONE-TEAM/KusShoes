@@ -3,6 +3,7 @@ import { Hero } from "./Hero";
 import { ExplodeView } from "./ExplodeView";
 import { FeatureCards } from "./FeatureCards";
 import { Collaboration } from "./Collaboration";
+import { Pricing } from "./Pricing";
 import { InteractiveFooter } from "./InteractiveFooter";
 import { Footer } from "./Footer";
 import "../../landing.css";
@@ -21,6 +22,7 @@ export function LandingPage({ onOpenStudio }: { onOpenStudio: () => void }) {
       <ExplodeView />
       <FeatureCards />
       <Collaboration />
+      <Pricing />
       <InteractiveFooter onOpenStudio={onOpenStudio} />
       <Footer />
     </div>

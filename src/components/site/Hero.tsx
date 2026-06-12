@@ -18,18 +18,18 @@ export function Hero({ onOpenStudio }: { onOpenStudio?: () => void }) {
         {/* Copy */}
         <div className="relative z-10 animate-fade-up">
           <span className="inline-flex items-center gap-2 rounded-none border-2 border-primary bg-primary/10 px-3 py-1 text-xs font-bold font-mono text-primary uppercase">
-            <Sparkles className="h-3.5 w-3.5" /> AI + 3D Sneaker Studio
+            <Sparkles className="h-3.5 w-3.5" /> #1 · Thiết kế · 3D · Sáng tạo
           </span>
           <h1 className="mt-6 text-6xl md:text-7xl lg:text-8xl font-heading tracking-tight leading-[0.9]">
-            Shape Your Shoes
+            Thiết kế đôi giày
             <br />
             <span className="text-primary text-glow">
-              Show Your Style
+              của bạn. Ngay bây giờ.
             </span>
           </h1>
           <p className="mt-6 max-w-xl text-lg text-muted-foreground font-medium">
-            Scan real photos, customize in 3D space, and connect directly
-            with manufacturing lines.
+            Chọn mẫu, tô màu, dùng AI tách nền — thấy kết quả 3D ngay lập tức.
+            Không cần cài phần mềm. Mở trình duyệt là dùng được.
           </p>
           <div className="mt-10 flex flex-wrap gap-4">
             <button
@@ -37,21 +37,21 @@ export function Hero({ onOpenStudio }: { onOpenStudio?: () => void }) {
               onClick={onOpenStudio}
               className="inline-flex items-center gap-2 rounded-none border-2 border-primary bg-primary px-8 py-4 text-sm font-bold uppercase text-primary-foreground glow-orange-lg hover:scale-105 transition-transform"
             >
-              Launch Studio
+              Dùng thử miễn phí
             </button>
             <a
               href="#features"
               className="inline-flex items-center gap-2 rounded-none border-2 border-foreground px-8 py-4 text-sm font-bold uppercase text-foreground hover:bg-foreground hover:text-background transition-colors"
             >
-              <Play className="h-4 w-4" /> Watch Demo
+              <Play className="h-4 w-4" /> Xem demo
             </a>
           </div>
 
           <dl className="mt-12 grid grid-cols-3 gap-6 max-w-md font-mono border-t-2 border-border pt-6">
             {[
-              { k: "12k+", v: "Scanned models" },
-              { k: "98%", v: "Accuracy" },
-              { k: "48h", v: "To factory" },
+              { k: "< 3 giây", v: "AI tách nền" },
+              { k: "115+", v: "Người khảo sát" },
+              { k: "65%", v: "Sẵn trả phí" },
             ].map((s) => (
               <div key={s.v}>
                 <dt className="text-3xl font-bold text-foreground">{s.k}</dt>
@@ -97,7 +97,7 @@ export function Hero({ onOpenStudio }: { onOpenStudio?: () => void }) {
           >
             <img
               src={sneakerHero}
-              alt="3D white sneaker model KusShoes on glowing orange rotating stage"
+              alt="Mô hình 3D giày trắng KusShoes đang xoay trên sân khấu cam phát sáng"
               width={1024}
               height={1024}
               className="relative z-10 w-[88%] max-w-[560px] drop-shadow-[0_30px_60px_rgba(255,90,30,0.35)]"
@@ -109,15 +109,15 @@ export function Hero({ onOpenStudio }: { onOpenStudio?: () => void }) {
             className="hidden sm:block absolute top-16 left-2 z-20 border-2 border-foreground bg-background px-3 py-2 text-xs font-mono animate-float-slow shadow-[4px_4px_0_oklch(0.15_0_0)]"
             style={{ animationDelay: "0.5s" }}
           >
-            <div className="text-primary font-bold uppercase">● Material</div>
-            <div className="text-foreground">Premium Leather</div>
+            <div className="text-primary font-bold uppercase">● Chất liệu</div>
+            <div className="text-foreground">Da thật · Premium</div>
           </div>
           <div
             className="hidden sm:block absolute bottom-20 right-0 z-20 border-2 border-foreground bg-background px-3 py-2 text-xs font-mono animate-float-slow shadow-[4px_4px_0_oklch(0.15_0_0)]"
             style={{ animationDelay: "2.2s" }}
           >
-            <div className="text-primary font-medium">● Scan ready</div>
-            <div className="text-muted-foreground">.glb · 2.4MB</div>
+            <div className="text-primary font-medium">● Xuất ngay</div>
+            <div className="text-muted-foreground">.glb · Kỹ thuật</div>
           </div>
         </div>
       </div>

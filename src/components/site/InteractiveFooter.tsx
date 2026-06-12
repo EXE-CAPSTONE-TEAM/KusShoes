@@ -25,17 +25,16 @@ export function InteractiveFooter({ onOpenStudio }: { onOpenStudio?: () => void 
           <div className="relative grid lg:grid-cols-2 gap-12 items-center">
             <div>
               <span className="text-xs uppercase font-mono font-bold tracking-[0.3em] text-primary">
-                05 — Try It Now
+                06 · Trải nghiệm · Miễn phí
               </span>
               <h2 className="mt-4 text-5xl md:text-6xl font-heading tracking-tight leading-[0.9]">
-                Don't Just Read.
+                Đừng đọc nữa.
                 <br />
-                <span className="text-primary">Click to Change.</span>
+                <span className="text-primary">Thử luôn đi.</span>
               </h2>
               <p className="mt-6 max-w-md text-foreground font-medium">
-                This is a mini-studio. Pick a color and watch the shoe react.
-                Imagine having the full palette, layers, and texture engine
-                inside the actual Kus Studio.
+                Đây là miễn phí. Chọn mẫu và xem giày 3D ngay — không cần thẻ,
+                không tài khoản. Kết hợp ngay trong trình duyệt của bạn.
               </p>
 
               <div className="mt-8 flex flex-wrap gap-3">
@@ -58,14 +57,19 @@ export function InteractiveFooter({ onOpenStudio }: { onOpenStudio?: () => void 
                 ))}
               </div>
 
-              <button
-                type="button"
-                onClick={onOpenStudio}
-                className="mt-12 inline-flex items-center gap-2 border-2 border-foreground bg-primary px-8 py-4 text-base font-bold uppercase text-primary-foreground shadow-[8px_8px_0_oklch(0.15_0_0)] hover:translate-x-1 hover:translate-y-1 transition-transform"
-              >
-                Start Your Project Now
-                <ArrowRight className="h-4 w-4" />
-              </button>
+              <div className="mt-12 flex flex-col gap-3">
+                <button
+                  type="button"
+                  onClick={onOpenStudio}
+                  className="inline-flex items-center gap-2 border-2 border-foreground bg-primary px-8 py-4 text-base font-bold uppercase text-primary-foreground shadow-[8px_8px_0_oklch(0.15_0_0)] hover:translate-x-1 hover:translate-y-1 transition-transform w-fit"
+                >
+                  Bắt đầu miễn phí
+                  <ArrowRight className="h-4 w-4" />
+                </button>
+                <span className="text-xs font-mono text-muted-foreground">
+                  Không cần thẻ tín dụng · Dùng ngay trong trình duyệt
+                </span>
+              </div>
             </div>
 
             {/* Mini studio */}

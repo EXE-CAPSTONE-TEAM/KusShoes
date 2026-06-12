@@ -1,4 +1,4 @@
-import { Layers, ScanLine, Wand2 } from "lucide-react";
+import { Layers, MousePointerClick, Send } from "lucide-react";
 import sneakerSole from "@/assets/sneaker-sole.png";
 import sneakerUpper from "@/assets/sneaker-upper.png";
 import sneakerLaces from "@/assets/sneaker-laces.png";
@@ -6,19 +6,19 @@ import { useScrollProgress } from "@/hooks/use-scroll-progress";
 
 const steps = [
   {
-    icon: ScanLine,
-    title: "Instant Scan & Rigging",
-    desc: "Take photos from a few angles, and AI instantly stitches them into a clean 3D model with proper topology in seconds.",
+    icon: MousePointerClick,
+    title: "Chọn mẫu giày",
+    desc: "Duyệt thư viện hàng chục mẫu giày 3D có sẵn, hoặc upload mô hình của bạn.",
   },
   {
     icon: Layers,
-    title: "Layer-based Customization",
-    desc: "Detach components — sole, upper leather, laces — and edit them independently just like working in Photoshop.",
+    title: "Thiết kế trên canvas 3D",
+    desc: "Vẽ, tô, dán ảnh đã tách nền lên bề mặt giày — thấy kết quả xoay 3D theo thời gian thực.",
   },
   {
-    icon: Wand2,
-    title: "Material & Texture Engine",
-    desc: "Apply real PBR materials, change colors, or generate AI patterns directly on the 3D surface.",
+    icon: Send,
+    title: "Xuất file hoặc kết nối nghệ nhân",
+    desc: "Tải về ảnh chất lượng cao, hoặc gửi thiết kế đến đầu mối thợ vẽ tay để hiện thực hóa.",
   },
 ];
 
@@ -98,14 +98,14 @@ export function ExplodeView() {
 
         {/* Text */}
         <div>
-          <span className="text-xs uppercase font-mono font-bold tracking-[0.3em] text-primary">02 — Explode View</span>
+          <span className="text-xs uppercase font-mono font-bold tracking-[0.3em] text-primary">02 · Quy trình · Đơn giản</span>
           <h2 className="mt-4 text-5xl md:text-6xl font-heading tracking-tight leading-[0.9]">
-            Tear It Down.
+            Đơn giản như
             <br />
-            <span className="text-primary">Master Every Millimeter.</span>
+            <span className="text-primary">3 bước.</span>
           </h2>
           <p className="mt-6 text-foreground font-medium max-w-lg">
-            Scroll down to watch the shoe disassemble itself. Every part is an independent layer, giving you total creative control.
+            Từ ý tưởng đến xuất xưởng — không cần kinh nghiệm thiết kế, không cần cài phần mềm. Kéo xuống để xem giày thay đổi từng bước.
           </p>
 
           <ul className="mt-10 flex flex-col gap-5">

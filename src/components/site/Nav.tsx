@@ -3,9 +3,10 @@ import logo from "@/assets/logo.png";
 
 const links = [
   { href: "#studio", label: "Studio" },
-  { href: "#features", label: "Features" },
-  { href: "#team", label: "Team" },
-  { href: "#contact", label: "Contact" },
+  { href: "#features", label: "Tính năng" },
+  { href: "#pricing", label: "Bảng giá" },
+  { href: "#team", label: "Đánh giá" },
+  { href: "#contact", label: "Đăng nhập" },
 ];
 
 export function Nav({ onOpenStudio }: { onOpenStudio?: () => void }) {
@@ -47,7 +48,7 @@ export function Nav({ onOpenStudio }: { onOpenStudio?: () => void }) {
             onClick={onOpenStudio}
             className="inline-flex items-center rounded-none border-2 border-primary bg-primary px-7 py-2.5 text-sm font-bold text-primary-foreground glow-orange hover:bg-primary-glow transition-all"
           >
-            Open Kus Studio
+            Dùng thử miễn phí
           </button>
         </div>
       </nav>
