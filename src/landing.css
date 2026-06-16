@@ -12,8 +12,8 @@
    ──────────────────────────────────────────────────────────────────────── */
 @layer customizer, theme, base, components, utilities;
 
-@import "tailwindcss/theme.css" layer(theme);
-@import "tailwindcss/utilities.css" layer(utilities);
+@import "tailwindcss/theme.css";
+@import "tailwindcss/utilities.css";
 @import "tw-animate-css";
 
 @theme inline {
@@ -151,7 +151,7 @@
   }
   .kus-landing :where(h1, h2, h3, h4, h5, h6),
   .kus-landing .font-heading {
-    font-family: "Bricolage Grotesque", var(--font-sans);
+    font-family: "Archivo", var(--font-sans);
     font-weight: 700;
     text-transform: uppercase;
     letter-spacing: -0.02em;
@@ -203,8 +203,16 @@
   0%, 100% { transform: translateY(0) rotate(0deg); }
   50% { transform: translateY(-16px) rotate(2deg); }
 }
+/* Flat in-plane spin (e.g. the conic-gradient feature card). Was rotateY(360deg),
+   which on a non-perspective element squashed the gradient to a line each half-turn. */
 @keyframes spin-slow {
-  to { transform: rotateY(360deg); }
+  to { transform: rotate(360deg); }
+}
+/* Tilted "turntable" spin for the orbital rings — bakes the 75deg tilt INTO the
+   keyframe so the animated transform no longer wipes out the inline rotateX(75deg). */
+@keyframes spin-ring {
+  from { transform: rotateX(75deg) rotateZ(0deg); }
+  to { transform: rotateX(75deg) rotateZ(360deg); }
 }
 @keyframes pulse-glow {
   0%, 100% { opacity: 0.5; transform: scale(1); }
@@ -216,5 +224,6 @@
 }
 .animate-float-slow { animation: float-slow 9s ease-in-out infinite; }
 .animate-spin-slow { animation: spin-slow 18s linear infinite; }
+.animate-spin-ring { animation: spin-ring 18s linear infinite; }
 .animate-pulse-glow { animation: pulse-glow 4s ease-in-out infinite; }
 .animate-fade-up { animation: fade-up 0.8s ease-out both; }

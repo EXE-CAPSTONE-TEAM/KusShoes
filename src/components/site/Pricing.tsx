@@ -1,5 +1,8 @@
 import { useState } from "react";
 import { Check } from "lucide-react";
+import { useLanguage } from "@/i18n/LanguageContext";
+import type { Dictionary } from "@/i18n/dictionaries";
+import { motion } from "framer-motion";
 
 type Plan = {
   name: string;
@@ -12,48 +15,48 @@ type Plan = {
   ctaHref: string;
 };
 
-const plans: Plan[] = [
+const getPlans = (t: Dictionary): Plan[] => [
   {
-    name: "Miễn phí",
+    name: t.pricing.plans.free.name,
     priceMonthly: 0,
     priceYearly: 0,
     highlight: false,
     features: [
-      "3 mẫu giày 3D có sẵn",
-      "Công cụ thiết kế cơ bản",
-      "Export có watermark",
-      "Lưu tối đa 3 thiết kế",
+      t.pricing.plans.free.f1,
+      t.pricing.plans.free.f2,
+      t.pricing.plans.free.f3,
+      t.pricing.plans.free.f4,
     ],
-    cta: "Bắt đầu miễn phí",
+    cta: t.pricing.plans.free.cta,
     ctaHref: "#studio",
   },
   {
-    name: "Basic",
-    badge: "Phổ biến nhất",
+    name: t.pricing.plans.basic.name,
+    badge: t.pricing.popular,
     priceMonthly: 199000,
     priceYearly: 1500000,
     highlight: true,
     features: [
-      "Toàn bộ thư viện mẫu giày",
-      "AI tách nền không giới hạn",
-      "Export sạch không watermark",
-      "Lưu tối đa 20 thiết kế",
+      t.pricing.plans.basic.f1,
+      t.pricing.plans.basic.f2,
+      t.pricing.plans.basic.f3,
+      t.pricing.plans.basic.f4,
     ],
-    cta: "Đăng ký ngay",
+    cta: t.pricing.plans.basic.cta,
     ctaHref: "#studio",
   },
   {
-    name: "Pro",
+    name: t.pricing.plans.pro.name,
     priceMonthly: 499000,
     priceYearly: 3990000,
     highlight: false,
     features: [
-      "Tất cả tính năng Basic",
-      "Export độ phân giải cao",
-      "Lưu thiết kế không giới hạn",
-      "Truy cập sớm tính năng mới",
+      t.pricing.plans.pro.f1,
+      t.pricing.plans.pro.f2,
+      t.pricing.plans.pro.f3,
+      t.pricing.plans.pro.f4,
     ],
-    cta: "Bắt đầu Pro",
+    cta: t.pricing.plans.pro.cta,
     ctaHref: "#studio",
   },
 ];
@@ -63,22 +66,30 @@ function formatPrice(price: number): string {
 }
 
 export function Pricing() {
+  const { t } = useLanguage();
   const [yearly, setYearly] = useState(true);
+  const plans = getPlans(t);
 
   return (
     <section id="pricing" className="relative py-32">
       <div className="absolute inset-0 tech-grid opacity-10" />
       <div className="relative mx-auto max-w-7xl px-6">
-        <div className="max-w-2xl">
+        <motion.div 
+          initial={{ opacity: 0, y: -20 }}
+          whileInView={{ opacity: 1, y: 0 }}
+          viewport={{ once: true, margin: "-100px" }}
+          transition={{ duration: 0.5 }}
+          className="max-w-2xl"
+        >
           <span className="text-xs uppercase font-mono font-bold tracking-[0.3em] text-primary">
-            05 · Gói dịch vụ · Giá
+            {t.pricing.tag}
           </span>
           <h2 className="mt-4 text-5xl md:text-6xl font-heading tracking-tight leading-[0.9]">
-            Bắt đầu miễn phí.
+            {t.pricing.titleLine1}
             <br />
-            <span className="text-primary">Nâng cấp khi cần.</span>
+            <span className="text-primary">{t.pricing.titleLine2}</span>
           </h2>
-        </div>
+        </motion.div>
 
         {/* Toggle */}
         <div className="mt-10 flex items-center gap-4 flex-wrap">
@@ -89,13 +100,13 @@ export function Pricing() {
               !yearly ? "text-foreground" : "text-muted-foreground hover:text-foreground"
             }`}
           >
-            Tháng
+            {t.pricing.month}
           </button>
           <button
             type="button"
             onClick={() => setYearly((v) => !v)}
             className="relative h-7 w-14 border-2 border-foreground bg-background shadow-[3px_3px_0_oklch(0.15_0_0)] flex items-center px-1"
-            aria-label="Chuyển đổi thanh toán theo năm / tháng"
+            aria-label="Toggle"
           >
             <span
               className={`h-4 w-5 bg-primary transition-transform duration-300 ${
@@ -110,26 +121,34 @@ export function Pricing() {
               yearly ? "text-foreground" : "text-muted-foreground hover:text-foreground"
             }`}
           >
-            Năm
+            {t.pricing.year}
           </button>
           {yearly && (
             <span className="border-2 border-primary bg-primary/10 px-2 py-0.5 text-[10px] font-bold font-mono text-primary uppercase">
-              Tiết kiệm đến 33%
+              {t.pricing.save}
             </span>
           )}
         </div>
 
         {/* Plan cards */}
-        <div className="mt-12 grid md:grid-cols-3 gap-6 items-start">
-          {plans.map((plan) => (
-            <PricingCard key={plan.name} plan={plan} yearly={yearly} />
+        <motion.div 
+          initial="hidden"
+          whileInView="visible"
+          viewport={{ once: true, margin: "-50px" }}
+          variants={{
+            visible: { transition: { staggerChildren: 0.15 } },
+          }}
+          className="mt-12 grid md:grid-cols-3 gap-6 items-start"
+        >
+          {plans.map((plan, i) => (
+            <PricingCard key={i} plan={plan} yearly={yearly} />
           ))}
-        </div>
+        </motion.div>
 
         <p className="mt-8 text-center text-xs font-mono text-muted-foreground">
-          Cần workspace nhóm?{" "}
+          {t.pricing.needTeam}{" "}
           <a href="#contact" className="text-primary hover:underline">
-            Xem gói Team — 299.000đ/người/tháng
+            {t.pricing.teamLink}
           </a>
         </p>
       </div>
@@ -138,16 +157,21 @@ export function Pricing() {
 }
 
 function PricingCard({ plan, yearly }: { plan: Plan; yearly: boolean }) {
+  const { t } = useLanguage();
   const isFree = plan.priceMonthly === 0;
   const price = isFree
-    ? "Miễn phí"
+    ? t.pricing.freeLabel
     : yearly
     ? formatPrice(plan.priceYearly)
     : formatPrice(plan.priceMonthly);
-  const unit = isFree ? null : yearly ? "/ năm" : "/ tháng";
+  const unit = isFree ? null : yearly ? t.pricing.perYear : t.pricing.perMonth;
 
   return (
-    <div
+    <motion.div
+      variants={{
+        hidden: { opacity: 0, y: 50 },
+        visible: { opacity: 1, y: 0, transition: { type: "spring", bounce: 0.4 } },
+      }}
       className={`relative border-2 p-8 ${
         plan.highlight
           ? "border-primary bg-card shadow-[8px_8px_0_oklch(0.72_0.22_45)] -translate-y-2"
@@ -173,7 +197,7 @@ function PricingCard({ plan, yearly }: { plan: Plan; yearly: boolean }) {
 
       {!isFree && yearly && (
         <div className="mt-1 text-xs font-mono text-muted-foreground">
-          tương đương {formatPrice(Math.round(plan.priceYearly / 12))} / tháng
+          {t.pricing.equivalent} {formatPrice(Math.round(plan.priceYearly / 12))} {t.pricing.perMonth}
         </div>
       )}
 
@@ -206,6 +230,6 @@ function PricingCard({ plan, yearly }: { plan: Plan; yearly: boolean }) {
       >
         {plan.cta}
       </a>
-    </div>
+    </motion.div>
   );
 }

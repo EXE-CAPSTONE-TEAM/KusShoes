@@ -1,41 +1,43 @@
 import { ChevronDown, Languages } from "lucide-react";
 import logo from "@/assets/logo.png";
+import { useLanguage } from "@/i18n/LanguageContext";
+import type { Dictionary } from "@/i18n/dictionaries";
 
-const linkColumns: { title: string; links: { label: string; href: string }[] }[] = [
+const getLinkColumns = (t: Dictionary) => [
   {
-    title: "Kus Studio",
+    title: t.footer.cols.col1,
     links: [
-      { label: "Overview", href: "#top" },
-      { label: "Launch Studio", href: "#studio" },
-      { label: "Features", href: "#features" },
-      { label: "Pricing", href: "#" },
+      { label: t.footer.cols.col1_1, href: "#top" },
+      { label: t.footer.cols.col1_2, href: "#studio" },
+      { label: t.footer.cols.col1_3, href: "#features" },
+      { label: t.footer.cols.col1_4, href: "#" },
     ],
   },
   {
-    title: "Create",
+    title: t.footer.cols.col2,
     links: [
-      { label: "AI Prompt-to-Texture", href: "#features" },
-      { label: "Manual Studio", href: "#features" },
-      { label: "Explode View", href: "#" },
-      { label: "Pro Connect", href: "#" },
+      { label: t.footer.cols.col2_1, href: "#features" },
+      { label: t.footer.cols.col2_2, href: "#features" },
+      { label: t.footer.cols.col2_3, href: "#" },
+      { label: t.footer.cols.col2_4, href: "#" },
     ],
   },
   {
-    title: "Company",
+    title: t.footer.cols.col3,
     links: [
-      { label: "Who we are", href: "#team" },
-      { label: "Stories & Insight", href: "#" },
-      { label: "Careers", href: "#" },
-      { label: "Brand use", href: "#" },
+      { label: t.footer.cols.col3_1, href: "#team" },
+      { label: t.footer.cols.col3_2, href: "#" },
+      { label: t.footer.cols.col3_3, href: "#" },
+      { label: t.footer.cols.col3_4, href: "#" },
     ],
   },
   {
-    title: "Learn & Support",
+    title: t.footer.cols.col4,
     links: [
-      { label: "Help Center", href: "#" },
-      { label: "Talk to the team", href: "#" },
-      { label: "Beginners Series", href: "#" },
-      { label: "Community", href: "#" },
+      { label: t.footer.cols.col4_1, href: "#" },
+      { label: t.footer.cols.col4_2, href: "#" },
+      { label: t.footer.cols.col4_3, href: "#" },
+      { label: t.footer.cols.col4_4, href: "#" },
     ],
   },
 ];
@@ -44,6 +46,8 @@ const socialLinks = ["Instagram", "YouTube", "X (formerly Twitter)", "TikTok"];
 const legalLinks = ["Privacy Policy", "Terms & Conditions", "Cookies Policy"];
 
 export function Footer() {
+  const { t, lang, setLang } = useLanguage();
+  const linkColumns = getLinkColumns(t);
   const year = new Date().getFullYear();
 
   return (
@@ -57,7 +61,7 @@ export function Footer() {
           <div className="lg:col-span-4">
             <img src={logo} alt="KusShoes" className="-ml-2 -my-6 h-[120px] w-auto object-contain" />
             <p className="mt-2 text-lg font-heading text-muted-foreground">
-              Thiết kế đôi giày của bạn. Ngay trên trình duyệt.
+              {t.footer.desc}
             </p>
           </div>
 
@@ -92,20 +96,32 @@ export function Footer() {
         <div className="grid gap-10 lg:grid-cols-12">
           {/* Locale + copyright */}
           <div className="lg:col-span-6">
-            <button
-              type="button"
-              className="inline-flex items-center gap-2 border-2 border-foreground bg-background px-3 py-2 text-sm font-bold uppercase font-mono text-foreground shadow-[3px_3px_0_oklch(0.15_0_0)] transition-transform hover:translate-x-[-1px] hover:translate-y-[-1px]"
-            >
-              <Languages className="h-4 w-4" />
-              English (US)
-              <ChevronDown className="h-3.5 w-3.5" />
-            </button>
+            <div className="flex items-center gap-3">
+              <button
+                type="button"
+                onClick={() => setLang('vi')}
+                className={`inline-flex items-center gap-2 border-2 border-foreground px-3 py-2 text-sm font-bold uppercase font-mono shadow-[3px_3px_0_oklch(0.15_0_0)] transition-all ${
+                  lang === 'vi' ? "bg-background text-foreground hover:-translate-x-0.5 hover:-translate-y-0.5" : "bg-muted/20 text-foreground/50 shadow-none hover:text-foreground hover:bg-background"
+                }`}
+              >
+                <Languages className="h-4 w-4" />
+                Tiếng Việt
+              </button>
+              <button
+                type="button"
+                onClick={() => setLang('en')}
+                className={`inline-flex items-center gap-2 border-2 border-foreground px-3 py-2 text-sm font-bold uppercase font-mono shadow-[3px_3px_0_oklch(0.15_0_0)] transition-all ${
+                  lang === 'en' ? "bg-background text-foreground hover:-translate-x-0.5 hover:-translate-y-0.5" : "bg-muted/20 text-foreground/50 shadow-none hover:text-foreground hover:bg-background"
+                }`}
+              >
+                English
+              </button>
+            </div>
             <p className="mt-6 text-sm font-bold uppercase tracking-tight text-foreground">
-              Made in Vietnam.
+              {t.footer.madeIn}
             </p>
             <p className="mt-2 max-w-md text-xs leading-relaxed text-muted-foreground font-mono">
-              © {year} KusShoes. All rights reserved. KusShoes® is a registered
-              trademark of the FPTU EXE team.
+              © {year} {t.footer.copyright}
             </p>
           </div>
 

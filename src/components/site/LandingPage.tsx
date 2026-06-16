@@ -2,8 +2,8 @@ import { Nav } from "./Nav";
 import { Hero } from "./Hero";
 import { ExplodeView } from "./ExplodeView";
 import { FeatureCards } from "./FeatureCards";
-import { Collaboration } from "./Collaboration";
-import { Pricing } from "./Pricing";
+import { AboutPreview } from "./AboutPreview";
+import { FAQ } from "./FAQ";
 import { InteractiveFooter } from "./InteractiveFooter";
 import { Footer } from "./Footer";
 import "../../landing.css";
@@ -14,15 +14,15 @@ import "../../landing.css";
  * `onOpenStudio` is fired by the "Open Kus Studio" / "Launch Studio" CTAs to
  * hand off to the main customizer (which shows the login screen).
  */
-export function LandingPage({ onOpenStudio }: { onOpenStudio: () => void }) {
+export function LandingPage({ onOpenStudio, onLogin, onRegister }: { onOpenStudio: () => void, onLogin?: () => void, onRegister?: () => void }) {
   return (
     <div className="kus-landing relative bg-background text-foreground">
-      <Nav onOpenStudio={onOpenStudio} />
+      <Nav onOpenStudio={onOpenStudio} onLogin={onLogin} onRegister={onRegister} />
       <Hero onOpenStudio={onOpenStudio} />
       <ExplodeView />
       <FeatureCards />
-      <Collaboration />
-      <Pricing />
+      <AboutPreview />
+      <FAQ />
       <InteractiveFooter onOpenStudio={onOpenStudio} />
       <Footer />
     </div>

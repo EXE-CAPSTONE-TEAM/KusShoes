@@ -12,8 +12,12 @@ import type {
   User,
 } from "../types";
 
-const API_BASE_URL = import.meta.env.VITE_API_BASE_URL ?? "http://127.0.0.1:8000";
-const TOKEN_STORAGE_KEY = "shoe-customizer-token";
+const API_BASE_URL = import.meta.env.VITE_API_BASE_URL ?? `http://${window.location.hostname}:8000`;
+
+function getCsrfToken(): string | null {
+  const match = document.cookie.match(/(?:^|;) ?kusshoes_csrf_token=([^;]*)(?:;|$)/);
+  return match ? match[1] : null;
+}
 
 export class ApiError extends Error {
   constructor(
@@ -25,11 +29,21 @@ export class ApiError extends Error {
 }
 
 async function request<T>(path: string, options: RequestInit = {}): Promise<T> {
+  const headers: Record<string, string> = {
+    "Content-Type": "application/json",
+  };
+  if (options.method && ["POST", "PUT", "PATCH", "DELETE"].includes(options.method.toUpperCase())) {
+    const csrfToken = getCsrfToken();
+    if (csrfToken) {
+      headers["X-CSRF-Token"] = csrfToken;
+    }
+  }
+
   const response = await fetch(`${API_BASE_URL}${path}`, {
     ...options,
+    credentials: "include",
     headers: {
-      "Content-Type": "application/json",
-      ...authHeader(),
+      ...headers,
       ...options.headers,
     },
   });
@@ -50,24 +64,36 @@ async function errorMessage(response: Response): Promise<string> {
   }
 }
 
-function authHeader(): Record<string, string> {
-  const token = localStorage.getItem(TOKEN_STORAGE_KEY);
-  return token ? { Authorization: `Bearer ${token}` } : {};
-}
+// Note: We no longer store tokens in localStorage per editor-integration-guide.md
+// Cookies are automatically handled by the browser.
 
-function storeToken(accessToken: string): void {
-  localStorage.setItem(TOKEN_STORAGE_KEY, accessToken);
+function downloadBlob(blob: Blob, filename: string): void {
+  const url = URL.createObjectURL(blob);
+  const anchor = document.createElement("a");
+  anchor.href = url;
+  anchor.download = filename;
+  anchor.style.display = "none";
+  document.body.appendChild(anchor);
+  anchor.click();
+  anchor.remove();
+  window.setTimeout(() => URL.revokeObjectURL(url), 1000);
 }
 
 export const api = {
   baseUrl: API_BASE_URL,
 
   hasToken(): boolean {
-    return Boolean(localStorage.getItem(TOKEN_STORAGE_KEY));
+    // We can't strictly check HTTP-only cookies, so we assume true and let api.me() verify
+    // or check if csrf cookie is present
+    return Boolean(getCsrfToken());
   },
 
-  logout(): void {
-    localStorage.removeItem(TOKEN_STORAGE_KEY);
+  async logout(): Promise<void> {
+    try {
+      await request("/api/auth/logout", { method: "POST" });
+    } catch (e) {
+      // ignore
+    }
   },
 
   async register(name: string, email: string, password: string): Promise<User> {
@@ -75,7 +101,6 @@ export const api = {
       method: "POST",
       body: JSON.stringify({ name, email, password }),
     });
-    storeToken(payload.accessToken);
     return payload.user;
   },
 
@@ -84,7 +109,6 @@ export const api = {
       method: "POST",
       body: JSON.stringify({ email, password }),
     });
-    storeToken(payload.accessToken);
     return payload.user;
   },
 
@@ -92,8 +116,14 @@ export const api = {
     const payload = await request<{ accessToken: string; user: User }>("/api/auth/demo-login", {
       method: "POST",
     });
-    storeToken(payload.accessToken);
     return payload.user;
+  },
+
+  async createProject(payload: { name: string; sourceType?: string; templateId?: string | null }): Promise<{ id: string; name: string }> {
+    return request<{ id: string; name: string }>("/api/projects", {
+      method: "POST",
+      body: JSON.stringify(payload),
+    });
   },
 
   async me(): Promise<User> {
@@ -132,7 +162,10 @@ export const api = {
 
     const response = await fetch(`${API_BASE_URL}/api/models/import`, {
       method: "POST",
-      headers: authHeader(),
+      credentials: "include",
+      headers: {
+        "X-CSRF-Token": getCsrfToken() || "",
+      },
       body: form,
     });
     if (!response.ok) {
@@ -148,7 +181,10 @@ export const api = {
 
     const response = await fetch(`${API_BASE_URL}/api/design-assets`, {
       method: "POST",
-      headers: authHeader(),
+      credentials: "include",
+      headers: {
+        "X-CSRF-Token": getCsrfToken() || "",
+      },
       body: form,
     });
     if (!response.ok) {
@@ -159,7 +195,7 @@ export const api = {
 
   async fetchDesignAssetBlobUrl(assetId: string): Promise<string> {
     const response = await fetch(`${API_BASE_URL}/api/design-assets/${assetId}/download`, {
-      headers: authHeader(),
+      credentials: "include",
     });
     if (!response.ok) {
       throw new ApiError(await errorMessage(response), response.status);
@@ -169,7 +205,7 @@ export const api = {
 
   async fetchModelBlobUrl(modelAsset: ModelAsset): Promise<string> {
     const response = await fetch(`${API_BASE_URL}${modelAsset.glbUrl}`, {
-      headers: authHeader(),
+      credentials: "include",
     });
     if (!response.ok) {
       throw new ApiError(await errorMessage(response), response.status);
@@ -182,7 +218,7 @@ export const api = {
       return null;
     }
     const response = await fetch(`${API_BASE_URL}${design.previewGlbUrl}`, {
-      headers: authHeader(),
+      credentials: "include",
       cache: "no-store",
     });
     if (!response.ok) {
@@ -217,34 +253,24 @@ export const api = {
 
   async downloadExport(exportPackage: ExportPackage): Promise<void> {
     const response = await fetch(`${API_BASE_URL}${exportPackage.downloadUrl}`, {
-      headers: authHeader(),
+      credentials: "include",
     });
     if (!response.ok) {
       throw new ApiError(await errorMessage(response), response.status);
     }
 
-    const url = URL.createObjectURL(await response.blob());
-    const anchor = document.createElement("a");
-    anchor.href = url;
-    anchor.download = `${exportPackage.id}.zip`;
-    anchor.click();
-    URL.revokeObjectURL(url);
+    downloadBlob(await response.blob(), `${exportPackage.id}.zip`);
   },
 
   async downloadModelFile(urlPath: string, filename: string): Promise<void> {
     const response = await fetch(`${API_BASE_URL}${urlPath}`, {
-      headers: authHeader(),
+      credentials: "include",
     });
     if (!response.ok) {
       throw new ApiError(await errorMessage(response), response.status);
     }
 
-    const url = URL.createObjectURL(await response.blob());
-    const anchor = document.createElement("a");
-    anchor.href = url;
-    anchor.download = filename;
-    anchor.click();
-    URL.revokeObjectURL(url);
+    downloadBlob(await response.blob(), filename);
   },
 };
 

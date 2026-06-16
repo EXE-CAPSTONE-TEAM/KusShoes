@@ -27,3 +27,11 @@ pnpm-debug.log*
 # Tooling
 .claude/
 .vite/
+.agents/
+skills-lock.json
+
+# Test scripts and temporary dumps
+dom.html
+dom_dumper.py
+test_*.py
+

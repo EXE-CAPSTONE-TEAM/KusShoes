@@ -1,6 +1,7 @@
 import { Globe, Sparkles, RotateCcw } from "lucide-react";
 import type { LucideIcon } from "lucide-react";
 import { useState } from "react";
+import { motion } from "framer-motion";
 
 type Card = {
   tag: string;
@@ -10,111 +11,128 @@ type Card = {
   visual: React.ReactNode;
 };
 
-const cards: Card[] = [
-  {
-    tag: "01 · 3D real-time",
-    title: "Thấy ngay trong 3D",
-    desc: "Ý tưởng đến không suy đoán: thiết kế hiện lên trực tiếp trên mô hình 3D, không cần chờ render, không cần phần mềm khác.",
-    icon: RotateCcw,
-    visual: (
-      <div className="relative h-full w-full overflow-hidden rounded-xl">
-        <div className="absolute inset-0 bg-[conic-gradient(from_0deg_at_50%_50%,#FF5A1F,#FF8A3D,#0a0a0a,#FF5A1F)] opacity-70 animate-spin-slow" />
-        <div className="absolute inset-0 bg-background/40 backdrop-blur-sm" />
-        <div className="absolute inset-x-4 bottom-4 border-2 border-foreground bg-background px-3 py-2 font-mono text-xs shadow-[4px_4px_0_oklch(0.15_0_0)]">
-          <span className="text-muted-foreground">render &gt;</span>{" "}
-          <span className="text-primary">real-time · 60fps</span>
-          <span className="ml-1 inline-block h-3 w-1.5 align-middle bg-primary animate-pulse" />
-        </div>
-      </div>
-    ),
-  },
-  {
-    tag: "02 · AI một click",
-    title: "AI tách nền tức thì",
-    desc: "Upload ảnh bất kỳ, AI loại nền trong vài giây. Dán họa tiết, hình vẽ, pattern lên giày chỉ với 1 click.",
-    icon: Sparkles,
-    visual: (
-      <div className="relative h-full w-full overflow-hidden rounded-xl bg-background">
-        <div className="absolute inset-0 tech-grid opacity-50" />
-        <div className="absolute left-3 top-3 flex flex-col gap-1.5">
-          {["#FFFFFF", "#FF5A1F", "#0A0A0A", "#A1A1A1"].map((c) => (
-            <span
-              key={c}
-              className="h-5 w-5 border-2 border-foreground"
-              style={{ backgroundColor: c }}
-            />
-          ))}
-        </div>
-        <div className="absolute right-3 top-3 space-y-1.5 text-[10px] font-mono text-muted-foreground">
-          <div className="border-2 border-foreground bg-background px-2 py-1 shadow-[2px_2px_0_oklch(0.15_0_0)]">Input · Ảnh gốc</div>
-          <div className="border-2 border-primary bg-primary/10 text-primary px-2 py-1 shadow-[2px_2px_0_oklch(0.15_0_0)]">AI · Tách nền</div>
-          <div className="border-2 border-foreground bg-background px-2 py-1 shadow-[2px_2px_0_oklch(0.15_0_0)]">Output · Giày 3D</div>
-        </div>
-        <div className="absolute inset-x-0 bottom-0 h-12 border-t border-border bg-card/60 backdrop-blur grid grid-cols-4 text-[10px] text-muted-foreground">
-          {["Upload", "Remove", "Apply", "Done"].map((t, i) => (
-            <div
-              key={t}
-              className={`flex items-center justify-center ${
-                i === 2 ? "text-primary" : ""
-              }`}
-            >
-              {t}
-            </div>
-          ))}
-        </div>
-      </div>
-    ),
-  },
-  {
-    tag: "03 · Zero setup",
-    title: "Mở trình duyệt. Dùng luôn.",
-    desc: "Không download, không cài đặt, không account phức tạp. Mở Chrome hay Safari lên là thiết kế được luôn.",
-    icon: Globe,
-    visual: (
-      <div className="relative h-full w-full overflow-hidden rounded-xl bg-background">
-        <div className="absolute inset-0 orange-grid opacity-60" />
-        {/* Browser chrome mock */}
-        <div className="absolute top-4 inset-x-4 border-2 border-foreground bg-background shadow-[4px_4px_0_oklch(0.15_0_0)]">
-          <div className="flex items-center gap-1.5 border-b border-border px-2 py-1.5">
-            <span className="h-2 w-2 border border-foreground bg-primary/50" />
-            <span className="h-2 w-2 border border-foreground bg-muted" />
-            <span className="h-2 w-2 border border-foreground bg-muted" />
-            <div className="ml-2 flex-1 h-4 border border-border bg-muted/30 px-1 flex items-center">
-              <span className="text-[8px] font-mono text-muted-foreground">kus.studio</span>
-            </div>
-          </div>
-          <div className="px-3 py-2 text-[9px] font-mono text-muted-foreground">
-            <span className="text-primary">✓</span> No download required
-          </div>
-        </div>
-        <div className="absolute right-4 bottom-4 border-2 border-foreground bg-primary px-2.5 py-1 text-[10px] font-bold font-mono text-primary-foreground shadow-[2px_2px_0_oklch(0.15_0_0)] uppercase">
-          READY IN BROWSER
-        </div>
-      </div>
-    ),
-  },
-];
+import { useLanguage } from "@/i18n/LanguageContext";
 
 export function FeatureCards() {
+  const { t } = useLanguage();
+
+  const cards: Card[] = [
+    {
+      tag: t.features.card1Tag,
+      title: t.features.card1Title,
+      desc: t.features.card1Desc,
+      icon: RotateCcw,
+      visual: (
+        <div className="relative h-full w-full overflow-hidden border-2 border-foreground bg-background group-hover:border-primary transition-colors">
+          <div className="absolute inset-0 tech-grid opacity-30" />
+          <div className="absolute inset-0 flex items-center justify-center">
+            <div className="relative w-20 h-20 group-hover:scale-110 transition-transform duration-500">
+              {/* Pseudo isometric cube effect */}
+              <div className="absolute w-full h-full border-2 border-foreground bg-primary/10 transform rotate-45 translate-y-3 translate-x-3" />
+              <div className="absolute w-full h-full border-2 border-foreground bg-primary/30 transform rotate-45 translate-y-1.5 translate-x-1.5" />
+              <div className="absolute w-full h-full border-2 border-foreground bg-primary transform rotate-45 flex items-center justify-center shadow-[4px_4px_0_oklch(0.15_0_0)]">
+                <span className="text-primary-foreground font-heading font-black text-2xl -rotate-45">3D</span>
+              </div>
+            </div>
+          </div>
+          <div className="absolute bottom-0 inset-x-0 border-t-2 border-foreground bg-card/90 px-3 py-2 flex justify-between items-center">
+            <span className="font-mono text-[10px] text-foreground font-bold">RENDER</span>
+            <div className="flex items-center gap-1.5">
+               <span className="inline-block h-2 w-2 rounded-full bg-primary animate-pulse" />
+               <span className="font-mono text-[10px] font-bold text-primary">60 FPS</span>
+            </div>
+          </div>
+        </div>
+      ),
+    },
+    {
+      tag: t.features.card2Tag,
+      title: t.features.card2Title,
+      desc: t.features.card2Desc,
+      icon: Sparkles,
+      visual: (
+        <div className="relative h-full w-full overflow-hidden border-2 border-foreground bg-background flex group-hover:border-primary transition-colors">
+          {/* Before / After split */}
+          <div className="w-1/2 h-full bg-foreground/5 bg-[radial-gradient(#111_1px,transparent_1px)] [background-size:8px_8px] relative">
+            <div className="absolute top-2 left-2 bg-background border-2 border-foreground px-2 py-0.5 text-[9px] font-mono font-bold shadow-[2px_2px_0_oklch(0.15_0_0)]">RAW</div>
+          </div>
+          <div className="w-1/2 h-full bg-background relative overflow-hidden border-l-2 border-dashed border-foreground/30">
+            <div className="absolute inset-0 orange-grid opacity-30" />
+            <div className="absolute bottom-2 right-2 bg-primary border-2 border-foreground px-2 py-0.5 text-[9px] font-mono font-bold text-primary-foreground shadow-[2px_2px_0_oklch(0.15_0_0)]">CLEAN</div>
+          </div>
+          
+          {/* Magic wand icon */}
+          <div className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 h-12 w-12 bg-background border-2 border-foreground flex items-center justify-center rotate-12 group-hover:rotate-0 group-hover:scale-110 transition-transform duration-300 shadow-[4px_4px_0_oklch(0.15_0_0)]">
+             <Sparkles className="h-6 w-6 text-primary animate-pulse" />
+          </div>
+        </div>
+      ),
+    },
+    {
+      tag: t.features.card3Tag,
+      title: t.features.card3Title,
+      desc: t.features.card3Desc,
+      icon: Globe,
+      visual: (
+        <div className="relative h-full w-full overflow-hidden border-2 border-foreground bg-primary/10 p-3 flex flex-col group-hover:bg-primary/20 transition-colors">
+          {/* Browser header mock */}
+          <div className="border-2 border-foreground bg-background flex items-center px-2 py-1.5 gap-1.5 mb-3 shadow-[2px_2px_0_oklch(0.15_0_0)] relative z-10">
+             <div className="w-2.5 h-2.5 border border-foreground bg-muted" />
+             <div className="w-2.5 h-2.5 border border-foreground bg-muted" />
+             <div className="w-2.5 h-2.5 border border-foreground bg-primary" />
+             <div className="ml-2 bg-muted/10 border border-foreground px-2 py-0.5 text-[9px] font-mono flex-1 text-center truncate">kus.studio/run</div>
+          </div>
+          
+          {/* Browser content */}
+          <div className="flex-1 border-2 border-foreground bg-background relative overflow-hidden flex flex-col items-center justify-center shadow-[4px_4px_0_oklch(0.15_0_0)] group-hover:-translate-y-1 transition-transform duration-300">
+            <div className="absolute inset-0 tech-grid opacity-20" />
+            <div className="relative z-10 text-center px-2">
+              <div className="font-heading font-black text-2xl text-foreground uppercase tracking-wider">
+                Ready
+              </div>
+              <div className="font-mono text-[9px] font-bold text-primary mt-1 bg-primary/10 px-2 py-0.5 border border-primary/20">
+                NO INSTALL REQUIRED
+              </div>
+            </div>
+          </div>
+        </div>
+      ),
+    },
+  ];
+
   return (
     <section id="features" className="relative py-32">
       <div className="mx-auto max-w-7xl px-6">
-        <div className="max-w-2xl">
+        <motion.div
+          initial={{ opacity: 0, y: -20 }}
+          whileInView={{ opacity: 1, y: 0 }}
+          viewport={{ once: true, margin: "-100px" }}
+          transition={{ duration: 0.5 }}
+          className="max-w-2xl"
+        >
           <span className="text-xs uppercase font-mono font-bold tracking-[0.3em] text-primary">
-            03 · Lợi thế · So sánh
+            {t.features.tag}
           </span>
           <h2 className="mt-4 text-5xl md:text-6xl font-heading tracking-tight leading-[0.9]">
-            3 điểm khác biệt,
+            {t.features.titleLine1}
             <br />
-            <span className="text-primary">3 rào cản bị xóa.</span>
+            <span className="text-primary">{t.features.titleLine2}</span>
           </h2>
-        </div>
+        </motion.div>
 
-        <div className="mt-16 grid md:grid-cols-3 gap-6">
+        <motion.div 
+          initial="hidden"
+          whileInView="visible"
+          viewport={{ once: true, margin: "-50px" }}
+          variants={{
+            visible: { transition: { staggerChildren: 0.15 } },
+          }}
+          className="mt-16 grid md:grid-cols-3 gap-6"
+        >
           {cards.map((c) => (
             <FeatureCard key={c.title} card={c} />
           ))}
-        </div>
+        </motion.div>
       </div>
     </section>
   );
@@ -122,8 +140,15 @@ export function FeatureCards() {
 
 function FeatureCard({ card }: { card: Card }) {
   const [hovered, setHovered] = useState(false);
+  
+  const variants = {
+    hidden: { opacity: 0, y: 50 },
+    visible: { opacity: 1, y: 0, transition: { type: "spring" as const, bounce: 0.4 } },
+  };
+
   return (
-    <article
+    <motion.article
+      variants={variants}
       onMouseEnter={() => setHovered(true)}
       onMouseLeave={() => setHovered(false)}
       className={`group relative border-2 border-foreground bg-card p-6 transition-all duration-300 ${
@@ -144,6 +169,6 @@ function FeatureCard({ card }: { card: Card }) {
 
       <h3 className="mt-6 text-2xl font-bold uppercase tracking-tight">{card.title}</h3>
       <p className="mt-2 text-sm text-foreground/80 font-medium">{card.desc}</p>
-    </article>
+    </motion.article>
   );
 }
