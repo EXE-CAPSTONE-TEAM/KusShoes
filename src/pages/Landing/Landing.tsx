@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { Smartphone, Monitor, Cloud, Sparkles, Send, Layout, CheckCircle2, Check, ArrowRight } from 'lucide-react';
 import { motion } from 'framer-motion';
 import { Navbar } from '../../components/Navbar/Navbar';
@@ -6,6 +6,84 @@ import { Footer } from '../../components/Footer/Footer';
 import { AnimatedPrice } from '../../components/AnimatedPrice/AnimatedPrice';
 import { InteractiveParticleGrid } from '../../components/InteractiveParticleGrid/InteractiveParticleGrid';
 import styles from './Landing.module.css';
+
+const TypewriterHeadline: React.FC = () => {
+  const [line1Done, setLine1Done] = useState(false);
+  const [line2Done, setLine2Done] = useState(false);
+
+  const container1 = {
+    hidden: { opacity: 1 },
+    visible: {
+      opacity: 1,
+      transition: {
+        staggerChildren: 0.04,
+      }
+    }
+  };
+
+  const container2 = {
+    hidden: { opacity: 1 },
+    visible: {
+      opacity: 1,
+      transition: {
+        delayChildren: 0.9,
+        staggerChildren: 0.04,
+      }
+    }
+  };
+
+  const letter = {
+    hidden: { opacity: 0, display: 'none' },
+    visible: {
+      opacity: 1,
+      display: 'inline'
+    }
+  };
+
+  return (
+    <h1 className={styles.heroTitle}>
+      {/* Line 1 */}
+      <motion.div 
+        className={styles.typewriterLine}
+        variants={container1}
+        initial="hidden"
+        animate="visible"
+        onAnimationComplete={() => setLine1Done(true)}
+      >
+        {"SCAN WITH ".split("").map((char, index) => (
+          <motion.span key={index} variants={letter}>{char}</motion.span>
+        ))}
+        <span className="text-gradient-orange">
+          {"KUSSHOES".split("").map((char, index) => (
+            <motion.span key={index} variants={letter}>{char}</motion.span>
+          ))}
+        </span>
+        <motion.span variants={letter}>.</motion.span>
+        {!line1Done && <span className={styles.typingCursor} />}
+      </motion.div>
+
+      {/* Line 2 */}
+      <motion.div 
+        className={styles.typewriterLine}
+        variants={container2}
+        initial="hidden"
+        animate="visible"
+        onAnimationComplete={() => setLine2Done(true)}
+      >
+        {"DESIGN IN ".split("").map((char, index) => (
+          <motion.span key={index} variants={letter}>{char}</motion.span>
+        ))}
+        <span className="text-gradient-orange">
+          {"KUSSTUDIO".split("").map((char, index) => (
+            <motion.span key={index} variants={letter}>{char}</motion.span>
+          ))}
+        </span>
+        <motion.span variants={letter}>.</motion.span>
+        {line1Done && !line2Done && <span className={styles.typingCursor} />}
+      </motion.div>
+    </h1>
+  );
+};
 
 interface LandingProps {
   navigate: (path: string) => void;
@@ -140,10 +218,7 @@ export const Landing: React.FC<LandingProps> = ({ navigate }) => {
           transition={{ duration: 0.8 }}
         >
           <span className={styles.heroBadge}>THE FUTURE OF SNEAKER CUSTOMIZATION</span>
-          <h1 className={styles.heroTitle}>
-            SCAN WITH <span className="text-gradient-orange">KUSSHOES</span>.<br />
-            DESIGN IN <span className="text-gradient-orange">KUSSTUDIO</span>.
-          </h1>
+          <TypewriterHeadline />
           <p className={styles.heroDesc}>
             A unified design ecosystem. Turn physical sneakers into interactive 3D models via photogrammetry, save them to the cloud, and build unique customs inside a responsive 3D design studio.
           </p>

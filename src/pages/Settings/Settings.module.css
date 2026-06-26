@@ -1,15 +1,12 @@
 .container {
   flex-grow: 1;
-  padding: 40px;
+  padding: 40px 48px 60px 40px;
+  width: 100%;
   max-width: 1400px;
-  margin: 0 auto;
+  margin: 0;
   display: flex;
   flex-direction: column;
   gap: 32px;
-  overflow-y: auto;
-  height: 100vh;
-  position: relative;
-  scrollbar-gutter: stable;
 }
 
 /* Toast Notification styling */
@@ -59,7 +56,7 @@
 /* Layout Grid */
 .settingsLayout {
   display: grid;
-  grid-template-columns: 240px 320px 1fr;
+  grid-template-columns: 240px 1fr 320px;
   gap: 28px;
   align-items: start;
 }
@@ -106,8 +103,8 @@
   padding: 40px;
   border-radius: var(--border-radius-lg);
   min-height: 500px;
-  max-width: 1040px;
   width: 100%;
+  order: 1;
 }
 
 .sectionHeaderCompact {
@@ -134,7 +131,7 @@
   align-items: start;
 }
 
-/* Left side: Designer Card styling */
+/* Designer Profile Card — far right column */
 .designerCard {
   border-radius: var(--border-radius-md);
   padding: 32px 24px;
@@ -146,6 +143,10 @@
   border: 1px solid var(--glass-border);
   position: relative;
   overflow: hidden;
+  order: 2;
+  position: sticky;
+  top: 0;
+  align-self: start;
 }
 
 .avatarWrapper {

@@ -8,6 +8,7 @@ import { Projects } from './pages/Projects/Projects';
 import { Billing } from './pages/Billing/Billing';
 import { Settings } from './pages/Settings/Settings';
 import { ProjectDetails } from './pages/ProjectDetails/ProjectDetails';
+import { ProductsPage } from './pages/ProductsPage/ProductsPage';
 
 interface Project {
   id: string;
@@ -31,6 +32,8 @@ const getPageFromPath = (path: string): string => {
   switch (cleanPath) {
     case '/project-details':
       return 'project-details';
+    case '/products':
+      return 'products-info';
     case '/pricing':
       return 'pricing';
     case '/login':
@@ -248,9 +251,10 @@ function App() {
       )}
 
       {/* Main Content Area */}
-      <main style={{ flexGrow: 1, backgroundColor: 'var(--bg-primary)', minHeight: '100vh', display: 'flex', flexDirection: 'column', transition: 'background-color var(--transition-normal)' }}>
+      <main style={{ flexGrow: 1, backgroundColor: 'var(--bg-primary)', height: '100vh', overflowY: 'auto', display: 'flex', flexDirection: 'column', transition: 'background-color var(--transition-normal)' }}>
 
         {activePage === 'landing' && <Landing navigate={navigate} />}
+        {activePage === 'products-info' && <ProductsPage navigate={navigate} />}
         {activePage === 'login' && <Login setPage={navigate} />}
         {activePage === 'pricing' && <PricingPage navigate={navigate} />}
         

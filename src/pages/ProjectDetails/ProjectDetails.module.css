@@ -1,15 +1,12 @@
 .container {
   flex-grow: 1;
-  padding: 40px;
+  padding: 32px 40px;
   width: 100%;
   max-width: 100%;
   margin: 0;
   display: flex;
   flex-direction: column;
-  gap: 32px;
-  overflow-y: auto;
-  height: 100vh;
-  scrollbar-gutter: stable;
+  gap: 24px;
 }
 
 .navHeader {
@@ -39,33 +36,30 @@
   background: rgba(255, 90, 54, 0.05);
 }
 
-/* Main Details Grid split (50/50) */
+/* Main Details Grid — always 2-column side-by-side on desktop portal */
 .detailsGrid {
   display: grid;
-  grid-template-cols: 1fr;
-  gap: 32px;
-}
-
-@media (min-width: 480px) {
-  .detailsGrid {
-    grid-template-cols: 1.15fr 1fr;
-    align-items: start;
-    gap: 32px;
-  }
+  grid-template-columns: 1fr 1.1fr;
+  align-items: start;
+  gap: 36px;
+  flex: 1;
 }
 
 /* Left Column: Image HUD Preview */
 .previewColumn {
   display: flex;
   flex-direction: column;
-  gap: 24px;
+  gap: 20px;
+  position: sticky;
+  top: 0;
+  align-self: start;
 }
 
 .imageFrame {
   position: relative;
   background: var(--bg-secondary);
   border-radius: var(--border-radius-lg);
-  aspect-ratio: 16 / 10;
+  aspect-ratio: 4 / 3;
   overflow: hidden;
   display: flex;
   align-items: center;
@@ -73,9 +67,7 @@
   border: 1px solid var(--glass-border);
   box-shadow: 0 0 40px rgba(0, 0, 0, 0.5), inset 0 0 20px rgba(0, 0, 0, 0.4);
   transition: all var(--transition-normal);
-  max-width: 580px;
   width: 100%;
-  margin: 0 auto;
 }
 
 /* Pulse neon border based on colorCode custom variable */
@@ -295,14 +287,8 @@
 /* Download Formats Grid */
 .downloadsGrid {
   display: grid;
-  grid-template-cols: 1fr;
-  gap: 12px;
-}
-
-@media (min-width: 576px) {
-  .downloadsGrid {
-    grid-template-cols: repeat(2, 1fr);
-  }
+  grid-template-columns: repeat(2, 1fr);
+  gap: 10px;
 }
 
 .downloadCard {
@@ -548,4 +534,444 @@
   background: rgba(230, 30, 67, 0.15);
   border-color: var(--color-crimson);
   color: var(--color-crimson);
+}
+
+/* ========================= TAB NAVIGATION ========================= */
+.tabNav {
+  display: flex;
+  gap: 4px;
+  background: var(--bg-secondary);
+  border: 1px solid var(--glass-border);
+  border-radius: var(--border-radius-sm);
+  padding: 4px;
+}
+
+.tabBtn {
+  display: inline-flex;
+  align-items: center;
+  gap: 7px;
+  padding: 9px 18px;
+  border-radius: calc(var(--border-radius-sm) - 2px);
+  border: none;
+  background: transparent;
+  color: var(--text-muted);
+  font-family: var(--font-sans);
+  font-size: 0.875rem;
+  font-weight: 600;
+  cursor: pointer;
+  transition: all var(--transition-fast);
+  flex: 1;
+  justify-content: center;
+}
+
+.tabBtn:hover {
+  color: var(--text-primary);
+  background: var(--hover-bg-item);
+}
+
+.tabBtnActive {
+  background: var(--glass-bg);
+  color: var(--text-primary);
+  border: 1px solid var(--glass-border);
+  box-shadow: var(--shadow-sm);
+}
+
+.tabBtnActive svg {
+  color: var(--color-orange);
+}
+
+.tabCount {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 18px;
+  height: 18px;
+  background: var(--color-orange);
+  color: #fff;
+  font-size: 0.65rem;
+  font-weight: 700;
+  border-radius: 50%;
+  line-height: 1;
+}
+
+/* ========================= SHARE PANEL ========================= */
+.sharePanel {
+  display: flex;
+  flex-direction: column;
+  gap: 28px;
+}
+
+.shareDesc {
+  font-size: 0.875rem;
+  color: var(--text-muted);
+  margin-bottom: 12px;
+  margin-top: 4px;
+}
+
+/* Invite Form */
+.inviteForm {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.inviteInputRow {
+  display: flex;
+  gap: 10px;
+  align-items: center;
+}
+
+.emailInputWrap {
+  flex: 1;
+  position: relative;
+  display: flex;
+  align-items: center;
+}
+
+.emailInputIcon {
+  position: absolute;
+  left: 13px;
+  color: var(--text-muted);
+  pointer-events: none;
+  flex-shrink: 0;
+}
+
+.emailInput {
+  width: 100%;
+  background: var(--bg-secondary);
+  border: 1px solid var(--glass-border);
+  border-radius: var(--border-radius-sm);
+  padding: 10px 14px 10px 38px;
+  font-family: var(--font-sans);
+  font-size: 0.875rem;
+  color: var(--text-primary);
+  outline: none;
+  transition: border-color var(--transition-fast);
+}
+
+.emailInput::placeholder {
+  color: var(--text-muted);
+}
+
+.emailInput:focus {
+  border-color: var(--color-orange);
+  box-shadow: 0 0 0 3px rgba(255, 90, 54, 0.08);
+}
+
+.roleSelectWrap {
+  position: relative;
+  display: flex;
+  align-items: center;
+}
+
+.roleSelect {
+  appearance: none;
+  background: var(--bg-secondary);
+  border: 1px solid var(--glass-border);
+  border-radius: var(--border-radius-sm);
+  padding: 10px 32px 10px 14px;
+  font-family: var(--font-sans);
+  font-size: 0.875rem;
+  font-weight: 600;
+  color: var(--text-primary);
+  cursor: pointer;
+  outline: none;
+  transition: border-color var(--transition-fast);
+}
+
+.roleSelect:focus {
+  border-color: var(--color-orange);
+}
+
+.selectChevron {
+  position: absolute;
+  right: 10px;
+  color: var(--text-muted);
+  pointer-events: none;
+}
+
+.inviteBtn {
+  background: var(--color-orange);
+  color: #fff;
+  border: none;
+  border-radius: var(--border-radius-sm);
+  padding: 10px 20px;
+  font-family: var(--font-sans);
+  font-size: 0.875rem;
+  font-weight: 700;
+  cursor: pointer;
+  white-space: nowrap;
+  transition: all var(--transition-fast);
+}
+
+.inviteBtn:hover {
+  background: #e04820;
+  transform: translateY(-1px);
+  box-shadow: 0 4px 16px rgba(255, 90, 54, 0.3);
+}
+
+.inviteError {
+  font-size: 0.8rem;
+  color: var(--color-crimson);
+  margin: 0;
+}
+
+.inviteSuccess {
+  font-size: 0.8rem;
+  color: #34d399;
+  margin: 0;
+}
+
+/* Members List */
+.memberCountBadge {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  min-width: 20px;
+  height: 20px;
+  background: var(--hover-bg-item);
+  border: 1px solid var(--glass-border);
+  font-size: 0.7rem;
+  font-weight: 700;
+  border-radius: 10px;
+  padding: 0 6px;
+  margin-left: 8px;
+  color: var(--text-secondary);
+  font-family: var(--font-mono);
+  vertical-align: middle;
+}
+
+.memberList {
+  display: flex;
+  flex-direction: column;
+  gap: 1px;
+  border: 1px solid var(--glass-border);
+  border-radius: var(--border-radius-md);
+  overflow: visible;
+}
+
+.memberRow {
+  display: flex;
+  align-items: center;
+  gap: 14px;
+  padding: 14px 18px;
+  background: var(--grid-item-bg);
+  transition: background var(--transition-fast);
+  position: relative;
+  z-index: 0;
+  border-radius: var(--border-radius-md);
+}
+
+.memberRow:not(:last-child) {
+  border-bottom: 1px solid var(--glass-border);
+}
+
+.memberRow:hover {
+  background: var(--hover-bg-item);
+}
+
+.memberAvatar {
+  width: 38px;
+  height: 38px;
+  border-radius: 50%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-family: var(--font-sans);
+  font-size: 0.75rem;
+  font-weight: 800;
+  color: #fff;
+  flex-shrink: 0;
+  letter-spacing: 0.5px;
+}
+
+.memberInfo {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  min-width: 0;
+}
+
+.memberEmail {
+  font-size: 0.875rem;
+  font-weight: 500;
+  color: var(--text-primary);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.memberJoined {
+  font-size: 0.75rem;
+  color: var(--text-muted);
+}
+
+/* Role Badge + Dropdown */
+.memberRoleWrap {
+  position: relative;
+  flex-shrink: 0;
+  z-index: 1;
+}
+
+.roleBadge {
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+  padding: 4px 10px;
+  border-radius: 20px;
+  font-size: 0.72rem;
+  font-weight: 700;
+  cursor: pointer;
+  border: 1px solid transparent;
+  transition: all var(--transition-fast);
+  font-family: var(--font-sans);
+  letter-spacing: 0.3px;
+}
+
+.roleBadgeEdit {
+  background: rgba(255, 90, 54, 0.1);
+  color: var(--color-orange);
+  border-color: rgba(255, 90, 54, 0.2);
+}
+
+.roleBadgeEdit:hover {
+  background: rgba(255, 90, 54, 0.18);
+  border-color: rgba(255, 90, 54, 0.4);
+}
+
+.roleBadgeView {
+  background: rgba(56, 189, 248, 0.08);
+  color: #38bdf8;
+  border-color: rgba(56, 189, 248, 0.2);
+}
+
+.roleBadgeView:hover {
+  background: rgba(56, 189, 248, 0.15);
+  border-color: rgba(56, 189, 248, 0.35);
+}
+
+.roleDropdown {
+  position: absolute;
+  top: calc(100% + 6px);
+  right: 0;
+  background: var(--bg-secondary);
+  border: 1px solid var(--glass-border);
+  border-radius: var(--border-radius-sm);
+  box-shadow: 0 8px 32px rgba(0, 0, 0, 0.5), 0 2px 8px rgba(0, 0, 0, 0.3);
+  overflow: visible;
+  z-index: 9999;
+  min-width: 110px;
+  animation: dropdownIn 0.12s ease;
+}
+
+@keyframes dropdownIn {
+  from { opacity: 0; transform: translateY(-4px); }
+  to { opacity: 1; transform: translateY(0); }
+}
+
+.roleOption {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+  width: 100%;
+  padding: 10px 14px;
+  font-family: var(--font-sans);
+  font-size: 0.8rem;
+  font-weight: 600;
+  color: var(--text-secondary);
+  background: transparent;
+  border: none;
+  cursor: pointer;
+  text-align: left;
+  transition: background var(--transition-fast), color var(--transition-fast);
+}
+
+.roleOption:hover {
+  background: var(--hover-bg-item);
+  color: var(--text-primary);
+}
+
+.roleOptionActive {
+  color: var(--color-orange);
+}
+
+/* Remove Button */
+.removeBtn {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 30px;
+  height: 30px;
+  background: transparent;
+  border: 1px solid transparent;
+  border-radius: var(--border-radius-sm);
+  color: var(--text-muted);
+  cursor: pointer;
+  flex-shrink: 0;
+  transition: all var(--transition-fast);
+}
+
+.removeBtn:hover {
+  background: rgba(230, 30, 67, 0.08);
+  border-color: rgba(230, 30, 67, 0.2);
+  color: var(--color-crimson);
+}
+
+/* Empty Members */
+.emptyMembers {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 12px;
+  padding: 40px 20px;
+  border: 1px dashed var(--glass-border);
+  border-radius: var(--border-radius-md);
+  color: var(--text-muted);
+  font-size: 0.875rem;
+}
+
+.emptyIcon {
+  color: var(--text-muted);
+  opacity: 0.4;
+}
+
+/* Visibility Note */
+.visibilityNote {
+  display: flex;
+  align-items: flex-start;
+  gap: 12px;
+  padding: 14px 18px;
+  background: var(--glass-bg);
+  border: 1px solid var(--glass-border);
+  border-radius: var(--border-radius-md);
+}
+
+.visibilityNoteIcon {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 32px;
+  height: 32px;
+  background: var(--hover-bg-item);
+  border: 1px solid var(--glass-border);
+  border-radius: 8px;
+  color: var(--text-secondary);
+  flex-shrink: 0;
+  margin-top: 1px;
+}
+
+.visNoteLabel {
+  font-size: 0.875rem;
+  font-weight: 600;
+  color: var(--text-primary);
+}
+
+.visNoteDesc {
+  font-size: 0.8rem;
+  color: var(--text-muted);
+  margin: 4px 0 0 0;
+  line-height: 1.5;
 }

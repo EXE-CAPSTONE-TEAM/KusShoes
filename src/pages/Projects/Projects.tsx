@@ -3,7 +3,7 @@ import {
   Search, Plus, MoreVertical, Trash2, Edit3, Share2, 
   Globe, EyeOff, Link, Grid, List, Check, X, ArrowRight, 
   ArrowLeft, RefreshCw, Smartphone, Laptop, 
-  ChevronRight, Download, CheckSquare, Square 
+  ChevronRight, Download, CheckSquare, Square, Camera, Cpu 
 } from 'lucide-react';
 import { motion, AnimatePresence } from 'framer-motion';
 import styles from './Projects.module.css';
@@ -386,7 +386,7 @@ export const Projects: React.FC<ProjectsProps> = ({
               return (
                 <motion.div
                   key={proj.id}
-                  className={`${styles.card} ${isSelected ? styles.cardSelected : ''} glass-panel`}
+                  className={styles.cardWrapper}
                   layout
                   initial={{ opacity: 0, scale: 0.95 }}
                   animate={{ opacity: 1, scale: 1 }}
@@ -394,76 +394,116 @@ export const Projects: React.FC<ProjectsProps> = ({
                   transition={{ duration: 0.25 }}
                   onClick={() => handleCardClick(proj)}
                 >
-                  {/* Image Container with overlay */}
-                  <div className={styles.imgContainer}>
-                    <img src={proj.imageUrl} alt={proj.name} className={styles.shoeImg} />
-                    
-                    {/* Checkbox overlay */}
-                    <button 
-                      className={`${styles.cardCheck} ${isSelected ? styles.cardCheckActive : ''}`}
-                      onClick={(e) => handleSelectCard(e, proj.id)}
-                    >
-                      {isSelected ? <CheckSquare size={18} /> : <Square size={18} />}
-                    </button>
-                    
-                    {/* Visibility Badge */}
-                    <div className={styles.overlayBadges}>
-                      <span className={`${styles.badge} ${styles.visibilityBadge}`}>
-                        {proj.visibility === 'Public' && <Globe size={12} />}
-                        {proj.visibility === 'Link' && <Link size={12} />}
-                        {proj.visibility === 'Private' && <EyeOff size={12} />}
-                        {proj.visibility}
-                      </span>
-                    </div>
-                    
-                    {/* Options button */}
-                    <button
-                      className={`${styles.optionsBtn} glass-panel`}
-                      onClick={(e) => {
-                        e.stopPropagation(); // Avoid opening drawer
-                        setActiveMenuId(activeMenuId === proj.id ? null : proj.id);
-                      }}
-                    >
-                      <MoreVertical size={16} />
-                    </button>
+                  <div className={`${styles.card} ${isSelected ? styles.cardSelected : ''} glass-panel`}>
+                    {/* Image Container with overlay */}
+                    <div className={styles.imgContainer}>
+                      <img src={proj.imageUrl} alt={proj.name} className={styles.shoeImg} />
+                      
+                      {/* Checkbox overlay */}
+                      <button 
+                        className={`${styles.cardCheck} ${isSelected ? styles.cardCheckActive : ''}`}
+                        onClick={(e) => handleSelectCard(e, proj.id)}
+                      >
+                        {isSelected ? <CheckSquare size={18} /> : <Square size={18} />}
+                      </button>
+                      
+                      {/* Visibility Badge */}
+                      <div className={styles.overlayBadges}>
+                        <span className={`${styles.badge} ${styles.visibilityBadge}`}>
+                          {proj.visibility === 'Public' && <Globe size={12} />}
+                          {proj.visibility === 'Link' && <Link size={12} />}
+                          {proj.visibility === 'Private' && <EyeOff size={12} />}
+                          {proj.visibility}
+                        </span>
+                      </div>
+                      
+                      {/* Options button */}
+                      <button
+                        className={`${styles.optionsBtn} glass-panel`}
+                        onClick={(e) => {
+                          e.stopPropagation(); // Avoid opening drawer
+                          setActiveMenuId(activeMenuId === proj.id ? null : proj.id);
+                        }}
+                      >
+                        <MoreVertical size={16} />
+                      </button>
 
-                    {/* Dropdown Menu */}
-                    {activeMenuId === proj.id && (
-                      <div className={`${styles.dropdown} glass-panel`} onClick={(e) => e.stopPropagation()}>
-                        <button onClick={() => { setEditingProject(proj); setRenameValue(proj.name); setActiveMenuId(null); }}>
-                          <Edit3 size={14} /> Rename
-                        </button>
-                        <button onClick={() => { setSharingProject(proj); setActiveMenuId(null); }}>
-                          <Share2 size={14} /> Share Link
-                        </button>
-                        <div className={styles.dropdownDivider} />
-                        <button className={styles.deleteBtn} onClick={() => handleDelete(proj.id)}>
-                          <Trash2 size={14} /> Delete
+                      {/* Dropdown Menu */}
+                      {activeMenuId === proj.id && (
+                        <div className={`${styles.dropdown} glass-panel`} onClick={(e) => e.stopPropagation()}>
+                          <button onClick={() => { setEditingProject(proj); setRenameValue(proj.name); setActiveMenuId(null); }}>
+                            <Edit3 size={14} /> Rename
+                          </button>
+                          <button onClick={() => { setSharingProject(proj); setActiveMenuId(null); }}>
+                            <Share2 size={14} /> Share Link
+                          </button>
+                          <div className={styles.dropdownDivider} />
+                          <button className={styles.deleteBtn} onClick={() => handleDelete(proj.id)}>
+                            <Trash2 size={14} /> Delete
+                          </button>
+                        </div>
+                      )}
+                    </div>
+
+                    {/* Info Container */}
+                    <div className={styles.cardInfo}>
+                      <div className={styles.cardHeader}>
+                        <h3 className={styles.cardName}>{proj.name}</h3>
+                        <span className={`${styles.statusIndicator} ${styles[proj.status.toLowerCase()]}`}>
+                          {proj.status}
+                        </span>
+                      </div>
+                      <div className={styles.metaRowCompact}>
+                        <span className={styles.baseModel}>{proj.baseModel}</span>
+                        <span className={styles.cardMetaDot}>•</span>
+                        <span className={styles.fileSizeText}>{proj.fileSize}</span>
+                      </div>
+
+                      {/* Hover Details Panel */}
+                      <div className={styles.hoverDetails}>
+                        <div className={styles.hoverDetailRow}>
+                          <span className={styles.hoverDetailLabel}>
+                            {proj.device.toLowerCase().includes('iphone') || 
+                             proj.device.toLowerCase().includes('ipad') || 
+                             proj.device.toLowerCase().includes('samsung') || 
+                             proj.device.toLowerCase().includes('phone') ? (
+                              <Smartphone size={12} />
+                            ) : (
+                              <Laptop size={12} />
+                            )}
+                            Device
+                          </span>
+                          <span className={styles.hoverDetailVal}>{proj.device}</span>
+                        </div>
+                        
+                        <div className={styles.hoverDetailRow}>
+                          <span className={styles.hoverDetailLabel}>
+                            <Camera size={12} />
+                            Source Photos
+                          </span>
+                          <span className={styles.hoverDetailVal}>{proj.photosCount} photos</span>
+                        </div>
+                        
+                        <div className={styles.hoverDetailRow}>
+                          <span className={styles.hoverDetailLabel}>
+                            <Cpu size={12} />
+                            Vertices
+                          </span>
+                          <span className={styles.hoverDetailVal}>{proj.verticesCount}</span>
+                        </div>
+
+                        {proj.description && (
+                          <p className={styles.hoverDescription}>{proj.description}</p>
+                        )}
+                      </div>
+                      
+                      <div className={styles.cardFooter}>
+                        <span className={styles.updatedText}>Updated {proj.updatedAt}</span>
+                        <button className={styles.viewDetailsLink} type="button">
+                          <span>Inspect Drawer</span>
+                          <ChevronRight size={12} />
                         </button>
                       </div>
-                    )}
-                  </div>
-
-                  {/* Info Container */}
-                  <div className={styles.cardInfo}>
-                    <div className={styles.cardHeader}>
-                      <h3 className={styles.cardName}>{proj.name}</h3>
-                      <span className={`${styles.statusIndicator} ${styles[proj.status.toLowerCase()]}`}>
-                        {proj.status}
-                      </span>
-                    </div>
-                    <div className={styles.metaRowCompact}>
-                      <span className={styles.baseModel}>{proj.baseModel}</span>
-                      <span className={styles.cardMetaDot}>•</span>
-                      <span className={styles.fileSizeText}>{proj.fileSize}</span>
-                    </div>
-                    
-                    <div className={styles.cardFooter}>
-                      <span className={styles.updatedText}>Updated {proj.updatedAt}</span>
-                      <button className={styles.viewDetailsLink} type="button">
-                        <span>Inspect Drawer</span>
-                        <ChevronRight size={12} />
-                      </button>
                     </div>
                   </div>
                 </motion.div>

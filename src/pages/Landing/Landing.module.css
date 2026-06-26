@@ -5,7 +5,7 @@
   color: var(--text-primary);
   display: flex;
   flex-direction: column;
-  overflow-y: auto;
+  flex-shrink: 0;
   scroll-behavior: smooth;
   position: relative;
   transition: background-color var(--transition-normal);
@@ -127,14 +127,14 @@
 
 /* Hero Section */
 .heroSection {
-  padding: 180px 40px 120px;
+  padding: 150px 40px 70px;
   display: flex;
   flex-direction: column;
   align-items: center;
   text-align: center;
   position: relative;
   overflow: hidden;
-  min-height: 80vh;
+  min-height: 60vh;
   justify-content: center;
   z-index: 2;
 }
@@ -162,15 +162,15 @@
 
 .heroTitle {
   font-family: 'Space Grotesk', sans-serif;
-  font-size: 4.8rem;
+  font-size: 3.2rem;
   font-weight: 800;
   line-height: 1.05;
-  letter-spacing: -2px;
+  letter-spacing: -1px;
 }
 
 .heroDesc {
   color: var(--text-secondary);
-  font-size: 1.2rem;
+  font-size: 1.05rem;
   line-height: 1.6;
   max-width: 720px;
 }
@@ -222,7 +222,7 @@
 
 /* Products Section */
 .productsSection {
-  padding: 100px 40px;
+  padding: 70px 40px;
   max-width: 1400px;
   margin: 0 auto;
   width: 100%;
@@ -458,7 +458,7 @@
 
 /* Workflow Section */
 .workflowSection {
-  padding: 100px 40px;
+  padding: 70px 40px;
   max-width: 1400px;
   margin: 0 auto;
   width: 100%;
@@ -522,7 +522,7 @@
 
 /* Features Section */
 .featuresSection {
-  padding: 100px 40px;
+  padding: 70px 40px;
   max-width: 1400px;
   margin: 0 auto;
   width: 100%;
@@ -573,7 +573,7 @@
 
 /* Pricing Section */
 .pricingSection {
-  padding: 100px 40px;
+  padding: 70px 40px;
   max-width: 1400px;
   margin: 0 auto;
   width: 100%;
@@ -738,7 +738,7 @@
 
 /* Newsletter Section */
 .newsletterSection {
-  padding: 80px 40px;
+  padding: 60px 40px;
   max-width: 1000px;
   margin: 0 auto;
   width: 100%;
@@ -747,7 +747,7 @@
 }
 
 .newsletterBox {
-  padding: 56px;
+  padding: 40px;
   border-radius: var(--border-radius-lg);
   text-align: center;
   display: flex;
@@ -818,7 +818,7 @@
 /* Footer */
 .footer {
   border-top: 1px solid var(--glass-border);
-  padding: 80px 40px 40px;
+  padding: 50px 40px 30px;
   width: 100%;
   background-color: var(--bg-secondary);
   position: relative;
@@ -945,5 +945,29 @@
   opacity: 0.55;
   pointer-events: none;
   z-index: 0;
+}
+
+.typingCursor {
+  display: inline-block;
+  width: 4px;
+  height: 0.9em;
+  background-color: var(--color-orange);
+  margin-left: 6px;
+  vertical-align: middle;
+  animation: blinkCursor 0.75s step-end infinite;
+}
+
+@keyframes blinkCursor {
+  from, to { opacity: 1 }
+  50% { opacity: 0 }
+}
+
+.typewriterLine {
+  display: block;
+  min-height: 1.15em;
+  line-height: 1.15;
+  margin: 0;
+  padding: 0;
+  white-space: nowrap;
 }
 
