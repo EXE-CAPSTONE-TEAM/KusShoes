@@ -1,0 +1,264 @@
+.sidebar {
+  width: 230px;
+  height: 100vh;
+  background-color: var(--bg-secondary);
+  border-right: 1px solid var(--glass-border);
+  display: flex;
+  flex-direction: column;
+  padding: 24px 16px;
+  position: sticky;
+  top: 0;
+  z-index: 100;
+}
+
+.logoSection {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  margin-bottom: 32px;
+}
+
+.logoContainer {
+  width: 36px;
+  height: 36px;
+  background: linear-gradient(135deg, var(--color-orange) 0%, var(--color-crimson) 100%);
+  border-radius: var(--border-radius-md);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  box-shadow: 0 0 15px rgba(255, 90, 54, 0.4);
+}
+
+.logoIcon {
+  color: var(--text-primary);
+  width: 22px;
+  height: 22px;
+  animation: rotateLogo 8s linear infinite;
+}
+
+@keyframes rotateLogo {
+  from { transform: rotate(0deg); }
+  to { transform: rotate(360deg); }
+}
+
+.logoText {
+  display: flex;
+  flex-direction: column;
+}
+
+.brandTitle {
+  font-family: 'Space Grotesk', sans-serif;
+  font-weight: 700;
+  font-size: 1.05rem;
+  letter-spacing: 1.5px;
+  line-height: 1;
+}
+
+.brandSubtitle {
+  font-family: var(--font-mono);
+  font-size: 0.6rem;
+  color: var(--text-muted);
+  letter-spacing: 2px;
+  margin-top: 2px;
+}
+
+.navMenu {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  flex-grow: 1;
+}
+
+.navItem {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  background: transparent;
+  border: 1px solid transparent;
+  color: var(--text-secondary);
+  padding: 10px 14px;
+  border-radius: var(--border-radius-md);
+  cursor: pointer;
+  font-family: var(--font-sans);
+  font-weight: 500;
+  font-size: 0.9rem;
+  text-align: left;
+  position: relative;
+  transition: all var(--transition-fast);
+}
+
+.navItem:hover {
+  color: var(--text-primary);
+  background-color: var(--hover-bg-item);
+}
+
+.navItem.active {
+  color: var(--text-primary);
+  background: var(--glass-bg);
+  border-color: var(--glass-border);
+  box-shadow: var(--shadow-sm);
+}
+
+.navIcon {
+  width: 20px;
+  height: 20px;
+  transition: transform var(--transition-fast);
+}
+
+.navItem:hover .navIcon {
+  transform: scale(1.05);
+}
+
+.navItem.active .navIcon {
+  color: var(--color-orange);
+}
+
+.activeIndicator {
+  position: absolute;
+  left: 0;
+  top: 25%;
+  height: 50%;
+  width: 4px;
+  background: linear-gradient(to bottom, var(--color-orange), var(--color-crimson));
+  border-radius: 0 4px 4px 0;
+  box-shadow: 0 0 10px rgba(255, 90, 54, 0.8);
+}
+
+.footerSection {
+  border-top: 1px solid var(--glass-border);
+  padding-top: 16px;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+}
+
+.userInfo {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.avatar {
+  width: 32px;
+  height: 32px;
+  border-radius: var(--border-radius-full);
+  object-fit: cover;
+  border: 2px solid var(--glass-border);
+}
+
+.userDetails {
+  display: flex;
+  flex-direction: column;
+}
+
+.userName {
+  font-weight: 600;
+  font-size: 0.85rem;
+  color: var(--text-primary);
+}
+
+.userRole {
+  font-size: 0.7rem;
+  color: var(--text-muted);
+}
+
+.logoutBtn {
+  background: transparent;
+  border: none;
+  color: var(--text-muted);
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 8px;
+  border-radius: var(--border-radius-sm);
+  transition: all var(--transition-fast);
+}
+
+.logoutBtn:hover {
+  color: var(--color-crimson);
+  background-color: rgba(230, 30, 67, 0.05);
+}
+
+/* Recent Projects Section in Sidebar */
+.recentSection {
+  margin-top: 20px;
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+
+.recentDivider {
+  height: 1px;
+  background-color: var(--glass-border);
+  margin-bottom: 2px;
+}
+
+.recentHeader {
+  font-family: var(--font-mono);
+  font-size: 0.6rem;
+  font-weight: 700;
+  text-transform: uppercase;
+  color: var(--text-muted);
+  letter-spacing: 1.5px;
+  padding-left: 14px;
+}
+
+.recentList {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+
+.recentItem {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  background: transparent;
+  border: 1px solid transparent;
+  color: var(--text-secondary);
+  padding: 8px 12px;
+  border-radius: var(--border-radius-md);
+  cursor: pointer;
+  font-family: var(--font-sans);
+  font-weight: 500;
+  font-size: 0.8rem;
+  text-align: left;
+  transition: all var(--transition-fast);
+  width: 100%;
+}
+
+.recentItem:hover {
+  color: var(--text-primary);
+  background-color: var(--hover-bg-item);
+}
+
+.recentDot {
+  width: 8px;
+  height: 8px;
+  border-radius: 50%;
+  flex-shrink: 0;
+}
+
+.recentDot.scanned {
+  background-color: var(--status-scanned);
+  box-shadow: 0 0 6px var(--status-scanned);
+}
+
+.recentDot.designing {
+  background-color: var(--status-designing);
+  box-shadow: 0 0 6px var(--status-designing);
+}
+
+.recentDot.completed {
+  background-color: var(--status-completed);
+  box-shadow: 0 0 6px var(--status-completed);
+}
+
+.recentName {
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  flex-grow: 1;
+}
+

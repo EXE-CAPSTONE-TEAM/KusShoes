@@ -1,0 +1,115 @@
+:root {
+  /* Fonts */
+  --font-sans: 'Outfit', 'Inter', system-ui, -apple-system, sans-serif;
+  --font-mono: 'Space Mono', 'Fira Code', monospace;
+
+  /* Color Palette - Streetwear Dark System */
+  --bg-primary: #0A0A0C;       /* Slate Black */
+  --bg-secondary: #121215;     /* Dark Charcoal */
+  --bg-tertiary: #1A1A1E;      /* Medium Gray */
+  
+  /* Accent Colors (Sunset Orange & Crimson Red) */
+  --color-orange: #FF5A36;
+  --color-orange-rgb: 255, 90, 54;
+  --color-crimson: #E61E43;
+  --color-crimson-rgb: 230, 30, 67;
+  
+  /* Text Colors */
+  --text-primary: #FFFFFF;
+  --text-secondary: #9A9AA2;
+  --text-muted: #62626A;
+  
+  /* Status Colors */
+  --status-scanned: #36D399;   /* Green */
+  --status-designing: #FBBD23; /* Yellow */
+  --status-completed: #38BDF8; /* Blue */
+
+  /* Glassmorphism & Borders */
+  --glass-bg: rgba(26, 26, 30, 0.45);
+  --glass-border: rgba(255, 255, 255, 0.06);
+  --glass-border-hover: rgba(255, 90, 54, 0.2);
+  --border-glow: 0 0 15px rgba(255, 90, 54, 0.15);
+  
+  /* Borders */
+  --border-radius-sm: 8px;
+  --border-radius-md: 12px;
+  --border-radius-lg: 18px;
+  --border-radius-full: 9999px;
+
+  /* Transitions */
+  --transition-fast: 0.2s cubic-bezier(0.16, 1, 0.3, 1);
+  --transition-normal: 0.3s cubic-bezier(0.16, 1, 0.3, 1);
+  --transition-slow: 0.5s cubic-bezier(0.16, 1, 0.3, 1);
+
+  /* Shadows */
+  --shadow-sm: 0 2px 8px rgba(0, 0, 0, 0.5);
+  --shadow-md: 0 8px 24px rgba(0, 0, 0, 0.6);
+  --shadow-lg: 0 16px 40px rgba(0, 0, 0, 0.8);
+  --shadow-neon: 0 0 20px rgba(255, 90, 54, 0.25);
+
+  /* Hover List Items Overlay */
+  --hover-bg-item: rgba(255, 255, 255, 0.03);
+
+  /* Theme-aware subcontainer background colors */
+  --card-info-bg: rgba(18, 18, 21, 0.35);
+  --table-header-bg: rgba(11, 11, 12, 0.4);
+  --dropdown-bg: rgba(18, 18, 21, 0.95);
+  --subcontainer-bg: rgba(11, 11, 12, 0.6);
+  --grid-item-bg: rgba(255, 255, 255, 0.02);
+
+  /* Decorative Grid Line color */
+  --grid-line-color: rgba(255, 255, 255, 0.02);
+}
+
+/* Light Theme Overrides (Warm Premium Paper/Cream Aesthetic) */
+[data-theme="light"] {
+  --bg-primary: #FAF9F6;
+  --bg-secondary: #F3F1EC;
+  --bg-tertiary: #EBE8E2;
+
+  --text-primary: #121215;
+  --text-secondary: #62626A;
+  --text-muted: #8A8A93;
+
+  --glass-bg: rgba(243, 241, 236, 0.7);
+  --glass-border: rgba(18, 18, 21, 0.08);
+  --glass-border-hover: rgba(255, 90, 54, 0.35);
+  --border-glow: 0 0 15px rgba(255, 90, 54, 0.1);
+
+  --shadow-sm: 0 2px 8px rgba(18, 18, 21, 0.06);
+  --shadow-md: 0 8px 24px rgba(18, 18, 21, 0.08);
+  --shadow-lg: 0 16px 40px rgba(18, 18, 21, 0.12);
+  --shadow-neon: 0 0 20px rgba(255, 90, 54, 0.15);
+
+  --hover-bg-item: rgba(0, 0, 0, 0.03);
+
+  /* Light Theme overrides for subcontainers */
+  --card-info-bg: rgba(243, 241, 236, 0.85);
+  --table-header-bg: rgba(18, 18, 21, 0.04);
+  --dropdown-bg: rgba(243, 241, 236, 0.98);
+  --subcontainer-bg: rgba(243, 241, 236, 0.9);
+  --grid-item-bg: rgba(18, 18, 21, 0.02);
+
+  /* Decorative Grid Line color */
+  --grid-line-color: rgba(18, 18, 21, 0.025);
+}
+
+
+/* Scrollbar Customization */
+::-webkit-scrollbar {
+  width: 6px;
+  height: 6px;
+}
+
+::-webkit-scrollbar-track {
+  background: var(--bg-primary);
+}
+
+::-webkit-scrollbar-thumb {
+  background: var(--bg-tertiary);
+  border-radius: var(--border-radius-full);
+}
+
+::-webkit-scrollbar-thumb:hover {
+  background: var(--color-orange);
+}

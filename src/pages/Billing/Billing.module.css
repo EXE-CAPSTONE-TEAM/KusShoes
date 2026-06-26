@@ -1,0 +1,453 @@
+.container {
+  flex-grow: 1;
+  padding: 40px;
+  max-width: 1400px;
+  margin: 0 auto;
+  display: flex;
+  flex-direction: column;
+  gap: 32px;
+  overflow-y: auto;
+  height: 100vh;
+}
+
+/* Header */
+.title {
+  font-family: 'Space Grotesk', sans-serif;
+  font-size: 2.2rem;
+  font-weight: 800;
+  letter-spacing: -0.5px;
+}
+
+.subtitle {
+  color: var(--text-secondary);
+  font-size: 0.95rem;
+  margin-top: 4px;
+}
+
+/* Main Grid Layout */
+.mainGrid {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 28px;
+  align-items: start;
+}
+
+.leftCol {
+  display: flex;
+  flex-direction: column;
+  gap: 28px;
+}
+
+/* Active Plan Card */
+.planCard {
+  padding: 32px;
+  border-radius: var(--border-radius-lg);
+  display: flex;
+  flex-direction: column;
+  gap: 20px;
+}
+
+.planHeader {
+  display: flex;
+  justify-content: space-between;
+  align-items: flex-start;
+}
+
+.planBadge {
+  background: rgba(255, 90, 54, 0.1);
+  color: var(--color-orange);
+  border: 1px solid rgba(255, 90, 54, 0.25);
+  font-family: var(--font-mono);
+  font-size: 0.7rem;
+  font-weight: 700;
+  padding: 4px 10px;
+  border-radius: var(--border-radius-sm);
+  letter-spacing: 0.5px;
+  display: inline-block;
+  margin-bottom: 8px;
+}
+
+.planName {
+  font-family: 'Space Grotesk', sans-serif;
+  font-size: 1.8rem;
+  font-weight: 700;
+}
+
+.planPriceInfo {
+  text-align: right;
+}
+
+.planPrice {
+  font-family: 'Space Grotesk', sans-serif;
+  font-size: 2.2rem;
+  font-weight: 800;
+}
+
+.planPeriod {
+  color: var(--text-muted);
+  font-size: 0.9rem;
+}
+
+.planDesc {
+  color: var(--text-secondary);
+  line-height: 1.6;
+}
+
+.planMeta {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+  border-top: 1px solid var(--glass-border);
+  border-bottom: 1px solid var(--glass-border);
+  padding: 16px 0;
+}
+
+.metaItem {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  font-size: 0.9rem;
+}
+
+.metaIcon {
+  color: var(--text-muted);
+}
+
+.planActions {
+  display: flex;
+  gap: 16px;
+}
+
+/* Quotas Card */
+.quotaCard {
+  padding: 32px;
+  border-radius: var(--border-radius-md);
+  display: flex;
+  flex-direction: column;
+  gap: 20px;
+}
+
+.quotaHeader {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+}
+
+.quotaTitle {
+  font-family: 'Space Grotesk', sans-serif;
+  font-size: 1.2rem;
+  font-weight: 700;
+}
+
+.quotaIcon {
+  color: var(--text-muted);
+}
+
+.progressContainer {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+
+.progressLabels {
+  display: flex;
+  justify-content: space-between;
+  font-size: 0.85rem;
+  color: var(--text-secondary);
+}
+
+.progressBarBg {
+  height: 8px;
+  background-color: var(--bg-primary);
+  border-radius: var(--border-radius-full);
+  overflow: hidden;
+  border: 1px solid var(--glass-border);
+}
+
+.progressBarFill {
+  height: 100%;
+  background: linear-gradient(95deg, var(--color-orange), var(--color-crimson));
+  box-shadow: 0 0 10px rgba(255, 90, 54, 0.4);
+  border-radius: var(--border-radius-full);
+}
+
+.quotaInfoList {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+  border-top: 1px solid var(--glass-border);
+  padding-top: 16px;
+}
+
+.quotaInfoItem {
+  display: flex;
+  justify-content: space-between;
+  font-size: 0.85rem;
+  color: var(--text-secondary);
+}
+
+/* Invoices list panel */
+.rightCol {
+  padding: 32px;
+  border-radius: var(--border-radius-lg);
+  display: flex;
+  flex-direction: column;
+  gap: 24px;
+}
+
+.invoiceHeader {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+}
+
+.invoiceTitle {
+  font-family: 'Space Grotesk', sans-serif;
+  font-size: 1.2rem;
+  font-weight: 700;
+}
+
+.invoiceHelpBtn {
+  background: transparent;
+  border: none;
+  color: var(--text-muted);
+  font-size: 0.85rem;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  font-family: var(--font-sans);
+}
+
+.invoiceHelpBtn:hover {
+  color: var(--text-primary);
+}
+
+.table {
+  width: 100%;
+  border-collapse: collapse;
+  text-align: left;
+}
+
+.table th {
+  color: var(--text-muted);
+  font-size: 0.85rem;
+  font-weight: 600;
+  padding-bottom: 16px;
+  border-bottom: 1px solid var(--glass-border);
+}
+
+.table td {
+  padding: 20px 0;
+  font-size: 0.9rem;
+  border-bottom: 1px solid rgba(255, 255, 255, 0.02);
+}
+
+.invId {
+  font-family: var(--font-mono);
+  font-weight: 700;
+  color: var(--text-primary);
+}
+
+.statusBadge {
+  font-family: var(--font-mono);
+  font-size: 0.7rem;
+  font-weight: 700;
+  padding: 4px 8px;
+  border-radius: var(--border-radius-sm);
+}
+
+.statusBadge.paid {
+  background-color: rgba(54, 211, 153, 0.1);
+  color: var(--status-scanned);
+  border: 1px solid rgba(54, 211, 153, 0.15);
+}
+
+.downloadBtn {
+  background: transparent;
+  border: none;
+  color: var(--color-orange);
+  font-size: 0.85rem;
+  font-weight: 600;
+  cursor: pointer;
+  font-family: var(--font-sans);
+}
+
+.downloadBtn:hover {
+  text-decoration: underline;
+}
+
+/* Compare Pricing Modal */
+.modalBackdrop {
+  position: fixed;
+  top: 0;
+  left: 0;
+  width: 100vw;
+  height: 100vh;
+  background-color: rgba(0, 0, 0, 0.85);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  z-index: 1000;
+  backdrop-filter: blur(8px);
+  padding: 20px;
+}
+
+.upgradeModal {
+  width: 1100px;
+  max-width: 100%;
+  padding: 40px;
+  border-radius: var(--border-radius-lg);
+  display: flex;
+  flex-direction: column;
+  gap: 32px;
+  background: rgba(18, 18, 21, 0.98);
+  box-shadow: var(--shadow-lg);
+  position: relative;
+  overflow-y: auto;
+  max-height: 90vh;
+}
+
+.modalCloseHeader {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+}
+
+.compareTitle {
+  font-family: 'Space Grotesk', sans-serif;
+  font-size: 1.8rem;
+  font-weight: 800;
+}
+
+.closeBtn {
+  background: transparent;
+  border: none;
+  color: var(--text-muted);
+  cursor: pointer;
+  padding: 8px;
+  border-radius: var(--border-radius-full);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  transition: all var(--transition-fast);
+}
+
+.closeBtn:hover {
+  color: var(--text-primary);
+  background-color: rgba(255, 255, 255, 0.05);
+}
+
+.pricingGrid {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 24px;
+}
+
+.priceCard {
+  padding: 32px;
+  border-radius: var(--border-radius-md);
+  display: flex;
+  flex-direction: column;
+  position: relative;
+  transition: all var(--transition-normal);
+}
+
+.popularCard {
+  border-color: var(--color-orange);
+  background: rgba(255, 90, 54, 0.03);
+  box-shadow: 0 0 30px rgba(255, 90, 54, 0.1);
+}
+
+.popularBadge {
+  position: absolute;
+  top: -12px;
+  left: 50%;
+  transform: translateX(-50%);
+  background: linear-gradient(135deg, var(--color-orange) 0%, var(--color-crimson) 100%);
+  color: var(--text-primary);
+  font-family: var(--font-mono);
+  font-size: 0.65rem;
+  font-weight: 800;
+  padding: 4px 12px;
+  border-radius: var(--border-radius-full);
+  letter-spacing: 0.5px;
+  box-shadow: 0 4px 10px rgba(255, 90, 54, 0.4);
+}
+
+.tierName {
+  font-family: 'Space Grotesk', sans-serif;
+  font-size: 1.25rem;
+  font-weight: 700;
+}
+
+.priceContainer {
+  display: flex;
+  align-items: baseline;
+  margin: 16px 0 8px;
+}
+
+.tierPrice {
+  font-family: 'Space Grotesk', sans-serif;
+  font-size: 2.6rem;
+  font-weight: 800;
+}
+
+.tierPeriod {
+  color: var(--text-muted);
+  font-size: 0.95rem;
+  margin-left: 4px;
+}
+
+.tierDesc {
+  color: var(--text-secondary);
+  font-size: 0.85rem;
+  line-height: 1.4;
+  margin-bottom: 24px;
+}
+
+.divider {
+  height: 1px;
+  background-color: var(--glass-border);
+  margin-bottom: 24px;
+}
+
+.featureList {
+  list-style: none;
+  display: flex;
+  flex-direction: column;
+  gap: 14px;
+  margin-bottom: 32px;
+  flex-grow: 1;
+}
+
+.featureItem {
+  display: flex;
+  align-items: flex-start;
+  gap: 12px;
+  font-size: 0.85rem;
+  color: var(--text-secondary);
+  line-height: 1.3;
+}
+
+.checkIcon {
+  color: var(--color-orange);
+  margin-top: 2px;
+  flex-shrink: 0;
+}
+
+.pricingCta {
+  width: 100%;
+  justify-content: center;
+  font-size: 0.9rem;
+}
+
+@media (max-width: 1000px) {
+  .mainGrid {
+    grid-template-columns: 1fr;
+  }
+  .pricingGrid {
+    grid-template-columns: 1fr;
+    gap: 32px;
+  }
+}

@@ -1,0 +1,127 @@
+.navbar {
+  position: fixed;
+  top: 20px;
+  left: 50%;
+  transform: translateX(-50%);
+  width: calc(100% - 80px);
+  max-width: 1400px;
+  height: 70px;
+  padding: 0 32px;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  border-radius: var(--border-radius-md);
+  z-index: 1000;
+  background: var(--glass-bg);
+  backdrop-filter: blur(16px);
+  -webkit-backdrop-filter: blur(16px);
+  border: 1px solid var(--glass-border);
+}
+
+.navBrand {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  cursor: pointer;
+}
+
+.logoIndicator {
+  width: 12px;
+  height: 12px;
+  background: linear-gradient(135deg, var(--color-orange), var(--color-crimson));
+  border-radius: 50%;
+  box-shadow: 0 0 10px var(--color-orange);
+}
+
+.logoText {
+  font-family: 'Space Grotesk', sans-serif;
+  font-weight: 700;
+  letter-spacing: 1.5px;
+  font-size: 1.1rem;
+}
+
+.navLinks {
+  display: flex;
+  gap: 32px;
+}
+
+.navLinks a {
+  color: var(--text-secondary);
+  text-decoration: none;
+  font-family: var(--font-sans);
+  font-weight: 500;
+  font-size: 0.95rem;
+  transition: color var(--transition-fast);
+}
+
+.navLinks a:hover {
+  color: var(--text-primary);
+}
+
+.activeLink {
+  color: var(--color-orange) !important;
+  text-shadow: 0 0 8px rgba(255, 90, 54, 0.4);
+}
+
+.navActions {
+  display: flex;
+  align-items: center;
+  gap: 20px;
+}
+
+.loginLink {
+  background: transparent;
+  border: none;
+  color: var(--text-secondary);
+  font-family: var(--font-sans);
+  font-weight: 600;
+  font-size: 0.95rem;
+  cursor: pointer;
+  transition: color var(--transition-fast);
+}
+
+.loginLink:hover {
+  color: var(--text-primary);
+}
+
+/* Responsive elements */
+@media (max-width: 768px) {
+  .navbar {
+    width: calc(100% - 32px);
+    padding: 0 16px;
+  }
+  .navLinks {
+    display: none;
+  }
+}
+
+.themeToggleBtn {
+  background: transparent;
+  border: 1px solid var(--glass-border);
+  color: var(--text-secondary);
+  width: 36px;
+  height: 36px;
+  border-radius: var(--border-radius-sm);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  cursor: pointer;
+  transition: all var(--transition-fast);
+}
+
+.themeToggleBtn:hover {
+  color: var(--text-primary);
+  border-color: var(--color-orange);
+  background-color: var(--hover-bg-item);
+  box-shadow: 0 0 10px rgba(255, 90, 54, 0.15);
+  transform: scale(1.05);
+}
+
+.themeToggleBtn:active {
+  transform: scale(0.95);
+}
+
+.themeIcon {
+  transition: transform var(--transition-normal);
+}
+
