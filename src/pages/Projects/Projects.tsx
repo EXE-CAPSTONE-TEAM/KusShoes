@@ -1,4 +1,5 @@
 import React, { useState, useRef, useMemo } from 'react';
+import { api } from '../../api/client';
 import { 
   Search, Plus, MoreVertical, Trash2, Edit3, Share2, 
   Globe, EyeOff, Link, Grid, List, Check, X, ArrowRight, 
@@ -207,48 +208,40 @@ export const Projects: React.FC<ProjectsProps> = ({
   };
 
   // Finalize Wizard & Create project
-  const handleCreateProjectFinal = () => {
+  const handleCreateProjectFinal = async () => {
     setWizardDesktopStatus('packaging');
-    setTimeout(() => {
-      setWizardDesktopStatus('launched');
-      
-      // Assemble new project object
-      const sourceScan = wizardSource === 'cloud' 
-        ? mockCloudScans.find(s => s.id === selectedCloudScan) 
-        : null;
-        
-      const newProj: Project = {
-        id: Date.now().toString(),
+    try {
+      const created = await api.createProject({
         name: wizardName,
-        baseModel: wizardBaseModel || 'Custom Sneaker Base',
-        status: 'Designing', // Starts directly in Designing since we locked it on desktop
-        visibility: wizardVisibility,
-        updatedAt: 'Just now',
-        imageUrl: wizardSource === 'cloud' 
-          ? 'https://images.unsplash.com/photo-1542291026-7eec264c27ff?auto=format&fit=crop&w=300&q=80'
-          : 'https://images.unsplash.com/photo-1608231387042-66d1773070a5?auto=format&fit=crop&w=300&q=80',
-        device: sourceScan?.device || 'Desktop Upload',
-        fileSize: sourceScan?.size || (uploadedFile ? `${(uploadedFile.size / (1024 * 1024)).toFixed(1)} MB` : '15.4 MB'),
-        photosCount: sourceScan?.photos || 0,
-        verticesCount: '280.000 points',
-        colorCode: '#FF5A36', // Default Sneaker Flow Orange
-        description: 'New custom design project synced directly to KusStudio Desktop. Buffers packaged from Cloud Vault.',
-      };
+        sourceType: wizardSource === 'cloud' ? 'scan' : 'uploaded_glb',
+      });
 
-      setProjects(prev => [newProj, ...prev]);
-      
+      setWizardDesktopStatus('launched');
+
+      // Get auth token for deep link authentication sync
+      const authRes = await api.getAuthToken();
+      const token = authRes.accessToken;
+
+      // Trigger custom protocol deep link to launch Tauri app
+      const deepLink = `kusshoes-editor://editor/${created.id}?token=${token}`;
+      window.location.href = deepLink;
+
+      // Reset and close modal after launch trigger
       setTimeout(() => {
-        // Reset and close modal
         setIsCreateWizardOpen(false);
         setWizardStep(1);
         setWizardName('');
         setWizardBaseModel('');
         setWizardDesktopStatus('idle');
         setUploadedFile(null);
-        alert(`New Project "${wizardName}" successfully added and synced to KusStudio Desktop client!`);
+        alert(`Project "${wizardName}" successfully created! Triggered KusStudio Desktop client deep link.`);
       }, 1000);
-      
-    }, 2000);
+
+    } catch (err: any) {
+      console.error("Failed to create project and launch desktop client:", err);
+      setWizardDesktopStatus('idle');
+      alert(`Error launching desktop client: ${err.message || err}`);
+    }
   };
 
   // Reset Wizard

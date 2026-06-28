@@ -1,4 +1,5 @@
 import { useState, useEffect } from 'react';
+import { api } from './api/client';
 import { Landing } from './pages/Landing/Landing';
 import { Login } from './pages/Login/Login';
 import { PricingPage } from './pages/PricingPage/PricingPage';
@@ -177,6 +178,44 @@ function App() {
       description: 'Soft cream tones on leather panels. Raw reconstructed mesh containing full vertex normals.',
     },
   ]);
+
+  const mapBackendStatus = (backendStatus: string): 'Scanned' | 'Designing' | 'Completed' => {
+    if (backendStatus === 'ready') return 'Completed';
+    if (backendStatus === 'processing' || backendStatus === 'draft') return 'Designing';
+    return 'Scanned';
+  };
+
+  const convertBackendProjectToFrontend = (bp: any): Project => {
+    return {
+      id: bp.id,
+      name: bp.name,
+      baseModel: bp.baseModel || 'Custom Sneaker Base',
+      status: mapBackendStatus(bp.status),
+      visibility: 'Private',
+      updatedAt: bp.updatedAt ? new Date(bp.updatedAt).toLocaleDateString() : 'Just now',
+      imageUrl: bp.thumbnailUrl || 'https://images.unsplash.com/photo-1542291026-7eec264c27ff?auto=format&fit=crop&w=300&q=80',
+      device: bp.device || 'Mobile Scan',
+      fileSize: bp.fileSize || '15.4 MB',
+      photosCount: bp.photosCount || 45,
+      verticesCount: bp.verticesCount || '280.000 points',
+      colorCode: bp.colorCode || '#FF5A36',
+      description: bp.description || 'Project synced from Cloud Vault.',
+    };
+  };
+
+  // Load real projects from Backend
+  useEffect(() => {
+    if (!isPortalView) return;
+
+    api.listProjects()
+      .then((res) => {
+        const mapped = res.items.map(convertBackendProjectToFrontend);
+        setProjects(mapped);
+      })
+      .catch((err) => {
+        console.error("Failed to load projects from Backend API:", err);
+      });
+  }, [activePage]);
 
   // Intercept state changes and push history
   const navigate = (pageOrPath: string) => {

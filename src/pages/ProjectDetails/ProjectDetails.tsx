@@ -1,4 +1,5 @@
 import React, { useState, useEffect, useRef } from 'react';
+import { api } from '../../api/client';
 import { 
   ArrowLeft, Laptop, RefreshCw, Check, Download, FileText, 
   Globe, Link, EyeOff, Terminal, Share2, UserPlus, X, ChevronDown
@@ -128,38 +129,40 @@ export const ProjectDetails: React.FC<ProjectDetailsProps> = ({
     ] : []);
   }, [project]);
 
-  const handleLaunchKusStudio = () => {
+  const handleLaunchKusStudio = async () => {
     if (syncStatus === 'connecting') return;
     setSyncStatus('connecting');
-    setLogs([]);
+    setLogs([`[${new Date().toLocaleTimeString()}] Querying secure session token...`]);
 
-    const logSteps = [
-      'Pinging KusStudio daemon on port 8421...',
-      'Connection established with localhost:8421 (WS protocol).',
-      'Handshaking secure local daemon socket token...',
-      `Verifying workspace file structures for "${project.name}"...`,
-      `Packaging reconstruction vertex buffers (${project.fileSize})...`,
-      `Streaming photogrammetry assets (${project.photosCount} files)...`,
-      'Buffers synchronized. Temporary read/write lock acquired.',
-      'Launching KusStudio Desktop application...',
-      'Desktop window active. Sneaker Flow Portal lock engaged.'
-    ];
+    try {
+      const authRes = await api.getAuthToken();
+      const token = authRes.accessToken;
+      const timeStr1 = new Date().toLocaleTimeString();
+      setLogs(prev => [...prev, `[${timeStr1}] Token generated. Syncing buffers...`]);
 
-    let stepIndex = 0;
-    const interval = setInterval(() => {
-      if (stepIndex < logSteps.length) {
-        const timeStr = new Date().toLocaleTimeString();
-        setLogs(prev => [...prev, `[${timeStr}] ${logSteps[stepIndex]}`]);
-        stepIndex++;
-      } else {
-        clearInterval(interval);
+      const deepLink = `kusshoes-editor://editor/${project.id}?token=${token}`;
+      
+      const timeStr2 = new Date().toLocaleTimeString();
+      setLogs(prev => [...prev, `[${timeStr2}] Requesting KusStudio launch via deep link...`]);
+      
+      window.location.href = deepLink;
+
+      setTimeout(() => {
+        const timeStr3 = new Date().toLocaleTimeString();
+        setLogs(prev => [...prev, `[${timeStr3}] App launched. Workspace session locked.`]);
         setSyncStatus('launched');
-        // Update parent projects list state
         setProjects(prev => 
           prev.map(p => p.id === project.id ? { ...p, status: 'Designing', updatedAt: 'Just now' } : p)
         );
-      }
-    }, 600);
+      }, 1500);
+
+    } catch (err: any) {
+      console.error("Failed to launch KusStudio Desktop:", err);
+      const timeStrErr = new Date().toLocaleTimeString();
+      setLogs(prev => [...prev, `[${timeStrErr}] Error: ${err.message || err}`]);
+      setSyncStatus('idle');
+      alert(`Could not launch Desktop app: ${err.message || err}`);
+    }
   };
 
   const handleResetConnection = () => {

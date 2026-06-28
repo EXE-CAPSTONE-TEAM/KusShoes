@@ -272,6 +272,18 @@ export const api = {
 
     downloadBlob(await response.blob(), filename);
   },
+
+  async listProjects(): Promise<{ items: any[] }> {
+    return request<{ items: any[] }>("/api/projects");
+  },
+
+  async getAuthToken(): Promise<{ accessToken: string }> {
+    return request<{ accessToken: string }>("/api/auth/token");
+  },
+
+  async getProjectExports(projectId: string): Promise<{ items: any[] }> {
+    return request<{ items: any[] }>(`/api/projects/${projectId}/exports`);
+  },
 };
 
 export type ModelImportPayload = {
