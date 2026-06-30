@@ -123,7 +123,7 @@ export const Dashboard: React.FC<{ setActivePage: (page: string) => void }> = ({
               <RefreshCw className={`${styles.icon} ${syncing ? styles.spin : ''}`} size={18} />
               {syncing ? 'Syncing assets...' : 'Sync Cloud Scan'}
             </button>
-            <button className="btn-outline" onClick={() => alert('Downloading Sneaker Flow Desktop v1.4.2')}>
+            <button className="btn-outline" onClick={() => alert('Downloading KusShoes Desktop v1.4.2')}>
               <Download size={18} />
               Get Desktop App
             </button>

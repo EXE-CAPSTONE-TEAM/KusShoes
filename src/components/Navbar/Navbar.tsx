@@ -1,4 +1,4 @@
-import React from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import { Sun, Moon } from 'lucide-react';
 import { useTheme } from '../../context/ThemeContext';
 import styles from './Navbar.module.css';
@@ -10,6 +10,22 @@ interface NavbarProps {
 
 export const Navbar: React.FC<NavbarProps> = ({ navigate, currentPage }) => {
   const { theme, toggleTheme } = useTheme();
+  const [hidden, setHidden] = useState(false);
+  const lastScrollY = useRef(0);
+
+  useEffect(() => {
+    const handleScroll = () => {
+      const currentY = window.scrollY;
+      if (currentY > lastScrollY.current && currentY > 80) {
+        setHidden(true);
+      } else {
+        setHidden(false);
+      }
+      lastScrollY.current = currentY;
+    };
+    window.addEventListener('scroll', handleScroll, { passive: true });
+    return () => window.removeEventListener('scroll', handleScroll);
+  }, []);
 
   
   const handleScrollLink = (e: React.MouseEvent<HTMLAnchorElement>, targetId: string) => {
@@ -52,10 +68,9 @@ export const Navbar: React.FC<NavbarProps> = ({ navigate, currentPage }) => {
   };
 
   return (
-    <header className={`${styles.navbar} glass-panel`}>
+    <header className={`${styles.navbar} ${hidden ? styles.navbarHidden : ''} glass-panel`}>
       <div className={styles.navBrand} onClick={() => navigate('/')}>
-        <div className={styles.logoIndicator} />
-        <span className={styles.logoText}>SNEAKER FLOW</span>
+        <img src="/KusShoes_Logo_cropped.png" alt="KusShoes" className={styles.logoImage} />
       </div>
       <nav className={styles.navLinks}>
         {/* Products Dropdown */}

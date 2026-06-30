@@ -380,7 +380,7 @@ export const Settings: React.FC = () => {
                     <div className={styles.formSectionGroup}>
                       <h4 className={styles.formGroupTitle}>Theme Preferences</h4>
                       <p className={styles.inputLabelDesc} style={{ marginBottom: '16px' }}>
-                        Choose the primary look and feel for your Sneaker Flow workspace.
+                        Choose the primary look and feel for your KusShoes workspace.
                       </p>
                       
                       <div className={styles.themeSelectorGrid}>
@@ -536,7 +536,7 @@ export const Settings: React.FC = () => {
                       {[
                         { value: 'private', title: 'Private', desc: 'Only visible to you and your synced desktop client.' },
                         { value: 'link', title: 'Shareable Link', desc: 'Anyone with the secure preview URL can rotate the shoe model.' },
-                        { value: 'public', title: 'Public Community', desc: 'Discoverable in the Sneaker Flow community showcase.' },
+                        { value: 'public', title: 'Public Community', desc: 'Discoverable in the KusShoes community showcase.' },
                       ].map((option) => (
                         <div 
                           key={option.value} 
@@ -582,7 +582,7 @@ export const Settings: React.FC = () => {
                       type="button" 
                       className={styles.deleteAccountBtn}
                       onClick={() => {
-                        if (confirm('CRITICAL WARNING: Are you absolutely sure you want to permanently delete your Sneaker Flow account? All 3D cloud data will be lost.')) {
+                        if (confirm('CRITICAL WARNING: Are you absolutely sure you want to permanently delete your KusShoes account? All 3D cloud data will be lost.')) {
                           alert('Account deletion request initiated.');
                         }
                       }}

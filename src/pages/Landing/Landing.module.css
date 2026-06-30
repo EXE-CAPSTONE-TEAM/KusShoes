@@ -11,41 +11,57 @@
   transition: background-color var(--transition-normal);
 }
 
-/* Background glowing gradient spots */
-.bgGlow1 {
-  position: absolute;
-  top: 5%;
-  left: -10%;
-  width: 600px;
-  height: 600px;
-  background: radial-gradient(circle, rgba(255, 90, 54, 0.09) 0%, transparent 70%);
-  z-index: 0;
+/* Corner spotlights — fixed so they stay in viewport while scrolling */
+.cornerTL,
+.cornerTR,
+.cornerBL,
+.cornerBR {
+  position: fixed;
+  width: 55vw;
+  height: 55vh;
   pointer-events: none;
-  filter: blur(50px);
-}
-
-.bgGlow2 {
-  position: absolute;
-  top: 40%;
-  right: -10%;
-  width: 700px;
-  height: 700px;
-  background: radial-gradient(circle, rgba(230, 30, 67, 0.06) 0%, transparent 70%);
   z-index: 0;
-  pointer-events: none;
   filter: blur(60px);
 }
 
-.bgGlow3 {
-  position: absolute;
-  bottom: 10%;
-  left: 10%;
-  width: 500px;
-  height: 500px;
-  background: radial-gradient(circle, rgba(255, 90, 54, 0.05) 0%, transparent 70%);
-  z-index: 0;
-  pointer-events: none;
-  filter: blur(40px);
+.cornerTL {
+  top: 0;
+  left: 0;
+  background: radial-gradient(ellipse at top left,
+    rgba(255, 90, 54, 0.22) 0%,
+    rgba(255, 90, 54, 0.08) 40%,
+    transparent 70%);
+}
+
+.cornerTR {
+  top: 0;
+  right: 0;
+  background: radial-gradient(ellipse at top right,
+    rgba(255, 90, 54, 0.20) 0%,
+    rgba(255, 90, 54, 0.07) 40%,
+    transparent 70%);
+}
+
+.cornerBL {
+  bottom: 0;
+  left: 0;
+  background: radial-gradient(ellipse at bottom left,
+    rgba(255, 90, 54, 0.20) 0%,
+    rgba(255, 90, 54, 0.07) 40%,
+    transparent 70%);
+}
+
+.cornerBR {
+  bottom: 0;
+  right: 0;
+  background: radial-gradient(ellipse at bottom right,
+    rgba(255, 90, 54, 0.22) 0%,
+    rgba(255, 90, 54, 0.08) 40%,
+    transparent 70%);
+}
+
+.vignette {
+  display: none;
 }
 
 /* Navbar */

@@ -181,10 +181,13 @@ export const Landing: React.FC<LandingProps> = ({ navigate }) => {
       {/* Interactive mouse particle grid */}
       <InteractiveParticleGrid />
 
-      {/* Background ambient glowing lights */}
-      <div className={styles.bgGlow1} />
-      <div className={styles.bgGlow2} />
-      <div className={styles.bgGlow3} />
+      {/* Corner spotlights */}
+      <div className={styles.cornerTL} />
+      <div className={styles.cornerTR} />
+      <div className={styles.cornerBL} />
+      <div className={styles.cornerBR} />
+      {/* Vignette: darkens edges, focuses eye on center */}
+      <div className={styles.vignette} />
 
       {/* Topographic Contour Waves */}
       <div className={styles.topoLeft}>
@@ -239,7 +242,7 @@ export const Landing: React.FC<LandingProps> = ({ navigate }) => {
       {/* Products Showcase Section */}
       <section id="products" className={styles.productsSection}>
         <div className={styles.sectionHeader}>
-          <h2 className={styles.sectionTitle}>Sneaker Flow Products</h2>
+          <h2 className={styles.sectionTitle}>KusShoes Products</h2>
           <p className={styles.sectionSubtitle}>Seamlessly transition from mobile capture to full-fledged desktop design workspace.</p>
         </div>
 
@@ -387,7 +390,7 @@ export const Landing: React.FC<LandingProps> = ({ navigate }) => {
       {/* Pricing Section (NEW) */}
       <section id="pricing" className={styles.pricingSection}>
         <div className={styles.sectionHeader}>
-          <h2 className={styles.sectionTitle}>Sneaker Flow Pricing</h2>
+          <h2 className={styles.sectionTitle}>KusShoes Pricing</h2>
           <p className={styles.sectionSubtitle}>Choose a plan to power your shoe scans. Annual plans are billed in full.</p>
 
           {/* Toggle billing */}
@@ -465,7 +468,7 @@ export const Landing: React.FC<LandingProps> = ({ navigate }) => {
           viewport={{ once: true }}
           transition={{ duration: 0.6 }}
         >
-          <h2 className={styles.newsTitle}>Join the Sneaker Flow Beta</h2>
+          <h2 className={styles.newsTitle}>Join the KusShoes Beta</h2>
           <p className={styles.newsDesc}>
             Register your email today to receive download links for KusShoes & KusStudio once public testing starts. Get 50 free cloud scans upon launch!
           </p>

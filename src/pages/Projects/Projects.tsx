@@ -1,9 +1,9 @@
-import React, { useState, useRef, useMemo } from 'react';
+import React, { useState, useRef, useMemo, useEffect } from 'react';
 import { 
   Search, Plus, MoreVertical, Trash2, Edit3, Share2, 
   Globe, EyeOff, Link, Grid, List, Check, X, ArrowRight, 
   ArrowLeft, RefreshCw, Smartphone, Laptop, 
-  ChevronRight, Download, CheckSquare, Square, Camera, Cpu 
+  CheckSquare, Square, Camera, Cpu 
 } from 'lucide-react';
 import { motion, AnimatePresence } from 'framer-motion';
 import styles from './Projects.module.css';
@@ -28,17 +28,21 @@ interface ProjectsProps {
   projects: Project[];
   setProjects: React.Dispatch<React.SetStateAction<Project[]>>;
   onViewDetails: (id: string) => void;
+  initialFilter?: 'All' | 'Scanned' | 'Designing' | 'Completed';
 }
 
 export const Projects: React.FC<ProjectsProps> = ({
   projects,
   setProjects,
-  onViewDetails
+  onViewDetails,
+  initialFilter
 }) => {
   // View states
   const [viewMode, setViewMode] = useState<'grid' | 'list'>('grid');
   const [searchTerm, setSearchTerm] = useState('');
-  const [statusFilter, setStatusFilter] = useState<'All' | 'Scanned' | 'Designing' | 'Completed'>('All');
+  const [statusFilter, setStatusFilter] = useState<'All' | 'Scanned' | 'Designing' | 'Completed'>(
+    initialFilter || 'All'
+  );
   const [sortBy, setSortBy] = useState<'name' | 'date' | 'size'>('date');
   
   // Selection states
@@ -51,11 +55,31 @@ export const Projects: React.FC<ProjectsProps> = ({
   const [sharingProject, setSharingProject] = useState<Project | null>(null);
   const [editingProject, setEditingProject] = useState<Project | null>(null);
   const [renameValue, setRenameValue] = useState('');
+
+  // Bulk actions status dropdown state
+  const [showBulkStatusDropdown, setShowBulkStatusDropdown] = useState(false);
+
+  const handleBulkStatusChange = (status: 'Scanned' | 'Designing' | 'Completed') => {
+    setProjects(prev => prev.map(p => selectedIds.includes(p.id) ? { ...p, status } : p));
+    alert(`Updated status to ${status} for ${selectedIds.length} projects.`);
+    setSelectedIds([]);
+    setShowBulkStatusDropdown(false);
+  };
   
   // Step-Wizard (New Project) States
   const [isCreateWizardOpen, setIsCreateWizardOpen] = useState(false);
   const [wizardStep, setWizardStep] = useState<1 | 2 | 3>(1);
   const [wizardSource, setWizardSource] = useState<'cloud' | 'upload'>('cloud');
+
+  // Trigger wizard if new=true parameter is present in browser query params
+  useEffect(() => {
+    const params = new URLSearchParams(window.location.search);
+    if (params.get('new') === 'true') {
+      setIsCreateWizardOpen(true);
+      const newUrl = window.location.pathname;
+      window.history.replaceState({}, '', newUrl);
+    }
+  }, []);
   
   // Synced Cloud Scans for Step 1
   const mockCloudScans = [
@@ -106,25 +130,12 @@ export const Projects: React.FC<ProjectsProps> = ({
     return result;
   }, [projects, searchTerm, statusFilter, sortBy]);
 
-  // Bulk visibility update
-  const handleBulkVisibility = (visibility: 'Private' | 'Link' | 'Public') => {
-    setProjects(prev => prev.map(p => selectedIds.includes(p.id) ? { ...p, visibility } : p));
-    alert(`Updated visibility to ${visibility} for ${selectedIds.length} projects.`);
-    setSelectedIds([]);
-  };
-
   // Bulk delete
   const handleBulkDelete = () => {
     if (confirm(`Are you sure you want to delete the ${selectedIds.length} selected projects?`)) {
       setProjects(prev => prev.filter(p => !selectedIds.includes(p.id)));
       setSelectedIds([]);
     }
-  };
-
-  // Bulk ZIP mock export
-  const handleBulkExport = () => {
-    alert(`Packaging ${selectedIds.length} projects into a ZIP folder containing high-poly GLTF models. Starting download...`);
-    setSelectedIds([]);
   };
 
   // Single Delete
@@ -261,41 +272,56 @@ export const Projects: React.FC<ProjectsProps> = ({
 
   return (
     <div className={styles.container}>
-      {/* Contextual Bulk Action Bar */}
+      {/* Floating Action Bar (FAB) for Bulk Actions */}
       <AnimatePresence>
         {selectedIds.length > 0 && (
           <motion.div 
-            className={`${styles.bulkBar} glass-panel`}
-            initial={{ opacity: 0, y: -20 }}
-            animate={{ opacity: 1, y: 0 }}
-            exit={{ opacity: 0, y: -20 }}
-            transition={{ duration: 0.2 }}
+            className={`${styles.bulkFAB} glass-panel`}
+            initial={{ opacity: 0, y: 50, x: '-50%' }}
+            animate={{ opacity: 1, y: 0, x: '-50%' }}
+            exit={{ opacity: 0, y: 50, x: '-50%' }}
+            transition={{ type: 'spring', damping: 25, stiffness: 200 }}
           >
-            <div className={styles.bulkInfo}>
-              <CheckSquare size={18} className={styles.bulkSelectedIcon} />
-              <span>Selected <strong>{selectedIds.length}</strong> items</span>
+            <div className={styles.fabInfo}>
+              <CheckSquare size={16} className={styles.fabSelectedIcon} />
+              <span><strong>{selectedIds.length}</strong> selected</span>
             </div>
             
-            <div className={styles.bulkActions}>
-              <div className={styles.bulkVisibilitySelector}>
-                <span>Visibility:</span>
-                <button onClick={() => handleBulkVisibility('Private')}>Private</button>
-                <button onClick={() => handleBulkVisibility('Link')}>Link</button>
-                <button onClick={() => handleBulkVisibility('Public')}>Public</button>
+            <div className={styles.fabActions}>
+              <div className={styles.fabDropdownWrapper}>
+                <button 
+                  className={styles.fabBtn} 
+                  onClick={() => setShowBulkStatusDropdown(!showBulkStatusDropdown)}
+                >
+                  Change Status
+                </button>
+                <AnimatePresence>
+                  {showBulkStatusDropdown && (
+                    <motion.div 
+                      className={`${styles.fabDropdown} glass-panel`}
+                      initial={{ opacity: 0, y: 10 }}
+                      animate={{ opacity: 1, y: 0 }}
+                      exit={{ opacity: 0, y: 10 }}
+                    >
+                      <button onClick={() => handleBulkStatusChange('Scanned')}>Scanned</button>
+                      <button onClick={() => handleBulkStatusChange('Designing')}>Designing</button>
+                      <button onClick={() => handleBulkStatusChange('Completed')}>Completed</button>
+                    </motion.div>
+                  )}
+                </AnimatePresence>
               </div>
               
-              <div className={styles.bulkDivider} />
-              
-              <button className={`${styles.bulkBtn} ${styles.exportBtn}`} onClick={handleBulkExport}>
-                <Download size={14} />
-                <span>Export ZIP</span>
-              </button>
-              <button className={`${styles.bulkBtn} ${styles.deleteBtn}`} onClick={handleBulkDelete}>
-                <Trash2 size={14} />
-                <span>Delete</span>
+              <button className={`${styles.fabBtn} ${styles.fabDeleteBtn}`} onClick={handleBulkDelete}>
+                Delete
               </button>
               
-              <button className={styles.bulkCloseBtn} onClick={() => setSelectedIds([])}>
+              <div className={styles.fabDivider} />
+              
+              <button 
+                className={styles.fabCancelBtn} 
+                onClick={() => { setSelectedIds([]); setShowBulkStatusDropdown(false); }}
+                title="Cancel selection"
+              >
                 <X size={16} />
               </button>
             </div>
@@ -398,6 +424,7 @@ export const Projects: React.FC<ProjectsProps> = ({
                     {/* Image Container with overlay */}
                     <div className={styles.imgContainer}>
                       <img src={proj.imageUrl} alt={proj.name} className={styles.shoeImg} />
+                      <div className={styles.topOverlay} />
                       
                       {/* Checkbox overlay */}
                       <button 
@@ -406,16 +433,6 @@ export const Projects: React.FC<ProjectsProps> = ({
                       >
                         {isSelected ? <CheckSquare size={18} /> : <Square size={18} />}
                       </button>
-                      
-                      {/* Visibility Badge */}
-                      <div className={styles.overlayBadges}>
-                        <span className={`${styles.badge} ${styles.visibilityBadge}`}>
-                          {proj.visibility === 'Public' && <Globe size={12} />}
-                          {proj.visibility === 'Link' && <Link size={12} />}
-                          {proj.visibility === 'Private' && <EyeOff size={12} />}
-                          {proj.visibility}
-                        </span>
-                      </div>
                       
                       {/* Options button */}
                       <button
@@ -437,8 +454,41 @@ export const Projects: React.FC<ProjectsProps> = ({
                           <button onClick={() => { setSharingProject(proj); setActiveMenuId(null); }}>
                             <Share2 size={14} /> Share Link
                           </button>
+                          
                           <div className={styles.dropdownDivider} />
-                          <button className={styles.deleteBtn} onClick={() => handleDelete(proj.id)}>
+                          
+                          <div className={styles.dropdownSectionTitle}>Visibility</div>
+                          <button 
+                            className={`${styles.dropdownItem} ${proj.visibility === 'Private' ? styles.dropdownActiveItem : ''}`}
+                            onClick={() => {
+                              setProjects(prev => prev.map(p => p.id === proj.id ? { ...p, visibility: 'Private' } : p));
+                              setActiveMenuId(null);
+                            }}
+                          >
+                            <EyeOff size={14} /> Private
+                          </button>
+                          <button 
+                            className={`${styles.dropdownItem} ${proj.visibility === 'Link' ? styles.dropdownActiveItem : ''}`}
+                            onClick={() => {
+                              setProjects(prev => prev.map(p => p.id === proj.id ? { ...p, visibility: 'Link' } : p));
+                              setActiveMenuId(null);
+                            }}
+                          >
+                            <Link size={14} /> Link Share
+                          </button>
+                          <button 
+                            className={`${styles.dropdownItem} ${proj.visibility === 'Public' ? styles.dropdownActiveItem : ''}`}
+                            onClick={() => {
+                              setProjects(prev => prev.map(p => p.id === proj.id ? { ...p, visibility: 'Public' } : p));
+                              setActiveMenuId(null);
+                            }}
+                          >
+                            <Globe size={14} /> Public Showcase
+                          </button>
+                          
+                          <div className={styles.dropdownDivider} />
+                          
+                          <button className={styles.dropdownDeleteBtn} onClick={() => handleDelete(proj.id)}>
                             <Trash2 size={14} /> Delete
                           </button>
                         </div>
@@ -499,10 +549,6 @@ export const Projects: React.FC<ProjectsProps> = ({
                       
                       <div className={styles.cardFooter}>
                         <span className={styles.updatedText}>Updated {proj.updatedAt}</span>
-                        <button className={styles.viewDetailsLink} type="button">
-                          <span>Inspect Drawer</span>
-                          <ChevronRight size={12} />
-                        </button>
                       </div>
                     </div>
                   </div>
@@ -589,9 +635,6 @@ export const Projects: React.FC<ProjectsProps> = ({
                       </td>
                       <td onClick={(e) => e.stopPropagation()}>
                         <div className={styles.rowActions}>
-                          <button onClick={() => handleCardClick(proj)} title="Inspect project">
-                            <ChevronRight size={16} />
-                          </button>
                           <button onClick={() => { setSharingProject(proj); }} title="Share link">
                             <Share2 size={14} />
                           </button>
@@ -606,6 +649,34 @@ export const Projects: React.FC<ProjectsProps> = ({
               </AnimatePresence>
             </tbody>
           </table>
+        </div>
+      )}
+
+      {/* Minimalist Pagination */}
+      {filteredAndSortedProjects.length > 0 && (
+        <div className={styles.pagination}>
+          <button 
+            className={styles.pageBtn} 
+            onClick={() => alert('Previous page')}
+            disabled
+          >
+            <ArrowLeft size={16} />
+            <span>Previous</span>
+          </button>
+          
+          <div className={styles.pageNumbers}>
+            <button className={`${styles.pageNumberBtn} ${styles.activePage}`}>1</button>
+            <button className={styles.pageNumberBtn} onClick={() => alert('Go to page 2')}>2</button>
+            <button className={styles.pageNumberBtn} onClick={() => alert('Go to page 3')}>3</button>
+          </div>
+          
+          <button 
+            className={styles.pageBtn} 
+            onClick={() => alert('Next page')}
+          >
+            <span>Next</span>
+            <ArrowRight size={16} />
+          </button>
         </div>
       )}
 
@@ -845,7 +916,7 @@ export const Projects: React.FC<ProjectsProps> = ({
                 <div className={styles.wizardStepContent}>
                   <h4 className={styles.wizardStepSubTitle}>Launch Design Studio</h4>
                   <p className={styles.wizardStepDesc}>
-                    Sneaker Flow is preparing to bridge this asset model into KusStudio Desktop Client. Click below to begin customizer.
+                    KusShoes is preparing to bridge this asset model into KusStudio Desktop Client. Click below to begin customizer.
                   </p>
                   
                   <div className={styles.desktopConnectionWrapper}>

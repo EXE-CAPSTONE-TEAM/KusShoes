@@ -302,41 +302,19 @@
   overflow: hidden;
   display: flex;
   flex-direction: column;
-  transition: transform 0.3s cubic-bezier(0.34, 1.56, 0.64, 1),
+  transition: transform 0.3s cubic-bezier(0.16, 1, 0.3, 1),
               border-color var(--transition-normal), 
-              box-shadow var(--transition-normal),
-              opacity 0.3s ease;
+              box-shadow var(--transition-normal);
   cursor: pointer;
   position: relative;
   width: 100%;
   height: 100%;
-  will-change: transform;
-  backface-visibility: hidden;
 }
 
-.grid:hover .card {
-  opacity: 0.7;
-  transform: scale(0.96);
-}
-
-.grid .cardWrapper:hover .card {
-  opacity: 1;
-  transform: scale(1.08);
-  z-index: 30;
-  box-shadow: 0 16px 36px rgba(0, 0, 0, 0.6), 
-              0 0 0 1px rgba(255, 90, 54, 0.25);
-  border-color: rgba(255, 90, 54, 0.3) !important;
-}
-
-/* Push adjacent cards left/right */
-.grid .cardWrapper:has(+ .cardWrapper:hover) .card {
-  transform: translateX(-16px) scale(0.96);
-  opacity: 0.8;
-}
-
-.grid .cardWrapper:hover + .cardWrapper .card {
-  transform: translateX(16px) scale(0.96);
-  opacity: 0.8;
+.card:hover {
+  transform: translateY(-8px);
+  box-shadow: 0 16px 32px rgba(0, 0, 0, 0.5), var(--border-glow);
+  border-color: var(--glass-border-hover) !important;
 }
 
 .cardSelected {
@@ -349,6 +327,17 @@
   position: relative;
   overflow: hidden;
   background-color: var(--bg-tertiary);
+}
+
+.topOverlay {
+  position: absolute;
+  top: 0;
+  left: 0;
+  right: 0;
+  height: 60px;
+  background: linear-gradient(to bottom, rgba(0, 0, 0, 0.6) 0%, rgba(0, 0, 0, 0) 100%);
+  pointer-events: none;
+  z-index: 5;
 }
 
 .shoeImg {
@@ -414,7 +403,7 @@
 .visibilityBadge {
   background-color: rgba(11, 11, 12, 0.7);
   border: 1px solid var(--glass-border);
-  color: var(--text-secondary);
+  color: #FFFFFF; /* High contrast pure white text and icons */
   display: flex;
   align-items: center;
   gap: 6px;
@@ -449,7 +438,7 @@
   position: absolute;
   top: 56px;
   right: 16px;
-  width: 140px;
+  width: 175px;
   border-radius: var(--border-radius-sm);
   display: flex;
   flex-direction: column;
@@ -515,10 +504,13 @@
   font-weight: 700;
   font-size: 1.1rem;
   color: var(--text-primary);
-  white-space: nowrap;
+  display: -webkit-box;
+  -webkit-line-clamp: 2;
+  -webkit-box-orient: vertical;
   overflow: hidden;
   text-overflow: ellipsis;
-  max-width: 160px;
+  line-height: 1.3;
+  height: 2.86rem;
 }
 
 .statusIndicator {
@@ -539,9 +531,9 @@
 }
 
 .statusIndicator.designing {
-  background-color: rgba(251, 189, 35, 0.08);
-  color: var(--status-designing);
-  border: 1px solid rgba(251, 189, 35, 0.2);
+  background-color: rgba(217, 119, 6, 0.08); /* Light burnt orange background */
+  color: #D97706; /* Deeper, high-contrast burnt orange */
+  border: 1px solid rgba(217, 119, 6, 0.2);
 }
 
 .statusIndicator.completed {
@@ -673,7 +665,7 @@
   font-size: 0.8rem;
   text-transform: uppercase;
   color: var(--text-secondary);
-  font-family: var(--font-mono);
+  font-family: var(--font-sans); /* Modern rounded sans-serif font */
   font-weight: 700;
   letter-spacing: 0.5px;
   border-bottom: 1px solid var(--glass-border);
@@ -708,7 +700,11 @@
 }
 
 .tableRow:hover {
-  background-color: var(--hover-bg-item);
+  background-color: rgba(18, 18, 21, 0.03); /* Subtle light grey hover background */
+}
+
+[data-theme="dark"] .tableRow:hover {
+  background-color: rgba(255, 255, 255, 0.03); /* Subtle hover for dark mode */
 }
 
 .tableRowSelected {
@@ -800,17 +796,27 @@
   border-radius: var(--border-radius-sm);
   display: flex;
   align-items: center;
-  transition: all var(--transition-fast);
+  transition: opacity var(--transition-fast), color var(--transition-fast), background-color var(--transition-fast);
+  opacity: 0; /* Default hide */
+}
+
+.tableRow:hover .rowActions button {
+  opacity: 1; /* Show on row hover */
 }
 
 .rowActions button:hover {
+  color: var(--text-primary);
+  background-color: rgba(0, 0, 0, 0.05);
+}
+
+[data-theme="dark"] .rowActions button:hover {
   color: var(--text-primary);
   background-color: rgba(255, 255, 255, 0.05);
 }
 
 .rowActions .rowDeleteBtn:hover {
-  color: var(--color-crimson);
-  background-color: rgba(230, 30, 67, 0.1);
+  color: var(--color-crimson) !important;
+  background-color: rgba(230, 30, 67, 0.1) !important;
 }
 
 /* Slide-out Drawer Detail Panel */
@@ -1594,4 +1600,305 @@
   .drawer {
     width: 100vw;
   }
+}
+
+/* Floating Action Bar (FAB) for Bulk Actions - Clean Light Mode Aesthetic */
+.bulkFAB {
+  position: fixed;
+  bottom: 40px;
+  left: 50%;
+  transform: translateX(-50%);
+  display: flex;
+  align-items: center;
+  gap: 20px;
+  padding: 12px 24px;
+  border-radius: var(--border-radius-full);
+  background: rgba(255, 255, 255, 0.9); /* Translucent frosted white background */
+  backdrop-filter: blur(16px);
+  -webkit-backdrop-filter: blur(16px);
+  border: 1px solid rgba(18, 18, 21, 0.08); /* Subtle 1px light gray border */
+  box-shadow: 0px 8px 24px rgba(0, 0, 0, 0.12); /* Smooth, elevated drop-shadow */
+  z-index: 1000;
+}
+
+.fabInfo {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  font-size: 0.9rem;
+  color: #1F2937; /* High-contrast dark gray text */
+  font-family: var(--font-sans);
+}
+
+.fabSelectedIcon {
+  color: var(--color-orange); /* Brand coral orange accent */
+}
+
+.fabInfo strong {
+  color: var(--color-orange); /* Highlighted selected count */
+}
+
+.fabActions {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+}
+
+.fabDropdownWrapper {
+  position: relative;
+}
+
+/* Light Mode Ghost Button */
+.fabBtn {
+  background: transparent;
+  border: 1px solid rgba(31, 41, 55, 0.15); /* Ghost outline border */
+  color: #1F2937; /* High-contrast dark gray */
+  padding: 8px 16px;
+  border-radius: var(--border-radius-full);
+  cursor: pointer;
+  font-family: var(--font-sans);
+  font-size: 0.85rem;
+  font-weight: 600;
+  transition: all var(--transition-fast);
+}
+
+.fabBtn:hover {
+  border-color: var(--color-orange);
+  background: rgba(255, 90, 54, 0.06);
+  color: var(--color-orange);
+}
+
+/* Destructive Action subtle red color */
+.fabDeleteBtn {
+  border-color: rgba(230, 30, 67, 0.2);
+  color: var(--color-crimson);
+}
+
+.fabDeleteBtn:hover {
+  background: rgba(230, 30, 67, 0.08);
+  border-color: var(--color-crimson);
+  color: var(--color-crimson);
+}
+
+.fabDropdown {
+  position: absolute;
+  bottom: calc(100% + 12px);
+  left: 50%;
+  transform: translateX(-50%);
+  width: 140px;
+  border-radius: var(--border-radius-md);
+  display: flex;
+  flex-direction: column;
+  padding: 6px;
+  z-index: 1010;
+  background: #FFFFFF;
+  border: 1px solid rgba(0, 0, 0, 0.08);
+  box-shadow: 0 8px 24px rgba(0, 0, 0, 0.1);
+}
+
+.fabDropdown button {
+  background: transparent;
+  border: none;
+  color: #4B5563;
+  padding: 8px 12px;
+  font-family: var(--font-sans);
+  font-size: 0.85rem;
+  font-weight: 600;
+  cursor: pointer;
+  text-align: center;
+  border-radius: var(--border-radius-sm);
+  transition: all var(--transition-fast);
+  width: 100%;
+}
+
+.fabDropdown button:hover {
+  background-color: rgba(0, 0, 0, 0.03);
+  color: var(--color-orange);
+}
+
+.fabDivider {
+  width: 1px;
+  height: 20px;
+  background-color: rgba(31, 41, 55, 0.15); /* Subtle dark gray divider line */
+}
+
+.fabCancelBtn {
+  background: transparent;
+  border: 1px solid rgba(31, 41, 55, 0.15);
+  color: #1F2937; /* High-contrast dark gray */
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 32px;
+  height: 32px;
+  border-radius: var(--border-radius-full);
+  transition: all var(--transition-fast);
+}
+
+.fabCancelBtn:hover {
+  color: var(--color-orange);
+  border-color: var(--color-orange);
+  background: rgba(255, 90, 54, 0.06);
+}
+
+/* Theme adaptation overrides if dark mode is toggled via context */
+[data-theme="dark"] .bulkFAB {
+  background: rgba(18, 18, 21, 0.95);
+  border-color: rgba(255, 90, 54, 0.3);
+  box-shadow: 0 12px 36px rgba(0, 0, 0, 0.7), var(--shadow-neon);
+}
+[data-theme="dark"] .fabInfo {
+  color: var(--text-primary);
+}
+[data-theme="dark"] .fabBtn {
+  border-color: var(--glass-border);
+  color: var(--text-primary);
+}
+[data-theme="dark"] .fabBtn:hover {
+  border-color: var(--color-orange);
+  background: rgba(255, 90, 54, 0.1);
+  color: var(--color-orange);
+}
+[data-theme="dark"] .fabDeleteBtn {
+  border-color: rgba(230, 30, 67, 0.3);
+}
+[data-theme="dark"] .fabDeleteBtn:hover {
+  background: rgba(230, 30, 67, 0.15);
+  border-color: var(--color-crimson);
+}
+[data-theme="dark"] .fabDropdown {
+  background: var(--dropdown-bg);
+  border-color: var(--glass-border);
+}
+[data-theme="dark"] .fabDropdown button {
+  color: var(--text-secondary);
+}
+[data-theme="dark"] .fabDropdown button:hover {
+  background-color: var(--hover-bg-item);
+  color: var(--color-orange);
+}
+[data-theme="dark"] .fabDivider {
+  background-color: var(--glass-border);
+}
+[data-theme="dark"] .fabCancelBtn {
+  border-color: var(--glass-border);
+  color: var(--text-muted);
+}
+[data-theme="dark"] .fabCancelBtn:hover {
+  color: var(--text-primary);
+  border-color: var(--color-orange);
+  background: rgba(255, 90, 54, 0.1);
+}
+
+/* Dropdown visibility configuration styles */
+.dropdownSectionTitle {
+  font-size: 0.7rem;
+  color: var(--text-muted);
+  text-transform: uppercase;
+  font-weight: 700;
+  padding: 6px 12px 2px;
+  font-family: var(--font-mono);
+  letter-spacing: 0.5px;
+}
+
+.dropdownActiveItem {
+  color: var(--color-orange) !important;
+  background-color: rgba(255, 90, 54, 0.05) !important;
+}
+
+.dropdownDeleteBtn {
+  background: transparent;
+  border: none;
+  font-family: var(--font-sans);
+  font-size: 0.85rem;
+  font-weight: 500;
+  cursor: pointer;
+  text-align: left;
+  border-radius: var(--border-radius-sm);
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  transition: all var(--transition-fast);
+  width: 100%;
+  color: var(--text-secondary);
+}
+
+.dropdownDeleteBtn:hover {
+  background-color: rgba(230, 30, 67, 0.1) !important;
+  color: var(--color-crimson) !important;
+}
+
+/* Minimalist Pagination styles */
+.pagination {
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  gap: 24px;
+  margin-top: 48px;
+  padding: 24px 0 16px;
+  border-top: 1px solid var(--glass-border);
+}
+
+.pageBtn {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  background: transparent;
+  border: 1px solid var(--glass-border);
+  color: var(--text-primary);
+  padding: 8px 16px;
+  border-radius: var(--border-radius-sm);
+  font-family: var(--font-sans);
+  font-size: 0.9rem;
+  font-weight: 600;
+  cursor: pointer;
+  transition: all var(--transition-fast);
+}
+
+.pageBtn:hover:not(:disabled) {
+  border-color: var(--color-orange);
+  color: var(--color-orange);
+  background-color: rgba(255, 90, 54, 0.05);
+}
+
+.pageBtn:disabled {
+  color: var(--text-muted);
+  cursor: not-allowed;
+  opacity: 0.5;
+}
+
+.pageNumbers {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.pageNumberBtn {
+  width: 38px;
+  height: 38px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: transparent;
+  border: 1px solid var(--glass-border);
+  color: var(--text-secondary);
+  border-radius: var(--border-radius-sm);
+  font-family: var(--font-sans);
+  font-size: 0.9rem;
+  font-weight: 600;
+  cursor: pointer;
+  transition: all var(--transition-fast);
+}
+
+.pageNumberBtn:hover {
+  border-color: var(--color-orange);
+  color: var(--color-orange);
+}
+
+.pageNumberBtn.activePage {
+  background-color: var(--color-orange);
+  border-color: var(--color-orange);
+  color: var(--text-primary);
+  box-shadow: var(--shadow-neon);
 }

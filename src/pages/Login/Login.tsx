@@ -137,7 +137,7 @@ export const Login: React.FC<LoginProps> = ({ setPage }) => {
               <CheckCircle2 size={48} className={styles.successIcon} />
             </motion.div>
             <h3>Access Granted</h3>
-            <p>Redirecting to Sneaker Flow Portal...</p>
+            <p>Redirecting to KusShoes Portal...</p>
           </div>
         ) : (
           <>

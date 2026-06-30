@@ -14,52 +14,15 @@
 .logoSection {
   display: flex;
   align-items: center;
-  gap: 12px;
+  justify-content: center;
   margin-bottom: 32px;
 }
 
-.logoContainer {
-  width: 36px;
+.logoImage {
   height: 36px;
-  background: linear-gradient(135deg, var(--color-orange) 0%, var(--color-crimson) 100%);
-  border-radius: var(--border-radius-md);
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  box-shadow: 0 0 15px rgba(255, 90, 54, 0.4);
-}
-
-.logoIcon {
-  color: var(--text-primary);
-  width: 22px;
-  height: 22px;
-  animation: rotateLogo 8s linear infinite;
-}
-
-@keyframes rotateLogo {
-  from { transform: rotate(0deg); }
-  to { transform: rotate(360deg); }
-}
-
-.logoText {
-  display: flex;
-  flex-direction: column;
-}
-
-.brandTitle {
-  font-family: 'Space Grotesk', sans-serif;
-  font-weight: 700;
-  font-size: 1.05rem;
-  letter-spacing: 1.5px;
-  line-height: 1;
-}
-
-.brandSubtitle {
-  font-family: var(--font-mono);
-  font-size: 0.6rem;
-  color: var(--text-muted);
-  letter-spacing: 2px;
-  margin-top: 2px;
+  width: auto;
+  object-fit: contain;
+  cursor: pointer;
 }
 
 .navMenu {
@@ -194,6 +157,13 @@
   margin-bottom: 2px;
 }
 
+.recentHeaderRow {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding-right: 8px;
+}
+
 .recentHeader {
   font-family: var(--font-mono);
   font-size: 0.6rem;
@@ -204,10 +174,48 @@
   padding-left: 14px;
 }
 
+.quickAddBtn {
+  background: transparent;
+  border: none;
+  color: var(--text-muted);
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 4px;
+  border-radius: var(--border-radius-sm);
+  transition: all var(--transition-fast);
+}
+
+.quickAddBtn:hover {
+  color: var(--color-orange);
+  background-color: var(--hover-bg-item);
+}
+
 .recentList {
   display: flex;
   flex-direction: column;
-  gap: 4px;
+  gap: 8px; /* Slightly increased vertical gap */
+}
+
+.viewAllLink {
+  background: transparent;
+  border: none;
+  color: var(--text-muted);
+  font-size: 0.72rem;
+  font-weight: 600;
+  cursor: pointer;
+  font-family: var(--font-sans);
+  text-align: left;
+  padding-left: 14px;
+  transition: color var(--transition-fast);
+  margin-top: 2px;
+  width: fit-content;
+}
+
+.viewAllLink:hover {
+  color: var(--color-orange);
+  text-decoration: underline;
 }
 
 .recentItem {
@@ -260,5 +268,38 @@
   overflow: hidden;
   text-overflow: ellipsis;
   flex-grow: 1;
+}
+
+/* Storage Widget */
+.storageWidget {
+  margin-top: auto; /* Push above profile and occupy empty space */
+  margin-bottom: 20px;
+  padding: 0 14px;
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.storageLabels {
+  display: flex;
+  justify-content: space-between;
+  font-size: 0.72rem;
+  color: var(--text-muted); /* Low-contrast grey font */
+  font-family: var(--font-sans);
+  font-weight: 500;
+}
+
+.storageBarBg {
+  height: 5px; /* Thin progress bar */
+  background-color: var(--bg-primary);
+  border-radius: var(--border-radius-full);
+  overflow: hidden;
+  border: 1px solid var(--glass-border);
+}
+
+.storageBarFill {
+  height: 100%;
+  background: linear-gradient(95deg, var(--color-orange), var(--color-crimson));
+  border-radius: var(--border-radius-full);
 }
 

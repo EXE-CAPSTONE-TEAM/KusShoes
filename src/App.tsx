@@ -28,7 +28,8 @@ interface Project {
 
 // Helper to convert URL path to page key
 const getPageFromPath = (path: string): string => {
-  const cleanPath = path.split('?')[0];
+  const parts = path.split('?');
+  const cleanPath = parts[0];
   switch (cleanPath) {
     case '/project-details':
       return 'project-details';
@@ -42,6 +43,8 @@ const getPageFromPath = (path: string): string => {
       return 'dashboard';
     case '/projects':
       return 'projects';
+    case '/archives':
+      return 'archives';
     case '/billing':
       return 'billing';
     case '/settings':
@@ -54,25 +57,29 @@ const getPageFromPath = (path: string): string => {
 
 // Helper to convert page key to URL path
 const getPathFromPage = (page: string): string => {
-  const cleanPage = page.split('?')[0];
+  const parts = page.split('?');
+  const cleanPage = parts[0];
+  const query = parts[1] ? '?' + parts[1] : '';
   switch (cleanPage) {
     case 'project-details':
-      return '/project-details';
+      return '/project-details' + query;
     case 'pricing':
-      return '/pricing';
+      return '/pricing' + query;
     case 'login':
-      return '/login';
+      return '/login' + query;
     case 'dashboard':
-      return '/dashboard';
+      return '/dashboard' + query;
     case 'projects':
-      return '/projects';
+      return '/projects' + query;
+    case 'archives':
+      return '/archives' + query;
     case 'billing':
-      return '/billing';
+      return '/billing' + query;
     case 'settings':
-      return '/settings';
+      return '/settings' + query;
     case 'landing':
     default:
-      return '/';
+      return '/' + query;
   }
 };
 
@@ -182,7 +189,7 @@ function App() {
   const navigate = (pageOrPath: string) => {
     const isPath = pageOrPath.startsWith('/');
     const path = isPath ? pageOrPath : getPathFromPage(pageOrPath);
-    const page = isPath ? getPageFromPath(pageOrPath) : pageOrPath;
+    const page = isPath ? getPageFromPath(pageOrPath) : pageOrPath.split('?')[0];
     
     const currentFull = window.location.pathname + window.location.search;
     if (currentFull !== path) {
@@ -232,7 +239,7 @@ function App() {
     }
   }, [activePage, projects, activeDetailProject]);
 
-  const isPortalView = ['dashboard', 'projects', 'billing', 'settings', 'project-details'].includes(activePage);
+  const isPortalView = ['dashboard', 'projects', 'archives', 'billing', 'settings', 'project-details'].includes(activePage);
 
   const handleLogout = () => {
     navigate('/');
@@ -265,6 +272,14 @@ function App() {
             projects={projects} 
             setProjects={setProjects}
             onViewDetails={(id) => navigate(`/project-details?id=${id}`)}
+          />
+        )}
+        {activePage === 'archives' && (
+          <Projects 
+            projects={projects} 
+            setProjects={setProjects}
+            onViewDetails={(id) => navigate(`/project-details?id=${id}`)}
+            initialFilter="Completed"
           />
         )}
         {activePage === 'billing' && <Billing />}

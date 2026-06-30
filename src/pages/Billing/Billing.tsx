@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { CreditCard, HardDrive, Check, Calendar, ArrowUpRight, HelpCircle, X } from 'lucide-react';
+import { CreditCard, HardDrive, Check, Calendar, ArrowUpRight, HelpCircle, X, Building, Pencil, Eye } from 'lucide-react';
 import { motion, AnimatePresence } from 'framer-motion';
 import styles from './Billing.module.css';
 
@@ -17,6 +17,12 @@ export const Billing: React.FC = () => {
     { id: 'INV-8219', date: 'May 15, 2026', amount: '259.000 VNĐ', status: 'Paid' },
     { id: 'INV-7651', date: 'Apr 15, 2026', amount: '259.000 VNĐ', status: 'Paid' },
   ]);
+
+  // Billing Details State
+  const [companyName, setCompanyName] = useState('KusShoes Joint Stock Company');
+  const [billingAddress, setBillingAddress] = useState('FPT University, Hoa Lac High-Tech Park, Hanoi, Vietnam');
+  const [taxId, setTaxId] = useState('0109876543');
+  const [isEditingBilling, setIsEditingBilling] = useState(false);
 
   const pricingTiers = [
     {
@@ -76,91 +82,68 @@ export const Billing: React.FC = () => {
 
       {/* Main Grid */}
       <div className={styles.mainGrid}>
-        {/* Left Side: Current Plan Info */}
-        <div className={styles.leftCol}>
-          {/* Active Plan Card */}
-          <motion.div 
-            className={`${styles.planCard} glass-panel`}
-            initial={{ opacity: 0, y: 15 }}
-            animate={{ opacity: 1, y: 0 }}
-          >
-            <div className={styles.planHeader}>
-              <div>
-                <span className={styles.planBadge}>ACTIVE PLAN</span>
-                <h2 className={styles.planName}>Basic Creator</h2>
-              </div>
-              <div className={styles.planPriceInfo}>
-                <span className={styles.planPrice}>259.000 VNĐ</span>
-                <span className={styles.planPeriod}>/ tháng</span>
-              </div>
+        {/* Top-Left Card: Active Plan */}
+        <motion.div 
+          className={`${styles.planCard} glass-panel`}
+          initial={{ opacity: 0, y: 15 }}
+          animate={{ opacity: 1, y: 0 }}
+        >
+          <div className={styles.planHeader}>
+            <div>
+              <span className={styles.planBadge}>ACTIVE PLAN</span>
+              <h2 className={styles.planName}>Basic Creator</h2>
             </div>
-            
-            <p className={styles.planDesc}>
-              You have full access to high-def shoe scans, instant cloud synchronization, and 3D web preview linkages.
-            </p>
+            <div className={styles.planPriceInfo}>
+              <span className={styles.planPrice}>259.000 VNĐ</span>
+              <span className={styles.planPeriod}>/ tháng</span>
+            </div>
+          </div>
+          
+          <p className={styles.planDesc}>
+            You have full access to high-def shoe scans, instant cloud synchronization, and 3D web preview linkages.
+          </p>
 
-            <div className={styles.planMeta}>
-              <div className={styles.metaItem}>
-                <Calendar size={16} className={styles.metaIcon} />
-                <span>Next billing date: <strong>July 15, 2026</strong></span>
-              </div>
-              <div className={styles.metaItem}>
-                <CreditCard size={16} className={styles.metaIcon} />
+          <div className={styles.planMeta}>
+            <div className={styles.metaItem}>
+              <Calendar size={16} className={styles.metaIcon} />
+              <span>Next billing date: <strong>July 15, 2026</strong></span>
+            </div>
+            <div className={styles.metaItem}>
+              <CreditCard size={16} className={styles.metaIcon} />
+              <div className={styles.paymentMethodWrapper}>
                 <span>Payment method: <strong>Visa ending in 4242</strong></span>
+                <button 
+                  className={styles.editPaymentBtn} 
+                  onClick={() => alert('Edit payment method requested')}
+                  title="Edit Payment Method"
+                >
+                  <Pencil size={12} />
+                </button>
               </div>
             </div>
+          </div>
 
-            <div className={styles.planActions}>
-              <button className="btn-neon-orange" onClick={() => setShowUpgradeModal(true)}>
-                Upgrade / Change Plan
-              </button>
+          <div className={styles.planActions}>
+            <button className="btn-neon-orange" onClick={() => setShowUpgradeModal(true)}>
+              Upgrade / Change Plan
+            </button>
+            <div className={styles.cancelActionWrapper}>
               <button className="btn-outline" onClick={() => alert('Cancel Subscription option requested')}>
                 Cancel Plan
               </button>
+              <span className={styles.cancelMicroCopy}>
+                Access remains active until the next billing date.
+              </span>
             </div>
-          </motion.div>
+          </div>
+        </motion.div>
 
-          {/* Cloud Quotas Card */}
-          <motion.div 
-            className={`${styles.quotaCard} glass-panel`}
-            initial={{ opacity: 0, y: 15 }}
-            animate={{ opacity: 1, y: 0 }}
-            transition={{ delay: 0.1 }}
-          >
-            <div className={styles.quotaHeader}>
-              <h3 className={styles.quotaTitle}>Cloud Quota Usage</h3>
-              <HardDrive size={18} className={styles.quotaIcon} />
-            </div>
-            
-            <div className={styles.progressContainer}>
-              <div className={styles.progressLabels}>
-                <span>Cloud Storage</span>
-                <span>1.4 GB of 5.0 GB used (28%)</span>
-              </div>
-              <div className={styles.progressBarBg}>
-                <div className={styles.progressBarFill} style={{ width: '28%' }} />
-              </div>
-            </div>
-
-            <div className={styles.quotaInfoList}>
-              <div className={styles.quotaInfoItem}>
-                <span>Active Scans Sync Limit</span>
-                <span>Unlimited (Pro benefit)</span>
-              </div>
-              <div className={styles.quotaInfoItem}>
-                <span>Monthly Scan Processings</span>
-                <span>38 / 100 scans</span>
-              </div>
-            </div>
-          </motion.div>
-        </div>
-
-        {/* Right Side: Invoice History */}
+        {/* Top-Right Card: Invoice History */}
         <motion.div 
           className={`${styles.rightCol} glass-panel`}
           initial={{ opacity: 0, y: 15 }}
           animate={{ opacity: 1, y: 0 }}
-          transition={{ delay: 0.2 }}
+          transition={{ delay: 0.15 }}
         >
           <div className={styles.invoiceHeader}>
             <h3 className={styles.invoiceTitle}>Invoice History</h3>
@@ -192,14 +175,142 @@ export const Billing: React.FC = () => {
                     </span>
                   </td>
                   <td>
-                    <button className={styles.downloadBtn} onClick={() => alert(`Downloading PDF for ${inv.id}`)}>
-                      Download
-                    </button>
+                    <div className={styles.actionCell}>
+                      <button 
+                        className={styles.viewIconBtn} 
+                        onClick={() => alert(`Previewing invoice ${inv.id}`)}
+                        title="View Invoice"
+                      >
+                        <Eye size={16} />
+                      </button>
+                      <button className={styles.downloadBtn} onClick={() => alert(`Downloading PDF for ${inv.id}`)}>
+                        Download
+                      </button>
+                    </div>
                   </td>
                 </tr>
               ))}
             </tbody>
           </table>
+        </motion.div>
+
+        {/* Bottom-Left Card: Billing Details */}
+        <motion.div 
+          className={`${styles.billingCard} glass-panel`}
+          initial={{ opacity: 0, y: 15 }}
+          animate={{ opacity: 1, y: 0 }}
+          transition={{ delay: 0.05 }}
+        >
+          <div className={styles.billingHeader}>
+            <div className={styles.billingTitleContainer}>
+              <Building size={18} className={styles.billingIcon} />
+              <h3 className={styles.billingTitle}>Billing Details</h3>
+            </div>
+            <button 
+              className={styles.editDetailsBtn} 
+              onClick={() => setIsEditingBilling(!isEditingBilling)}
+            >
+              {isEditingBilling ? 'Save Changes' : 'Edit Details'}
+            </button>
+          </div>
+          
+          <div className={styles.billingFields}>
+            <div className={styles.fieldGroup}>
+              <label className={styles.fieldLabel}>COMPANY NAME</label>
+              {isEditingBilling ? (
+                <input 
+                  type="text" 
+                  className={styles.fieldInput} 
+                  value={companyName} 
+                  onChange={(e) => setCompanyName(e.target.value)} 
+                />
+              ) : (
+                <p className={styles.fieldValue}>{companyName}</p>
+              )}
+            </div>
+            
+            <div className={styles.fieldGroup}>
+              <label className={styles.fieldLabel}>BILLING ADDRESS</label>
+              {isEditingBilling ? (
+                <input 
+                  type="text" 
+                  className={styles.fieldInput} 
+                  value={billingAddress} 
+                  onChange={(e) => setBillingAddress(e.target.value)} 
+                />
+              ) : (
+                <p className={styles.fieldValue}>{billingAddress}</p>
+              )}
+            </div>
+            
+            <div className={styles.fieldGroup}>
+              <label className={styles.fieldLabel}>TAX ID</label>
+              {isEditingBilling ? (
+                <input 
+                  type="text" 
+                  className={styles.fieldInput} 
+                  value={taxId} 
+                  onChange={(e) => setTaxId(e.target.value)} 
+                />
+              ) : (
+                <p className={styles.fieldValue}>{taxId}</p>
+              )}
+            </div>
+          </div>
+        </motion.div>
+
+        {/* Bottom-Right Card: Cloud Quota Usage */}
+        <motion.div 
+          className={`${styles.quotaCard} glass-panel`}
+          initial={{ opacity: 0, y: 15 }}
+          animate={{ opacity: 1, y: 0 }}
+          transition={{ delay: 0.1 }}
+        >
+          <div className={styles.quotaHeader}>
+            <h3 className={styles.quotaTitle}>Cloud Quota Usage</h3>
+            <HardDrive size={18} className={styles.quotaIcon} />
+          </div>
+          
+          <div className={styles.progressContainer}>
+            <div className={styles.progressLabels}>
+              <span>Cloud Storage</span>
+              <span>1.4 GB of 5.0 GB used (28%)</span>
+            </div>
+            <div className={styles.progressBarBg}>
+              <div className={styles.progressBarFill} style={{ width: '28%' }} />
+            </div>
+          </div>
+
+          <div className={styles.progressContainer}>
+            <div className={styles.progressLabels}>
+              <span>High-def Shoe Scans</span>
+              <span>25 / 50 used (50%)</span>
+            </div>
+            <div className={styles.progressBarBg}>
+              <div className={styles.progressBarFill} style={{ width: '50%' }} />
+            </div>
+          </div>
+
+          <div className={styles.progressContainer}>
+            <div className={styles.progressLabels}>
+              <span>3D Web Previews</span>
+              <span>8 / 20 used (40%)</span>
+            </div>
+            <div className={styles.progressBarBg}>
+              <div className={styles.progressBarFill} style={{ width: '40%' }} />
+            </div>
+          </div>
+
+          <div className={styles.quotaInfoList}>
+            <div className={styles.quotaInfoItem}>
+              <span>Active Scans Sync Limit</span>
+              <span>Unlimited (Pro benefit)</span>
+            </div>
+            <div className={styles.quotaInfoItem}>
+              <span>Monthly Scan Processings</span>
+              <span>38 / 100 scans</span>
+            </div>
+          </div>
         </motion.div>
       </div>
 

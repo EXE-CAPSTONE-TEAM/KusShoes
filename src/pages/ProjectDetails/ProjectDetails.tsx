@@ -142,7 +142,7 @@ export const ProjectDetails: React.FC<ProjectDetailsProps> = ({
       `Streaming photogrammetry assets (${project.photosCount} files)...`,
       'Buffers synchronized. Temporary read/write lock acquired.',
       'Launching KusStudio Desktop application...',
-      'Desktop window active. Sneaker Flow Portal lock engaged.'
+      'Desktop window active. KusShoes Portal lock engaged.'
     ];
 
     let stepIndex = 0;

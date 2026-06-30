@@ -88,9 +88,12 @@
 }
 
 .shoeImg {
-  max-width: 90%;
-  max-height: 80%;
-  object-fit: contain;
+  position: absolute;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  border-radius: var(--border-radius-lg);
   filter: drop-shadow(0 15px 30px rgba(0, 0, 0, 0.8));
   transition: transform var(--transition-slow);
 }

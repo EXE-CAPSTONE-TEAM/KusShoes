@@ -30,8 +30,7 @@ export const Footer: React.FC<FooterProps> = ({ navigate }) => {
         {/* Col 1: Brand */}
         <div className={styles.footerBrandBlock}>
           <div className={styles.navBrand} onClick={() => navigate('/')}>
-            <div className={styles.logoIndicator} />
-            <span className={styles.logoText}>SNEAKER FLOW</span>
+            <img src="/KusShoes_Logo_cropped.png" alt="KusShoes" className={styles.logoImage} />
           </div>
           <p className={styles.footerBrandDesc}>"Shape your shoes, show your style."</p>
         </div>
@@ -63,7 +62,7 @@ export const Footer: React.FC<FooterProps> = ({ navigate }) => {
 
       {/* Bottom Footer */}
       <div className={styles.footerBottom}>
-        <span>© 2026 Sneaker Flow Ecosystem. All rights reserved.</span>
+        <span>© 2026 KusShoes Ecosystem. All rights reserved.</span>
         
         {/* Social Icons */}
         <div className={styles.socialsList}>

@@ -26,8 +26,7 @@
 .mainGrid {
   display: grid;
   grid-template-columns: 1fr 1fr;
-  gap: 28px;
-  align-items: start;
+  gap: 32px;
 }
 
 .leftCol {
@@ -111,9 +110,143 @@
   color: var(--text-muted);
 }
 
+.paymentMethodWrapper {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.editPaymentBtn {
+  background: transparent;
+  border: none;
+  color: var(--text-muted);
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 4px;
+  border-radius: var(--border-radius-sm);
+  transition: all var(--transition-fast);
+}
+
+.editPaymentBtn:hover {
+  color: var(--color-orange);
+  background-color: rgba(255, 90, 54, 0.08);
+}
+
 .planActions {
   display: flex;
   gap: 16px;
+  align-items: flex-start;
+}
+
+.cancelActionWrapper {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  align-items: flex-start;
+}
+
+.cancelMicroCopy {
+  font-size: 0.72rem;
+  color: var(--text-muted);
+  white-space: nowrap;
+}
+
+/* Billing Details Card */
+.billingCard {
+  padding: 32px;
+  border-radius: var(--border-radius-md);
+  display: flex;
+  flex-direction: column;
+  gap: 20px;
+}
+
+.billingHeader {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+}
+
+.billingTitleContainer {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+
+.billingTitle {
+  font-family: 'Space Grotesk', sans-serif;
+  font-size: 1.2rem;
+  font-weight: 700;
+}
+
+.billingIcon {
+  color: var(--text-muted);
+}
+
+.editDetailsBtn {
+  background: transparent;
+  border: 1px solid var(--glass-border);
+  color: var(--text-primary);
+  font-size: 0.8rem;
+  font-weight: 600;
+  padding: 6px 12px;
+  border-radius: var(--border-radius-sm);
+  cursor: pointer;
+  font-family: var(--font-sans);
+  transition: all var(--transition-fast);
+}
+
+.editDetailsBtn:hover {
+  border-color: var(--color-orange);
+  color: var(--color-orange);
+  background-color: rgba(255, 90, 54, 0.05);
+}
+
+.billingFields {
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+  border-top: 1px solid var(--glass-border);
+  padding-top: 16px;
+}
+
+.fieldGroup {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+
+.fieldLabel {
+  font-family: 'Space Grotesk', sans-serif;
+  font-size: 0.85rem;
+  font-weight: 700;
+  letter-spacing: 0.5px;
+  color: var(--text-primary);
+  text-transform: uppercase;
+}
+
+.fieldValue {
+  font-size: 0.9rem;
+  color: var(--text-primary);
+}
+
+.fieldInput {
+  background: var(--bg-primary);
+  border: 1px solid var(--glass-border);
+  color: var(--text-primary);
+  padding: 10px 14px;
+  font-size: 0.9rem;
+  border-radius: var(--border-radius-sm);
+  font-family: var(--font-sans);
+  width: 100%;
+  outline: none;
+  transition: all var(--transition-fast);
+}
+
+.fieldInput:focus {
+  border-color: var(--color-orange);
+  box-shadow: 0 0 8px rgba(255, 90, 54, 0.15);
 }
 
 /* Quotas Card */
@@ -180,8 +313,9 @@
 .quotaInfoItem {
   display: flex;
   justify-content: space-between;
-  font-size: 0.85rem;
-  color: var(--text-secondary);
+  font-size: 0.88rem;
+  color: var(--text-primary);
+  font-weight: 700;
 }
 
 /* Invoices list panel */
@@ -273,6 +407,30 @@
 
 .downloadBtn:hover {
   text-decoration: underline;
+}
+
+.actionCell {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+}
+
+.viewIconBtn {
+  background: transparent;
+  border: none;
+  color: var(--text-secondary);
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 4px;
+  border-radius: var(--border-radius-sm);
+  transition: all var(--transition-fast);
+}
+
+.viewIconBtn:hover {
+  color: var(--color-orange);
+  background-color: rgba(255, 90, 54, 0.08);
 }
 
 /* Compare Pricing Modal */

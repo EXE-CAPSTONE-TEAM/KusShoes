@@ -16,6 +16,11 @@
   backdrop-filter: blur(16px);
   -webkit-backdrop-filter: blur(16px);
   border: 1px solid var(--glass-border);
+  transition: transform 0.38s cubic-bezier(0.16, 1, 0.3, 1);
+}
+
+.navbarHidden {
+  transform: translateX(-50%) translateY(calc(-100% - 30px));
 }
 
 .navBrand {
@@ -25,19 +30,10 @@
   cursor: pointer;
 }
 
-.logoIndicator {
-  width: 12px;
-  height: 12px;
-  background: linear-gradient(135deg, var(--color-orange), var(--color-crimson));
-  border-radius: 50%;
-  box-shadow: 0 0 10px var(--color-orange);
-}
-
-.logoText {
-  font-family: 'Space Grotesk', sans-serif;
-  font-weight: 700;
-  letter-spacing: 1.5px;
-  font-size: 1.1rem;
+.logoImage {
+  height: 44px;
+  width: auto;
+  object-fit: contain;
 }
 
 .navLinks {
@@ -56,6 +52,31 @@
 
 .navLinks a:hover {
   color: var(--text-primary);
+}
+
+/* Hand-drawn underline on top-level nav links */
+.navItem > a {
+  position: relative;
+  padding-bottom: 3px;
+}
+
+.navItem > a::after {
+  content: '';
+  position: absolute;
+  bottom: -2px;
+  left: 0;
+  width: 100%;
+  height: 6px;
+  background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' preserveAspectRatio='none' viewBox='0 0 100 6'%3E%3Cpath d='M0,4 C8,2 14,6 26,3 C38,1 44,6 56,4 C68,2 76,6 88,3 C94,1 98,4 100,4' stroke='%23FF5A36' stroke-width='2' fill='none' stroke-linecap='round' stroke-linejoin='round'/%3E%3C/svg%3E");
+  background-repeat: no-repeat;
+  background-size: 100% 100%;
+  transform: scaleX(0);
+  transform-origin: left center;
+  transition: transform 0.38s cubic-bezier(0.16, 1, 0.3, 1);
+}
+
+.navItem:hover > a::after {
+  transform: scaleX(1);
 }
 
 .activeLink {
