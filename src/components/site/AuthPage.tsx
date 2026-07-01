@@ -1,6 +1,5 @@
 import { type FormEvent, useState } from "react";
-import { ArrowLeft, ArrowRight, Eye, EyeOff, UserPlus, LogIn, Sparkles } from "lucide-react";
-import logo from "@/assets/logo.png";
+import { ArrowLeft, ArrowRight, Eye, EyeOff, Sparkles } from "lucide-react";
 import introVideo from "@/assets/intro_choice.mp4";
 import "../../landing.css";
 

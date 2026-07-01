@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState } from 'react';
 import { Smartphone, Monitor, Cloud, Sparkles, Send, Layout, CheckCircle2, Check, ArrowRight } from 'lucide-react';
 import { motion } from 'framer-motion';
 import { Navbar } from '../../components/Navbar/Navbar';

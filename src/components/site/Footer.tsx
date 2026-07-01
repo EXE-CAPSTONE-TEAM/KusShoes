@@ -1,4 +1,4 @@
-import { ChevronDown, Languages } from "lucide-react";
+import { Languages } from "lucide-react";
 import logo from "@/assets/logo.png";
 import { useLanguage } from "@/i18n/LanguageContext";
 import type { Dictionary } from "@/i18n/dictionaries";

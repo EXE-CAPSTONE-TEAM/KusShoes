@@ -2,8 +2,8 @@ import React, { useState } from 'react';
 import { motion, type Variants } from 'framer-motion';
 import { 
   Smartphone, Monitor, Download, Apple, Play, Cpu, 
-  Layers, Zap, Shield, CheckCircle2, ChevronRight, 
-  ArrowLeft, AppWindow, HardDrive, Sparkles 
+  Layers, Zap, Shield, CheckCircle2, ChevronRight,
+  AppWindow, HardDrive, Sparkles
 } from 'lucide-react';
 import { Navbar } from '../../components/Navbar/Navbar';
 import { Footer } from '../../components/Footer/Footer';

@@ -1,5 +1,5 @@
-import React, { createContext, useContext, useState, ReactNode } from "react";
-import { dictionaries, Language, Dictionary } from "./dictionaries";
+import { createContext, useContext, useState, type ReactNode } from "react";
+import { dictionaries, type Language, type Dictionary } from "./dictionaries";
 
 type LanguageContextType = {
   lang: Language;
