@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { motion } from 'framer-motion';
+import { motion, type Variants } from 'framer-motion';
 import { 
   Smartphone, Monitor, Download, Apple, Play, Cpu, 
   Layers, Zap, Shield, CheckCircle2, ChevronRight, 
@@ -26,7 +26,7 @@ export const ProductsPage: React.FC<ProductsPageProps> = ({ navigate }) => {
     }
   };
 
-  const itemVariants = {
+  const itemVariants: Variants = {
     hidden: { opacity: 0, y: 30 },
     visible: { 
       opacity: 1, 
