@@ -1,5 +1,6 @@
 import React from 'react';
 import { LayoutDashboard, FolderKanban, Archive, CreditCard, Settings, LogOut, Plus } from 'lucide-react';
+import { useTheme } from '../../context/ThemeContext';
 import styles from './Sidebar.module.css';
 
 interface Project {
@@ -25,6 +26,7 @@ export const Sidebar: React.FC<SidebarProps> = ({
   onLogout, 
   projects 
 }) => {
+  const { theme } = useTheme();
   const menuItems = [
     { id: 'dashboard', label: 'Overview', icon: LayoutDashboard },
     { id: 'projects', label: 'Projects', icon: FolderKanban },
@@ -49,7 +51,7 @@ export const Sidebar: React.FC<SidebarProps> = ({
       {/* Brand Header */}
       <div className={styles.logoSection}>
         <img
-          src="/KusShoes_Logo_cropped.png"
+          src={theme === 'dark' ? '/KusShoes_Logo_Dark_Mode_cropped.png' : '/KusShoes_Logo_cropped.png'}
           alt="KusShoes"
           className={styles.logoImage}
           onClick={() => setActivePage('dashboard')}

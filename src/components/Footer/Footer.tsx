@@ -1,5 +1,6 @@
 import React from 'react';
 import { Instagram, Github, Youtube, MessageSquare } from 'lucide-react';
+import { useTheme } from '../../context/ThemeContext';
 import styles from './Footer.module.css';
 
 interface FooterProps {
@@ -7,7 +8,8 @@ interface FooterProps {
 }
 
 export const Footer: React.FC<FooterProps> = ({ navigate }) => {
-  
+  const { theme } = useTheme();
+
   const handlePricingClick = (e: React.MouseEvent<HTMLAnchorElement>) => {
     e.preventDefault();
     navigate('/pricing');
@@ -30,7 +32,11 @@ export const Footer: React.FC<FooterProps> = ({ navigate }) => {
         {/* Col 1: Brand */}
         <div className={styles.footerBrandBlock}>
           <div className={styles.navBrand} onClick={() => navigate('/')}>
-            <img src="/KusShoes_Logo_cropped.png" alt="KusShoes" className={styles.logoImage} />
+            <img
+              src={theme === 'dark' ? '/KusShoes_Logo_Dark_Mode_cropped.png' : '/KusShoes_Logo_cropped.png'}
+              alt="KusShoes"
+              className={styles.logoImage}
+            />
           </div>
           <p className={styles.footerBrandDesc}>"Shape your shoes, show your style."</p>
         </div>
