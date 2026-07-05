@@ -8,13 +8,22 @@ import {
 import { Navbar } from '../../components/Navbar/Navbar';
 import { Footer } from '../../components/Footer/Footer';
 import { InteractiveParticleGrid } from '../../components/InteractiveParticleGrid/InteractiveParticleGrid';
+import { Select } from '../../components/Select/Select';
+import { useToast } from '../../context/ToastContext';
 import styles from './ProductsPage.module.css';
 
 interface ProductsPageProps {
   navigate: (path: string) => void;
 }
 
+const DESKTOP_OS_OPTIONS = [
+  { value: 'windows', label: 'Windows 10/11 (.EXE)' },
+  { value: 'mac-silicon', label: 'macOS Apple Silicon (M1/M2/M3 .DMG)' },
+  { value: 'mac-intel', label: 'macOS Intel Core (.DMG)' },
+];
+
 export const ProductsPage: React.FC<ProductsPageProps> = ({ navigate }) => {
+  const { toast } = useToast();
   const [activeTab, setActiveTab] = useState<'ios' | 'android'>('ios');
   const [desktopOS, setDesktopOS] = useState<'windows' | 'mac-silicon' | 'mac-intel'>('windows');
 
@@ -36,7 +45,7 @@ export const ProductsPage: React.FC<ProductsPageProps> = ({ navigate }) => {
   };
 
   const handleDownload = (appName: string, platform: string) => {
-    alert(`Starting download for ${appName} (${platform}). Thank you for participating in our beta test!`);
+    toast(`Starting download for ${appName} (${platform}). Thank you for participating in our beta test!`);
   };
 
   return (
@@ -195,15 +204,12 @@ export const ProductsPage: React.FC<ProductsPageProps> = ({ navigate }) => {
             <div className={styles.downloadBox}>
               <h3 className={styles.downloadTitle}>Select Operating System</h3>
               <div className={styles.selectDropdownWrapper}>
-                <select 
-                  value={desktopOS} 
-                  onChange={(e) => setDesktopOS(e.target.value as any)}
-                  className={styles.osSelect}
-                >
-                  <option value="windows">Windows 10/11 (.EXE)</option>
-                  <option value="mac-silicon">macOS Apple Silicon (M1/M2/M3 .DMG)</option>
-                  <option value="mac-intel">macOS Intel Core (.DMG)</option>
-                </select>
+                <Select
+                  value={desktopOS}
+                  onValueChange={(v) => setDesktopOS(v as any)}
+                  options={DESKTOP_OS_OPTIONS}
+                  ariaLabel="Select desktop operating system"
+                />
               </div>
 
               <div className={styles.downloadDetails}>

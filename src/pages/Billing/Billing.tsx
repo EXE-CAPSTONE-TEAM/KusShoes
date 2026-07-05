@@ -1,6 +1,8 @@
 import React, { useState } from 'react';
 import { CreditCard, HardDrive, Check, Calendar, ArrowUpRight, HelpCircle, X, Building, Pencil, Eye } from 'lucide-react';
 import { motion, AnimatePresence } from 'framer-motion';
+import { ConfirmDialog } from '../../components/ConfirmDialog/ConfirmDialog';
+import { useToast } from '../../context/ToastContext';
 import styles from './Billing.module.css';
 
 interface Invoice {
@@ -11,7 +13,9 @@ interface Invoice {
 }
 
 export const Billing: React.FC = () => {
+  const { toast } = useToast();
   const [showUpgradeModal, setShowUpgradeModal] = useState(false);
+  const [showCancelConfirm, setShowCancelConfirm] = useState(false);
   const [invoices] = useState<Invoice[]>([
     { id: 'INV-8742', date: 'Jun 15, 2026', amount: '259.000 VNĐ', status: 'Paid' },
     { id: 'INV-8219', date: 'May 15, 2026', amount: '259.000 VNĐ', status: 'Paid' },
@@ -112,9 +116,9 @@ export const Billing: React.FC = () => {
               <CreditCard size={16} className={styles.metaIcon} />
               <div className={styles.paymentMethodWrapper}>
                 <span>Payment method: <strong>Visa ending in 4242</strong></span>
-                <button 
-                  className={styles.editPaymentBtn} 
-                  onClick={() => alert('Edit payment method requested')}
+                <button
+                  className={styles.editPaymentBtn}
+                  onClick={() => toast('Edit payment method requested', 'info')}
                   title="Edit Payment Method"
                 >
                   <Pencil size={12} />
@@ -128,7 +132,7 @@ export const Billing: React.FC = () => {
               Upgrade / Change Plan
             </button>
             <div className={styles.cancelActionWrapper}>
-              <button className="btn-outline" onClick={() => alert('Cancel Subscription option requested')}>
+              <button className="btn-outline" onClick={() => setShowCancelConfirm(true)}>
                 Cancel Plan
               </button>
               <span className={styles.cancelMicroCopy}>
@@ -147,7 +151,7 @@ export const Billing: React.FC = () => {
         >
           <div className={styles.invoiceHeader}>
             <h3 className={styles.invoiceTitle}>Invoice History</h3>
-            <button className={styles.invoiceHelpBtn} onClick={() => alert('Support ticket link')}>
+            <button className={styles.invoiceHelpBtn} onClick={() => toast('Opening support ticket form...', 'info')}>
               <HelpCircle size={16} />
               <span>Need help?</span>
             </button>
@@ -176,14 +180,14 @@ export const Billing: React.FC = () => {
                   </td>
                   <td>
                     <div className={styles.actionCell}>
-                      <button 
-                        className={styles.viewIconBtn} 
-                        onClick={() => alert(`Previewing invoice ${inv.id}`)}
+                      <button
+                        className={styles.viewIconBtn}
+                        onClick={() => toast(`Previewing invoice ${inv.id}`, 'info')}
                         title="View Invoice"
                       >
                         <Eye size={16} />
                       </button>
-                      <button className={styles.downloadBtn} onClick={() => alert(`Downloading PDF for ${inv.id}`)}>
+                      <button className={styles.downloadBtn} onClick={() => toast(`Downloading PDF for ${inv.id}`)}>
                         Download
                       </button>
                     </div>
@@ -361,7 +365,7 @@ export const Billing: React.FC = () => {
                     <button 
                       className={`${tier.popular ? 'btn-neon-orange' : 'btn-outline'} ${styles.pricingCta}`}
                       onClick={() => {
-                        alert(`Selecting: ${tier.name}`);
+                        toast(`Plan updated to ${tier.name}`);
                         setShowUpgradeModal(false);
                       }}
                     >
@@ -375,6 +379,16 @@ export const Billing: React.FC = () => {
           </div>
         )}
       </AnimatePresence>
+
+      <ConfirmDialog
+        open={showCancelConfirm}
+        onOpenChange={setShowCancelConfirm}
+        title="Cancel your subscription?"
+        description="Your Pro Tier access remains active until the next billing date (July 15, 2026), then your account will drop to the Free Starter plan."
+        confirmLabel="Cancel Subscription"
+        cancelLabel="Keep Plan"
+        onConfirm={() => toast('Subscription canceled. Access remains until July 15, 2026.', 'error')}
+      />
     </div>
   );
 };

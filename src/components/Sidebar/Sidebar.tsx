@@ -1,5 +1,10 @@
 import React from 'react';
-import { LayoutDashboard, FolderKanban, Archive, CreditCard, Settings, LogOut, Plus } from 'lucide-react';
+import { LayoutDashboard, FolderKanban, Archive, CreditCard, Settings, LogOut, Plus, ChevronsUpDown, User } from 'lucide-react';
+import * as Tooltip from '@radix-ui/react-tooltip';
+import * as Progress from '@radix-ui/react-progress';
+import * as Separator from '@radix-ui/react-separator';
+import * as Avatar from '@radix-ui/react-avatar';
+import * as DropdownMenu from '@radix-ui/react-dropdown-menu';
 import { useTheme } from '../../context/ThemeContext';
 import styles from './Sidebar.module.css';
 
@@ -47,6 +52,7 @@ export const Sidebar: React.FC<SidebarProps> = ({
   };
 
   return (
+    <Tooltip.Provider delayDuration={300}>
     <aside className={styles.sidebar}>
       {/* Brand Header */}
       <div className={styles.logoSection}>
@@ -81,19 +87,28 @@ export const Sidebar: React.FC<SidebarProps> = ({
         {/* Separator and Recent Projects Section */}
         {recentProjects.length > 0 && (
           <div className={styles.recentSection}>
-            <div className={styles.recentDivider} />
+            <Separator.Root className={styles.recentDivider} decorative />
             <div className={styles.recentHeaderRow}>
               <span className={styles.recentHeader}>Recent Projects</span>
-              <button 
-                className={styles.quickAddBtn} 
-                onClick={(e) => {
-                  e.stopPropagation();
-                  setActivePage('projects?new=true');
-                }}
-                title="Quick Create Project"
-              >
-                <Plus size={12} />
-              </button>
+              <Tooltip.Root>
+                <Tooltip.Trigger asChild>
+                  <button
+                    className={styles.quickAddBtn}
+                    onClick={(e) => {
+                      e.stopPropagation();
+                      setActivePage('projects?new=true');
+                    }}
+                  >
+                    <Plus size={12} />
+                  </button>
+                </Tooltip.Trigger>
+                <Tooltip.Portal>
+                  <Tooltip.Content className={styles.tooltipContent} side="right" sideOffset={8}>
+                    Quick Create Project
+                    <Tooltip.Arrow className={styles.tooltipArrow} />
+                  </Tooltip.Content>
+                </Tooltip.Portal>
+              </Tooltip.Root>
             </div>
             
             <div className={styles.recentList}>
@@ -125,28 +140,70 @@ export const Sidebar: React.FC<SidebarProps> = ({
           <span>Storage: 1.4 GB / 5.0 GB</span>
           <span>28%</span>
         </div>
-        <div className={styles.storageBarBg}>
-          <div className={styles.storageBarFill} style={{ width: '28%' }} />
-        </div>
+        <Progress.Root className={styles.storageBarBg} value={28}>
+          <Progress.Indicator
+            className={styles.storageBarFill}
+            style={{ transform: `translateX(-${100 - 28}%)` }}
+          />
+        </Progress.Root>
       </div>
 
       {/* User Session Info Footer */}
       <div className={styles.footerSection}>
-        <div className={styles.userInfo}>
-          <img
-            src="https://images.unsplash.com/photo-1534528741775-53994a69daeb?auto=format&fit=crop&w=100&q=80"
-            alt="User Avatar"
-            className={styles.avatar}
-          />
-          <div className={styles.userDetails}>
-            <p className={styles.userName}>Duy Nguyen</p>
-            <p className={styles.userRole}>Sneaker Creator</p>
-          </div>
-        </div>
-        <button className={styles.logoutBtn} onClick={onLogout}>
-          <LogOut size={18} />
-        </button>
+        <DropdownMenu.Root>
+          <DropdownMenu.Trigger asChild>
+            <button className={styles.userInfo}>
+              <Avatar.Root className={styles.avatarRoot}>
+                <Avatar.Image
+                  className={styles.avatar}
+                  src="https://images.unsplash.com/photo-1534528741775-53994a69daeb?auto=format&fit=crop&w=100&q=80"
+                  alt="Duy Nguyen"
+                />
+                <Avatar.Fallback className={styles.avatarFallback} delayMs={300}>
+                  DN
+                </Avatar.Fallback>
+              </Avatar.Root>
+              <div className={styles.userDetails}>
+                <p className={styles.userName}>Duy Nguyen</p>
+                <p className={styles.userRole}>Sneaker Creator</p>
+              </div>
+              <ChevronsUpDown size={14} className={styles.userChevron} />
+            </button>
+          </DropdownMenu.Trigger>
+          <DropdownMenu.Portal>
+            <DropdownMenu.Content className={styles.dropdownContent} side="top" align="start" sideOffset={8}>
+              <DropdownMenu.Item className={styles.dropdownItem} onSelect={() => setActivePage('settings')}>
+                <User size={14} /> Profile
+              </DropdownMenu.Item>
+              <DropdownMenu.Item className={styles.dropdownItem} onSelect={() => setActivePage('settings')}>
+                <Settings size={14} /> Settings
+              </DropdownMenu.Item>
+              <DropdownMenu.Separator className={styles.dropdownSeparator} />
+              <DropdownMenu.Item
+                className={`${styles.dropdownItem} ${styles.dropdownItemDanger}`}
+                onSelect={onLogout}
+              >
+                <LogOut size={14} /> Log out
+              </DropdownMenu.Item>
+            </DropdownMenu.Content>
+          </DropdownMenu.Portal>
+        </DropdownMenu.Root>
+
+        <Tooltip.Root>
+          <Tooltip.Trigger asChild>
+            <button className={styles.logoutBtn} onClick={onLogout}>
+              <LogOut size={18} />
+            </button>
+          </Tooltip.Trigger>
+          <Tooltip.Portal>
+            <Tooltip.Content className={styles.tooltipContent} side="top" sideOffset={8}>
+              Log out
+              <Tooltip.Arrow className={styles.tooltipArrow} />
+            </Tooltip.Content>
+          </Tooltip.Portal>
+        </Tooltip.Root>
       </div>
     </aside>
+    </Tooltip.Provider>
   );
 };

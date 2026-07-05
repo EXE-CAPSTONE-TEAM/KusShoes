@@ -6,7 +6,16 @@ import {
   CheckSquare, Square, Camera, Cpu 
 } from 'lucide-react';
 import { motion, AnimatePresence } from 'framer-motion';
+import { Select } from '../../components/Select/Select';
+import { ConfirmDialog } from '../../components/ConfirmDialog/ConfirmDialog';
+import { useToast } from '../../context/ToastContext';
 import styles from './Projects.module.css';
+
+const SORT_OPTIONS = [
+  { value: 'date', label: 'Last Updated' },
+  { value: 'name', label: 'Alphabetical (A-Z)' },
+  { value: 'size', label: 'File Size' },
+];
 
 interface Project {
   id: string;
@@ -37,6 +46,7 @@ export const Projects: React.FC<ProjectsProps> = ({
   onViewDetails,
   initialFilter
 }) => {
+  const { toast } = useToast();
   // View states
   const [viewMode, setViewMode] = useState<'grid' | 'list'>('grid');
   const [searchTerm, setSearchTerm] = useState('');
@@ -59,9 +69,13 @@ export const Projects: React.FC<ProjectsProps> = ({
   // Bulk actions status dropdown state
   const [showBulkStatusDropdown, setShowBulkStatusDropdown] = useState(false);
 
+  // Delete confirmation dialog state
+  const [confirmDeleteId, setConfirmDeleteId] = useState<string | null>(null);
+  const [confirmBulkDeleteOpen, setConfirmBulkDeleteOpen] = useState(false);
+
   const handleBulkStatusChange = (status: 'Scanned' | 'Designing' | 'Completed') => {
     setProjects(prev => prev.map(p => selectedIds.includes(p.id) ? { ...p, status } : p));
-    alert(`Updated status to ${status} for ${selectedIds.length} projects.`);
+    toast(`Updated status to ${status} for ${selectedIds.length} projects.`);
     setSelectedIds([]);
     setShowBulkStatusDropdown(false);
   };
@@ -132,18 +146,24 @@ export const Projects: React.FC<ProjectsProps> = ({
 
   // Bulk delete
   const handleBulkDelete = () => {
-    if (confirm(`Are you sure you want to delete the ${selectedIds.length} selected projects?`)) {
-      setProjects(prev => prev.filter(p => !selectedIds.includes(p.id)));
-      setSelectedIds([]);
-    }
+    setConfirmBulkDeleteOpen(true);
+  };
+
+  const confirmBulkDelete = () => {
+    setProjects(prev => prev.filter(p => !selectedIds.includes(p.id)));
+    setSelectedIds([]);
   };
 
   // Single Delete
   const handleDelete = (id: string) => {
-    if (confirm('Are you sure you want to delete this project?')) {
-      setProjects(prev => prev.filter(p => p.id !== id));
-      setActiveMenuId(null);
-    }
+    setConfirmDeleteId(id);
+  };
+
+  const confirmSingleDelete = () => {
+    if (!confirmDeleteId) return;
+    setProjects(prev => prev.filter(p => p.id !== confirmDeleteId));
+    setActiveMenuId(null);
+    setConfirmDeleteId(null);
   };
 
   // Rename action
@@ -210,7 +230,7 @@ export const Projects: React.FC<ProjectsProps> = ({
       setWizardStep(2);
     } else if (wizardStep === 2) {
       if (!wizardName.trim()) {
-        alert('Please enter a project name.');
+        toast('Please enter a project name.', 'error');
         return;
       }
       setWizardStep(3);
@@ -256,7 +276,7 @@ export const Projects: React.FC<ProjectsProps> = ({
         setWizardBaseModel('');
         setWizardDesktopStatus('idle');
         setUploadedFile(null);
-        alert(`New Project "${wizardName}" successfully added and synced to KusStudio Desktop client!`);
+        toast(`New Project "${wizardName}" successfully added and synced to KusStudio Desktop client!`);
       }, 1000);
       
     }, 2000);
@@ -359,15 +379,12 @@ export const Projects: React.FC<ProjectsProps> = ({
         {/* Sorting Dropdown */}
         <div className={`${styles.sortWrapper} glass-panel`}>
           <span className={styles.controlLabel}>Sort:</span>
-          <select 
-            value={sortBy} 
-            onChange={(e) => setSortBy(e.target.value as 'name' | 'date' | 'size')}
-            className={styles.selectInput}
-          >
-            <option value="date">Last Updated</option>
-            <option value="name">Alphabetical (A-Z)</option>
-            <option value="size">File Size</option>
-          </select>
+          <Select
+            value={sortBy}
+            onValueChange={(v) => setSortBy(v as 'name' | 'date' | 'size')}
+            options={SORT_OPTIONS}
+            ariaLabel="Sort projects"
+          />
         </div>
 
         {/* Tab Filters */}
@@ -655,24 +672,23 @@ export const Projects: React.FC<ProjectsProps> = ({
       {/* Minimalist Pagination */}
       {filteredAndSortedProjects.length > 0 && (
         <div className={styles.pagination}>
-          <button 
-            className={styles.pageBtn} 
-            onClick={() => alert('Previous page')}
+          <button
+            className={styles.pageBtn}
             disabled
           >
             <ArrowLeft size={16} />
             <span>Previous</span>
           </button>
-          
+
           <div className={styles.pageNumbers}>
             <button className={`${styles.pageNumberBtn} ${styles.activePage}`}>1</button>
-            <button className={styles.pageNumberBtn} onClick={() => alert('Go to page 2')}>2</button>
-            <button className={styles.pageNumberBtn} onClick={() => alert('Go to page 3')}>3</button>
+            <button className={styles.pageNumberBtn} onClick={() => toast('Page 2 is not available in this demo.', 'info')}>2</button>
+            <button className={styles.pageNumberBtn} onClick={() => toast('Page 3 is not available in this demo.', 'info')}>3</button>
           </div>
-          
-          <button 
-            className={styles.pageBtn} 
-            onClick={() => alert('Next page')}
+
+          <button
+            className={styles.pageBtn}
+            onClick={() => toast('No more pages in this demo.', 'info')}
           >
             <span>Next</span>
             <ArrowRight size={16} />
@@ -736,7 +752,7 @@ export const Projects: React.FC<ProjectsProps> = ({
                 className="btn-neon-orange"
                 onClick={() => {
                   navigator.clipboard.writeText(`https://sneakerflow.cloud/share/model-${sharingProject.id}`);
-                  alert('Link copied to clipboard!');
+                  toast('Link copied to clipboard!');
                   setSharingProject(null);
                 }}
               >
@@ -1019,6 +1035,24 @@ export const Projects: React.FC<ProjectsProps> = ({
           </motion.div>
         </div>
       )}
+
+      <ConfirmDialog
+        open={confirmDeleteId !== null}
+        onOpenChange={(open) => !open && setConfirmDeleteId(null)}
+        title="Delete this project?"
+        description="This will permanently remove the project and its scanned assets. This action cannot be undone."
+        confirmLabel="Delete Project"
+        onConfirm={confirmSingleDelete}
+      />
+
+      <ConfirmDialog
+        open={confirmBulkDeleteOpen}
+        onOpenChange={setConfirmBulkDeleteOpen}
+        title={`Delete ${selectedIds.length} selected projects?`}
+        description="This will permanently remove all selected projects and their scanned assets. This action cannot be undone."
+        confirmLabel="Delete Projects"
+        onConfirm={confirmBulkDelete}
+      />
     </div>
   );
 };

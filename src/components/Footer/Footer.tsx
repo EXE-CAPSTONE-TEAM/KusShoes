@@ -1,6 +1,7 @@
 import React from 'react';
 import { Instagram, Github, Youtube, MessageSquare } from 'lucide-react';
 import { useTheme } from '../../context/ThemeContext';
+import { useToast } from '../../context/ToastContext';
 import styles from './Footer.module.css';
 
 interface FooterProps {
@@ -9,6 +10,7 @@ interface FooterProps {
 
 export const Footer: React.FC<FooterProps> = ({ navigate }) => {
   const { theme } = useTheme();
+  const { toast } = useToast();
 
   const handlePricingClick = (e: React.MouseEvent<HTMLAnchorElement>) => {
     e.preventDefault();
@@ -52,16 +54,16 @@ export const Footer: React.FC<FooterProps> = ({ navigate }) => {
         {/* Col 3: Resources */}
         <div className={styles.footerLinkCol}>
           <h4>Resources</h4>
-          <a href="#docs" onClick={(e) => { e.preventDefault(); alert('Docs'); }}>Documentation</a>
-          <a href="#about" onClick={(e) => { e.preventDefault(); alert('About the team'); }}>Developer Team</a>
-          <a href="#releases" onClick={(e) => { e.preventDefault(); alert('Release Notes'); }}>Release Notes</a>
+          <a href="#docs" onClick={(e) => { e.preventDefault(); toast('Documentation page coming soon', 'info'); }}>Documentation</a>
+          <a href="#about" onClick={(e) => { e.preventDefault(); toast('About the team page coming soon', 'info'); }}>Developer Team</a>
+          <a href="#releases" onClick={(e) => { e.preventDefault(); toast('Release notes coming soon', 'info'); }}>Release Notes</a>
         </div>
 
         {/* Col 4: Support & Security */}
         <div className={styles.footerLinkCol}>
           <h4>Support & Security</h4>
-          <a href="#terms" onClick={(e) => { e.preventDefault(); alert('Terms'); }}>Terms of Service</a>
-          <a href="#privacy" onClick={(e) => { e.preventDefault(); alert('Privacy'); }}>Privacy Policy</a>
+          <a href="#terms" onClick={(e) => { e.preventDefault(); toast('Terms of Service page coming soon', 'info'); }}>Terms of Service</a>
+          <a href="#privacy" onClick={(e) => { e.preventDefault(); toast('Privacy Policy page coming soon', 'info'); }}>Privacy Policy</a>
           <a href="/pricing" onClick={handlePricingClick}>FAQs</a>
         </div>
       </div>

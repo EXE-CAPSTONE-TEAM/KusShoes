@@ -1,0 +1,167 @@
+.sidebar {
+  width: 240px;
+  height: 100vh;
+  background-color: var(--bg-secondary);
+  border-right: 1px solid var(--glass-border);
+  display: flex;
+  flex-direction: column;
+  padding: 24px 16px;
+  position: sticky;
+  top: 0;
+  z-index: 100;
+  flex-shrink: 0;
+}
+
+.logoSection {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 8px;
+  margin-bottom: 28px;
+}
+
+.logoImage {
+  height: 32px;
+  width: auto;
+  object-fit: contain;
+}
+
+.adminTag {
+  font-family: var(--font-mono);
+  font-size: 0.62rem;
+  font-weight: 700;
+  letter-spacing: 1.5px;
+  text-transform: uppercase;
+  color: var(--color-orange);
+  background: rgba(255, 90, 54, 0.1);
+  border: 1px solid rgba(255, 90, 54, 0.2);
+  padding: 3px 10px;
+  border-radius: var(--border-radius-full);
+}
+
+.navMenu {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  flex-grow: 1;
+}
+
+.navItem {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  background: transparent;
+  border: 1px solid transparent;
+  color: var(--text-secondary);
+  padding: 10px 14px;
+  border-radius: var(--border-radius-md);
+  cursor: pointer;
+  font-family: var(--font-sans);
+  font-weight: 500;
+  font-size: 0.87rem;
+  text-align: left;
+  position: relative;
+  transition: all var(--transition-fast);
+}
+
+.navItem:hover {
+  color: var(--text-primary);
+  background-color: var(--hover-bg-item);
+}
+
+.navItem.active {
+  color: var(--text-primary);
+  background: var(--glass-bg);
+  border-color: var(--glass-border);
+}
+
+.navItem.active .navIcon {
+  color: var(--color-orange);
+}
+
+.activeIndicator {
+  position: absolute;
+  left: 0;
+  top: 25%;
+  height: 50%;
+  width: 4px;
+  background: linear-gradient(to bottom, var(--color-orange), var(--color-crimson));
+  border-radius: 0 4px 4px 0;
+}
+
+.footerSection {
+  border-top: 1px solid var(--glass-border);
+  padding-top: 16px;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+}
+
+.sessionInfo {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  min-width: 0;
+}
+
+.sessionEmail {
+  font-size: 0.78rem;
+  font-weight: 600;
+  color: var(--text-primary);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  max-width: 150px;
+}
+
+.roleBadge {
+  font-size: 0.62rem;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.6px;
+  padding: 2px 8px;
+  border-radius: var(--border-radius-full);
+  width: fit-content;
+}
+
+.roleAdmin {
+  background-color: rgba(230, 30, 67, 0.12);
+  color: var(--color-crimson);
+}
+
+.roleStaff {
+  background-color: rgba(56, 189, 248, 0.12);
+  color: var(--status-completed);
+}
+
+.logoutBtn {
+  background: transparent;
+  border: none;
+  color: var(--text-muted);
+  cursor: pointer;
+  display: flex;
+  padding: 8px;
+  border-radius: var(--border-radius-sm);
+  transition: all var(--transition-fast);
+}
+
+.logoutBtn:hover {
+  color: var(--color-crimson);
+  background-color: rgba(230, 30, 67, 0.05);
+}
+
+.tooltipContent {
+  background-color: var(--dropdown-bg);
+  color: var(--text-primary);
+  border: 1px solid var(--glass-border);
+  padding: 8px 12px;
+  border-radius: var(--border-radius-sm);
+  font-size: 0.8rem;
+  box-shadow: var(--shadow-md);
+  z-index: 200;
+}
+
+.tooltipArrow {
+  fill: var(--dropdown-bg);
+}

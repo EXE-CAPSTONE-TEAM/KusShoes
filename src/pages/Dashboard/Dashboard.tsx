@@ -2,7 +2,13 @@ import React, { useRef, useState } from 'react';
 import * as THREE from 'three';
 import { Canvas, useFrame } from '@react-three/fiber';
 import { OrbitControls, Stage } from '@react-three/drei';
-import { FolderKanban, HardDrive, ShieldCheck, Download, RefreshCw, Plus, ArrowRight } from 'lucide-react';
+import * as Dialog from '@radix-ui/react-dialog';
+import * as Tooltip from '@radix-ui/react-tooltip';
+import * as Progress from '@radix-ui/react-progress';
+import * as DropdownMenu from '@radix-ui/react-dropdown-menu';
+import * as Avatar from '@radix-ui/react-avatar';
+import * as Separator from '@radix-ui/react-separator';
+import { FolderKanban, HardDrive, ShieldCheck, Download, RefreshCw, Plus, ArrowRight, X, MoreVertical, Trash2, Eye, Pin } from 'lucide-react';
 import { motion } from 'framer-motion';
 import styles from './Dashboard.module.css';
 
@@ -97,36 +103,90 @@ export const Dashboard: React.FC<{ setActivePage: (page: string) => void }> = ({
     }, 2000);
   };
 
+  const handleRemoveLog = (id: number) => {
+    setSyncLogs(prev => prev.filter(log => log.id !== id));
+  };
+
   const statCards = [
     { label: 'Total Projects', value: '12 Active', icon: FolderKanban, link: 'projects' },
-    { label: 'Cloud Storage', value: '1.4 / 5.0 GB', icon: HardDrive, link: 'billing' },
+    { label: 'Cloud Storage', value: '1.4 / 5.0 GB', icon: HardDrive, link: 'billing', progress: 28 },
     { label: 'Subscription Plan', value: 'Pro Tier', icon: ShieldCheck, link: 'billing' },
   ];
 
   return (
+    <Tooltip.Provider delayDuration={200}>
     <div className={styles.container}>
       {/* Welcome Banner */}
-      <motion.div 
+      <motion.div
         className={`${styles.banner} glass-panel`}
         initial={{ opacity: 0, y: 20 }}
         animate={{ opacity: 1, y: 0 }}
         transition={{ duration: 0.5 }}
       >
         <div className={styles.bannerInfo}>
-          <span className={styles.badge}>SNEAKER FLOW 3D</span>
+          <div className={styles.bannerIdentity}>
+            <Avatar.Root className={styles.avatarRoot}>
+              <Avatar.Image
+                className={styles.avatarImage}
+                src="https://i.pravatar.cc/80?u=duynguyen"
+                alt="Duy Nguyen"
+              />
+              <Avatar.Fallback className={styles.avatarFallback} delayMs={300}>
+                DN
+              </Avatar.Fallback>
+            </Avatar.Root>
+            <span className={styles.badge}>SNEAKER FLOW 3D</span>
+          </div>
           <h1 className={styles.bannerTitle}>Keep Creating, <span className="text-gradient-orange">Duy Nguyen</span></h1>
           <p className={styles.bannerDesc}>
             Manage your mobile scans, billing, and system configurations. Sync shoe assets instantly to the Desktop App for full 3D rendering.
           </p>
           <div className={styles.bannerActions}>
-            <button className="btn-neon-orange" onClick={handleSync} disabled={syncing}>
-              <RefreshCw className={`${styles.icon} ${syncing ? styles.spin : ''}`} size={18} />
-              {syncing ? 'Syncing assets...' : 'Sync Cloud Scan'}
-            </button>
-            <button className="btn-outline" onClick={() => alert('Downloading KusShoes Desktop v1.4.2')}>
-              <Download size={18} />
-              Get Desktop App
-            </button>
+            <Tooltip.Root>
+              <Tooltip.Trigger asChild>
+                <button className="btn-neon-orange" onClick={handleSync} disabled={syncing}>
+                  <RefreshCw className={`${styles.icon} ${syncing ? styles.spin : ''}`} size={18} />
+                  {syncing ? 'Syncing assets...' : 'Sync Cloud Scan'}
+                </button>
+              </Tooltip.Trigger>
+              <Tooltip.Portal>
+                <Tooltip.Content className={styles.tooltipContent} sideOffset={8}>
+                  Pulls the latest scans from your mobile device
+                  <Tooltip.Arrow className={styles.tooltipArrow} />
+                </Tooltip.Content>
+              </Tooltip.Portal>
+            </Tooltip.Root>
+
+            <Dialog.Root>
+              <Dialog.Trigger asChild>
+                <button className="btn-outline">
+                  <Download size={18} />
+                  Get Desktop App
+                </button>
+              </Dialog.Trigger>
+              <Dialog.Portal>
+                <Dialog.Overlay className={styles.dialogOverlay} />
+                <Dialog.Content className={styles.dialogContent}>
+                  <Dialog.Title className={styles.dialogTitle}>KusShoes Desktop v1.4.2</Dialog.Title>
+                  <Dialog.Description className={styles.dialogDescription}>
+                    Get full 3D rendering, paint mapping, and offline project sync by installing the Desktop companion app.
+                  </Dialog.Description>
+                  <div className={styles.dialogActions}>
+                    <Dialog.Close asChild>
+                      <button className="btn-outline">Cancel</button>
+                    </Dialog.Close>
+                    <Dialog.Close asChild>
+                      <button className="btn-neon-orange">Start Download</button>
+                    </Dialog.Close>
+                  </div>
+                  <Dialog.Close asChild>
+                    <button className={styles.dialogCloseIcon} aria-label="Close">
+                      <X size={16} />
+                    </button>
+                  </Dialog.Close>
+                </Dialog.Content>
+              </Dialog.Portal>
+            </Dialog.Root>
           </div>
         </div>
         
@@ -154,7 +214,7 @@ export const Dashboard: React.FC<{ setActivePage: (page: string) => void }> = ({
         {statCards.map((stat, index) => {
           const Icon = stat.icon;
           return (
-            <motion.div 
+            <motion.div
               key={stat.label}
               className={`${styles.statCard} glass-panel`}
               initial={{ opacity: 0, y: 20 }}
@@ -164,11 +224,29 @@ export const Dashboard: React.FC<{ setActivePage: (page: string) => void }> = ({
             >
               <div className={styles.statHeader}>
                 <span className={styles.statLabel}>{stat.label}</span>
-                <div className={styles.statIconWrapper}>
-                  <Icon size={20} className={styles.statIcon} />
-                </div>
+                <Tooltip.Root>
+                  <Tooltip.Trigger asChild>
+                    <div className={styles.statIconWrapper}>
+                      <Icon size={20} className={styles.statIcon} />
+                    </div>
+                  </Tooltip.Trigger>
+                  <Tooltip.Portal>
+                    <Tooltip.Content className={styles.tooltipContent} sideOffset={6}>
+                      {stat.label}
+                      <Tooltip.Arrow className={styles.tooltipArrow} />
+                    </Tooltip.Content>
+                  </Tooltip.Portal>
+                </Tooltip.Root>
               </div>
               <div className={styles.statValue}>{stat.value}</div>
+              {stat.progress !== undefined && (
+                <Progress.Root className={styles.progressRoot} value={stat.progress}>
+                  <Progress.Indicator
+                    className={styles.progressIndicator}
+                    style={{ transform: `translateX(-${100 - stat.progress}%)` }}
+                  />
+                </Progress.Root>
+              )}
               <div className={styles.statFooter}>
                 <span>View details</span>
                 <ArrowRight size={14} />
@@ -181,7 +259,7 @@ export const Dashboard: React.FC<{ setActivePage: (page: string) => void }> = ({
       {/* Bottom Grid */}
       <div className={styles.bottomGrid}>
         {/* Recent sync logs */}
-        <motion.div 
+        <motion.div
           className={`${styles.logPanel} glass-panel`}
           initial={{ opacity: 0, x: -20 }}
           animate={{ opacity: 1, x: 0 }}
@@ -193,6 +271,7 @@ export const Dashboard: React.FC<{ setActivePage: (page: string) => void }> = ({
               Sync Now
             </button>
           </div>
+          <Separator.Root className={styles.separator} decorative />
           <div className={styles.logList}>
             {syncLogs.map(log => (
               <div key={log.id} className={styles.logItem}>
@@ -201,6 +280,30 @@ export const Dashboard: React.FC<{ setActivePage: (page: string) => void }> = ({
                   <p className={styles.logText}>{log.text}</p>
                   <span className={styles.logTime}>{log.time}</span>
                 </div>
+                <DropdownMenu.Root>
+                  <DropdownMenu.Trigger asChild>
+                    <button className={styles.logMenuBtn} aria-label="Log actions">
+                      <MoreVertical size={16} />
+                    </button>
+                  </DropdownMenu.Trigger>
+                  <DropdownMenu.Portal>
+                    <DropdownMenu.Content className={styles.dropdownContent} sideOffset={6} align="end">
+                      <DropdownMenu.Item className={styles.dropdownItem} onSelect={() => setActivePage('projects')}>
+                        <Eye size={14} /> View project
+                      </DropdownMenu.Item>
+                      <DropdownMenu.Item className={styles.dropdownItem}>
+                        <Pin size={14} /> Pin to top
+                      </DropdownMenu.Item>
+                      <DropdownMenu.Separator className={styles.dropdownSeparator} />
+                      <DropdownMenu.Item
+                        className={`${styles.dropdownItem} ${styles.dropdownItemDanger}`}
+                        onSelect={() => handleRemoveLog(log.id)}
+                      >
+                        <Trash2 size={14} /> Remove
+                      </DropdownMenu.Item>
+                    </DropdownMenu.Content>
+                  </DropdownMenu.Portal>
+                </DropdownMenu.Root>
               </div>
             ))}
           </div>
@@ -225,5 +328,6 @@ export const Dashboard: React.FC<{ setActivePage: (page: string) => void }> = ({
         </motion.div>
       </div>
     </div>
+    </Tooltip.Provider>
   );
 };

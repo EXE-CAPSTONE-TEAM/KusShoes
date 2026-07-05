@@ -64,6 +64,14 @@
   display: none;
 }
 
+/* Light mode: flat white background, no orange corner spotlights */
+[data-theme="light"] .cornerTL,
+[data-theme="light"] .cornerTR,
+[data-theme="light"] .cornerBL,
+[data-theme="light"] .cornerBR {
+  display: none;
+}
+
 /* Navbar */
 .navbar {
   position: fixed;

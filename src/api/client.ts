@@ -13,6 +13,8 @@ import type {
 } from "../types";
 
 const API_BASE_URL = import.meta.env.VITE_API_BASE_URL ?? `http://${window.location.hostname}:8000`;
+const ACCESS_TOKEN_KEY = "kusshoes_access_token";
+const REFRESH_TOKEN_KEY = "kusshoes_refresh_token";
 
 function getCsrfToken(): string | null {
   const match = document.cookie.match(/(?:^|;) ?kusshoes_csrf_token=([^;]*)(?:;|$)/);
@@ -21,17 +23,115 @@ function getCsrfToken(): string | null {
 
 export class ApiError extends Error {
   readonly status: number;
+  readonly code: string | null;
+  readonly data: Record<string, unknown>;
 
-  constructor(message: string, status: number) {
+  constructor(
+    message: string,
+    status: number,
+    code: string | null = null,
+    data: Record<string, unknown> = {},
+  ) {
     super(message);
+    this.name = "ApiError";
     this.status = status;
+    this.code = code;
+    this.data = data;
   }
+}
+
+type AuthTokens = {
+  access_token: string;
+  refresh_token: string;
+  token_type: string;
+};
+
+export type RegisterInput = {
+  email: string;
+  username: string;
+  password: string;
+  confirmPassword: string;
+  fullName: string;
+};
+
+export type RegisterResult = {
+  userId: string;
+  email: string;
+  message: string;
+};
+
+function getStoredToken(key: string): string | null {
+  return sessionStorage.getItem(key) ?? localStorage.getItem(key);
+}
+
+function saveTokens(tokens: AuthTokens, remember: boolean): void {
+  clearTokens();
+  const storage = remember ? localStorage : sessionStorage;
+  storage.setItem(ACCESS_TOKEN_KEY, tokens.access_token);
+  storage.setItem(REFRESH_TOKEN_KEY, tokens.refresh_token);
+}
+
+function clearTokens(): void {
+  for (const storage of [localStorage, sessionStorage]) {
+    storage.removeItem(ACCESS_TOKEN_KEY);
+    storage.removeItem(REFRESH_TOKEN_KEY);
+  }
+}
+
+function replaceAccessToken(accessToken: string): void {
+  const storage = sessionStorage.getItem(REFRESH_TOKEN_KEY) ? sessionStorage : localStorage;
+  storage.setItem(ACCESS_TOKEN_KEY, accessToken);
+}
+
+let refreshPromise: Promise<string | null> | null = null;
+
+async function refreshAccessToken(): Promise<string | null> {
+  if (refreshPromise) return refreshPromise;
+
+  refreshPromise = (async () => {
+    const refreshToken = getStoredToken(REFRESH_TOKEN_KEY);
+    if (!refreshToken) return null;
+
+    try {
+      const response = await fetch(`${API_BASE_URL}/api/v1/auth/refresh`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ refresh_token: refreshToken }),
+      });
+      if (!response.ok) {
+        clearTokens();
+        return null;
+      }
+      const payload = (await response.json()) as { access_token: string };
+      replaceAccessToken(payload.access_token);
+      return payload.access_token;
+    } catch {
+      return null;
+    }
+  })().finally(() => {
+    refreshPromise = null;
+  });
+
+  return refreshPromise;
+}
+
+function canRefreshRequest(path: string): boolean {
+  return ![
+    "/api/v1/auth/login",
+    "/api/v1/auth/register",
+    "/api/v1/auth/verify-otp",
+    "/api/v1/auth/refresh",
+  ].includes(path);
 }
 
 async function request<T>(path: string, options: RequestInit = {}): Promise<T> {
   const headers: Record<string, string> = {
     "Content-Type": "application/json",
   };
+  const accessToken = getStoredToken(ACCESS_TOKEN_KEY);
+  if (accessToken) {
+    headers.Authorization = `Bearer ${accessToken}`;
+  }
   if (options.method && ["POST", "PUT", "PATCH", "DELETE"].includes(options.method.toUpperCase())) {
     const csrfToken = getCsrfToken();
     if (csrfToken) {
@@ -39,7 +139,7 @@ async function request<T>(path: string, options: RequestInit = {}): Promise<T> {
     }
   }
 
-  const response = await fetch(`${API_BASE_URL}${path}`, {
+  let response = await fetch(`${API_BASE_URL}${path}`, {
     ...options,
     credentials: "include",
     headers: {
@@ -48,24 +148,61 @@ async function request<T>(path: string, options: RequestInit = {}): Promise<T> {
     },
   });
 
+  if (response.status === 401 && canRefreshRequest(path)) {
+    const refreshedAccessToken = await refreshAccessToken();
+    if (refreshedAccessToken) {
+      headers.Authorization = `Bearer ${refreshedAccessToken}`;
+      response = await fetch(`${API_BASE_URL}${path}`, {
+        ...options,
+        credentials: "include",
+        headers: {
+          ...headers,
+          ...options.headers,
+        },
+      });
+    }
+  }
+
   if (!response.ok) {
-    throw new ApiError(await errorMessage(response), response.status);
+    throw await apiError(response);
   }
 
   return response.json() as Promise<T>;
 }
 
-async function errorMessage(response: Response): Promise<string> {
+async function apiError(response: Response): Promise<ApiError> {
   try {
-    const payload = await response.json();
-    return typeof payload.detail === "string" ? payload.detail : JSON.stringify(payload.detail);
+    const payload = (await response.json()) as Record<string, unknown>;
+    const detail = payload.detail;
+    let message = typeof payload.message === "string" ? payload.message : response.statusText;
+    if (typeof detail === "string") {
+      message = detail;
+    } else if (Array.isArray(detail)) {
+      message = detail
+        .map((item) => {
+          if (typeof item !== "object" || item === null) return String(item);
+          const validationError = item as { msg?: string };
+          return validationError.msg ?? JSON.stringify(item);
+        })
+        .join("; ");
+    }
+    return new ApiError(
+      message || `Request failed (${response.status})`,
+      response.status,
+      typeof payload.code === "string" ? payload.code : null,
+      payload,
+    );
   } catch {
-    return response.statusText;
+    return new ApiError(response.statusText || "Unable to connect to the server", response.status);
   }
 }
 
-// Note: We no longer store tokens in localStorage per editor-integration-guide.md
-// Cookies are automatically handled by the browser.
+async function errorMessage(response: Response): Promise<string> {
+  return (await apiError(response)).message;
+}
+
+// This backend exposes bearer tokens. "Remember me" chooses localStorage;
+// otherwise tokens live only for the current browser tab/session.
 
 function downloadBlob(blob: Blob, filename: string): void {
   const url = URL.createObjectURL(blob);
@@ -83,40 +220,61 @@ export const api = {
   baseUrl: API_BASE_URL,
 
   hasToken(): boolean {
-    // We can't strictly check HTTP-only cookies, so we assume true and let api.me() verify
-    // or check if csrf cookie is present
-    return Boolean(getCsrfToken());
+    return Boolean(getStoredToken(ACCESS_TOKEN_KEY));
   },
 
   async logout(): Promise<void> {
+    const refreshToken = getStoredToken(REFRESH_TOKEN_KEY);
     try {
-      await request("/api/auth/logout", { method: "POST" });
-    } catch (e) {
-      // ignore
+      if (refreshToken) {
+        await request("/api/v1/auth/logout", {
+          method: "POST",
+          body: JSON.stringify({ refresh_token: refreshToken }),
+        });
+      }
+    } catch {
+      // Local logout must still succeed when the API/token is unavailable.
+    } finally {
+      clearTokens();
     }
   },
 
-  async register(name: string, email: string, password: string): Promise<User> {
-    const payload = await request<{ accessToken: string; user: User }>("/api/auth/register", {
+  async register(input: RegisterInput): Promise<RegisterResult> {
+    const payload = await request<{ user_id: string; email: string; message: string }>("/api/v1/auth/register", {
       method: "POST",
-      body: JSON.stringify({ name, email, password }),
+      body: JSON.stringify({
+        email: input.email,
+        username: input.username,
+        password: input.password,
+        confirm_password: input.confirmPassword,
+        full_name: input.fullName,
+      }),
     });
-    return payload.user;
+    return { userId: payload.user_id, email: payload.email, message: payload.message };
   },
 
-  async login(email: string, password: string): Promise<User> {
-    const payload = await request<{ accessToken: string; user: User }>("/api/auth/login", {
+  async login(email: string, password: string, remember = true): Promise<void> {
+    const tokens = await request<AuthTokens>("/api/v1/auth/login", {
       method: "POST",
       body: JSON.stringify({ email, password }),
     });
-    return payload.user;
+    saveTokens(tokens, remember);
   },
 
-  async demoLogin(): Promise<User> {
-    const payload = await request<{ accessToken: string; user: User }>("/api/auth/demo-login", {
+  async verifyOtp(userId: string, otpCode: string, remember = true): Promise<void> {
+    const tokens = await request<AuthTokens>("/api/v1/auth/verify-otp", {
       method: "POST",
+      body: JSON.stringify({ user_id: userId, otp_code: otpCode }),
     });
-    return payload.user;
+    saveTokens(tokens, remember);
+  },
+
+  async resendOtp(userId: string): Promise<{ message: string; resendRemaining: number }> {
+    const payload = await request<{ message: string; resend_remaining: number }>("/api/v1/auth/resend-otp", {
+      method: "POST",
+      body: JSON.stringify({ user_id: userId }),
+    });
+    return { message: payload.message, resendRemaining: payload.resend_remaining };
   },
 
   async createProject(payload: { name: string; sourceType?: string; templateId?: string | null }): Promise<{ id: string; name: string }> {
@@ -127,7 +285,20 @@ export const api = {
   },
 
   async me(): Promise<User> {
-    return request<User>("/api/auth/me");
+    const profile = await request<{
+      id: string;
+      email: string;
+      first_name: string;
+      last_name: string;
+      member_since: string;
+    }>("/api/v1/users/me");
+    return {
+      id: profile.id,
+      role: "user",
+      name: `${profile.first_name} ${profile.last_name}`.trim(),
+      email: profile.email,
+      createdAt: profile.member_since,
+    };
   },
 
   async getReconstructionReadiness(): Promise<ReconstructionReadiness> {

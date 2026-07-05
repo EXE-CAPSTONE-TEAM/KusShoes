@@ -338,6 +338,198 @@
   z-index: 1;
 }
 
+/* Bannner identity row (Avatar + badge) */
+.bannerIdentity {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+}
+
+.avatarRoot {
+  width: 40px;
+  height: 40px;
+  border-radius: var(--border-radius-full);
+  overflow: hidden;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  border: 1px solid var(--glass-border);
+  background-color: var(--bg-tertiary);
+  flex-shrink: 0;
+}
+
+.avatarImage {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+}
+
+.avatarFallback {
+  color: var(--color-orange);
+  font-family: var(--font-mono);
+  font-size: 0.85rem;
+  font-weight: 700;
+}
+
+/* Radix Tooltip */
+.tooltipContent {
+  background-color: var(--dropdown-bg);
+  color: var(--text-primary);
+  border: 1px solid var(--glass-border);
+  padding: 8px 12px;
+  border-radius: var(--border-radius-sm);
+  font-size: 0.8rem;
+  box-shadow: var(--shadow-md);
+  max-width: 220px;
+  z-index: 100;
+}
+
+.tooltipArrow {
+  fill: var(--dropdown-bg);
+}
+
+/* Radix Dialog */
+.dialogOverlay {
+  position: fixed;
+  inset: 0;
+  background-color: rgba(0, 0, 0, 0.6);
+  z-index: 200;
+}
+
+.dialogContent {
+  position: fixed;
+  top: 50%;
+  left: 50%;
+  transform: translate(-50%, -50%);
+  width: 90vw;
+  max-width: 420px;
+  background-color: var(--bg-secondary);
+  border: 1px solid var(--glass-border);
+  border-radius: var(--border-radius-md);
+  padding: 28px;
+  box-shadow: var(--shadow-lg);
+  z-index: 201;
+}
+
+.dialogTitle {
+  font-family: 'Space Grotesk', sans-serif;
+  font-size: 1.2rem;
+  font-weight: 700;
+  margin-bottom: 10px;
+}
+
+.dialogDescription {
+  color: var(--text-secondary);
+  font-size: 0.9rem;
+  line-height: 1.5;
+  margin-bottom: 24px;
+}
+
+.dialogActions {
+  display: flex;
+  justify-content: flex-end;
+  gap: 12px;
+}
+
+.dialogCloseIcon {
+  position: absolute;
+  top: 16px;
+  right: 16px;
+  background: transparent;
+  border: none;
+  color: var(--text-muted);
+  cursor: pointer;
+  display: flex;
+  padding: 4px;
+  border-radius: var(--border-radius-sm);
+}
+
+.dialogCloseIcon:hover {
+  color: var(--text-primary);
+  background-color: var(--hover-bg-item);
+}
+
+/* Radix Progress */
+.progressRoot {
+  position: relative;
+  overflow: hidden;
+  background-color: var(--bg-tertiary);
+  border-radius: var(--border-radius-full);
+  width: 100%;
+  height: 6px;
+}
+
+.progressIndicator {
+  background-color: var(--color-orange);
+  width: 100%;
+  height: 100%;
+  transition: transform var(--transition-normal);
+  border-radius: var(--border-radius-full);
+}
+
+/* Radix Separator */
+.separator {
+  background-color: var(--glass-border);
+  height: 1px;
+  width: 100%;
+  border: none;
+}
+
+/* Radix Dropdown Menu */
+.logMenuBtn {
+  background: transparent;
+  border: none;
+  color: var(--text-muted);
+  cursor: pointer;
+  padding: 4px;
+  border-radius: var(--border-radius-sm);
+  display: flex;
+  align-self: flex-start;
+  margin-left: auto;
+}
+
+.logMenuBtn:hover {
+  color: var(--text-primary);
+  background-color: var(--hover-bg-item);
+}
+
+.dropdownContent {
+  background-color: var(--dropdown-bg);
+  border: 1px solid var(--glass-border);
+  border-radius: var(--border-radius-sm);
+  padding: 6px;
+  min-width: 170px;
+  box-shadow: var(--shadow-md);
+  z-index: 100;
+}
+
+.dropdownItem {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 8px 10px;
+  border-radius: var(--border-radius-sm);
+  font-size: 0.85rem;
+  color: var(--text-primary);
+  cursor: pointer;
+  outline: none;
+}
+
+.dropdownItem:hover,
+.dropdownItem[data-highlighted] {
+  background-color: var(--hover-bg-item);
+}
+
+.dropdownItemDanger {
+  color: var(--color-crimson);
+}
+
+.dropdownSeparator {
+  height: 1px;
+  background-color: var(--glass-border);
+  margin: 6px 0;
+}
+
 /* Responsive Grid styling */
 @media (max-width: 1280px) {
   .banner {

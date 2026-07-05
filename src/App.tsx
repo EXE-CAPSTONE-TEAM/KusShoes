@@ -9,6 +9,8 @@ import { Billing } from './pages/Billing/Billing';
 import { Settings } from './pages/Settings/Settings';
 import { ProjectDetails } from './pages/ProjectDetails/ProjectDetails';
 import { ProductsPage } from './pages/ProductsPage/ProductsPage';
+import { AdminApp } from './pages/Admin/AdminApp';
+import { api } from './api/client';
 
 interface Project {
   id: string;
@@ -30,6 +32,9 @@ interface Project {
 const getPageFromPath = (path: string): string => {
   const parts = path.split('?');
   const cleanPath = parts[0];
+  if (cleanPath === '/admin' || cleanPath.startsWith('/admin/')) {
+    return 'admin';
+  }
   switch (cleanPath) {
     case '/project-details':
       return 'project-details';
@@ -77,6 +82,8 @@ const getPathFromPage = (page: string): string => {
       return '/billing' + query;
     case 'settings':
       return '/settings' + query;
+    case 'admin':
+      return '/admin' + query;
     case 'landing':
     default:
       return '/' + query;
@@ -239,10 +246,18 @@ function App() {
     }
   }, [activePage, projects, activeDetailProject]);
 
+  if (activePage === 'admin') {
+    return <AdminApp />;
+  }
+
   const isPortalView = ['dashboard', 'projects', 'archives', 'billing', 'settings', 'project-details'].includes(activePage);
 
-  const handleLogout = () => {
-    navigate('/');
+  const handleLogout = async () => {
+    try {
+      await api.logout();
+    } finally {
+      navigate('/');
+    }
   };
 
   return (

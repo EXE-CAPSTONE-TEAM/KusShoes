@@ -1,9 +1,18 @@
 import React, { useState, useEffect, useRef } from 'react';
-import { 
-  ArrowLeft, Laptop, RefreshCw, Check, Download, FileText, 
+import {
+  ArrowLeft, Laptop, RefreshCw, Check, Download, FileText,
   Globe, Link, EyeOff, Terminal, Share2, UserPlus, X, ChevronDown
 } from 'lucide-react';
+import * as DropdownMenu from '@radix-ui/react-dropdown-menu';
+import { Select } from '../../components/Select/Select';
+import { ConfirmDialog } from '../../components/ConfirmDialog/ConfirmDialog';
+import { useToast } from '../../context/ToastContext';
 import styles from './ProjectDetails.module.css';
+
+const ROLE_OPTIONS = [
+  { value: 'View', label: 'View' },
+  { value: 'Edit', label: 'Edit' },
+];
 
 interface Project {
   id: string;
@@ -63,7 +72,9 @@ export const ProjectDetails: React.FC<ProjectDetailsProps> = ({
   onBack,
   setProjects
 }) => {
+  const { toast } = useToast();
   const [activeTab, setActiveTab] = useState<'overview' | 'share'>('overview');
+  const [confirmResetOpen, setConfirmResetOpen] = useState(false);
 
   // Share tab state
   const [members, setMembers] = useState<ShareMember[]>(INITIAL_MEMBERS);
@@ -71,7 +82,6 @@ export const ProjectDetails: React.FC<ProjectDetailsProps> = ({
   const [inviteRole, setInviteRole] = useState<'Edit' | 'View'>('View');
   const [inviteError, setInviteError] = useState('');
   const [inviteSuccess, setInviteSuccess] = useState('');
-  const [openRoleDropdown, setOpenRoleDropdown] = useState<string | null>(null);
 
   const handleInvite = () => {
     const trimmed = inviteEmail.trim().toLowerCase();
@@ -94,7 +104,6 @@ export const ProjectDetails: React.FC<ProjectDetailsProps> = ({
 
   const handleChangeRole = (id: string, role: 'Edit' | 'View') => {
     setMembers(prev => prev.map(m => m.id === id ? { ...m, role } : m));
-    setOpenRoleDropdown(null);
   };
 
   const handleRemoveMember = (id: string) => {
@@ -163,13 +172,15 @@ export const ProjectDetails: React.FC<ProjectDetailsProps> = ({
   };
 
   const handleResetConnection = () => {
-    if (confirm('Are you sure you want to release the desktop workspace lock? This will set status back to Scanned.')) {
-      setSyncStatus('idle');
-      setLogs([]);
-      setProjects(prev => 
-        prev.map(p => p.id === project.id ? { ...p, status: 'Scanned', updatedAt: 'Just now' } : p)
-      );
-    }
+    setConfirmResetOpen(true);
+  };
+
+  const confirmResetConnection = () => {
+    setSyncStatus('idle');
+    setLogs([]);
+    setProjects(prev =>
+      prev.map(p => p.id === project.id ? { ...p, status: 'Scanned', updatedAt: 'Just now' } : p)
+    );
   };
 
   return (
@@ -302,7 +313,7 @@ export const ProjectDetails: React.FC<ProjectDetailsProps> = ({
                     <button
                       key={dl.format}
                       className={styles.downloadCard}
-                      onClick={() => alert(`Downloading "${project.name}${dl.format}" (${dl.size})...`)}
+                      onClick={() => toast(`Downloading "${project.name}${dl.format}" (${dl.size})...`)}
                     >
                       <div className={styles.dlHeader}>
                         <FileText size={16} className={styles.dlIcon} />
@@ -406,15 +417,12 @@ export const ProjectDetails: React.FC<ProjectDetailsProps> = ({
                       />
                     </div>
                     <div className={styles.roleSelectWrap}>
-                      <select
-                        className={styles.roleSelect}
+                      <Select
                         value={inviteRole}
-                        onChange={e => setInviteRole(e.target.value as 'Edit' | 'View')}
-                      >
-                        <option value="View">View</option>
-                        <option value="Edit">Edit</option>
-                      </select>
-                      <ChevronDown size={13} className={styles.selectChevron} />
+                        onValueChange={(v) => setInviteRole(v as 'Edit' | 'View')}
+                        options={ROLE_OPTIONS}
+                        ariaLabel="Select invite role"
+                      />
                     </div>
                     <button className={styles.inviteBtn} onClick={handleInvite}>
                       Invite
@@ -452,27 +460,30 @@ export const ProjectDetails: React.FC<ProjectDetailsProps> = ({
                           <span className={styles.memberJoined}>Joined {member.joinedAt}</span>
                         </div>
                         <div className={styles.memberRoleWrap}>
-                          <button
-                            className={`${styles.roleBadge} ${member.role === 'Edit' ? styles.roleBadgeEdit : styles.roleBadgeView}`}
-                            onClick={() => setOpenRoleDropdown(openRoleDropdown === member.id ? null : member.id)}
-                          >
-                            {member.role}
-                            <ChevronDown size={11} />
-                          </button>
-                          {openRoleDropdown === member.id && (
-                            <div className={styles.roleDropdown}>
-                              {(['Edit', 'View'] as const).map(r => (
-                                <button
-                                  key={r}
-                                  className={`${styles.roleOption} ${member.role === r ? styles.roleOptionActive : ''}`}
-                                  onClick={() => handleChangeRole(member.id, r)}
-                                >
-                                  {r}
-                                  {member.role === r && <Check size={12} />}
-                                </button>
-                              ))}
-                            </div>
-                          )}
+                          <DropdownMenu.Root>
+                            <DropdownMenu.Trigger asChild>
+                              <button
+                                className={`${styles.roleBadge} ${member.role === 'Edit' ? styles.roleBadgeEdit : styles.roleBadgeView}`}
+                              >
+                                {member.role}
+                                <ChevronDown size={11} />
+                              </button>
+                            </DropdownMenu.Trigger>
+                            <DropdownMenu.Portal>
+                              <DropdownMenu.Content className={styles.roleDropdown} sideOffset={6} align="end">
+                                {(['Edit', 'View'] as const).map(r => (
+                                  <DropdownMenu.Item
+                                    key={r}
+                                    className={`${styles.roleOption} ${member.role === r ? styles.roleOptionActive : ''}`}
+                                    onSelect={() => handleChangeRole(member.id, r)}
+                                  >
+                                    {r}
+                                    {member.role === r && <Check size={12} />}
+                                  </DropdownMenu.Item>
+                                ))}
+                              </DropdownMenu.Content>
+                            </DropdownMenu.Portal>
+                          </DropdownMenu.Root>
                         </div>
                         <button
                           className={styles.removeBtn}
@@ -512,6 +523,15 @@ export const ProjectDetails: React.FC<ProjectDetailsProps> = ({
         </div>
 
       </div>
+
+      <ConfirmDialog
+        open={confirmResetOpen}
+        onOpenChange={setConfirmResetOpen}
+        title="Release workspace lock?"
+        description="This will release the desktop workspace lock and set the project status back to Scanned."
+        confirmLabel="Release Lock"
+        onConfirm={confirmResetConnection}
+      />
     </div>
   );
 };

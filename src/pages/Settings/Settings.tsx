@@ -1,11 +1,14 @@
 import React, { useState } from 'react';
-import { 
+import {
   User, Shield, Eye, Smartphone, Save, Key, AlertTriangle,
-  Instagram, Globe, Camera, Award, Check, X, Upload, RefreshCw
+  Instagram, Globe, Camera, Award, X, Upload, RefreshCw
 } from 'lucide-react';
 import { motion, AnimatePresence } from 'framer-motion';
+import * as Tabs from '@radix-ui/react-tabs';
 import styles from './Settings.module.css';
 import { useTheme } from '../../context/ThemeContext';
+import { useToast } from '../../context/ToastContext';
+import { ConfirmDialog } from '../../components/ConfirmDialog/ConfirmDialog';
 
 type SettingTab = 'profile' | 'security' | 'privacy';
 
@@ -17,10 +20,8 @@ interface PresetAvatar {
 export const Settings: React.FC = () => {
   const [activeTab, setActiveTab] = useState<SettingTab>('profile');
   const { theme, setTheme } = useTheme();
-  
-  // Toast Notification state
-  const [showToast, setShowToast] = useState(false);
-  const [toastMessage, setToastMessage] = useState('');
+  const { toast } = useToast();
+  const [confirmDeleteAccountOpen, setConfirmDeleteAccountOpen] = useState(false);
 
   // Curated Preset Avatars
   const presetAvatars: PresetAvatar[] = [
@@ -61,34 +62,25 @@ export const Settings: React.FC = () => {
   const [shoeVisibility, setShoeVisibility] = useState('link'); // 'private' | 'link' | 'public'
   const [allowCloudSync, setAllowCloudSync] = useState(true);
 
-  // Toast trigger utility
-  const triggerToast = (msg: string) => {
-    setToastMessage(msg);
-    setShowToast(true);
-    setTimeout(() => {
-      setShowToast(false);
-    }, 3000);
-  };
-
   const handleProfileSave = (e: React.FormEvent) => {
     e.preventDefault();
-    triggerToast('Profile configurations updated successfully!');
+    toast('Profile configurations updated successfully!');
   };
 
   const handlePasswordSave = (e: React.FormEvent) => {
     e.preventDefault();
     if (passwordForm.newPassword !== passwordForm.confirmPassword) {
-      alert('New passwords do not match!');
+      toast('New passwords do not match!', 'error');
       return;
     }
-    triggerToast('Security password has been updated!');
+    toast('Security password has been updated!');
     setPasswordForm({ currentPassword: '', newPassword: '', confirmPassword: '' });
   };
 
   const handleSelectPresetAvatar = (url: string) => {
     setProfileData(prev => ({ ...prev, avatar: url }));
     setIsAvatarModalOpen(false);
-    triggerToast('Avatar updated successfully!');
+    toast('Avatar updated successfully!');
   };
 
   const handleCustomUploadSimulate = () => {
@@ -96,32 +88,17 @@ export const Settings: React.FC = () => {
     setTimeout(() => {
       setUploadProgress(false);
       // Set to another mock hypebeast design
-      setProfileData(prev => ({ 
-        ...prev, 
-        avatar: 'https://images.unsplash.com/photo-1600185365483-26d7a4cc7519?auto=format&fit=crop&w=120&q=80' 
+      setProfileData(prev => ({
+        ...prev,
+        avatar: 'https://images.unsplash.com/photo-1600185365483-26d7a4cc7519?auto=format&fit=crop&w=120&q=80'
       }));
       setIsAvatarModalOpen(false);
-      triggerToast('Custom avatar uploaded and synchronized!');
+      toast('Custom avatar uploaded and synchronized!');
     }, 1500);
   };
 
   return (
     <div className={styles.container}>
-      {/* Toast Notification */}
-      <AnimatePresence>
-        {showToast && (
-          <motion.div 
-            className={`${styles.toast} glass-panel`}
-            initial={{ opacity: 0, y: 50, x: '-50%' }}
-            animate={{ opacity: 1, y: 0, x: '-50%' }}
-            exit={{ opacity: 0, y: 20, x: '-50%' }}
-          >
-            <Check size={18} className={styles.toastIcon} />
-            <span>{toastMessage}</span>
-          </motion.div>
-        )}
-      </AnimatePresence>
-
       {/* Header */}
       <div className={styles.header}>
         <div>
@@ -131,31 +108,27 @@ export const Settings: React.FC = () => {
       </div>
 
       {/* Settings Layout */}
-      <div className={styles.settingsLayout}>
+      <Tabs.Root
+        value={activeTab}
+        onValueChange={(v) => setActiveTab(v as SettingTab)}
+        className={styles.settingsLayout}
+        style={{ display: 'contents' }}
+      >
         {/* Navigation Tabs */}
-        <div className={`${styles.tabsColumn} glass-panel`}>
-          <button
-            onClick={() => setActiveTab('profile')}
-            className={`${styles.tabItem} ${activeTab === 'profile' ? styles.active : ''}`}
-          >
+        <Tabs.List className={`${styles.tabsColumn} glass-panel`}>
+          <Tabs.Trigger value="profile" className={`${styles.tabItem} ${activeTab === 'profile' ? styles.active : ''}`}>
             <User size={18} />
             <span>Profile Details</span>
-          </button>
-          <button
-            onClick={() => setActiveTab('security')}
-            className={`${styles.tabItem} ${activeTab === 'security' ? styles.active : ''}`}
-          >
+          </Tabs.Trigger>
+          <Tabs.Trigger value="security" className={`${styles.tabItem} ${activeTab === 'security' ? styles.active : ''}`}>
             <Shield size={18} />
             <span>Security & Auth</span>
-          </button>
-          <button
-            onClick={() => setActiveTab('privacy')}
-            className={`${styles.tabItem} ${activeTab === 'privacy' ? styles.active : ''}`}
-          >
+          </Tabs.Trigger>
+          <Tabs.Trigger value="privacy" className={`${styles.tabItem} ${activeTab === 'privacy' ? styles.active : ''}`}>
             <Eye size={18} />
             <span>Model Privacy</span>
-          </button>
-        </div>
+          </Tabs.Trigger>
+        </Tabs.List>
 
         {/* Persistent Designer Profile Card */}
         <div className={`${styles.designerCard} glass-panel`}>
@@ -252,6 +225,7 @@ export const Settings: React.FC = () => {
         <div className={`${styles.contentColumn} glass-panel`}>
           <AnimatePresence mode="wait">
             {activeTab === 'profile' && (
+              <Tabs.Content value="profile" forceMount asChild>
               <motion.div
                 key="profile"
                 initial={{ opacity: 0, x: 10 }}
@@ -389,7 +363,7 @@ export const Settings: React.FC = () => {
                           className={`${styles.themeCard} ${theme === 'dark' ? styles.themeCardActive : ''}`}
                           onClick={() => {
                             setTheme('dark');
-                            triggerToast('Theme set to Streetwear Dark');
+                            toast('Theme set to Streetwear Dark');
                           }}
                         >
                           <div className={styles.themeCardPreviewDark}>
@@ -411,7 +385,7 @@ export const Settings: React.FC = () => {
                           className={`${styles.themeCard} ${theme === 'light' ? styles.themeCardActive : ''}`}
                           onClick={() => {
                             setTheme('light');
-                            triggerToast('Theme set to Premium Cream');
+                            toast('Theme set to Premium Cream');
                           }}
                         >
                           <div className={styles.themeCardPreviewLight}>
@@ -436,9 +410,11 @@ export const Settings: React.FC = () => {
                     </button>
                   </form>
               </motion.div>
+              </Tabs.Content>
             )}
 
             {activeTab === 'security' && (
+              <Tabs.Content value="security" forceMount asChild>
               <motion.div
                 key="security"
                 initial={{ opacity: 0, x: 10 }}
@@ -512,9 +488,11 @@ export const Settings: React.FC = () => {
                   </button>
                 </form>
               </motion.div>
+              </Tabs.Content>
             )}
 
             {activeTab === 'privacy' && (
+              <Tabs.Content value="privacy" forceMount asChild>
               <motion.div
                 key="privacy"
                 initial={{ opacity: 0, x: 10 }}
@@ -578,24 +556,30 @@ export const Settings: React.FC = () => {
                       <h4 className={styles.dangerTitle}>Danger Zone</h4>
                     </div>
                     <p className={styles.dangerDesc}>Permanently delete your account profile and erase all 3D shoe designs. This action is irreversible.</p>
-                    <button 
-                      type="button" 
+                    <button
+                      type="button"
                       className={styles.deleteAccountBtn}
-                      onClick={() => {
-                        if (confirm('CRITICAL WARNING: Are you absolutely sure you want to permanently delete your KusShoes account? All 3D cloud data will be lost.')) {
-                          alert('Account deletion request initiated.');
-                        }
-                      }}
+                      onClick={() => setConfirmDeleteAccountOpen(true)}
                     >
                       Delete Account
                     </button>
                   </div>
                 </div>
               </motion.div>
+              </Tabs.Content>
             )}
           </AnimatePresence>
         </div>
-      </div>
+      </Tabs.Root>
+
+      <ConfirmDialog
+        open={confirmDeleteAccountOpen}
+        onOpenChange={setConfirmDeleteAccountOpen}
+        title="Permanently delete your account?"
+        description="This is a critical action: your KusShoes account, profile, and all 3D cloud shoe designs will be permanently erased. This cannot be undone."
+        confirmLabel="Delete Account"
+        onConfirm={() => toast('Account deletion request initiated.', 'error')}
+      />
 
       {/* Interactive Avatar Picker Selector Modal */}
       {isAvatarModalOpen && (
