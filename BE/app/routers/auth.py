@@ -1,12 +1,14 @@
 import uuid
 
 import redis.asyncio as aioredis
-from fastapi import APIRouter, Depends, Request, status
+from fastapi import APIRouter, Body, Depends, Request, Response, status
 from fastapi.responses import RedirectResponse
 from sqlalchemy.ext.asyncio import AsyncSession
 
+from app.config import settings
 from app.database import get_db
 from app.dependencies import get_current_user, get_redis, verify_service_token
+from app.exceptions import AuthRefreshInvalid
 from app.schemas.auth import (
     AccessTokenResponse,
     ForgotPasswordRequest,
@@ -22,6 +24,7 @@ from app.schemas.auth import (
     RegisterResponse,
     ResetPasswordRequest,
     SessionListResponse,
+    SSODesktopSessionResponse,
     SSOCreateRequest,
     SSOCreateResponse,
     SSOVerifyRequest,
@@ -33,9 +36,45 @@ from app.services import auth_service
 router = APIRouter()
 
 
+def _set_refresh_cookie(response: Response, refresh_token: str | None) -> None:
+    if not refresh_token:
+        return
+    response.set_cookie(
+        key=settings.REFRESH_COOKIE_NAME,
+        value=refresh_token,
+        max_age=settings.REFRESH_TOKEN_EXPIRE_DAYS * 24 * 60 * 60,
+        httponly=True,
+        secure=settings.is_production,
+        samesite=settings.REFRESH_COOKIE_SAMESITE,
+        path="/api/v1",
+    )
+
+
+def _clear_refresh_cookie(response: Response) -> None:
+    response.delete_cookie(
+        key=settings.REFRESH_COOKIE_NAME,
+        httponly=True,
+        secure=settings.is_production,
+        samesite=settings.REFRESH_COOKIE_SAMESITE,
+        path="/api/v1",
+    )
+
+
+def _refresh_token_from_request(
+    request: Request,
+    body: RefreshTokenRequest | LogoutRequest | None,
+) -> str:
+    token = body.refresh_token if body else None
+    token = token or request.cookies.get(settings.REFRESH_COOKIE_NAME)
+    if not token:
+        raise AuthRefreshInvalid()
+    return token
+
+
 @router.post("/register", response_model=RegisterResponse, status_code=201)
 async def register(
     body: RegisterRequest,
+    request: Request,
     db: AsyncSession = Depends(get_db),
     redis: aioredis.Redis = Depends(get_redis),
 ):
@@ -46,6 +85,7 @@ async def register(
         username=body.username,
         password=body.password,
         full_name=body.full_name,
+        client_ip=_client_ip(request),
     )
 
 
@@ -53,10 +93,11 @@ async def register(
 async def verify_otp(
     body: OTPVerifyRequest,
     request: Request,
+    response: Response,
     db: AsyncSession = Depends(get_db),
     redis: aioredis.Redis = Depends(get_redis),
 ):
-    return await auth_service.verify_otp(
+    result = await auth_service.verify_otp(
         db,
         redis,
         user_id=str(body.user_id),
@@ -64,6 +105,8 @@ async def verify_otp(
         user_agent=request.headers.get("user-agent"),
         ip_address=_client_ip(request),
     )
+    _set_refresh_cookie(response, result.refresh_token)
+    return TokenResponse(access_token=result.access_token, token_type=result.token_type)
 
 
 @router.post("/resend-otp", response_model=OTPResendResponse)
@@ -83,10 +126,11 @@ async def resend_otp(
 async def login(
     body: LoginRequest,
     request: Request,
+    response: Response,
     db: AsyncSession = Depends(get_db),
     redis: aioredis.Redis = Depends(get_redis),
 ):
-    return await auth_service.login_user(
+    result = await auth_service.login_user(
         db,
         redis,
         email=body.email,
@@ -94,6 +138,8 @@ async def login(
         client_ip=_client_ip(request),
         user_agent=request.headers.get("user-agent"),
     )
+    _set_refresh_cookie(response, result.refresh_token)
+    return TokenResponse(access_token=result.access_token, token_type=result.token_type)
 
 
 @router.get("/google")
@@ -107,12 +153,13 @@ async def google_login(
 @router.get("/google/callback", response_model=GoogleLoginResponse)
 async def google_callback(
     request: Request,
+    response: Response,
     code: str,
     state: str,
     db: AsyncSession = Depends(get_db),
     redis: aioredis.Redis = Depends(get_redis),
 ):
-    return await auth_service.handle_google_callback(
+    result = await auth_service.handle_google_callback(
         db,
         redis,
         code=code,
@@ -120,27 +167,44 @@ async def google_callback(
         user_agent=request.headers.get("user-agent"),
         ip_address=_client_ip(request),
     )
+    _set_refresh_cookie(response, result["refresh_token"])
+    return GoogleLoginResponse(
+        access_token=result["access_token"],
+        token_type=result["token_type"],
+        is_new_user=result["is_new_user"],
+        linked=result["linked"],
+    )
 
 
 @router.post("/refresh", response_model=AccessTokenResponse)
 async def refresh_token(
-    body: RefreshTokenRequest,
     request: Request,
+    response: Response,
+    body: RefreshTokenRequest | None = Body(default=None),
     db: AsyncSession = Depends(get_db),
     redis: aioredis.Redis = Depends(get_redis),
 ):
-    return await auth_service.refresh_access_token(
-        db, redis, body.refresh_token, client_ip=_client_ip(request)
+    result = await auth_service.refresh_access_token(
+        db, redis, _refresh_token_from_request(request, body), client_ip=_client_ip(request)
     )
+    _set_refresh_cookie(response, result.refresh_token)
+    return AccessTokenResponse(access_token=result.access_token, token_type=result.token_type)
 
 
 @router.post("/logout")
 async def logout(
-    body: LogoutRequest,
+    request: Request,
+    response: Response,
+    body: LogoutRequest | None = Body(default=None),
     db: AsyncSession = Depends(get_db),
     user=Depends(get_current_user),
 ):
-    return await auth_service.logout(db, user, body.refresh_token)
+    try:
+        return await auth_service.logout(
+            db, user, _refresh_token_from_request(request, body)
+        )
+    finally:
+        _clear_refresh_cookie(response)
 
 
 @router.post(
@@ -216,6 +280,15 @@ async def verify_sso(
     _: None = Depends(verify_service_token),
 ):
     return await auth_service.verify_editor_sso(db, redis, body.sso_token)
+
+
+@router.post("/desktop-session", response_model=SSODesktopSessionResponse)
+async def create_desktop_session(
+    body: SSOVerifyRequest,
+    db: AsyncSession = Depends(get_db),
+    redis: aioredis.Redis = Depends(get_redis),
+):
+    return await auth_service.exchange_editor_sso(db, redis, body.sso_token)
 
 
 def _client_ip(request: Request) -> str:

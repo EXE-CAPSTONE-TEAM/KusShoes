@@ -98,3 +98,58 @@ async def test_save_design_and_trigger_bake(client, service_headers, auth_header
         )
     assert first.status_code == 202
     assert second.status_code == 409
+
+
+@pytest.mark.asyncio
+async def test_editor_context_returns_desktop_contract(client, auth_headers):
+    project_id = (await _create_project(client, auth_headers, "Desktop Shoe")).json()["id"]
+
+    with patch(
+        "app.infrastructure.storage.generate_presigned_upload_url",
+        return_value="http://upload",
+    ):
+        upload = await client.post(
+            f"/api/v1/projects/{project_id}/assets/upload-url",
+            headers=auth_headers,
+            json={
+                "asset_type": "source_model",
+                "filename": "shoe.glb",
+                "content_type": "model/gltf-binary",
+            },
+        )
+    asset_id = upload.json()["asset_id"]
+
+    with patch("app.infrastructure.storage.file_exists", return_value=True):
+        confirmed = await client.post(
+            f"/api/v1/projects/{project_id}/assets/confirm",
+            headers=auth_headers,
+            json={"asset_id": asset_id, "file_size_bytes": 1000},
+        )
+    assert confirmed.status_code == 200
+
+    context = await client.get(
+        f"/api/v1/editor/projects/{project_id}/context",
+        headers=auth_headers,
+    )
+
+    assert context.status_code == 200
+    payload = context.json()
+    assert payload["project"]["id"] == project_id
+    assert payload["modelAsset"]["id"] == asset_id
+    assert payload["modelAsset"]["canonicalGlbUrl"] == f"/api/v1/editor/assets/{asset_id}/download"
+    assert payload["permissions"] == {
+        "canEdit": True,
+        "canBake": False,
+        "canExport": False,
+    }
+
+    with patch(
+        "app.infrastructure.storage.open_download_stream",
+        return_value=(iter([b"glb"]), "model/gltf-binary"),
+    ):
+        download = await client.get(
+            f"/api/v1/editor/assets/{asset_id}/download",
+            headers=auth_headers,
+        )
+    assert download.status_code == 200
+    assert download.content == b"glb"

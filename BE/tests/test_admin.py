@@ -48,6 +48,10 @@ async def _make_refresh_token(db, user):
     return raw_token
 
 
+def _items(response):
+    return response.json()["items"]
+
+
 # --- RBAC ---
 
 
@@ -202,7 +206,7 @@ async def test_user_list_search_and_detail(client, db, authenticated_user):
 
     listing = await client.get("/api/v1/admin/users?q=profile", headers=admin_headers)
     assert listing.status_code == 200
-    assert any(u["email"] == authenticated_user.email for u in listing.json())
+    assert any(u["email"] == authenticated_user.email for u in _items(listing))
 
     detail = await client.get(
         f"/api/v1/admin/users/{authenticated_user.id}", headers=admin_headers
@@ -237,8 +241,8 @@ async def test_ban_unban_flow(client, db, authenticated_user, auth_headers):
 
     logs = await client.get("/api/v1/admin/audit-logs?action=user.ban", headers=admin_headers)
     assert logs.status_code == 200
-    assert len(logs.json()) == 1
-    assert logs.json()[0]["payload"] == {"reason": "spam"}
+    assert len(_items(logs)) == 1
+    assert _items(logs)[0]["payload"] == {"reason": "spam"}
 
 
 @pytest.mark.asyncio
@@ -517,21 +521,21 @@ async def test_admin_lists_include_display_fields(client, db, authenticated_user
         "/api/v1/admin/billing/subscriptions", headers=admin_headers
     )
     subscription = next(
-        item for item in subscriptions.json() if item["user_id"] == str(authenticated_user.id)
+        item for item in _items(subscriptions) if item["user_id"] == str(authenticated_user.id)
     )
     assert subscription["user_email"] == authenticated_user.email
 
     invoices = await client.get("/api/v1/admin/billing/invoices", headers=admin_headers)
-    invoice_body = next(item for item in invoices.json() if item["id"] == str(invoice.id))
+    invoice_body = next(item for item in _items(invoices) if item["id"] == str(invoice.id))
     assert invoice_body["user_email"] == authenticated_user.email
     assert invoice_body["polar_order_id"] == "polar-display-order"
 
     projects = await client.get("/api/v1/admin/projects", headers=admin_headers)
-    project_body = next(item for item in projects.json() if item["id"] == str(project.id))
+    project_body = next(item for item in _items(projects) if item["id"] == str(project.id))
     assert project_body["owner_email"] == authenticated_user.email
 
     jobs = await client.get("/api/v1/admin/bake-jobs", headers=admin_headers)
-    job_body = next(item for item in jobs.json() if item["id"] == str(job.id))
+    job_body = next(item for item in _items(jobs) if item["id"] == str(job.id))
     assert job_body["project_name"] == project.name
 
     job_detail = await client.get(
@@ -540,7 +544,7 @@ async def test_admin_lists_include_display_fields(client, db, authenticated_user
     assert job_detail.json()["project_name"] == project.name
 
     exports = await client.get("/api/v1/admin/exports", headers=admin_headers)
-    export_body = next(item for item in exports.json() if item["id"] == str(export.id))
+    export_body = next(item for item in _items(exports) if item["id"] == str(export.id))
     assert export_body["project_name"] == project.name
     assert export_body["user_email"] == authenticated_user.email
 
@@ -625,12 +629,12 @@ async def test_admin_project_delete_and_visibility(client, db, authenticated_use
     mock_cleanup.assert_called_once()
 
     default_list = await client.get("/api/v1/admin/projects", headers=admin_headers)
-    assert all(p["id"] != str(project.id) for p in default_list.json())
+    assert all(p["id"] != str(project.id) for p in _items(default_list))
 
     with_deleted = await client.get(
         "/api/v1/admin/projects?include_deleted=true", headers=admin_headers
     )
-    assert any(p["id"] == str(project.id) for p in with_deleted.json())
+    assert any(p["id"] == str(project.id) for p in _items(with_deleted))
 
 
 # --- Audit logs RBAC ---
@@ -675,8 +679,8 @@ async def test_audit_log_search_and_display_email(client, db):
             "/api/v1/admin/audit-logs", params={"q": q}, headers=headers
         )
         assert response.status_code == 200
-        assert any(item["target_id"] == target_id for item in response.json())
-        assert response.json()[0]["actor_email"] == admin.email
+        assert any(item["target_id"] == target_id for item in _items(response))
+        assert _items(response)[0]["actor_email"] == admin.email
 
     combined = await client.get(
         "/api/v1/admin/audit-logs",
@@ -684,13 +688,13 @@ async def test_audit_log_search_and_display_email(client, db):
         headers=headers,
     )
     assert combined.status_code == 200
-    assert [item["action"] for item in combined.json()] == ["project.delete"]
+    assert [item["action"] for item in _items(combined)] == ["project.delete"]
 
     empty = await client.get(
         "/api/v1/admin/audit-logs", params={"q": "   "}, headers=headers
     )
     assert empty.status_code == 200
-    assert len(empty.json()) == 2
+    assert len(_items(empty)) == 2
 
 
 @pytest.mark.asyncio

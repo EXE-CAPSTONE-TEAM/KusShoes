@@ -24,10 +24,14 @@ class Settings(BaseSettings):
     ACCESS_TOKEN_EXPIRE_MINUTES: int = 5
     REFRESH_TOKEN_EXPIRE_DAYS: int = 30
     SSO_TOKEN_EXPIRE_MINUTES: int = 5
+    REFRESH_COOKIE_NAME: str = "kusshoes_refresh_token"
+    REFRESH_COOKIE_SAMESITE: str = "lax"
 
     # Authentication abuse protection
+    REGISTER_RATE_LIMIT: int = 5
+    REGISTER_RATE_WINDOW_SECONDS: int = 60
     LOGIN_RATE_LIMIT: int = 10
-    LOGIN_RATE_WINDOW_SECONDS: int = 900
+    LOGIN_RATE_WINDOW_SECONDS: int = 60
     REFRESH_RATE_LIMIT: int = 30
     REFRESH_RATE_WINDOW_SECONDS: int = 60
     PASSWORD_RESET_RATE_LIMIT: int = 3
@@ -54,6 +58,7 @@ class Settings(BaseSettings):
 
     # Sentry
     SENTRY_DSN: str = ""
+    SENTRY_TRACES_SAMPLE_RATE: float = 0.1
 
     # Polar (billing)
     POLAR_ACCESS_TOKEN: str = ""

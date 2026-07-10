@@ -2,6 +2,8 @@ from unittest.mock import patch
 
 import pytest
 
+from app.config import settings
+
 
 @pytest.mark.asyncio
 async def test_forgot_password_does_not_reveal_account(
@@ -34,7 +36,7 @@ async def test_reset_password_revokes_existing_sessions(
         json={"email": authenticated_user.email, "password": "Password1"},
     )
     assert login.status_code == 200
-    old_refresh = login.json()["refresh_token"]
+    old_refresh = login.cookies.get(settings.REFRESH_COOKIE_NAME)
 
     with patch("app.infrastructure.otp_store.generate_otp", return_value="654321"):
         requested = await client.post(
@@ -110,6 +112,29 @@ async def test_login_rate_limit_returns_retry_after(client, authenticated_user, 
 
 
 @pytest.mark.asyncio
+async def test_missing_bearer_token_returns_401(client):
+    response = await client.get("/api/v1/projects")
+    assert response.status_code == 401
+    assert response.json()["code"] == "AUTH_TOKEN_INVALID"
+
+
+@pytest.mark.asyncio
+async def test_request_id_header_is_echoed(client):
+    response = await client.get("/health", headers={"X-Request-ID": "test-request-id"})
+    assert response.status_code == 200
+    assert response.headers["X-Request-ID"] == "test-request-id"
+
+
+@pytest.mark.asyncio
+async def test_metrics_endpoint_exposes_prometheus_text(client):
+    await client.get("/health")
+    response = await client.get("/metrics")
+    assert response.status_code == 200
+    assert "text/plain" in response.headers["content-type"]
+    assert "kusshoes_http_requests_total" in response.text
+
+
+@pytest.mark.asyncio
 async def test_list_and_revoke_login_sessions(client, authenticated_user):
     first = await client.post(
         "/api/v1/auth/login",
@@ -122,6 +147,8 @@ async def test_list_and_revoke_login_sessions(client, authenticated_user):
         json={"email": authenticated_user.email, "password": "Password1"},
     )
     assert first.status_code == second.status_code == 200
+    first_refresh = first.cookies.get(settings.REFRESH_COOKIE_NAME)
+    second_refresh = second.cookies.get(settings.REFRESH_COOKIE_NAME)
     headers = {"Authorization": f"Bearer {first.json()['access_token']}"}
 
     sessions = await client.get("/api/v1/auth/sessions", headers=headers)
@@ -135,7 +162,7 @@ async def test_list_and_revoke_login_sessions(client, authenticated_user):
     assert revoked.status_code == 200
     rejected = await client.post(
         "/api/v1/auth/refresh",
-        json={"refresh_token": second.json()["refresh_token"]},
+        json={"refresh_token": second_refresh},
     )
     assert rejected.status_code == 401
 
@@ -143,6 +170,6 @@ async def test_list_and_revoke_login_sessions(client, authenticated_user):
     assert revoked_all.status_code == 200
     rejected_first = await client.post(
         "/api/v1/auth/refresh",
-        json={"refresh_token": first.json()["refresh_token"]},
+        json={"refresh_token": first_refresh},
     )
     assert rejected_first.status_code == 401

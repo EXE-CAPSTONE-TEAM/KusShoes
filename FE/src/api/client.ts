@@ -11,11 +11,13 @@ import type {
   ScanSession,
   User,
 } from "../types";
+import { toast as notifyToast } from "../context/ToastContext";
 
 const API_BASE_URL = import.meta.env.VITE_API_BASE_URL ?? `http://${window.location.hostname}:8000`;
 const STORAGE_PUBLIC_URL = import.meta.env.VITE_STORAGE_PUBLIC_URL ?? `http://${window.location.hostname}:9000/kusshoes`;
-const ACCESS_TOKEN_KEY = "kusshoes_access_token";
-const REFRESH_TOKEN_KEY = "kusshoes_refresh_token";
+const LEGACY_ACCESS_TOKEN_KEY = "kusshoes_access_token";
+const LEGACY_REFRESH_TOKEN_KEY = "kusshoes_refresh_token";
+let accessTokenInMemory: string | null = null;
 
 function getCsrfToken(): string | null {
   const match = document.cookie.match(/(?:^|;) ?kusshoes_csrf_token=([^;]*)(?:;|$)/);
@@ -43,7 +45,6 @@ export class ApiError extends Error {
 
 type AuthTokens = {
   access_token: string;
-  refresh_token: string;
   token_type: string;
 };
 
@@ -163,6 +164,12 @@ export type ProjectExport = {
   created_at: string;
 };
 
+export type DesktopLaunch = {
+  ssoToken: string;
+  expiresIn: number;
+  apiBaseUrl: string;
+};
+
 const fallbackProjectImage = new URL("../assets/sneaker-hero.png", import.meta.url).href;
 
 function toPortalProject(project: ProjectResponse): PortalProject {
@@ -193,27 +200,28 @@ function toPortalProject(project: ProjectResponse): PortalProject {
   };
 }
 
-function getStoredToken(key: string): string | null {
-  return sessionStorage.getItem(key) ?? localStorage.getItem(key);
-}
-
-function saveTokens(tokens: AuthTokens, remember: boolean): void {
-  clearTokens();
-  const storage = remember ? localStorage : sessionStorage;
-  storage.setItem(ACCESS_TOKEN_KEY, tokens.access_token);
-  storage.setItem(REFRESH_TOKEN_KEY, tokens.refresh_token);
-}
-
-function clearTokens(): void {
+function clearLegacyStoredTokens(): void {
   for (const storage of [localStorage, sessionStorage]) {
-    storage.removeItem(ACCESS_TOKEN_KEY);
-    storage.removeItem(REFRESH_TOKEN_KEY);
+    storage.removeItem(LEGACY_ACCESS_TOKEN_KEY);
+    storage.removeItem(LEGACY_REFRESH_TOKEN_KEY);
   }
 }
 
+clearLegacyStoredTokens();
+
+function saveTokens(tokens: AuthTokens, _remember: boolean): void {
+  accessTokenInMemory = tokens.access_token;
+  clearLegacyStoredTokens();
+}
+
+function clearTokens(): void {
+  accessTokenInMemory = null;
+  clearLegacyStoredTokens();
+}
+
 function replaceAccessToken(accessToken: string): void {
-  const storage = sessionStorage.getItem(REFRESH_TOKEN_KEY) ? sessionStorage : localStorage;
-  storage.setItem(ACCESS_TOKEN_KEY, accessToken);
+  accessTokenInMemory = accessToken;
+  clearLegacyStoredTokens();
 }
 
 let refreshPromise: Promise<string | null> | null = null;
@@ -222,14 +230,11 @@ async function refreshAccessToken(): Promise<string | null> {
   if (refreshPromise) return refreshPromise;
 
   refreshPromise = (async () => {
-    const refreshToken = getStoredToken(REFRESH_TOKEN_KEY);
-    if (!refreshToken) return null;
-
     try {
       const response = await fetch(`${API_BASE_URL}/api/v1/auth/refresh`, {
         method: "POST",
+        credentials: "include",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ refresh_token: refreshToken }),
       });
       if (!response.ok) {
         clearTokens();
@@ -257,11 +262,35 @@ function canRefreshRequest(path: string): boolean {
   ].includes(path);
 }
 
+function notifyApiError(error: ApiError, path: string): void {
+  if (responseIsAuthNoise(path)) return;
+  if (error.status >= 500) {
+    notifyToast.error("Server error. Please try again later.");
+    return;
+  }
+  if (error.status === 401) {
+    notifyToast.error("Session expired. Please sign in again.");
+    return;
+  }
+  if (error.status >= 400) {
+    notifyToast.error(error.message || "Request failed. Please check your input.");
+  }
+}
+
+function responseIsAuthNoise(path: string): boolean {
+  return [
+    "/api/v1/auth/login",
+    "/api/v1/auth/register",
+    "/api/v1/auth/verify-otp",
+    "/api/v1/auth/resend-otp",
+  ].includes(path);
+}
+
 async function request<T>(path: string, options: RequestInit = {}): Promise<T> {
   const headers: Record<string, string> = {
     "Content-Type": "application/json",
   };
-  const accessToken = getStoredToken(ACCESS_TOKEN_KEY);
+  const accessToken = accessTokenInMemory;
   if (accessToken) {
     headers.Authorization = `Bearer ${accessToken}`;
   }
@@ -297,7 +326,9 @@ async function request<T>(path: string, options: RequestInit = {}): Promise<T> {
   }
 
   if (!response.ok) {
-    throw await apiError(response);
+    const error = await apiError(response);
+    notifyApiError(error, path);
+    throw error;
   }
 
   return response.json() as Promise<T>;
@@ -330,12 +361,11 @@ async function apiError(response: Response): Promise<ApiError> {
   }
 }
 
-async function errorMessage(response: Response): Promise<string> {
-  return (await apiError(response)).message;
+async function throwApiResponseError(response: Response, path: string): Promise<never> {
+  const error = await apiError(response);
+  notifyApiError(error, path);
+  throw error;
 }
-
-// This backend exposes bearer tokens. "Remember me" chooses localStorage;
-// otherwise tokens live only for the current browser tab/session.
 
 function downloadBlob(blob: Blob, filename: string): void {
   const url = URL.createObjectURL(blob);
@@ -353,18 +383,12 @@ export const api = {
   baseUrl: API_BASE_URL,
 
   hasToken(): boolean {
-    return Boolean(getStoredToken(ACCESS_TOKEN_KEY));
+    return Boolean(accessTokenInMemory);
   },
 
   async logout(): Promise<void> {
-    const refreshToken = getStoredToken(REFRESH_TOKEN_KEY);
     try {
-      if (refreshToken) {
-        await request("/api/v1/auth/logout", {
-          method: "POST",
-          body: JSON.stringify({ refresh_token: refreshToken }),
-        });
-      }
+      await request("/api/v1/auth/logout", { method: "POST" });
     } catch {
       // Local logout must still succeed when the API/token is unavailable.
     } finally {
@@ -428,6 +452,18 @@ export const api = {
   async getProject(projectId: string): Promise<PortalProject> {
     const project = await request<ProjectResponse>(`/api/v1/projects/${projectId}`);
     return toPortalProject(project);
+  },
+
+  async createDesktopLaunch(projectId: string): Promise<DesktopLaunch> {
+    const payload = await request<{ sso_token: string; expires_in: number }>("/api/v1/auth/sso-token", {
+      method: "POST",
+      body: JSON.stringify({ project_id: projectId }),
+    });
+    return {
+      ssoToken: payload.sso_token,
+      expiresIn: payload.expires_in,
+      apiBaseUrl: API_BASE_URL,
+    };
   },
 
   async createProject(payload: { name: string; description?: string | null }): Promise<PortalProject> {
@@ -615,7 +651,7 @@ export const api = {
       body: form,
     });
     if (!response.ok) {
-      throw new ApiError(await errorMessage(response), response.status);
+      await throwApiResponseError(response, "/api/models/import");
     }
     return response.json() as Promise<ModelImportResponse>;
   },
@@ -634,17 +670,18 @@ export const api = {
       body: form,
     });
     if (!response.ok) {
-      throw new ApiError(await errorMessage(response), response.status);
+      await throwApiResponseError(response, "/api/design-assets");
     }
     return response.json() as Promise<DesignAsset>;
   },
 
   async fetchDesignAssetBlobUrl(assetId: string): Promise<string> {
-    const response = await fetch(`${API_BASE_URL}/api/design-assets/${assetId}/download`, {
+    const path = `/api/design-assets/${assetId}/download`;
+    const response = await fetch(`${API_BASE_URL}${path}`, {
       credentials: "include",
     });
     if (!response.ok) {
-      throw new ApiError(await errorMessage(response), response.status);
+      await throwApiResponseError(response, path);
     }
     return URL.createObjectURL(await response.blob());
   },
@@ -654,7 +691,7 @@ export const api = {
       credentials: "include",
     });
     if (!response.ok) {
-      throw new ApiError(await errorMessage(response), response.status);
+      await throwApiResponseError(response, modelAsset.glbUrl);
     }
     return URL.createObjectURL(await response.blob());
   },
@@ -668,7 +705,7 @@ export const api = {
       cache: "no-store",
     });
     if (!response.ok) {
-      throw new ApiError(await errorMessage(response), response.status);
+      await throwApiResponseError(response, design.previewGlbUrl);
     }
     return URL.createObjectURL(await response.blob());
   },
@@ -702,7 +739,7 @@ export const api = {
       credentials: "include",
     });
     if (!response.ok) {
-      throw new ApiError(await errorMessage(response), response.status);
+      await throwApiResponseError(response, exportPackage.downloadUrl);
     }
 
     downloadBlob(await response.blob(), `${exportPackage.id}.zip`);
@@ -713,7 +750,7 @@ export const api = {
       credentials: "include",
     });
     if (!response.ok) {
-      throw new ApiError(await errorMessage(response), response.status);
+      await throwApiResponseError(response, urlPath);
     }
 
     downloadBlob(await response.blob(), filename);

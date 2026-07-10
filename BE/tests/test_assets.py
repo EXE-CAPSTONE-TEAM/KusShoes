@@ -19,13 +19,17 @@ async def test_asset_upload_confirm_and_delete(client, db, auth_headers):
             headers=auth_headers,
             json={
                 "asset_type": "source_model",
-                "filename": "shoe.glb",
+                "filename": "..\\unsafe<script>.glb",
                 "content_type": "model/gltf-binary",
             },
         )
     assert upload.status_code == 200
     assert upload.json()["upload_url"] == "http://upload"
     asset_id = upload.json()["asset_id"]
+
+    listed = await client.get(f"/api/v1/projects/{project_id}/assets", headers=auth_headers)
+    assert listed.status_code == 200
+    assert listed.json()["items"][0]["original_filename"] == "unsafescript.glb"
 
     with patch("app.infrastructure.storage.file_exists", return_value=False):
         missing = await client.post(

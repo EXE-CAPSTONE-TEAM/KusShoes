@@ -61,7 +61,7 @@ export const AdminSidebar: React.FC<AdminSidebarProps> = ({ activePage, navigate
 
         <div className={styles.footerSection}>
           <div className={styles.sessionInfo}>
-            <span className={styles.sessionEmail}>{session?.email}</span>
+            <span className={styles.sessionEmail}>{session?.email || 'Active admin session'}</span>
             <span className={`${styles.roleBadge} ${isAdmin ? styles.roleAdmin : styles.roleStaff}`}>
               {isAdmin ? 'Admin' : 'Staff'}
             </span>

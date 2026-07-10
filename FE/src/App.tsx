@@ -111,11 +111,6 @@ function App() {
 
   useEffect(() => {
     const portalPages = ['dashboard', 'projects', 'archives', 'billing', 'settings', 'project-details'];
-    if (portalPages.includes(activePage) && !api.hasToken()) {
-      navigate('/login');
-      return;
-    }
-
     if (!portalPages.includes(activePage) || projectsLoading) return;
     setProjectsLoading(true);
     setProjectsError('');

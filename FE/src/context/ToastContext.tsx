@@ -3,7 +3,7 @@ import * as Toast from '@radix-ui/react-toast';
 import { CheckCircle2, Info, AlertTriangle } from 'lucide-react';
 import styles from './ToastContext.module.css';
 
-type ToastVariant = 'success' | 'info' | 'error';
+export type ToastVariant = 'success' | 'info' | 'error';
 
 interface ToastItem {
   id: number;
@@ -16,6 +16,22 @@ interface ToastContextType {
 }
 
 const ToastContext = createContext<ToastContextType | undefined>(undefined);
+let publishToast: ((message: string, variant?: ToastVariant) => void) | null = null;
+
+export const toast = {
+  show(message: string, variant: ToastVariant = 'success') {
+    publishToast?.(message, variant);
+  },
+  success(message: string) {
+    publishToast?.(message, 'success');
+  },
+  info(message: string) {
+    publishToast?.(message, 'info');
+  },
+  error(message: string) {
+    publishToast?.(message, 'error');
+  },
+};
 
 const VARIANT_ICON: Record<ToastVariant, React.ComponentType<{ size?: number; className?: string }>> = {
   success: CheckCircle2,
@@ -30,6 +46,7 @@ export const ToastProvider: React.FC<{ children: React.ReactNode }> = ({ childre
     const id = Date.now() + Math.random();
     setItems(prev => [...prev, { id, message, variant }]);
   }, []);
+  publishToast = toast;
 
   const dismiss = useCallback((id: number) => {
     setItems(prev => prev.filter(item => item.id !== id));
@@ -37,7 +54,7 @@ export const ToastProvider: React.FC<{ children: React.ReactNode }> = ({ childre
 
   return (
     <ToastContext.Provider value={{ toast }}>
-      <Toast.Provider swipeDirection="right" duration={3500}>
+      <Toast.Provider swipeDirection="right" duration={5000}>
         {children}
         {items.map(item => {
           const Icon = VARIANT_ICON[item.variant];

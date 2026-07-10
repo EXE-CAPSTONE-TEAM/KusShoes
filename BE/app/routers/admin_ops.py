@@ -190,12 +190,12 @@ async def list_audit_logs(
     target_type: str | None = None,
     target_id: str | None = None,
     q: AdminSearchQuery | None = None,
+    before: datetime | None = None,
     limit: int = Query(default=20, ge=1, le=100),
     cursor: str | None = None,
     db: AsyncSession = Depends(get_db),
     admin=Depends(get_current_admin_write),
 ):
-    before = None
     before_id = None
     if cursor:
         decoded = decode_cursor(cursor)

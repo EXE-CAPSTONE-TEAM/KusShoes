@@ -13,6 +13,7 @@ interface AdminAuthContextType {
   login: (email: string, password: string) => Promise<void>;
   logout: () => Promise<void>;
   isLoggingOut: boolean;
+  isRestoring: boolean;
   isAdmin: boolean;
 }
 
@@ -21,6 +22,7 @@ const AdminAuthContext = createContext<AdminAuthContextType | undefined>(undefin
 export const AdminAuthProvider: React.FC<{ children: React.ReactNode }> = ({ children }) => {
   const [session, setSession] = useState<AdminSession | null>(() => getAdminSession());
   const [isLoggingOut, setIsLoggingOut] = useState(false);
+  const [isRestoring, setIsRestoring] = useState(() => !getAdminSession());
   const loggingOutRef = useRef(false);
 
   useEffect(() => {
@@ -29,12 +31,31 @@ export const AdminAuthProvider: React.FC<{ children: React.ReactNode }> = ({ chi
     return () => window.removeEventListener(ADMIN_SESSION_EXPIRED_EVENT, handleExpiredSession);
   }, []);
 
+  useEffect(() => {
+    if (session) {
+      setIsRestoring(false);
+      return;
+    }
+    let active = true;
+    adminAuth.restoreSession()
+      .then((restoredSession) => {
+        if (!active || !restoredSession) return;
+        saveAdminSession(restoredSession);
+        setSession(restoredSession);
+      })
+      .finally(() => {
+        if (active) setIsRestoring(false);
+      });
+    return () => {
+      active = false;
+    };
+  }, [session]);
+
   const login = async (email: string, password: string) => {
     const res = await adminAuth.login(email, password);
     const newSession: AdminSession = {
       role: res.role,
       accessToken: res.access_token,
-      refreshToken: res.refresh_token,
       email,
     };
     saveAdminSession(newSession);
@@ -46,11 +67,8 @@ export const AdminAuthProvider: React.FC<{ children: React.ReactNode }> = ({ chi
     loggingOutRef.current = true;
     setIsLoggingOut(true);
 
-    const refreshToken = getAdminSession()?.refreshToken;
     try {
-      if (refreshToken) {
-        await adminAuth.logout(refreshToken);
-      }
+      await adminAuth.logout();
     } catch {
       // Local session is cleared regardless of server-side outcome below.
     } finally {
@@ -63,7 +81,14 @@ export const AdminAuthProvider: React.FC<{ children: React.ReactNode }> = ({ chi
 
   return (
     <AdminAuthContext.Provider
-      value={{ session, login, logout, isLoggingOut, isAdmin: session?.role === 'admin' }}
+      value={{
+        session,
+        login,
+        logout,
+        isLoggingOut,
+        isRestoring,
+        isAdmin: session?.role === 'admin',
+      }}
     >
       {children}
     </AdminAuthContext.Provider>

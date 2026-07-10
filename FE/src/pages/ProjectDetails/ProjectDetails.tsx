@@ -49,6 +49,19 @@ interface ShareMember {
 
 const INITIAL_MEMBERS: ShareMember[] = [];
 
+function deepLinkForDesktop(projectId: string, ssoToken: string, apiBaseUrl: string): string {
+  const params = new URLSearchParams({
+    projectId,
+    sso: ssoToken,
+    apiBase: apiBaseUrl,
+  });
+  return `kusshoes-editor://open?${params.toString()}`;
+}
+
+function logLine(message: string): string {
+  return `[${new Date().toLocaleTimeString()}] ${message}`;
+}
+
 export const ProjectDetails: React.FC<ProjectDetailsProps> = ({
   project,
   onBack,
@@ -128,42 +141,29 @@ export const ProjectDetails: React.FC<ProjectDetailsProps> = ({
     return `${(bytes / 1024 / 1024).toFixed(1)} MB`;
   };
 
-  const handleLaunchKusStudio = () => {
+  const handleLaunchKusStudio = async () => {
     if (syncStatus === 'connecting') return;
-    if (project.editorUrl) {
-      window.location.assign(project.editorUrl);
-      return;
-    }
     setSyncStatus('connecting');
-    setLogs([]);
+    setLogs([logLine(`Requesting secure desktop session for "${project.name}"...`)]);
 
-    const logSteps = [
-      'Pinging KusStudio daemon on port 8421...',
-      'Connection established with localhost:8421 (WS protocol).',
-      'Handshaking secure local daemon socket token...',
-      `Verifying workspace file structures for "${project.name}"...`,
-      `Packaging reconstruction vertex buffers (${project.fileSize})...`,
-      `Streaming photogrammetry assets (${project.photosCount} files)...`,
-      'Buffers synchronized. Temporary read/write lock acquired.',
-      'Launching KusStudio Desktop application...',
-      'Desktop window active. KusShoes Portal lock engaged.'
-    ];
-
-    let stepIndex = 0;
-    const interval = setInterval(() => {
-      if (stepIndex < logSteps.length) {
-        const timeStr = new Date().toLocaleTimeString();
-        setLogs(prev => [...prev, `[${timeStr}] ${logSteps[stepIndex]}`]);
-        stepIndex++;
-      } else {
-        clearInterval(interval);
-        setSyncStatus('launched');
-        // Update parent projects list state
-        setProjects(prev => 
-          prev.map(p => p.id === project.id ? { ...p, status: 'Designing', updatedAt: 'Just now' } : p)
-        );
-      }
-    }, 600);
+    try {
+      const launch = await api.createDesktopLaunch(project.id);
+      setLogs(prev => [
+        ...prev,
+        logLine(`Launch token issued. Expires in ${launch.expiresIn} seconds.`),
+        logLine('Opening KusShoes Desktop through kusshoes-editor:// protocol...'),
+      ]);
+      window.location.assign(deepLinkForDesktop(project.id, launch.ssoToken, launch.apiBaseUrl));
+      setSyncStatus('launched');
+      setProjects(prev =>
+        prev.map(p => p.id === project.id ? { ...p, status: 'Designing', updatedAt: 'Just now' } : p)
+      );
+    } catch (caught) {
+      const message = caught instanceof Error ? caught.message : 'Unable to launch KusStudio Desktop.';
+      setLogs(prev => [...prev, logLine(message)]);
+      setSyncStatus('idle');
+      toast(message, 'error');
+    }
   };
 
   const handleResetConnection = () => {
@@ -363,7 +363,7 @@ export const ProjectDetails: React.FC<ProjectDetailsProps> = ({
                   {syncStatus === 'connecting' && (
                     <div className={styles.syncConnectingLoader}>
                       <RefreshCw className={styles.spinIcon} size={16} />
-                      <span>Streaming buffers to Port 8421...</span>
+                      <span>Opening KusShoes Desktop...</span>
                     </div>
                   )}
                   {syncStatus === 'launched' && (

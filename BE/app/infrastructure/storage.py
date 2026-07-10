@@ -36,6 +36,28 @@ def generate_presigned_download_url(file_path: str, ttl: int = 3600) -> str:
     )
 
 
+def open_download_stream(file_path: str):
+    client = _get_client()
+    try:
+        response = client.get_object(Bucket=settings.STORAGE_BUCKET, Key=file_path)
+    except ClientError as exc:
+        raise FileNotFoundError(file_path) from exc
+
+    body = response["Body"]
+
+    def chunks():
+        try:
+            while True:
+                chunk = body.read(1024 * 1024)
+                if not chunk:
+                    break
+                yield chunk
+        finally:
+            body.close()
+
+    return chunks(), response.get("ContentType") or "application/octet-stream"
+
+
 def health_check() -> None:
     """Raises on failure — dùng cho admin system health."""
     client = _get_client()
@@ -52,4 +74,3 @@ def file_exists(file_path: str) -> bool:
 
 def delete_file(file_path: str) -> None:
     _get_client().delete_object(Bucket=settings.STORAGE_BUCKET, Key=file_path)
-

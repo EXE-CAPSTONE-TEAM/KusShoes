@@ -10,7 +10,7 @@ from app.database import get_db, redis_pool
 from app.exceptions import AdminForbidden, AuthTokenInvalid
 from app.services import auth_service
 
-security = HTTPBearer()
+security = HTTPBearer(auto_error=False)
 
 
 async def get_redis() -> aioredis.Redis:  # type: ignore[return]
@@ -18,26 +18,32 @@ async def get_redis() -> aioredis.Redis:  # type: ignore[return]
 
 
 async def get_current_user(
-    credentials: HTTPAuthorizationCredentials = Security(security),
+    credentials: HTTPAuthorizationCredentials | None = Security(security),
     db: AsyncSession = Depends(get_db),
 ):
     """Resolve and authorize an active, verified end user."""
+    if credentials is None:
+        raise AuthTokenInvalid()
     return await auth_service.authenticate_user_access_token(db, credentials.credentials)
 
 
 async def get_current_admin(
-    credentials: HTTPAuthorizationCredentials = Security(security),
+    credentials: HTTPAuthorizationCredentials | None = Security(security),
     db: AsyncSession = Depends(get_db),
 ):
     """Resolve and authorize an active admin or staff user."""
+    if credentials is None:
+        raise AuthTokenInvalid()
     return await auth_service.authenticate_admin_access_token(db, credentials.credentials)
 
 
 async def get_current_admin_write(
-    credentials: HTTPAuthorizationCredentials = Security(security),
+    credentials: HTTPAuthorizationCredentials | None = Security(security),
     db: AsyncSession = Depends(get_db),
 ):
     """Admin-only: staff tokens are rejected with 403."""
+    if credentials is None:
+        raise AuthTokenInvalid()
     admin = await auth_service.authenticate_admin_access_token(db, credentials.credentials)
     if admin.role != "admin":
         raise AdminForbidden()

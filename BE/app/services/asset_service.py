@@ -15,6 +15,7 @@ from app.schemas.project_asset import (
     AssetUploadURLResponse,
 )
 from app.services.project_service import require_owner
+from app.utils.filename import sanitize_filename
 
 ALLOWED_UPLOADS = {
     "source_model": {"model/gltf-binary": {".glb"}, "model/gltf+json": {".gltf"}},
@@ -28,7 +29,8 @@ async def create_upload_url(
     db: AsyncSession, user, project_id: uuid.UUID, body: AssetUploadURLRequest
 ) -> AssetUploadURLResponse:
     await require_owner(db, project_id, user)
-    extension = pathlib.Path(body.filename).suffix.lower()
+    safe_filename = sanitize_filename(body.filename)
+    extension = pathlib.Path(safe_filename).suffix.lower()
     allowed_extensions = ALLOWED_UPLOADS[body.asset_type].get(body.content_type, set())
     if extension not in allowed_extensions:
         raise AssetUploadInvalid("Loại file hoặc MIME type không được hỗ trợ")
@@ -38,7 +40,7 @@ async def create_upload_url(
         project_id=project_id,
         user_id=user.id,
         asset_type=body.asset_type,
-        filename=body.filename,
+        filename=safe_filename,
         file_path=file_path,
         content_type=body.content_type,
     )
