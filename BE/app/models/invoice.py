@@ -1,5 +1,6 @@
 import uuid
 from datetime import datetime
+from typing import TYPE_CHECKING
 
 from sqlalchemy import CheckConstraint, DateTime, ForeignKey, Integer, String, Text
 from sqlalchemy.dialects.postgresql import JSONB, UUID
@@ -7,6 +8,10 @@ from sqlalchemy.orm import Mapped, mapped_column, relationship
 
 from app.database import Base
 from app.models.base import TimestampMixin
+
+if TYPE_CHECKING:
+    from app.models.plan import Plan
+    from app.models.user import User
 
 
 class Invoice(Base, TimestampMixin):
@@ -44,5 +49,5 @@ class Invoice(Base, TimestampMixin):
     status: Mapped[str] = mapped_column(String(20), nullable=False, default="pending")
     paid_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True), nullable=True)
 
-    user: Mapped["User"] = relationship(back_populates="invoices")  # noqa: F821
-    plan: Mapped["Plan | None"] = relationship(back_populates="invoices")  # noqa: F821
+    user: Mapped["User"] = relationship(back_populates="invoices")
+    plan: Mapped["Plan | None"] = relationship(back_populates="invoices")

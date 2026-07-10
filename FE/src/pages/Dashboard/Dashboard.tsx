@@ -160,6 +160,7 @@ export const Dashboard: React.FC<DashboardProps> = ({ setActivePage, projects })
   const displayName = profile
     ? `${profile.first_name} ${profile.last_name}`.trim() || profile.username
     : 'Creator';
+  const avatarUrl = profile ? api.avatarUrl(profile.avatar_path) : undefined;
 
   return (
     <Tooltip.Provider delayDuration={200}>
@@ -176,7 +177,7 @@ export const Dashboard: React.FC<DashboardProps> = ({ setActivePage, projects })
             <Avatar.Root className={styles.avatarRoot}>
               <Avatar.Image
                 className={styles.avatarImage}
-                src={undefined}
+                src={avatarUrl}
                 alt={displayName}
               />
               <Avatar.Fallback className={styles.avatarFallback} delayMs={300}>

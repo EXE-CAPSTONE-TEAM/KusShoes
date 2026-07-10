@@ -17,6 +17,7 @@ from app.schemas.editor import (
     EditorUserResponse,
 )
 from app.services.project_service import require_owner
+from app.types import JsonObject
 
 
 async def get_editor_context(
@@ -151,7 +152,10 @@ def _to_design(project, model_asset) -> EditorDesignResponse | None:
     )
 
 
-def _with_model_asset_id(design_config: dict, model_asset_id: uuid.UUID | None) -> dict:
+def _with_model_asset_id(
+    design_config: JsonObject,
+    model_asset_id: uuid.UUID | None,
+) -> JsonObject:
     config = deepcopy(design_config)
     if model_asset_id:
         config["modelAssetId"] = str(model_asset_id)

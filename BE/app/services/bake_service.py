@@ -1,4 +1,5 @@
 import uuid
+from collections.abc import Mapping
 
 import httpx
 from sqlalchemy.ext.asyncio import AsyncSession
@@ -17,7 +18,7 @@ async def process_bake(
     db: AsyncSession,
     job_id: uuid.UUID,
     worker_id: str | None,
-) -> dict:
+) -> dict[str, object]:
     job = await bake_job_repo.get_by_id(db, job_id)
     if not job:
         return {"status": "ignored", "reason": "job_not_found"}
@@ -81,23 +82,35 @@ async def _mark_failed(db: AsyncSession, job_id: uuid.UUID, message: str) -> Non
     await db.commit()
 
 
-def _validate_exports(value, allowed_formats: list[str]) -> list[dict]:
+def _validate_exports(
+    value: object,
+    allowed_formats: list[str],
+) -> list[export_record_repo.ExportRecordCreate]:
     if not isinstance(value, list) or not value:
         raise ValueError("Editor Worker không trả về exports hợp lệ")
-    exports: list[dict] = []
+    exports: list[export_record_repo.ExportRecordCreate] = []
     for item in value:
-        if not isinstance(item, dict):
+        if not isinstance(item, Mapping):
             raise ValueError("Export item không hợp lệ")
         export_format = item.get("format")
         file_path = item.get("file_path")
-        if export_format not in allowed_formats or not isinstance(file_path, str) or not file_path:
+        file_size_bytes = item.get("file_size_bytes")
+        if (
+            not isinstance(export_format, str)
+            or export_format not in allowed_formats
+            or not isinstance(file_path, str)
+            or not file_path
+        ):
             raise ValueError("Export format hoặc file_path không hợp lệ")
+        if file_size_bytes is not None and (
+            not isinstance(file_size_bytes, int) or isinstance(file_size_bytes, bool)
+        ):
+            raise ValueError("Export file_size_bytes is invalid")
         exports.append(
             {
                 "format": export_format,
                 "file_path": file_path,
-                "file_size_bytes": item.get("file_size_bytes"),
+                "file_size_bytes": file_size_bytes,
             }
         )
     return exports
-

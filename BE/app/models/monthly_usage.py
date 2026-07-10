@@ -1,5 +1,6 @@
 import uuid
 from datetime import date, datetime
+from typing import TYPE_CHECKING
 
 from sqlalchemy import Date, ForeignKey, Integer, UniqueConstraint
 from sqlalchemy.dialects.postgresql import UUID
@@ -7,6 +8,9 @@ from sqlalchemy.orm import Mapped, mapped_column, relationship
 
 from app.database import Base
 from app.models.base import utcnow
+
+if TYPE_CHECKING:
+    from app.models.user import User
 
 
 class MonthlyUsage(Base):
@@ -29,4 +33,4 @@ class MonthlyUsage(Base):
 
     updated_at: Mapped[datetime] = mapped_column(default=utcnow, onupdate=utcnow, nullable=False)
 
-    user: Mapped["User"] = relationship(back_populates="monthly_usages")  # noqa: F821
+    user: Mapped["User"] = relationship(back_populates="monthly_usages")

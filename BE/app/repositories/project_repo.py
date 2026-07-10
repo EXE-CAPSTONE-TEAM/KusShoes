@@ -6,6 +6,7 @@ from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.models.project import Project
 from app.models.user import User
+from app.types import JsonObject
 
 
 async def get_by_id(db: AsyncSession, project_id: uuid.UUID) -> Project | None:
@@ -124,7 +125,7 @@ async def save_design(
     db: AsyncSession,
     project: Project,
     *,
-    design_config: dict,
+    design_config: JsonObject,
     thumbnail_path: str | None,
 ) -> None:
     project.design_config = design_config
@@ -174,7 +175,15 @@ async def list_admin(
         query = query.where(Project.deleted_at.is_(None))
     if before is not None:
         if before_id is not None:
-            query = query.where((Project.created_at < before) | ((Project.created_at == before) & (Project.id < before_id)))
+            query = query.where(
+                or_(
+                    Project.created_at < before,
+                    and_(
+                        Project.created_at == before,
+                        Project.id < before_id,
+                    ),
+                )
+            )
         else:
             query = query.where(Project.created_at < before)
     query = query.order_by(Project.created_at.desc(), Project.id.desc()).limit(limit)

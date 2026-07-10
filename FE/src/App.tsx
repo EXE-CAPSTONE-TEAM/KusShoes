@@ -111,14 +111,17 @@ function App() {
 
   useEffect(() => {
     const portalPages = ['dashboard', 'projects', 'archives', 'billing', 'settings', 'project-details'];
-    if (!portalPages.includes(activePage) || projectsLoading) return;
+    if (!portalPages.includes(activePage)) return;
     setProjectsLoading(true);
     setProjectsError('');
     api.listProjects()
       .then((page) => setProjects(page.items))
       .catch((caught) => {
         if (caught instanceof ApiError && caught.status === 401) {
-          navigate('/login');
+          if (window.location.pathname !== '/login') {
+            window.history.pushState({}, '', '/login');
+          }
+          setActivePage('login');
           return;
         }
         setProjectsError(caught instanceof Error ? caught.message : 'Unable to load projects.');

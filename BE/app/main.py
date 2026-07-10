@@ -15,6 +15,22 @@ from sentry_sdk.integrations.fastapi import FastApiIntegration
 from app.config import settings
 from app.exceptions import register_exception_handlers
 from app.metrics import observe_request, render_prometheus
+from app.routers import (
+    admin_auth,
+    admin_billing,
+    admin_dashboard,
+    admin_ops,
+    admin_plans,
+    admin_users,
+    auth,
+    editor,
+    exports,
+    project_assets,
+    projects,
+    subscriptions,
+    users,
+    webhooks,
+)
 
 request_id_var: ContextVar[str] = ContextVar("request_id", default="-")
 
@@ -99,24 +115,6 @@ async def add_request_id(request, call_next):
         request_id_var.reset(token)
     response.headers["X-Request-ID"] = request_id
     return response
-
-# --- Routers ---
-from app.routers import (  # noqa: E402
-    admin_auth,
-    admin_billing,
-    admin_dashboard,
-    admin_ops,
-    admin_plans,
-    admin_users,
-    auth,
-    editor,
-    exports,
-    project_assets,
-    projects,
-    subscriptions,
-    users,
-    webhooks,
-)
 
 app.include_router(auth.router, prefix="/api/v1/auth", tags=["Auth"])
 app.include_router(admin_auth.router, prefix="/api/v1/admin", tags=["Admin Auth"])

@@ -3,6 +3,8 @@ from datetime import datetime
 
 from pydantic import BaseModel, Field
 
+from app.types import JsonObject
+
 
 class CreateProjectRequest(BaseModel):
     name: str = Field(min_length=1, max_length=100)
@@ -15,12 +17,12 @@ class UpdateProjectRequest(BaseModel):
 
 
 class SaveDesignRequest(BaseModel):
-    design_config: dict
+    design_config: JsonObject
     thumbnail_path: str | None = Field(default=None, max_length=1000)
 
 
 class TriggerBakeRequest(BaseModel):
-    design_config: dict
+    design_config: JsonObject
 
 
 class ProjectResponse(BaseModel):
@@ -29,13 +31,13 @@ class ProjectResponse(BaseModel):
     description: str | None
     status: str
     thumbnail_path: str | None
+    design_config: JsonObject | None = None
     editor_url: str
     created_at: datetime
     updated_at: datetime
 
 
 class ProjectDetailResponse(ProjectResponse):
-    design_config: dict | None
     canonical_model_asset_id: uuid.UUID | None
 
 

@@ -1,5 +1,7 @@
 import uuid
+from collections.abc import Sequence
 from datetime import datetime
+from typing import TypedDict
 
 from sqlalchemy import and_, delete, or_, select
 from sqlalchemy.ext.asyncio import AsyncSession
@@ -7,6 +9,12 @@ from sqlalchemy.ext.asyncio import AsyncSession
 from app.models.export_record import ExportRecord
 from app.models.project import Project
 from app.models.user import User
+
+
+class ExportRecordCreate(TypedDict):
+    format: str
+    file_path: str
+    file_size_bytes: int | None
 
 
 async def list_for_project(db: AsyncSession, project_id: uuid.UUID) -> list[ExportRecord]:
@@ -27,8 +35,6 @@ async def list_for_user(
     limit: int,
     cursor: tuple[datetime, uuid.UUID] | None,
 ) -> list[tuple[ExportRecord, str]]:
-    from app.models.project import Project
-
     query = (
         select(ExportRecord, Project.name)
         .join(Project, Project.id == ExportRecord.project_id)
@@ -82,7 +88,7 @@ async def create_many(
     project_id: uuid.UUID,
     bake_job_id: uuid.UUID,
     user_id: uuid.UUID,
-    exports: list[dict],
+    exports: Sequence[ExportRecordCreate],
 ) -> list[ExportRecord]:
     records = [
         ExportRecord(
@@ -123,7 +129,15 @@ async def list_admin(
         query = query.where(ExportRecord.format == format)
     if before is not None:
         if before_id is not None:
-            query = query.where((ExportRecord.created_at < before) | ((ExportRecord.created_at == before) & (ExportRecord.id < before_id)))
+            query = query.where(
+                or_(
+                    ExportRecord.created_at < before,
+                    and_(
+                        ExportRecord.created_at == before,
+                        ExportRecord.id < before_id,
+                    ),
+                )
+            )
         else:
             query = query.where(ExportRecord.created_at < before)
     query = query.order_by(ExportRecord.created_at.desc(), ExportRecord.id.desc()).limit(limit)

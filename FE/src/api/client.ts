@@ -114,6 +114,7 @@ type ProjectResponse = {
   description: string | null;
   status: string;
   thumbnail_path: string | null;
+  design_config: Record<string, unknown> | null;
   editor_url: string;
   created_at: string;
   updated_at: string;
@@ -170,32 +171,80 @@ export type DesktopLaunch = {
   apiBaseUrl: string;
 };
 
-const fallbackProjectImage = new URL("../assets/sneaker-hero.png", import.meta.url).href;
+const FALLBACK_PROJECT_IMAGE = new URL("../assets/sneaker-hero.png", import.meta.url).href;
+const COMPLETED_PROJECT_STATUSES = new Set(["completed", "ready", "exported"]);
+const DESIGNING_PROJECT_STATUSES = new Set(["in_progress", "processing", "queued", "baking"]);
+
+function asRecord(value: unknown): Record<string, unknown> {
+  return value && typeof value === "object" && !Array.isArray(value)
+    ? (value as Record<string, unknown>)
+    : {};
+}
+
+function stringValue(value: unknown, fallback: string): string {
+  if (typeof value !== "string") return fallback;
+  const trimmed = value.trim();
+  return trimmed || fallback;
+}
+
+function numberValue(value: unknown, fallback: number): number {
+  return typeof value === "number" && Number.isFinite(value) ? value : fallback;
+}
+
+function formatProjectSize(value: unknown): string {
+  if (typeof value !== "number" || !Number.isFinite(value) || value <= 0) return "—";
+  return `${value.toFixed(value >= 100 ? 0 : 1)} MB`;
+}
+
+function storageUrl(path: string | null): string | undefined {
+  if (!path) return undefined;
+  if (/^https?:\/\//i.test(path) || path.startsWith("data:")) return path;
+  return `${STORAGE_PUBLIC_URL.replace(/\/$/, "")}/${path.replace(/^\/+/, "")}`;
+}
+
+function projectImageUrl(path: string | null): string {
+  return storageUrl(path) ?? FALLBACK_PROJECT_IMAGE;
+}
+
+function normalizeProjectStatus(status: string): PortalProject["status"] {
+  const normalizedStatus = status.toLowerCase();
+  if (COMPLETED_PROJECT_STATUSES.has(normalizedStatus)) return "Completed";
+  if (DESIGNING_PROJECT_STATUSES.has(normalizedStatus)) return "Designing";
+  return "Scanned";
+}
+
+function normalizeProjectVisibility(value: unknown): PortalProject["visibility"] {
+  if (value === "Private" || value === "Link" || value === "Public") return value;
+  if (typeof value === "string") {
+    const normalized = value.toLowerCase();
+    if (normalized === "private") return "Private";
+    if (normalized === "link") return "Link";
+    if (normalized === "public") return "Public";
+  }
+  return "Private";
+}
 
 function toPortalProject(project: ProjectResponse): PortalProject {
-  const normalizedStatus = project.status.toLowerCase();
-  const status: PortalProject["status"] = ["completed", "ready", "exported"].includes(normalizedStatus)
-    ? "Completed"
-    : ["in_progress", "processing", "queued", "baking"].includes(normalizedStatus)
-      ? "Designing"
-      : "Scanned";
+  const config = asRecord(project.design_config);
+  const scan = asRecord(config.scan);
+  const palette = asRecord(config.palette);
 
   return {
     id: project.id,
     name: project.name,
-    baseModel: "Custom sneaker model",
-    status,
+    baseModel: stringValue(config.base_model, "Custom sneaker model"),
+    status: normalizeProjectStatus(project.status),
     rawStatus: project.status,
-    visibility: "Private",
+    visibility: normalizeProjectVisibility(config.visibility),
     updatedAt: project.updated_at,
     createdAt: project.created_at,
-    imageUrl: fallbackProjectImage,
+    imageUrl: projectImageUrl(project.thumbnail_path),
     editorUrl: project.editor_url,
-    device: "KusStudio",
-    fileSize: "—",
-    photosCount: 0,
-    verticesCount: "—",
-    colorCode: "#FF5A36",
+    device: stringValue(scan.device, "KusStudio"),
+    fileSize: formatProjectSize(scan.file_size_mb),
+    photosCount: numberValue(scan.photos_count, 0),
+    verticesCount: stringValue(scan.vertices, "—"),
+    colorCode: stringValue(palette.primary, "#FF5A36"),
     description: project.description ?? "",
   };
 }
@@ -521,8 +570,7 @@ export const api = {
   },
 
   avatarUrl(path: string | null): string | undefined {
-    if (!path) return undefined;
-    return `${STORAGE_PUBLIC_URL.replace(/\/$/, '')}/${path.replace(/^\//, '')}`;
+    return storageUrl(path);
   },
 
   async uploadAvatar(file: File): Promise<UserProfile> {

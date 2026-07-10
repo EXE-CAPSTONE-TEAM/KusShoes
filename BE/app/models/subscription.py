@@ -1,5 +1,6 @@
 import uuid
 from datetime import datetime
+from typing import TYPE_CHECKING
 
 from sqlalchemy import Boolean, CheckConstraint, DateTime, ForeignKey, String
 from sqlalchemy.dialects.postgresql import UUID
@@ -7,6 +8,10 @@ from sqlalchemy.orm import Mapped, mapped_column, relationship
 
 from app.database import Base
 from app.models.base import TimestampMixin, utcnow
+
+if TYPE_CHECKING:
+    from app.models.plan import Plan
+    from app.models.user import User
 
 
 class Subscription(Base, TimestampMixin):
@@ -53,8 +58,8 @@ class Subscription(Base, TimestampMixin):
         Boolean, nullable=False, default=False
     )
 
-    user: Mapped["User"] = relationship(back_populates="subscription")  # noqa: F821
-    plan: Mapped["Plan"] = relationship(back_populates="subscriptions")  # noqa: F821
+    user: Mapped["User"] = relationship(back_populates="subscription")
+    plan: Mapped["Plan"] = relationship(back_populates="subscriptions")
 
     @property
     def is_active(self) -> bool:

@@ -3,6 +3,8 @@ from datetime import datetime
 
 from pydantic import BaseModel, Field
 
+from app.types import JsonObject
+
 
 class EditorUserResponse(BaseModel):
     id: uuid.UUID
@@ -38,7 +40,7 @@ class EditorModelAssetResponse(BaseModel):
     metadataUrl: str = ""
     qualityReportUrl: str = ""
     objPackageZipUrl: str = ""
-    qualityReport: dict = Field(default_factory=dict)
+    qualityReport: JsonObject = Field(default_factory=dict)
     createdAt: datetime
     updatedAt: datetime | None = None
 
@@ -50,7 +52,7 @@ class EditorDesignResponse(BaseModel):
     modelAssetId: uuid.UUID
     name: str
     status: str
-    designConfig: dict
+    designConfig: JsonObject
     previewGlbUrl: str | None = None
     previewStatus: str = "none"
     previewErrorMessage: str | None = None
@@ -73,5 +75,5 @@ class EditorContextResponse(BaseModel):
 
 
 class EditorSaveDesignRequest(BaseModel):
-    designConfig: dict
+    designConfig: JsonObject
     name: str | None = None

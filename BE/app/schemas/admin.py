@@ -1,15 +1,19 @@
 import uuid
 from datetime import date, datetime
-from typing import Annotated, Literal
+from typing import Annotated, Generic, Literal, TypeVar
 
 from pydantic import BaseModel, BeforeValidator, EmailStr, Field
-from typing import TypeVar, Generic
+
+from app.types import JsonObject
 
 T = TypeVar("T")
+
 
 class CursorPage(BaseModel, Generic[T]):
     items: list[T]
     next_cursor: str | None
+
+
 AdminSearchQuery = Annotated[
     str,
     BeforeValidator(lambda value: value.strip()),
@@ -154,7 +158,7 @@ class AdminBakeJobResponse(BaseModel):
 
 
 class AdminBakeJobDetailResponse(AdminBakeJobResponse):
-    design_config_snapshot: dict
+    design_config_snapshot: JsonObject
 
 
 class AdminExportRecordResponse(BaseModel):

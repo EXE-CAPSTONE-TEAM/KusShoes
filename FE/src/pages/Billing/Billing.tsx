@@ -1,5 +1,5 @@
 import React, { useEffect, useMemo, useState } from 'react';
-import { CreditCard, HardDrive, Check, Calendar, ArrowUpRight, HelpCircle, X, Building, Pencil, Eye } from 'lucide-react';
+import { CreditCard, HardDrive, Check, Calendar, ArrowUpRight, HelpCircle, X, Building, Eye } from 'lucide-react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { ConfirmDialog } from '../../components/ConfirmDialog/ConfirmDialog';
 import { useToast } from '../../context/ToastContext';
@@ -10,14 +10,42 @@ import {
   type Subscription,
   type Usage,
   type Invoice as ApiInvoice,
+  type UserProfile,
 } from '../../api/client';
 import styles from './Billing.module.css';
+
+type InvoiceStatus = 'Paid' | 'Pending' | 'Failed';
 
 interface Invoice {
   id: string;
   date: string;
   amount: string;
-  status: 'Paid' | 'Pending' | 'Failed';
+  status: InvoiceStatus;
+}
+
+function formatVnd(amount: number): string {
+  return `${amount.toLocaleString('vi-VN')} VNĐ`;
+}
+
+function formatTierName(tier: string): string {
+  return tier.replace(/_/g, ' ').replace(/\b\w/g, (char) => char.toUpperCase());
+}
+
+function normalizeInvoiceStatus(status: string): InvoiceStatus {
+  const normalized = status.toLowerCase();
+  if (normalized === 'paid') return 'Paid';
+  if (normalized === 'failed') return 'Failed';
+  return 'Pending';
+}
+
+function quotaPercent(used: number | undefined, limit: number | null | undefined): number {
+  if (!limit) return 0;
+  return Math.min(100, ((used ?? 0) / limit) * 100);
+}
+
+function profileDisplayName(profile: UserProfile | null): string {
+  if (!profile) return 'Loading...';
+  return `${profile.first_name} ${profile.last_name}`.trim() || profile.username;
 }
 
 export const Billing: React.FC = () => {
@@ -28,6 +56,7 @@ export const Billing: React.FC = () => {
   const [plans, setPlans] = useState<Plan[]>([]);
   const [subscription, setSubscription] = useState<Subscription | null>(null);
   const [usage, setUsage] = useState<Usage | null>(null);
+  const [profile, setProfile] = useState<UserProfile | null>(null);
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
@@ -35,27 +64,22 @@ export const Billing: React.FC = () => {
       if (caught instanceof ApiError && caught.status === 404) return null;
       throw caught;
     });
-    Promise.all([api.listPlans(), subscriptionRequest, api.listInvoices(), api.usage()])
-      .then(([nextPlans, nextSubscription, nextInvoices, nextUsage]) => {
+    Promise.all([api.listPlans(), subscriptionRequest, api.listInvoices(), api.usage(), api.profile()])
+      .then(([nextPlans, nextSubscription, nextInvoices, nextUsage, nextProfile]) => {
         setPlans(nextPlans);
         setSubscription(nextSubscription);
         setUsage(nextUsage);
+        setProfile(nextProfile);
         setInvoices(nextInvoices.map((invoice: ApiInvoice) => ({
           id: invoice.id,
           date: new Date(invoice.created_at).toLocaleDateString(),
-          amount: `${invoice.amount_vnd.toLocaleString('vi-VN')} VNĐ`,
-          status: `${invoice.status.charAt(0).toUpperCase()}${invoice.status.slice(1)}` as Invoice['status'],
+          amount: formatVnd(invoice.amount_vnd),
+          status: normalizeInvoiceStatus(invoice.status),
         })));
       })
       .catch((caught) => toast(caught instanceof Error ? caught.message : 'Unable to load billing data.', 'error'))
       .finally(() => setLoading(false));
   }, [toast]);
-
-  // Billing Details State
-  const [companyName, setCompanyName] = useState('KusShoes Joint Stock Company');
-  const [billingAddress, setBillingAddress] = useState('FPT University, Hoa Lac High-Tech Park, Hanoi, Vietnam');
-  const [taxId, setTaxId] = useState('0109876543');
-  const [isEditingBilling, setIsEditingBilling] = useState(false);
 
   const currentPlan = useMemo(() => plans.find((plan) =>
     subscription?.tier === plan.tier
@@ -66,8 +90,8 @@ export const Billing: React.FC = () => {
     const isCurrent = currentPlan?.id === plan.id;
     return {
       plan,
-      name: plan.tier.replace(/_/g, ' ').replace(/\b\w/g, (char) => char.toUpperCase()),
-      price: `${plan.price_vnd.toLocaleString('vi-VN')} VNĐ`,
+      name: formatTierName(plan.tier),
+      price: formatVnd(plan.price_vnd),
       period: plan.billing_cycle ?? 'one time',
       description: `${plan.bake_priority} bake priority`,
       features: [
@@ -135,11 +159,11 @@ export const Billing: React.FC = () => {
             <div>
               <span className={styles.planBadge}>ACTIVE PLAN</span>
               <h2 className={styles.planName}>
-                {loading ? 'Loading...' : (currentPlan?.tier ?? subscription?.tier ?? 'Free')}
+                {loading ? 'Loading...' : formatTierName(currentPlan?.tier ?? subscription?.tier ?? 'free')}
               </h2>
             </div>
             <div className={styles.planPriceInfo}>
-              <span className={styles.planPrice}>{(currentPlan?.price_vnd ?? 0).toLocaleString('vi-VN')} VNĐ</span>
+              <span className={styles.planPrice}>{formatVnd(currentPlan?.price_vnd ?? 0)}</span>
               <span className={styles.planPeriod}>/ {currentPlan?.billing_cycle ?? 'month'}</span>
             </div>
           </div>
@@ -162,7 +186,7 @@ export const Billing: React.FC = () => {
                   onClick={handleOpenBillingPortal}
                   title="Edit Payment Method"
                 >
-                  <Pencil size={12} />
+                  <ArrowUpRight size={12} />
                 </button>
               </div>
             </div>
@@ -252,57 +276,29 @@ export const Billing: React.FC = () => {
           <div className={styles.billingHeader}>
             <div className={styles.billingTitleContainer}>
               <Building size={18} className={styles.billingIcon} />
-              <h3 className={styles.billingTitle}>Billing Details</h3>
+              <h3 className={styles.billingTitle}>Account Billing Profile</h3>
             </div>
-            <button 
-              className={styles.editDetailsBtn} 
-              onClick={() => setIsEditingBilling(!isEditingBilling)}
-            >
-              {isEditingBilling ? 'Save Changes' : 'Edit Details'}
-            </button>
           </div>
           
           <div className={styles.billingFields}>
             <div className={styles.fieldGroup}>
-              <label className={styles.fieldLabel}>COMPANY NAME</label>
-              {isEditingBilling ? (
-                <input 
-                  type="text" 
-                  className={styles.fieldInput} 
-                  value={companyName} 
-                  onChange={(e) => setCompanyName(e.target.value)} 
-                />
-              ) : (
-                <p className={styles.fieldValue}>{companyName}</p>
-              )}
+              <label className={styles.fieldLabel}>ACCOUNT OWNER</label>
+              <p className={styles.fieldValue}>{profileDisplayName(profile)}</p>
             </div>
             
             <div className={styles.fieldGroup}>
-              <label className={styles.fieldLabel}>BILLING ADDRESS</label>
-              {isEditingBilling ? (
-                <input 
-                  type="text" 
-                  className={styles.fieldInput} 
-                  value={billingAddress} 
-                  onChange={(e) => setBillingAddress(e.target.value)} 
-                />
-              ) : (
-                <p className={styles.fieldValue}>{billingAddress}</p>
-              )}
+              <label className={styles.fieldLabel}>EMAIL</label>
+              <p className={styles.fieldValue}>{profile?.email ?? 'Loading...'}</p>
             </div>
             
             <div className={styles.fieldGroup}>
-              <label className={styles.fieldLabel}>TAX ID</label>
-              {isEditingBilling ? (
-                <input 
-                  type="text" 
-                  className={styles.fieldInput} 
-                  value={taxId} 
-                  onChange={(e) => setTaxId(e.target.value)} 
-                />
-              ) : (
-                <p className={styles.fieldValue}>{taxId}</p>
-              )}
+              <label className={styles.fieldLabel}>ACCOUNT CODE</label>
+              <p className={styles.fieldValue}>{profile?.account_code ?? 'Loading...'}</p>
+            </div>
+
+            <div className={styles.fieldGroup}>
+              <label className={styles.fieldLabel}>ACCOUNT STATUS</label>
+              <p className={styles.fieldValue}>{profile?.status ?? 'Loading...'}</p>
             </div>
           </div>
         </motion.div>
@@ -325,7 +321,10 @@ export const Billing: React.FC = () => {
               <span>{usage?.projects_count ?? 0} / {usage?.max_projects ?? '∞'} used</span>
             </div>
             <div className={styles.progressBarBg}>
-              <div className={styles.progressBarFill} style={{ width: `${usage?.max_projects ? Math.min(100, usage.projects_count / usage.max_projects * 100) : 0}%` }} />
+              <div
+                className={styles.progressBarFill}
+                style={{ width: `${quotaPercent(usage?.projects_count, usage?.max_projects)}%` }}
+              />
             </div>
           </div>
 
@@ -335,7 +334,10 @@ export const Billing: React.FC = () => {
               <span>{usage?.exports_count ?? 0} / {usage?.max_exports_per_month ?? '∞'} used</span>
             </div>
             <div className={styles.progressBarBg}>
-              <div className={styles.progressBarFill} style={{ width: `${usage?.max_exports_per_month ? Math.min(100, usage.exports_count / usage.max_exports_per_month * 100) : 0}%` }} />
+              <div
+                className={styles.progressBarFill}
+                style={{ width: `${quotaPercent(usage?.exports_count, usage?.max_exports_per_month)}%` }}
+              />
             </div>
           </div>
 
@@ -345,7 +347,10 @@ export const Billing: React.FC = () => {
               <span>{usage?.ai_credits_used ?? 0} / {usage?.ai_credits_limit ?? '∞'} used</span>
             </div>
             <div className={styles.progressBarBg}>
-              <div className={styles.progressBarFill} style={{ width: `${usage?.ai_credits_limit ? Math.min(100, usage.ai_credits_used / usage.ai_credits_limit * 100) : 0}%` }} />
+              <div
+                className={styles.progressBarFill}
+                style={{ width: `${quotaPercent(usage?.ai_credits_used, usage?.ai_credits_limit)}%` }}
+              />
             </div>
           </div>
 

@@ -1,5 +1,6 @@
 import uuid
 from datetime import datetime
+from typing import TYPE_CHECKING
 
 from sqlalchemy import ARRAY, Boolean, DateTime, String, Text
 from sqlalchemy.dialects.postgresql import UUID
@@ -7,6 +8,13 @@ from sqlalchemy.orm import Mapped, mapped_column, relationship
 
 from app.database import Base
 from app.models.base import TimestampMixin
+
+if TYPE_CHECKING:
+    from app.models.invoice import Invoice
+    from app.models.monthly_usage import MonthlyUsage
+    from app.models.project import Project
+    from app.models.refresh_token import RefreshToken
+    from app.models.subscription import Subscription
 
 
 class User(Base, TimestampMixin):
@@ -37,17 +45,17 @@ class User(Base, TimestampMixin):
     deleted_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True), nullable=True)
 
     # Relationships
-    refresh_tokens: Mapped[list["RefreshToken"]] = relationship(  # noqa: F821
+    refresh_tokens: Mapped[list["RefreshToken"]] = relationship(
         back_populates="user", cascade="all, delete-orphan"
     )
-    subscription: Mapped["Subscription | None"] = relationship(  # noqa: F821
+    subscription: Mapped["Subscription | None"] = relationship(
         back_populates="user", uselist=False
     )
-    invoices: Mapped[list["Invoice"]] = relationship(back_populates="user")  # noqa: F821
-    projects: Mapped[list["Project"]] = relationship(  # noqa: F821
+    invoices: Mapped[list["Invoice"]] = relationship(back_populates="user")
+    projects: Mapped[list["Project"]] = relationship(
         back_populates="user", cascade="all, delete-orphan"
     )
-    monthly_usages: Mapped[list["MonthlyUsage"]] = relationship(  # noqa: F821
+    monthly_usages: Mapped[list["MonthlyUsage"]] = relationship(
         back_populates="user", cascade="all, delete-orphan"
     )
 

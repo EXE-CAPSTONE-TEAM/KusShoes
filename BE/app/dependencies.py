@@ -1,3 +1,4 @@
+from collections.abc import AsyncGenerator
 import hmac
 
 import redis.asyncio as aioredis
@@ -13,7 +14,7 @@ from app.services import auth_service
 security = HTTPBearer(auto_error=False)
 
 
-async def get_redis() -> aioredis.Redis:  # type: ignore[return]
+async def get_redis() -> AsyncGenerator[aioredis.Redis, None]:
     yield redis_pool
 
 

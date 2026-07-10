@@ -89,6 +89,7 @@ services:
         condition: service_completed_successfully
     volumes:
       - ./app:/app/app               # hot reload — code thay đổi ngay lập tức
+      - ./scripts:/app/scripts       # dev seed/admin scripts
       - ./migrations:/app/migrations # alembic migrations
       - ./alembic.ini:/app/alembic.ini
       - ./tests:/app/tests           # chạy pytest từ trong container
@@ -106,6 +107,7 @@ services:
         condition: service_healthy
     volumes:
       - ./app:/app/app
+      - ./scripts:/app/scripts
     command: celery -A app.workers.celery_app worker --loglevel=info -Q high,normal,low,bake
     restart: unless-stopped
 
@@ -118,6 +120,7 @@ services:
         condition: service_healthy
     volumes:
       - ./app:/app/app
+      - ./scripts:/app/scripts
     command: celery -A app.workers.celery_app beat --loglevel=info
     restart: unless-stopped
 
