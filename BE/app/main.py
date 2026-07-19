@@ -39,6 +39,9 @@ app.add_middleware(
         "http://localhost:3000",  # local FE dev
         "http://localhost:5173",  # Vite local FE dev
         "http://127.0.0.1:5173",
+        "tauri://localhost",
+        "http://tauri.localhost",
+        "https://tauri.localhost",
     ],
     allow_credentials=True,
     allow_methods=["*"],
@@ -56,7 +59,9 @@ from app.routers import (  # noqa: E402
     admin_plans,
     admin_users,
     auth,
+    editor,
     exports,
+    mobile,
     project_assets,
     projects,
     subscriptions,
@@ -65,6 +70,11 @@ from app.routers import (  # noqa: E402
 )
 
 app.include_router(auth.router, prefix="/api/v1/auth", tags=["Auth"])
+app.include_router(editor.router, prefix="/api/v1/editor", tags=["Editor"])
+app.include_router(mobile.router, prefix="/api/v1/mobile", tags=["Mobile"])
+app.include_router(
+    mobile.internal_router, prefix="/api/v1/internal/mobile", tags=["Mobile Internal"]
+)
 app.include_router(admin_auth.router, prefix="/api/v1/admin", tags=["Admin Auth"])
 app.include_router(admin_billing.router, prefix="/api/v1/admin", tags=["Admin Billing"])
 app.include_router(admin_dashboard.router, prefix="/api/v1/admin", tags=["Admin Dashboard"])

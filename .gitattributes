@@ -1,0 +1,3 @@
+# Shell scripts must stay LF — CRLF breaks container entrypoints
+# (exec /app/entrypoint.sh: no such file or directory)
+*.sh text eol=lf

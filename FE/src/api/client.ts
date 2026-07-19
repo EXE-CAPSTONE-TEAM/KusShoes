@@ -124,6 +124,11 @@ export type ProjectPage = {
   hasNext: boolean;
 };
 
+export type EditorLaunch = {
+  desktopUrl: string;
+  expiresIn: number;
+};
+
 export type Plan = {
   id: string;
   tier: string;
@@ -428,6 +433,21 @@ export const api = {
   async getProject(projectId: string): Promise<PortalProject> {
     const project = await request<ProjectResponse>(`/api/v1/projects/${projectId}`);
     return toPortalProject(project);
+  },
+
+  async createEditorLaunch(projectId: string): Promise<EditorLaunch> {
+    const launch = await request<{
+      launch_ticket: string;
+      desktop_url: string;
+      expires_in: number;
+    }>("/api/v1/auth/editor/launch", {
+      method: "POST",
+      body: JSON.stringify({ project_id: projectId }),
+    });
+    return {
+      desktopUrl: launch.desktop_url,
+      expiresIn: launch.expires_in,
+    };
   },
 
   async createProject(payload: { name: string; description?: string | null }): Promise<PortalProject> {

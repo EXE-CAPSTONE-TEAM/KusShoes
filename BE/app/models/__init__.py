@@ -1,6 +1,7 @@
 # Import tất cả models để Alembic autogenerate nhận diện được
 from app.models.audit_log import AuditLog
 from app.models.bake_job import BakeJob
+from app.models.design_revision import DesignRevision
 from app.models.export_record import ExportRecord
 from app.models.invoice import Invoice
 from app.models.monthly_usage import MonthlyUsage
@@ -21,6 +22,7 @@ __all__ = [
     "Project",
     "ProjectAsset",
     "BakeJob",
+    "DesignRevision",
     "ExportRecord",
     "AuditLog",
 ]

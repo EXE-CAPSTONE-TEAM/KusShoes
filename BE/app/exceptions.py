@@ -31,7 +31,9 @@ class AuthTokenExpired(AppException):
 
 class AuthRefreshInvalid(AppException):
     def __init__(self):
-        super().__init__(401, "AUTH_REFRESH_INVALID", "Refresh token không hợp lệ hoặc đã được dùng")
+        super().__init__(
+            401, "AUTH_REFRESH_INVALID", "Refresh token không hợp lệ hoặc đã được dùng"
+        )
 
 
 class AuthUserSuspended(AppException):
@@ -47,6 +49,13 @@ class AuthRoleForbidden(AppException):
 class AuthSSOInvalid(AppException):
     def __init__(self):
         super().__init__(401, "AUTH_SSO_INVALID", "SSO token không hợp lệ hoặc đã được dùng")
+
+
+class AuthEditorLaunchInvalid(AppException):
+    def __init__(self):
+        super().__init__(
+            401, "AUTH_EDITOR_LAUNCH_INVALID", "Phiên mở editor không hợp lệ hoặc đã được dùng"
+        )
 
 
 class AuthGoogleFailed(AppException):
@@ -67,7 +76,9 @@ class UsernameAlreadyTaken(AppException):
 class OTPExpired(AppException):
     def __init__(self):
         super().__init__(
-            400, "OTP_EXPIRED", "Mã xác minh đã hết hạn. Vui lòng đăng ký lại hoặc yêu cầu gửi lại mã."
+            400,
+            "OTP_EXPIRED",
+            "Mã xác minh đã hết hạn. Vui lòng đăng ký lại hoặc yêu cầu gửi lại mã.",
         )
 
 
@@ -199,12 +210,28 @@ class ProjectAccessDenied(AppException):
 
 class ProjectQuotaExceeded(AppException):
     def __init__(self):
-        super().__init__(403, "PROJ_QUOTA_EXCEEDED", "Bạn đã đạt giới hạn số project theo gói dịch vụ")
+        super().__init__(
+            403, "PROJ_QUOTA_EXCEEDED", "Bạn đã đạt giới hạn số project theo gói dịch vụ"
+        )
 
 
 class ProjectBakeInProgress(AppException):
     def __init__(self):
         super().__init__(409, "PROJ_BAKE_IN_PROGRESS", "Đang có bake job đang xử lý, vui lòng chờ")
+
+
+class DesignRevisionConflict(AppException):
+    def __init__(self, project):
+        super().__init__(
+            409,
+            "DESIGN_REVISION_CONFLICT",
+            "Thiết kế đã được cập nhật ở nơi khác. Vui lòng tải lại phiên bản mới nhất.",
+            extra={
+                "current_revision": project.current_design_revision,
+                "current_design_config": project.design_config,
+                "current_updated_at": project.updated_at.isoformat(),
+            },
+        )
 
 
 class ProjectCursorInvalid(AppException):
@@ -265,12 +292,16 @@ class SubPlanNotFound(AppException):
 
 class SubPlanNotMappedToPolar(AppException):
     def __init__(self):
-        super().__init__(502, "SUB_PLAN_GATEWAY_UNAVAILABLE", "Gói dịch vụ chưa được cấu hình thanh toán")
+        super().__init__(
+            502, "SUB_PLAN_GATEWAY_UNAVAILABLE", "Gói dịch vụ chưa được cấu hình thanh toán"
+        )
 
 
 class SubPaymentGatewayError(AppException):
     def __init__(self):
-        super().__init__(502, "SUB_PAYMENT_GATEWAY_ERROR", "Lỗi khi kết nối cổng thanh toán, vui lòng thử lại")
+        super().__init__(
+            502, "SUB_PAYMENT_GATEWAY_ERROR", "Lỗi khi kết nối cổng thanh toán, vui lòng thử lại"
+        )
 
 
 class SubAlreadyActive(AppException):
@@ -290,7 +321,11 @@ class SubNotFound(AppException):
 
 class SubNoPolarCustomer(AppException):
     def __init__(self):
-        super().__init__(404, "SUB_NO_POLAR_CUSTOMER", "Bạn chưa từng thanh toán, chưa có tài khoản trên cổng thanh toán")
+        super().__init__(
+            404,
+            "SUB_NO_POLAR_CUSTOMER",
+            "Bạn chưa từng thanh toán, chưa có tài khoản trên cổng thanh toán",
+        )
 
 
 class InvoiceNotRefundable(AppException):
@@ -301,7 +336,9 @@ class InvoiceNotRefundable(AppException):
 # --- Admin ---
 class AdminForbidden(AppException):
     def __init__(self):
-        super().__init__(403, "ADMIN_FORBIDDEN", "Chỉ quản trị viên mới có quyền thực hiện thao tác này")
+        super().__init__(
+            403, "ADMIN_FORBIDDEN", "Chỉ quản trị viên mới có quyền thực hiện thao tác này"
+        )
 
 
 class AdminUserNotFound(AppException):
@@ -323,12 +360,44 @@ class PlanUpdateInvalid(AppException):
 
 class BakeJobNotRequeueable(AppException):
     def __init__(self):
-        super().__init__(409, "BAKE_JOB_NOT_REQUEUEABLE", "Chỉ có thể chạy lại bake job đã thất bại")
+        super().__init__(
+            409, "BAKE_JOB_NOT_REQUEUEABLE", "Chỉ có thể chạy lại bake job đã thất bại"
+        )
 
 
 class BakeJobNotCancellable(AppException):
     def __init__(self):
         super().__init__(409, "BAKE_JOB_NOT_CANCELLABLE", "Chỉ có thể hủy bake job đang chờ xử lý")
+
+
+class MobileComputeUnavailable(AppException):
+    def __init__(self):
+        super().__init__(503, "MOBILE_COMPUTE_UNAVAILABLE", "Dịch vụ scan 3D chưa được cấu hình")
+
+
+class MobileScanGrantInvalid(AppException):
+    def __init__(self):
+        super().__init__(
+            401, "MOBILE_SCAN_GRANT_INVALID", "Quyền khởi tạo scan không hợp lệ hoặc đã hết hạn"
+        )
+
+
+class MobileScanCompletionInvalid(AppException):
+    def __init__(self):
+        super().__init__(
+            401,
+            "MOBILE_SCAN_COMPLETION_INVALID",
+            "Quyền hoàn tất scan không hợp lệ hoặc đã hết hạn",
+        )
+
+
+class MobileScanPublishConflict(AppException):
+    def __init__(self):
+        super().__init__(
+            409,
+            "MOBILE_SCAN_PUBLISH_CONFLICT",
+            "Một tiến trình publish khác đang xử lý project này",
+        )
 
 
 def register_exception_handlers(app: FastAPI) -> None:
@@ -340,6 +409,7 @@ def register_exception_handlers(app: FastAPI) -> None:
     @app.exception_handler(Exception)
     async def unhandled_exception_handler(request: Request, exc: Exception) -> JSONResponse:
         from loguru import logger
+
         logger.exception("Unhandled exception")
         return JSONResponse(
             status_code=500,

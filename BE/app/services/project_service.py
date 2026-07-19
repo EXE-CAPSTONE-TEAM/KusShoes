@@ -179,7 +179,7 @@ async def permanently_delete_project(
 async def save_design(
     db: AsyncSession, project_id: uuid.UUID, body: SaveDesignRequest
 ) -> dict[str, str]:
-    project = await project_repo.get_by_id(db, project_id)
+    project = await project_repo.get_by_id(db, project_id, for_update=True)
     if not project:
         raise ProjectNotFound()
     await project_repo.save_design(
@@ -187,6 +187,9 @@ async def save_design(
         project,
         design_config=body.design_config,
         thumbnail_path=body.thumbnail_path,
+        base_revision=body.base_revision,
+        author_user_id=project.user_id,
+        client="service",
     )
     return {"message": "Đã lưu thiết kế"}
 
@@ -309,6 +312,7 @@ def _to_detail(project) -> ProjectDetailResponse:
         **_to_response(project).model_dump(),
         design_config=project.design_config,
         canonical_model_asset_id=project.canonical_model_asset_id,
+        revision=project.current_design_revision,
     )
 
 

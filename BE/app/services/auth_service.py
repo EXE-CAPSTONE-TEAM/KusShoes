@@ -1,9 +1,13 @@
 import asyncio
+import base64
+import hashlib
 import hmac
+import json
 import re
 import secrets
 import uuid
 from datetime import UTC, datetime, timedelta
+from urllib.parse import urlencode
 
 import jwt as pyjwt
 import redis.asyncio as aioredis
@@ -11,6 +15,7 @@ from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.exceptions import (
     AccountBanned,
+    AuthEditorLaunchInvalid,
     AuthRateLimited,
     AuthRefreshInvalid,
     AuthRoleForbidden,
@@ -33,18 +38,24 @@ from app.exceptions import (
     OTPResendLimit,
     PasswordResetInvalid,
     PasswordResetLocked,
+    ProjectNotFound,
     UsernameAlreadyTaken,
 )
 from app.infrastructure import google_oauth, otp_store, rate_limiter, recovery_store, task_queue
 from app.repositories import (
     monthly_usage_repo,
     plan_repo,
+    project_repo,
     refresh_token_repo,
     subscription_repo,
     user_repo,
 )
 from app.schemas.auth import (
     AccessTokenResponse,
+    EditorLaunchClaimResponse,
+    EditorLaunchCreateResponse,
+    EditorLaunchExchangeResponse,
+    EditorSessionResponse,
     ForgotPasswordResponse,
     GoogleLoginResponse,
     OTPResendResponse,
@@ -57,15 +68,18 @@ from app.schemas.auth import (
 )
 from app.utils.jwt import (
     create_access_token,
+    create_editor_access_token,
     create_raw_refresh_token,
     create_sso_token,
     decode_access_token,
+    decode_editor_access_token,
     decode_sso_token,
     hash_token,
 )
 from app.utils.password import hash_password, verify_password
 
 # ── UC-AUTH-001: Registration ────────────────────────────────────────────────
+
 
 async def register_user(
     db: AsyncSession,
@@ -116,6 +130,7 @@ async def register_user(
 
 # ── UC-AUTH-002: OTP Verification ────────────────────────────────────────────
 
+
 async def verify_otp(
     db: AsyncSession,
     redis: aioredis.Redis,
@@ -154,6 +169,7 @@ async def verify_otp(
 
 
 # ── UC-AUTH-002: Resend OTP ───────────────────────────────────────────────────
+
 
 async def resend_otp(
     db: AsyncSession,
@@ -196,6 +212,7 @@ async def resend_otp(
 
 
 # ── UC-AUTH-003: Login email/password ────────────────────────────────────────
+
 
 async def login_user(
     db: AsyncSession,
@@ -248,6 +265,7 @@ async def login_user(
 
 # ── UC-AUTH-004: Google OAuth ─────────────────────────────────────────────────
 
+
 async def get_google_auth_url(redis: aioredis.Redis) -> str:
     state = secrets.token_hex(32)
     await redis.set(f"oauth:state:{state}", "1", ex=600)
@@ -287,9 +305,7 @@ async def handle_google_callback(
     if existing:
         if existing.status != "active":
             raise AccountBanned()
-        tokens = await _issue_tokens(
-            db, existing, user_agent=user_agent, ip_address=ip_address
-        )
+        tokens = await _issue_tokens(db, existing, user_agent=user_agent, ip_address=ip_address)
         return GoogleLoginResponse(**tokens.model_dump(), is_new_user=False)
 
     # AF-2: Auto-link — email/password account with same email
@@ -298,9 +314,7 @@ async def handle_google_callback(
         await user_repo.set_verified_google_link(db, by_email, google_id)
         if by_email.status != "active":
             raise AccountBanned()
-        tokens = await _issue_tokens(
-            db, by_email, user_agent=user_agent, ip_address=ip_address
-        )
+        tokens = await _issue_tokens(db, by_email, user_agent=user_agent, ip_address=ip_address)
         return GoogleLoginResponse(**tokens.model_dump(), is_new_user=False, linked=True)
 
     # New user via Google
@@ -323,6 +337,7 @@ async def handle_google_callback(
 
 
 # ── UC-AUTH-005: Admin/Staff Login ───────────────────────────────────────────
+
 
 async def login_admin(
     db: AsyncSession,
@@ -507,9 +522,7 @@ async def list_sessions(db: AsyncSession, user) -> SessionListResponse:
     )
 
 
-async def revoke_session(
-    db: AsyncSession, user, session_id: uuid.UUID
-) -> dict[str, str]:
+async def revoke_session(db: AsyncSession, user, session_id: uuid.UUID) -> dict[str, str]:
     token = await refresh_token_repo.get_active_for_user(db, user.id, session_id)
     if not token:
         raise AuthSessionNotFound()
@@ -522,11 +535,180 @@ async def revoke_all_sessions(db: AsyncSession, user) -> dict[str, str]:
     return {"message": "Đã thu hồi tất cả phiên đăng nhập"}
 
 
-async def create_editor_sso(redis: aioredis.Redis, user, project_id) -> SSOCreateResponse:
+EDITOR_SCOPES = ["editor:read", "editor:write"]
+
+
+async def create_editor_launch(
+    db: AsyncSession,
+    redis: aioredis.Redis,
+    user,
+    project_id: uuid.UUID,
+) -> EditorLaunchCreateResponse:
     from app.config import settings
 
+    if not await project_repo.get_owned_by_id(db, project_id, user.id):
+        raise ProjectNotFound()
+
+    ticket = await _store_opaque_record(
+        redis,
+        prefix="editor-launch-ticket",
+        payload={"user_id": str(user.id), "project_id": str(project_id)},
+        ttl=settings.EDITOR_LAUNCH_TICKET_EXPIRE_SECONDS,
+    )
+    desktop_url = f"{settings.EDITOR_DESKTOP_URL_SCHEME}://launch?{urlencode({'ticket': ticket})}"
+    return EditorLaunchCreateResponse(
+        launch_ticket=ticket,
+        desktop_url=desktop_url,
+        expires_in=settings.EDITOR_LAUNCH_TICKET_EXPIRE_SECONDS,
+    )
+
+
+async def claim_editor_launch(
+    redis: aioredis.Redis,
+    *,
+    launch_ticket: str,
+    code_challenge: str,
+) -> EditorLaunchClaimResponse:
+    from app.config import settings
+
+    record = await _consume_opaque_record(redis, "editor-launch-ticket", launch_ticket)
+    if not record:
+        raise AuthEditorLaunchInvalid()
+    authorization_code = await _store_opaque_record(
+        redis,
+        prefix="editor-auth-code",
+        payload={**record, "code_challenge": code_challenge},
+        ttl=settings.EDITOR_AUTH_CODE_EXPIRE_SECONDS,
+    )
+    return EditorLaunchClaimResponse(
+        authorization_code=authorization_code,
+        expires_in=settings.EDITOR_AUTH_CODE_EXPIRE_SECONDS,
+    )
+
+
+async def exchange_editor_launch(
+    db: AsyncSession,
+    redis: aioredis.Redis,
+    *,
+    authorization_code: str,
+    code_verifier: str,
+) -> EditorLaunchExchangeResponse:
+    from app.config import settings
+
+    record = await _consume_opaque_record(redis, "editor-auth-code", authorization_code)
+    if not record:
+        raise AuthEditorLaunchInvalid()
+    expected_challenge = str(record.get("code_challenge", ""))
+    actual_challenge = _pkce_s256(code_verifier)
+    if not hmac.compare_digest(expected_challenge, actual_challenge):
+        raise AuthEditorLaunchInvalid()
+
+    try:
+        user_id = uuid.UUID(str(record["user_id"]))
+        project_id = uuid.UUID(str(record["project_id"]))
+    except (KeyError, TypeError, ValueError):
+        raise AuthEditorLaunchInvalid()
+
+    user = await user_repo.get_by_id(db, user_id)
+    project = await project_repo.get_owned_by_id(db, project_id, user_id)
+    if not user or user.status != "active" or not project:
+        raise AuthEditorLaunchInvalid()
+
+    access_token = create_editor_access_token(
+        str(user_id),
+        str(project_id),
+        EDITOR_SCOPES,
+    )
+    return EditorLaunchExchangeResponse(
+        access_token=access_token,
+        expires_in=settings.EDITOR_ACCESS_TOKEN_EXPIRE_MINUTES * 60,
+        user_id=user_id,
+        project_id=project_id,
+        scopes=EDITOR_SCOPES,
+    )
+
+
+async def authenticate_editor_session(
+    db: AsyncSession,
+    raw_token: str,
+) -> EditorSessionResponse:
+    try:
+        payload = decode_editor_access_token(raw_token)
+        user_id = uuid.UUID(str(payload["sub"]))
+        project_id = uuid.UUID(str(payload["project_id"]))
+        scopes = payload.get("scope")
+        expires_at = int(payload["exp"])
+    except (pyjwt.PyJWTError, KeyError, TypeError, ValueError):
+        raise AuthEditorLaunchInvalid()
+    if not isinstance(scopes, list) or not set(EDITOR_SCOPES).issubset(scopes):
+        raise AuthEditorLaunchInvalid()
+    user = await user_repo.get_by_id(db, user_id)
+    project = await project_repo.get_owned_by_id(db, project_id, user_id)
+    if not user or user.status != "active" or not project:
+        raise AuthEditorLaunchInvalid()
+    return EditorSessionResponse(
+        user_id=user_id,
+        project_id=project_id,
+        scopes=[str(scope) for scope in scopes],
+        expires_at=expires_at,
+    )
+
+
+async def _store_opaque_record(
+    redis: aioredis.Redis,
+    *,
+    prefix: str,
+    payload: dict[str, str],
+    ttl: int,
+) -> str:
+    for _ in range(3):
+        raw_token = secrets.token_urlsafe(48)
+        created = await redis.set(
+            f"{prefix}:{hash_token(raw_token)}",
+            json.dumps(payload, separators=(",", ":")),
+            ex=ttl,
+            nx=True,
+        )
+        if created:
+            return raw_token
+    raise RuntimeError("Unable to allocate a unique editor launch record")
+
+
+async def _consume_opaque_record(
+    redis: aioredis.Redis,
+    prefix: str,
+    raw_token: str,
+) -> dict[str, str] | None:
+    raw_record = await redis.getdel(f"{prefix}:{hash_token(raw_token)}")
+    if not raw_record:
+        return None
+    try:
+        decoded = json.loads(raw_record)
+    except (TypeError, json.JSONDecodeError):
+        return None
+    return decoded if isinstance(decoded, dict) else None
+
+
+def _pkce_s256(code_verifier: str) -> str:
+    digest = hashlib.sha256(code_verifier.encode("ascii")).digest()
+    return base64.urlsafe_b64encode(digest).rstrip(b"=").decode("ascii")
+
+
+async def create_editor_sso(
+    db: AsyncSession,
+    redis: aioredis.Redis,
+    user,
+    project_id: uuid.UUID,
+) -> SSOCreateResponse:
+    from app.config import settings
+
+    if not await project_repo.get_owned_by_id(db, project_id, user.id):
+        raise ProjectNotFound()
+
     token = create_sso_token(str(user.id), str(project_id))
-    await redis.set(f"sso:{hash_token(token)}", str(user.id), ex=settings.SSO_TOKEN_EXPIRE_MINUTES * 60)
+    await redis.set(
+        f"sso:{hash_token(token)}", str(user.id), ex=settings.SSO_TOKEN_EXPIRE_MINUTES * 60
+    )
     return SSOCreateResponse(
         sso_token=token,
         expires_in=settings.SSO_TOKEN_EXPIRE_MINUTES * 60,
@@ -546,15 +728,23 @@ async def verify_editor_sso(
     user = await user_repo.get_by_id(db, payload["sub"])
     if not user or user.status != "active":
         raise AuthSSOInvalid()
+    try:
+        project_id = uuid.UUID(str(payload["project_id"]))
+    except (KeyError, TypeError, ValueError):
+        raise AuthSSOInvalid()
+    if not await project_repo.get_owned_by_id(db, project_id, user.id):
+        raise AuthSSOInvalid()
+
     return SSOVerifyResponse(
         user_id=user.id,
-        project_id=payload["project_id"],
+        project_id=project_id,
         email=user.email,
         username=user.username,
     )
 
 
 # ── Internal helpers ──────────────────────────────────────────────────────────
+
 
 async def _issue_tokens(
     db: AsyncSession,

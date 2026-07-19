@@ -51,8 +51,7 @@ const INITIAL_MEMBERS: ShareMember[] = [];
 
 export const ProjectDetails: React.FC<ProjectDetailsProps> = ({
   project,
-  onBack,
-  setProjects
+  onBack
 }) => {
   const { toast } = useToast();
   const [activeTab, setActiveTab] = useState<'overview' | 'share'>('overview');
@@ -82,16 +81,9 @@ export const ProjectDetails: React.FC<ProjectDetailsProps> = ({
     setMembers(prev => prev.filter(m => m.id !== id));
   };
 
-  const [syncStatus, setSyncStatus] = useState<'idle' | 'connecting' | 'launched'>(() => {
-    return project.status === 'Designing' ? 'launched' : 'idle';
-  });
-  const [logs, setLogs] = useState<string[]>(() => {
-    if (project.status === 'Designing') {
-      const time = new Date().toLocaleTimeString();
-      return [`[${time}] Ready. Session locked on local KusStudio client.`];
-    }
-    return [];
-  });
+  const [syncStatus, setSyncStatus] = useState<'idle' | 'connecting' | 'launched' | 'error'>('idle');
+  const [logs, setLogs] = useState<string[]>([]);
+  const [launchError, setLaunchError] = useState<string | null>(null);
   const consoleEndRef = useRef<HTMLDivElement>(null);
 
   // Auto scroll console logs to bottom
@@ -101,13 +93,12 @@ export const ProjectDetails: React.FC<ProjectDetailsProps> = ({
     }
   }, [logs]);
 
-  // Sync state if project changes
+  // A project status describes backend processing, not a live desktop session.
   useEffect(() => {
-    setSyncStatus(project.status === 'Designing' ? 'launched' : 'idle');
-    setLogs(project.status === 'Designing' ? [
-      `[${new Date().toLocaleTimeString()}] Ready. Session locked on local KusStudio client.`
-    ] : []);
-  }, [project]);
+    setSyncStatus('idle');
+    setLogs([]);
+    setLaunchError(null);
+  }, [project.id]);
 
   useEffect(() => {
     api.listProjectExports(project.id)
@@ -128,42 +119,27 @@ export const ProjectDetails: React.FC<ProjectDetailsProps> = ({
     return `${(bytes / 1024 / 1024).toFixed(1)} MB`;
   };
 
-  const handleLaunchKusStudio = () => {
+  const handleLaunchKusStudio = async () => {
     if (syncStatus === 'connecting') return;
-    if (project.editorUrl) {
-      window.location.assign(project.editorUrl);
-      return;
-    }
     setSyncStatus('connecting');
-    setLogs([]);
+    setLaunchError(null);
+    setLogs([`[${new Date().toLocaleTimeString()}] Requesting a secure one-time launch ticket...`]);
 
-    const logSteps = [
-      'Pinging KusStudio daemon on port 8421...',
-      'Connection established with localhost:8421 (WS protocol).',
-      'Handshaking secure local daemon socket token...',
-      `Verifying workspace file structures for "${project.name}"...`,
-      `Packaging reconstruction vertex buffers (${project.fileSize})...`,
-      `Streaming photogrammetry assets (${project.photosCount} files)...`,
-      'Buffers synchronized. Temporary read/write lock acquired.',
-      'Launching KusStudio Desktop application...',
-      'Desktop window active. KusShoes Portal lock engaged.'
-    ];
-
-    let stepIndex = 0;
-    const interval = setInterval(() => {
-      if (stepIndex < logSteps.length) {
-        const timeStr = new Date().toLocaleTimeString();
-        setLogs(prev => [...prev, `[${timeStr}] ${logSteps[stepIndex]}`]);
-        stepIndex++;
-      } else {
-        clearInterval(interval);
-        setSyncStatus('launched');
-        // Update parent projects list state
-        setProjects(prev => 
-          prev.map(p => p.id === project.id ? { ...p, status: 'Designing', updatedAt: 'Just now' } : p)
-        );
-      }
-    }, 600);
+    try {
+      const launch = await api.createEditorLaunch(project.id);
+      setLogs(prev => [
+        ...prev,
+        `[${new Date().toLocaleTimeString()}] Ticket ready (${launch.expiresIn}s). Opening KusStudio...`,
+      ]);
+      window.location.assign(launch.desktopUrl);
+      setSyncStatus('launched');
+    } catch (caught) {
+      const message = caught instanceof Error ? caught.message : 'Unable to open KusStudio.';
+      setLaunchError(message);
+      setLogs(prev => [...prev, `[${new Date().toLocaleTimeString()}] Launch failed: ${message}`]);
+      setSyncStatus('error');
+      toast(message, 'error');
+    }
   };
 
   const handleResetConnection = () => {
@@ -173,7 +149,8 @@ export const ProjectDetails: React.FC<ProjectDetailsProps> = ({
   const confirmResetConnection = () => {
     setSyncStatus('idle');
     setLogs([]);
-    toast('Workspace status is managed by the backend bake workflow.', 'info');
+    setLaunchError(null);
+    toast('Local launch status reset. Project data was not changed.', 'info');
   };
 
   return (
@@ -324,11 +301,11 @@ export const ProjectDetails: React.FC<ProjectDetailsProps> = ({
                   <Laptop size={18} className={styles.panelIcon} />
                   <div>
                     <h4 className={styles.panelTitle}>KusStudio Desktop Client</h4>
-                    <p className={styles.panelDesc}>Sync raw photogrammetry point clouds and paint custom sneakers on your local PC.</p>
+                    <p className={styles.panelDesc}>Open this project in KusStudio using a short-lived, one-time secure handoff.</p>
                   </div>
                 </div>
 
-                {(logs.length > 0 || syncStatus === 'connecting') && (
+                {(logs.length > 0 || syncStatus === 'connecting' || syncStatus === 'error') && (
                   <div className={styles.terminalBox}>
                     <div className={styles.terminalHeader}>
                       <Terminal size={12} className={styles.termIcon} />
@@ -354,26 +331,36 @@ export const ProjectDetails: React.FC<ProjectDetailsProps> = ({
                 )}
 
                 <div className={styles.panelFooter}>
-                  {syncStatus === 'idle' && (
-                    <button className="btn-neon-orange" onClick={handleLaunchKusStudio} style={{ width: '100%', justifyContent: 'center' }}>
+                  {(syncStatus === 'idle' || syncStatus === 'error') && (
+                    <button
+                      className="btn-neon-orange"
+                      onClick={handleLaunchKusStudio}
+                      style={{ width: '100%', justifyContent: 'center' }}
+                      aria-describedby={launchError ? 'kusstudio-launch-error' : undefined}
+                    >
                       <Laptop size={16} />
-                      <span>Open in KusStudio Desktop</span>
+                      <span>{syncStatus === 'error' ? 'Retry secure launch' : 'Open in KusStudio Desktop'}</span>
                     </button>
                   )}
+                  {launchError && (
+                    <span id="kusstudio-launch-error" role="alert" className={styles.inviteError}>
+                      {launchError}
+                    </span>
+                  )}
                   {syncStatus === 'connecting' && (
-                    <div className={styles.syncConnectingLoader}>
+                    <div className={styles.syncConnectingLoader} role="status" aria-live="polite">
                       <RefreshCw className={styles.spinIcon} size={16} />
-                      <span>Streaming buffers to Port 8421...</span>
+                      <span>Preparing a secure desktop session...</span>
                     </div>
                   )}
                   {syncStatus === 'launched' && (
                     <div className={styles.syncLaunchedGroup}>
-                      <div className={styles.syncConnectedBanner}>
+                      <div className={styles.syncConnectedBanner} role="status" aria-live="polite">
                         <Check size={16} className={styles.checkIcon} />
-                        <span>Active Session Locked on Desktop Client</span>
+                        <span>Launch request sent. KusStudio will complete secure sign-in.</span>
                       </div>
                       <button className={styles.disconnectBtn} onClick={handleResetConnection}>
-                        Release Lock
+                        Reset launch status
                       </button>
                     </div>
                   )}
@@ -515,9 +502,9 @@ export const ProjectDetails: React.FC<ProjectDetailsProps> = ({
       <ConfirmDialog
         open={confirmResetOpen}
         onOpenChange={setConfirmResetOpen}
-        title="Release workspace lock?"
-        description="This will release the desktop workspace lock and set the project status back to Scanned."
-        confirmLabel="Release Lock"
+        title="Reset local launch status?"
+        description="This only resets the portal message. It does not close KusStudio or change project data."
+        confirmLabel="Reset Status"
         onConfirm={confirmResetConnection}
       />
     </div>

@@ -18,10 +18,62 @@ from app.services.project_service import require_owner
 
 ALLOWED_UPLOADS = {
     "source_model": {"model/gltf-binary": {".glb"}, "model/gltf+json": {".gltf"}},
-    "sticker": {"image/png": {".png"}, "image/webp": {".webp"}},
+    "sticker": {"image/jpeg": {".jpg", ".jpeg"}, "image/png": {".png"}, "image/webp": {".webp"}},
     "texture": {"image/jpeg": {".jpg", ".jpeg"}, "image/png": {".png"}, "image/webp": {".webp"}},
-    "reference_image": {"image/jpeg": {".jpg", ".jpeg"}, "image/png": {".png"}, "image/webp": {".webp"}},
+    "reference_image": {
+        "image/jpeg": {".jpg", ".jpeg"},
+        "image/png": {".png"},
+        "image/webp": {".webp"},
+    },
 }
+
+MAX_UPLOAD_BYTES = {
+    "source_model": 500 * 1024 * 1024,
+    "sticker": 5 * 1024 * 1024,
+    "texture": 25 * 1024 * 1024,
+    "reference_image": 25 * 1024 * 1024,
+}
+
+
+def validate_uploaded_object(
+    *,
+    asset_type: str,
+    expected_content_type: str,
+    metadata: storage.ObjectMetadata,
+    prefix: bytes,
+    reported_size_bytes: int | None,
+) -> int:
+    max_size = MAX_UPLOAD_BYTES[asset_type]
+    if metadata.size_bytes < 1 or metadata.size_bytes > max_size:
+        raise AssetUploadInvalid(
+            f"Kích thước file không hợp lệ; giới hạn cho {asset_type} là {max_size} bytes"
+        )
+
+    actual_content_type = metadata.content_type.split(";", 1)[0].strip().lower()
+    if actual_content_type != expected_content_type.lower():
+        raise AssetUploadInvalid("MIME type trên storage không khớp với upload đã đăng ký")
+
+    if reported_size_bytes is not None and reported_size_bytes != metadata.size_bytes:
+        raise AssetUploadInvalid("Kích thước file tải lên không khớp với storage")
+
+    if not _matches_file_signature(actual_content_type, prefix):
+        raise AssetUploadInvalid("Nội dung file không khớp với định dạng đã đăng ký")
+
+    return metadata.size_bytes
+
+
+def _matches_file_signature(content_type: str, prefix: bytes) -> bool:
+    if content_type == "model/gltf-binary":
+        return prefix.startswith(b"glTF")
+    if content_type == "model/gltf+json":
+        return prefix.lstrip().startswith(b"{")
+    if content_type == "image/png":
+        return prefix.startswith(b"\x89PNG\r\n\x1a\n")
+    if content_type == "image/jpeg":
+        return prefix.startswith(b"\xff\xd8\xff")
+    if content_type == "image/webp":
+        return len(prefix) >= 12 and prefix.startswith(b"RIFF") and prefix[8:12] == b"WEBP"
+    return False
 
 
 async def create_upload_url(
@@ -58,9 +110,22 @@ async def confirm_upload(
         raise AssetNotFound()
     if asset.status != "uploading":
         raise AssetUploadInvalid("Asset không ở trạng thái chờ upload")
-    if not await asyncio.to_thread(storage.file_exists, asset.file_path):
+    try:
+        metadata, prefix = await asyncio.gather(
+            asyncio.to_thread(storage.get_object_metadata, asset.file_path),
+            asyncio.to_thread(storage.read_object_prefix, asset.file_path),
+        )
+    except storage.ObjectNotFoundError:
         raise StorageFileNotFound()
-    await project_asset_repo.mark_ready(db, asset, file_size_bytes=body.file_size_bytes)
+
+    verified_size = validate_uploaded_object(
+        asset_type=asset.asset_type,
+        expected_content_type=asset.mime_type or "application/octet-stream",
+        metadata=metadata,
+        prefix=prefix,
+        reported_size_bytes=body.file_size_bytes,
+    )
+    await project_asset_repo.mark_ready(db, asset, file_size_bytes=verified_size)
     if asset.asset_type == "source_model":
         await project_repo.set_canonical_asset(db, project, asset.id)
     return AssetResponse.model_validate(asset)

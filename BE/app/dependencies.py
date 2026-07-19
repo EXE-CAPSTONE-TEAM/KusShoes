@@ -25,6 +25,14 @@ async def get_current_user(
     return await auth_service.authenticate_user_access_token(db, credentials.credentials)
 
 
+async def get_editor_session(
+    credentials: HTTPAuthorizationCredentials = Security(security),
+    db: AsyncSession = Depends(get_db),
+):
+    """Validate a short-lived editor-only token and its project ownership."""
+    return await auth_service.authenticate_editor_session(db, credentials.credentials)
+
+
 async def get_current_admin(
     credentials: HTTPAuthorizationCredentials = Security(security),
     db: AsyncSession = Depends(get_db),
@@ -46,4 +54,10 @@ async def get_current_admin_write(
 
 async def verify_service_token(x_service_token: str = Header(...)) -> None:
     if not hmac.compare_digest(x_service_token, settings.SERVICE_TOKEN):
+        raise AuthTokenInvalid()
+
+
+async def verify_mobile_compute_token(x_service_token: str = Header(...)) -> None:
+    expected = settings.MOBILE_COMPUTE_SERVICE_TOKEN
+    if not expected or not hmac.compare_digest(x_service_token, expected):
         raise AuthTokenInvalid()

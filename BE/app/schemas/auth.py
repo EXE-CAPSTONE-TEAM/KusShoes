@@ -101,8 +101,10 @@ class ResetPasswordRequest(BaseModel):
     @field_validator("new_password")
     @classmethod
     def validate_new_password(cls, value: str) -> str:
-        if len(value) < 8 or not any(c.isupper() for c in value) or not any(
-            c.isdigit() for c in value
+        if (
+            len(value) < 8
+            or not any(c.isupper() for c in value)
+            or not any(c.isdigit() for c in value)
         ):
             raise ValueError("Mật khẩu mới cần tối thiểu 8 ký tự, 1 chữ hoa và 1 chữ số")
         return value
@@ -160,6 +162,83 @@ class SSOVerifyResponse(BaseModel):
     project_id: uuid.UUID
     email: str
     username: str
+
+
+class EditorLaunchCreateRequest(BaseModel):
+    project_id: uuid.UUID
+
+
+class EditorLaunchCreateResponse(BaseModel):
+    launch_ticket: str
+    desktop_url: str
+    expires_in: int
+
+
+class EditorLaunchClaimRequest(BaseModel):
+    launch_ticket: str
+    code_challenge: str
+    code_challenge_method: str = "S256"
+
+    @field_validator("launch_ticket")
+    @classmethod
+    def validate_launch_ticket(cls, value: str) -> str:
+        if not 32 <= len(value) <= 256:
+            raise ValueError("launch_ticket length is invalid")
+        return value
+
+    @field_validator("code_challenge")
+    @classmethod
+    def validate_code_challenge(cls, value: str) -> str:
+        if not re.fullmatch(r"[A-Za-z0-9_-]{43}", value):
+            raise ValueError("code_challenge must be a SHA-256 base64url value")
+        return value
+
+    @field_validator("code_challenge_method")
+    @classmethod
+    def validate_code_challenge_method(cls, value: str) -> str:
+        if value != "S256":
+            raise ValueError("Only PKCE S256 is supported")
+        return value
+
+
+class EditorLaunchClaimResponse(BaseModel):
+    authorization_code: str
+    expires_in: int
+
+
+class EditorLaunchExchangeRequest(BaseModel):
+    authorization_code: str
+    code_verifier: str
+
+    @field_validator("authorization_code")
+    @classmethod
+    def validate_authorization_code(cls, value: str) -> str:
+        if not 32 <= len(value) <= 256:
+            raise ValueError("authorization_code length is invalid")
+        return value
+
+    @field_validator("code_verifier")
+    @classmethod
+    def validate_code_verifier(cls, value: str) -> str:
+        if not re.fullmatch(r"[A-Za-z0-9._~-]{43,128}", value):
+            raise ValueError("code_verifier is not RFC 7636 compliant")
+        return value
+
+
+class EditorLaunchExchangeResponse(BaseModel):
+    access_token: str
+    token_type: str = "bearer"
+    expires_in: int
+    user_id: uuid.UUID
+    project_id: uuid.UUID
+    scopes: list[str]
+
+
+class EditorSessionResponse(BaseModel):
+    user_id: uuid.UUID
+    project_id: uuid.UUID
+    scopes: list[str]
+    expires_at: int
 
 
 class SessionResponse(BaseModel):

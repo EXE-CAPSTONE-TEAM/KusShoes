@@ -1,0 +1,39 @@
+# HTTPS cho API. KÍCH HOẠT SAU KHI ĐÃ CÓ CERT:
+#   mv kusshoes-https.conf.template kusshoes-https.conf
+#   docker compose -f docker-compose.prod.yml exec nginx nginx -s reload
+
+server {
+    listen 443 ssl;
+    http2 on;
+    server_name api.kusshoes.vn;
+
+    ssl_certificate     /etc/letsencrypt/live/api.kusshoes.vn/fullchain.pem;
+    ssl_certificate_key /etc/letsencrypt/live/api.kusshoes.vn/privkey.pem;
+
+    # Upload video scan / model GLB có thể lớn
+    client_max_body_size 300m;
+    proxy_read_timeout 300s;
+    proxy_send_timeout 300s;
+
+    location / {
+        proxy_pass http://api:8000;
+        proxy_set_header Host $host;
+        proxy_set_header X-Real-IP $remote_addr;
+        proxy_set_header X-Forwarded-For $proxy_add_x_forwarded_for;
+        proxy_set_header X-Forwarded-Proto $scheme;
+    }
+}
+
+# app.kusshoes.vn (FE web) — thêm sau khi có Dockerfile FE (Phase 1 trong
+# UNIFIED_DEPLOYMENT_PLAN.md). Cấp cert tương tự: certbot certonly -d app.kusshoes.vn
+# server {
+#     listen 443 ssl;
+#     http2 on;
+#     server_name app.kusshoes.vn;
+#     ssl_certificate     /etc/letsencrypt/live/app.kusshoes.vn/fullchain.pem;
+#     ssl_certificate_key /etc/letsencrypt/live/app.kusshoes.vn/privkey.pem;
+#     location / {
+#         proxy_pass http://fe:80;
+#         proxy_set_header Host $host;
+#     }
+# }

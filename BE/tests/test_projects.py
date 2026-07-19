@@ -81,7 +81,7 @@ async def test_save_design_and_trigger_bake(client, service_headers, auth_header
     saved = await client.put(
         f"/api/v1/projects/{project_id}/design",
         headers=service_headers,
-        json={"design_config": {"color": "red"}, "thumbnail_path": "thumbs/a.png"},
+        json={"design_config": {"color": "red"}, "thumbnail_path": "thumbs/a.png", "base_revision": 0},
     )
     assert saved.status_code == 200
 
@@ -98,3 +98,44 @@ async def test_save_design_and_trigger_bake(client, service_headers, auth_header
         )
     assert first.status_code == 202
     assert second.status_code == 409
+
+
+@pytest.mark.asyncio
+async def test_save_design_revision_conflict(client, db, service_headers, auth_headers):
+    project_id = (await _create_project(client, auth_headers)).json()["id"]
+
+    first = await client.put(
+        f"/api/v1/projects/{project_id}/design",
+        headers=service_headers,
+        json={"design_config": {"color": "red"}, "base_revision": 0},
+    )
+    assert first.status_code == 200
+
+    stale = await client.put(
+        f"/api/v1/projects/{project_id}/design",
+        headers=service_headers,
+        json={"design_config": {"color": "blue"}, "base_revision": 0},
+    )
+    assert stale.status_code == 409
+    body = stale.json()
+    assert body["code"] == "DESIGN_REVISION_CONFLICT"
+    assert body["current_revision"] == 1
+    assert body["current_design_config"] == {"color": "red"}
+    assert "current_updated_at" in body
+
+    second = await client.put(
+        f"/api/v1/projects/{project_id}/design",
+        headers=service_headers,
+        json={"design_config": {"color": "blue"}, "base_revision": 1},
+    )
+    assert second.status_code == 200
+
+    from app.models.design_revision import DesignRevision
+    from sqlalchemy import select
+
+    revisions = (
+        await db.execute(
+            select(DesignRevision).where(DesignRevision.project_id == project_id)
+        )
+    ).scalars().all()
+    assert sorted(r.revision for r in revisions) == [1, 2]

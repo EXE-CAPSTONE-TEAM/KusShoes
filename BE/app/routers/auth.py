@@ -6,9 +6,16 @@ from fastapi.responses import RedirectResponse
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.database import get_db
-from app.dependencies import get_current_user, get_redis, verify_service_token
+from app.dependencies import get_current_user, get_editor_session, get_redis, verify_service_token
 from app.schemas.auth import (
     AccessTokenResponse,
+    EditorLaunchClaimRequest,
+    EditorLaunchClaimResponse,
+    EditorLaunchCreateRequest,
+    EditorLaunchCreateResponse,
+    EditorLaunchExchangeRequest,
+    EditorLaunchExchangeResponse,
+    EditorSessionResponse,
     ForgotPasswordRequest,
     ForgotPasswordResponse,
     GoogleLoginResponse,
@@ -199,13 +206,55 @@ async def revoke_all_sessions(
     return await auth_service.revoke_all_sessions(db, user)
 
 
-@router.post("/sso-token", response_model=SSOCreateResponse)
-async def create_sso_token(
-    body: SSOCreateRequest,
+@router.post("/editor/launch", response_model=EditorLaunchCreateResponse)
+async def create_editor_launch(
+    body: EditorLaunchCreateRequest,
+    db: AsyncSession = Depends(get_db),
     redis: aioredis.Redis = Depends(get_redis),
     user=Depends(get_current_user),
 ):
-    return await auth_service.create_editor_sso(redis, user, body.project_id)
+    return await auth_service.create_editor_launch(db, redis, user, body.project_id)
+
+
+@router.post("/editor/launch/claim", response_model=EditorLaunchClaimResponse)
+async def claim_editor_launch(
+    body: EditorLaunchClaimRequest,
+    redis: aioredis.Redis = Depends(get_redis),
+):
+    return await auth_service.claim_editor_launch(
+        redis,
+        launch_ticket=body.launch_ticket,
+        code_challenge=body.code_challenge,
+    )
+
+
+@router.post("/editor/launch/exchange", response_model=EditorLaunchExchangeResponse)
+async def exchange_editor_launch(
+    body: EditorLaunchExchangeRequest,
+    db: AsyncSession = Depends(get_db),
+    redis: aioredis.Redis = Depends(get_redis),
+):
+    return await auth_service.exchange_editor_launch(
+        db,
+        redis,
+        authorization_code=body.authorization_code,
+        code_verifier=body.code_verifier,
+    )
+
+
+@router.get("/editor/session", response_model=EditorSessionResponse)
+async def get_current_editor_session(session=Depends(get_editor_session)):
+    return session
+
+
+@router.post("/sso-token", response_model=SSOCreateResponse)
+async def create_sso_token(
+    body: SSOCreateRequest,
+    db: AsyncSession = Depends(get_db),
+    redis: aioredis.Redis = Depends(get_redis),
+    user=Depends(get_current_user),
+):
+    return await auth_service.create_editor_sso(db, redis, user, body.project_id)
 
 
 @router.post("/verify-sso", response_model=SSOVerifyResponse)

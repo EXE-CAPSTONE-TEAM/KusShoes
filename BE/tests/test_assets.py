@@ -2,6 +2,8 @@ from unittest.mock import patch
 
 import pytest
 
+from app.infrastructure.storage import ObjectMetadata, ObjectNotFoundError
+
 
 @pytest.mark.asyncio
 async def test_asset_upload_confirm_and_delete(client, db, auth_headers):
@@ -27,7 +29,13 @@ async def test_asset_upload_confirm_and_delete(client, db, auth_headers):
     assert upload.json()["upload_url"] == "http://upload"
     asset_id = upload.json()["asset_id"]
 
-    with patch("app.infrastructure.storage.file_exists", return_value=False):
+    with (
+        patch(
+            "app.infrastructure.storage.get_object_metadata",
+            side_effect=ObjectNotFoundError("missing"),
+        ),
+        patch("app.infrastructure.storage.read_object_prefix", return_value=b""),
+    ):
         missing = await client.post(
             f"/api/v1/projects/{project_id}/assets/confirm",
             headers=auth_headers,
@@ -35,7 +43,16 @@ async def test_asset_upload_confirm_and_delete(client, db, auth_headers):
         )
     assert missing.status_code == 422
 
-    with patch("app.infrastructure.storage.file_exists", return_value=True):
+    with (
+        patch(
+            "app.infrastructure.storage.get_object_metadata",
+            return_value=ObjectMetadata(
+                size_bytes=1000,
+                content_type="model/gltf-binary",
+            ),
+        ),
+        patch("app.infrastructure.storage.read_object_prefix", return_value=b"glTF"),
+    ):
         confirmed = await client.post(
             f"/api/v1/projects/{project_id}/assets/confirm",
             headers=auth_headers,

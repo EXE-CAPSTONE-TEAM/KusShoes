@@ -1,7 +1,7 @@
 import uuid
 from datetime import datetime
 
-from sqlalchemy import DateTime, ForeignKey, String, Text
+from sqlalchemy import DateTime, ForeignKey, Integer, String, Text
 from sqlalchemy.dialects.postgresql import JSONB, UUID
 from sqlalchemy.orm import Mapped, mapped_column, relationship
 
@@ -28,6 +28,9 @@ class Project(Base, TimestampMixin):
         nullable=True,
     )
     design_config: Mapped[dict | None] = mapped_column(JSONB, nullable=True)
+    current_design_revision: Mapped[int] = mapped_column(
+        Integer, nullable=False, default=0
+    )
     thumbnail_path: Mapped[str | None] = mapped_column(Text, nullable=True)  # path in storage, NOT a URL
 
     deleted_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True), nullable=True)
