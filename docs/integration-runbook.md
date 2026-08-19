@@ -135,7 +135,29 @@ ngay và có thể duyệt.
 
 ---
 
-## 5. Việc còn lại
+## 5. Kiểm chứng nhanh (E2E web ↔ desktop)
+
+```bash
+cd KusShoes/BE
+docker compose exec -T -e SEED_USER_PASSWORD='...' api python -m scripts.seed_users
+docker compose exec -T -e E2E_PASSWORD='...' api python -m scripts.e2e_desktop_flow
+```
+
+Script chạy đúng chuỗi thật: login web → tạo project → xin launch ticket → PKCE
+claim/exchange (giả lập desktop) → import GLB thủ công → web thấy model → thử import
+lần hai phải bị 403. Chạy trong container `api` vì presigned URL trỏ tới MinIO nội bộ.
+
+Handshake bake worker:
+
+```bash
+curl -s -o /dev/null -w '%{http_code}\n' -X POST http://localhost:8010/bake \
+  -H "X-Service-Token: $CONTROL_PLANE_SERVICE_TOKEN" -H 'Content-Type: application/json' -d '{}'
+# 401 = token lệch · 422 = token đúng, payload rỗng (đúng như mong đợi)
+```
+
+---
+
+## 6. Việc còn lại
 
 - **Mobile (phase sau):** repoint `mobile/lib/services/backend_api.dart` từ IP LAN
   `172.16.1.232` sang domain thật, bật luồng `/api/v1/mobile/scans/*` và
