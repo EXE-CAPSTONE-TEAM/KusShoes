@@ -1,6 +1,3 @@
-import asyncio
-import pathlib
-import re
 import uuid
 
 from fastapi import APIRouter, Depends
@@ -9,9 +6,7 @@ from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.database import get_db
 from app.dependencies import get_editor_session
-from app.exceptions import AppException, AssetNotFound, StorageFileNotFound
-from app.infrastructure import storage
-from app.repositories import project_asset_repo
+from app.exceptions import AppException
 from app.schemas.auth import EditorSessionResponse
 from app.schemas.editor import (
     EditorContextResponse,
@@ -31,6 +26,22 @@ from app.services import asset_service, editor_service
 
 router = APIRouter()
 EDITOR_UPLOAD_ASSET_TYPES = {"sticker", "texture", "reference_image"}
+# Tạm thời cho phép KusStudio import thủ công model 3D khi project chưa có model
+# canonical (đứng thay cho luồng scan mobile — xem docs/integration-runbook.md).
+EDITOR_IMPORT_ASSET_TYPES = {"source_model"}
+EDITOR_ASSET_TYPES = EDITOR_UPLOAD_ASSET_TYPES | EDITOR_IMPORT_ASSET_TYPES
+
+
+async def _require_importable_project(db: AsyncSession, session: EditorSessionResponse):
+    """Chỉ cho import source model khi project chưa có model canonical."""
+    project = await editor_service.require_editor_project(db, session)
+    if project.canonical_model_asset_id:
+        raise AppException(
+            403,
+            "EDITOR_ASSET_TYPE_FORBIDDEN",
+            "KusStudio cannot replace the canonical source model.",
+        )
+    return project
 
 
 @router.get("/me", response_model=EditorUserResponse)
@@ -105,14 +116,17 @@ async def create_asset_upload_url(
     db: AsyncSession = Depends(get_db),
     session: EditorSessionResponse = Depends(get_editor_session),
 ):
-    if body.asset_type not in EDITOR_UPLOAD_ASSET_TYPES:
+    if body.asset_type not in EDITOR_ASSET_TYPES:
         raise AppException(
             403,
             "EDITOR_ASSET_TYPE_FORBIDDEN",
-            "KusStudio cannot replace the canonical source model.",
+            "KusStudio cannot upload this asset type.",
         )
     user = await editor_service.get_editor_user(db, session)
-    await editor_service.require_editor_project(db, session)
+    if body.asset_type in EDITOR_IMPORT_ASSET_TYPES:
+        await _require_importable_project(db, session)
+    else:
+        await editor_service.require_editor_project(db, session)
     return await asset_service.create_upload_url(db, user, session.project_id, body)
 
 
@@ -122,15 +136,12 @@ async def confirm_asset_upload(
     db: AsyncSession = Depends(get_db),
     session: EditorSessionResponse = Depends(get_editor_session),
 ):
-    asset = await project_asset_repo.get_by_id(db, body.asset_id)
-    if (
-        not asset
-        or asset.project_id != session.project_id
-        or asset.user_id != session.user_id
-        or asset.asset_type not in EDITOR_UPLOAD_ASSET_TYPES
-    ):
-        raise AssetNotFound()
+    asset = await editor_service.get_uploaded_asset_for_session(
+        db, session, body.asset_id, EDITOR_ASSET_TYPES
+    )
     user = await editor_service.get_editor_user(db, session)
+    if asset.asset_type in EDITOR_IMPORT_ASSET_TYPES:
+        await _require_importable_project(db, session)
     return await asset_service.confirm_upload(db, user, session.project_id, body)
 
 
@@ -140,9 +151,12 @@ async def get_asset_content(
     db: AsyncSession = Depends(get_db),
     session: EditorSessionResponse = Depends(get_editor_session),
 ):
-    asset = await editor_service.get_asset_for_session(db, session, asset_id)
-    filename = asset.original_filename or f"{asset.id}{pathlib.Path(asset.file_path).suffix}"
-    return await _stream_object(asset.file_path, filename, disposition="inline")
+    download = await editor_service.open_asset_content(db, session, asset_id)
+    return StreamingResponse(
+        download.chunks,
+        media_type=download.media_type,
+        headers=download.headers,
+    )
 
 
 @router.get("/exports/{export_id}/content")
@@ -151,37 +165,9 @@ async def get_export_content(
     db: AsyncSession = Depends(get_db),
     session: EditorSessionResponse = Depends(get_editor_session),
 ):
-    record = await editor_service.get_export_for_session(db, session, export_id)
-    suffix = pathlib.Path(record.file_path).suffix or f".{record.format}"
-    return await _stream_object(
-        record.file_path,
-        f"kusshoes-{record.project_id}-{record.id}{suffix}",
-        disposition="attachment",
-    )
-
-
-async def _stream_object(
-    file_path: str,
-    filename: str,
-    *,
-    disposition: str,
-) -> StreamingResponse:
-    try:
-        download = await asyncio.to_thread(storage.open_object_download, file_path)
-    except storage.ObjectNotFoundError:
-        raise StorageFileNotFound()
-    safe_filename = re.sub(r"[^A-Za-z0-9._-]+", "_", filename).strip("._")[:180]
-    safe_filename = safe_filename or "kusshoes-download"
-    headers = {
-        "Cache-Control": "private, no-store",
-        "Content-Disposition": f'{disposition}; filename="{safe_filename}"',
-        "Content-Length": str(download.size_bytes),
-        "X-Content-Type-Options": "nosniff",
-    }
-    if download.etag:
-        headers["ETag"] = f'"{download.etag}"'
+    download = await editor_service.open_export_content(db, session, export_id)
     return StreamingResponse(
-        storage.iter_object_chunks(download),
-        media_type=download.content_type,
-        headers=headers,
+        download.chunks,
+        media_type=download.media_type,
+        headers=download.headers,
     )

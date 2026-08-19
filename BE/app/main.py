@@ -86,6 +86,8 @@ app.add_middleware(
         "http://localhost:3000",  # local FE dev
         "http://localhost:5173",  # Vite local FE dev
         "http://127.0.0.1:5173",
+        "http://localhost:5174",  # KusStudio editor dev (ar-ai-exe/frontend)
+        "http://127.0.0.1:5174",
         "http://localhost:1420",  # Tauri dev server
         "http://127.0.0.1:1420",
         "http://tauri.localhost",  # Tauri desktop webview

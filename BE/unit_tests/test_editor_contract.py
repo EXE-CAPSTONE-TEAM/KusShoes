@@ -5,7 +5,7 @@ from types import SimpleNamespace
 import pytest
 from pydantic import ValidationError
 
-from app.exceptions import DesignRevisionConflict
+from app.exceptions import AppException, DesignRevisionConflict
 from app.infrastructure.storage import ObjectDownload, iter_object_chunks
 from app.schemas.auth import EditorSessionResponse
 from app.schemas.editor import MAX_EDITOR_CONFIG_BYTES, EditorDesignConfig
@@ -207,3 +207,51 @@ def test_streaming_download_enforces_content_length_and_closes_body() -> None:
 
     assert b"".join(iter_object_chunks(download, chunk_size=64 * 1024)) == b"glTFpayload"
     assert body.closed is True
+
+
+@pytest.mark.asyncio
+async def test_editor_can_import_first_source_model(monkeypatch) -> None:
+    """Project chưa có model canonical → KusStudio được import model gốc."""
+    from app.routers import editor as editor_router
+
+    session = _editor_session()
+    project = SimpleNamespace(canonical_model_asset_id=None)
+
+    async def fake_require_editor_project(db, editor_session, *args, **kwargs):
+        return project
+
+    monkeypatch.setattr(
+        editor_router.editor_service, "require_editor_project", fake_require_editor_project
+    )
+
+    assert await editor_router._require_importable_project(None, session) is project
+
+
+@pytest.mark.asyncio
+async def test_editor_cannot_replace_canonical_source_model(monkeypatch) -> None:
+    """Model canonical đã có → desktop không được ghi đè, phải làm từ web."""
+    from app.routers import editor as editor_router
+
+    session = _editor_session()
+    project = SimpleNamespace(canonical_model_asset_id=uuid.uuid4())
+
+    async def fake_require_editor_project(db, editor_session, *args, **kwargs):
+        return project
+
+    monkeypatch.setattr(
+        editor_router.editor_service, "require_editor_project", fake_require_editor_project
+    )
+
+    with pytest.raises(AppException) as excinfo:
+        await editor_router._require_importable_project(None, session)
+    assert excinfo.value.status_code == 403
+    assert excinfo.value.code == "EDITOR_ASSET_TYPE_FORBIDDEN"
+
+
+def _editor_session() -> EditorSessionResponse:
+    return EditorSessionResponse(
+        user_id=uuid.uuid4(),
+        project_id=uuid.uuid4(),
+        scopes=["editor:read", "editor:write"],
+        expires_at=int(datetime.now(UTC).timestamp()) + 900,
+    )

@@ -1,10 +1,16 @@
+import asyncio
+import pathlib
+import re
 import uuid
+from collections.abc import Iterable
+from dataclasses import dataclass
 from datetime import datetime
 from typing import Any
 
 from sqlalchemy.ext.asyncio import AsyncSession
 
-from app.exceptions import AppException, AssetNotFound, ProjectNotFound
+from app.exceptions import AppException, AssetNotFound, ProjectNotFound, StorageFileNotFound
+from app.infrastructure import storage
 from app.repositories import (
     bake_job_repo,
     export_record_repo,
@@ -208,6 +214,24 @@ async def get_export_package(
     )
 
 
+async def get_uploaded_asset_for_session(
+    db: AsyncSession,
+    session: EditorSessionResponse,
+    asset_id: uuid.UUID,
+    allowed_asset_types: set[str],
+):
+    """Asset vừa upload (chưa ready) thuộc đúng session editor."""
+    asset = await project_asset_repo.get_by_id(db, asset_id)
+    if (
+        not asset
+        or asset.project_id != session.project_id
+        or asset.user_id != session.user_id
+        or asset.asset_type not in allowed_asset_types
+    ):
+        raise AssetNotFound()
+    return asset
+
+
 async def get_asset_for_session(
     db: AsyncSession,
     session: EditorSessionResponse,
@@ -236,6 +260,66 @@ async def get_export_for_session(
         raise AppException(404, "EDITOR_EXPORT_NOT_FOUND", "Export not found.")
     await export_record_repo.increment_download_count(db, record)
     return record
+
+
+@dataclass(frozen=True)
+class EditorFileDownload:
+    """Nội dung file cùng header đã chuẩn hoá để router trả về StreamingResponse."""
+
+    chunks: Iterable[bytes]
+    media_type: str
+    headers: dict[str, str]
+
+
+async def open_asset_content(
+    db: AsyncSession,
+    session: EditorSessionResponse,
+    asset_id: uuid.UUID,
+) -> EditorFileDownload:
+    asset = await get_asset_for_session(db, session, asset_id)
+    filename = asset.original_filename or f"{asset.id}{pathlib.Path(asset.file_path).suffix}"
+    return await _open_object(asset.file_path, filename, disposition="inline")
+
+
+async def open_export_content(
+    db: AsyncSession,
+    session: EditorSessionResponse,
+    export_id: uuid.UUID,
+) -> EditorFileDownload:
+    record = await get_export_for_session(db, session, export_id)
+    suffix = pathlib.Path(record.file_path).suffix or f".{record.format}"
+    return await _open_object(
+        record.file_path,
+        f"kusshoes-{record.project_id}-{record.id}{suffix}",
+        disposition="attachment",
+    )
+
+
+async def _open_object(
+    file_path: str,
+    filename: str,
+    *,
+    disposition: str,
+) -> EditorFileDownload:
+    try:
+        download = await asyncio.to_thread(storage.open_object_download, file_path)
+    except storage.ObjectNotFoundError:
+        raise StorageFileNotFound()
+    safe_filename = re.sub(r"[^A-Za-z0-9._-]+", "_", filename).strip("._")[:180]
+    safe_filename = safe_filename or "kusshoes-download"
+    headers = {
+        "Cache-Control": "private, no-store",
+        "Content-Disposition": f'{disposition}; filename="{safe_filename}"',
+        "Content-Length": str(download.size_bytes),
+        "X-Content-Type-Options": "nosniff",
+    }
+    if download.etag:
+        headers["ETag"] = f'"{download.etag}"'
+    return EditorFileDownload(
+        chunks=storage.iter_object_chunks(download),
+        media_type=download.content_type,
+        headers=headers,
+    )
 
 
 async def _canonical_asset(db: AsyncSession, project):

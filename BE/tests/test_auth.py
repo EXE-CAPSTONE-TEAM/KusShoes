@@ -3,7 +3,6 @@ Auth integration tests — UC-AUTH-001 through UC-AUTH-005.
 Runs against kusshoes_test DB with real Redis.
 """
 import json
-import uuid
 from datetime import UTC
 
 import pytest
@@ -531,10 +530,19 @@ async def test_refresh_and_logout(client, verified_user):
     assert rejected.status_code == 401
 
 
+async def _create_project_id(client, headers) -> str:
+    """SSO/editor token chỉ cấp cho project mà user thật sự sở hữu."""
+    created = await client.post(
+        "/api/v1/projects", headers=headers, json={"name": "Desktop handoff project"}
+    )
+    assert created.status_code == 201, created.text
+    return created.json()["id"]
+
+
 @pytest.mark.asyncio
 async def test_sso_token_is_one_time_use(client, verified_user, service_headers):
     headers = {"Authorization": f"Bearer {verified_user['tokens']['access_token']}"}
-    project_id = str(uuid.uuid4())
+    project_id = await _create_project_id(client, headers)
     created = await client.post(
         "/api/v1/auth/sso-token",
         headers=headers,
@@ -560,7 +568,7 @@ async def test_sso_token_is_one_time_use(client, verified_user, service_headers)
 @pytest.mark.asyncio
 async def test_sso_desktop_session_exchanges_once(client, verified_user):
     headers = {"Authorization": f"Bearer {verified_user['tokens']['access_token']}"}
-    project_id = str(uuid.uuid4())
+    project_id = await _create_project_id(client, headers)
     created = await client.post(
         "/api/v1/auth/sso-token",
         headers=headers,
