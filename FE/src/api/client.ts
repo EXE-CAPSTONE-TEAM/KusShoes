@@ -170,12 +170,6 @@ export type ProjectExport = {
   created_at: string;
 };
 
-export type DesktopLaunch = {
-  ssoToken: string;
-  expiresIn: number;
-  apiBaseUrl: string;
-};
-
 const FALLBACK_PROJECT_IMAGE = new URL("../assets/sneaker-hero.png", import.meta.url).href;
 const COMPLETED_PROJECT_STATUSES = new Set(["completed", "ready", "exported"]);
 const DESIGNING_PROJECT_STATUSES = new Set(["in_progress", "processing", "queued", "baking"]);
@@ -520,18 +514,6 @@ export const api = {
     return {
       desktopUrl: launch.desktop_url,
       expiresIn: launch.expires_in,
-    };
-  },
-
-  async createDesktopLaunch(projectId: string): Promise<DesktopLaunch> {
-    const payload = await request<{ sso_token: string; expires_in: number }>("/api/v1/auth/sso-token", {
-      method: "POST",
-      body: JSON.stringify({ project_id: projectId }),
-    });
-    return {
-      ssoToken: payload.sso_token,
-      expiresIn: payload.expires_in,
-      apiBaseUrl: API_BASE_URL,
     };
   },
 
