@@ -592,3 +592,15 @@ async def test_sso_desktop_session_exchanges_once(client, verified_user):
         json={"sso_token": token},
     )
     assert replay.status_code == 401
+
+
+@pytest.mark.asyncio
+async def test_editor_endpoints_reject_missing_bearer(client):
+    """Thiếu Authorization phải là 401, không được rơi vào 500."""
+    missing = await client.get("/api/v1/editor/me")
+    assert missing.status_code == 401
+
+    invalid = await client.get(
+        "/api/v1/editor/me", headers={"Authorization": "Bearer not-a-real-token"}
+    )
+    assert invalid.status_code == 401

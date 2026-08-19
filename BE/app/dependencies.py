@@ -29,10 +29,12 @@ async def get_current_user(
 
 
 async def get_editor_session(
-    credentials: HTTPAuthorizationCredentials = Security(security),
+    credentials: HTTPAuthorizationCredentials | None = Security(security),
     db: AsyncSession = Depends(get_db),
 ):
     """Validate a short-lived editor-only token and its project ownership."""
+    if credentials is None:
+        raise AuthTokenInvalid()
     return await auth_service.authenticate_editor_session(db, credentials.credentials)
 
 

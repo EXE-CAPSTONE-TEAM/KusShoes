@@ -94,14 +94,25 @@ cp frontend.env.desktop.example ../frontend/.env.local   # VITE_KUSSHOES_API_BAS
 npm run tauri dev
 ```
 
+### Object storage khi bake chạy chéo stack
+
+KusShoes ký presigned URL bằng `STORAGE_ENDPOINT`. Bake worker nằm ở compose khác nên
+phải resolve được host đó: dùng `http://host.docker.internal:9000` cho cả hai bên
+(`KusShoes/BE/docker-compose.yml` và `ar-ai-exe/docker-compose.dev.yml` đều đã khai báo
+`extra_hosts: host.docker.internal:host-gateway`). Origin này cũng phải nằm trong
+`WORKER_ALLOWED_STORAGE_ORIGINS` của ar-ai-exe, nếu không worker sẽ từ chối capability.
+
+Chỉ chạy KusShoes một mình thì `http://minio:9000` là đủ.
+
 Biến môi trường bắt buộc khớp nhau giữa hai repo:
 
 | KusShoes/BE/.env | ar-ai-exe |
 |---|---|
-| `EDITOR_WORKER_URL=http://localhost:8010` | — |
+| `EDITOR_WORKER_URL=http://host.docker.internal:8010` (API chạy trong Docker) | backend expose `:8010` |
 | `EDITOR_WORKER_SERVICE_TOKEN=<token>` | `CONTROL_PLANE_SERVICE_TOKEN=<cùng token>` |
 | `EDITOR_DESKTOP_URL_SCHEME=kusshoes-editor` | scheme trong `desktop/src-tauri/tauri.conf.json` |
 | — | `VITE_KUSSHOES_API_BASE_URL=http://127.0.0.1:8000` |
+| `STORAGE_ENDPOINT=http://host.docker.internal:9000` | `WORKER_ALLOWED_STORAGE_ORIGINS` phải chứa đúng origin này |
 
 ---
 
