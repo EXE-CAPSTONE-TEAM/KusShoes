@@ -1,9 +1,10 @@
-import React, { useState } from 'react';
+import React, { useEffect, useMemo, useState } from 'react';
 import { Check, X, HelpCircle } from 'lucide-react';
 import { Navbar } from '../../components/Navbar/Navbar';
 import { Footer } from '../../components/Footer/Footer';
 import { AnimatedPrice } from '../../components/AnimatedPrice/AnimatedPrice';
 import { InteractiveParticleGrid } from '../../components/InteractiveParticleGrid/InteractiveParticleGrid';
+import { api, type Plan } from '../../api/client';
 import styles from './PricingPage.module.css';
 
 interface PricingPageProps {
@@ -12,43 +13,44 @@ interface PricingPageProps {
 
 export const PricingPage: React.FC<PricingPageProps> = ({ navigate }) => {
   const [isAnnual, setIsAnnual] = useState(false);
+  const [plans, setPlans] = useState<Plan[]>([]);
+  const [plansError, setPlansError] = useState('');
 
-  const plans = [
-    {
-      name: 'Free Starter',
-      priceMonthly: 0,
-      priceAnnual: 0,
-      desc: 'Test the mobile photogrammetry pipeline.',
-      features: ['3 active projects', 'Standard scan resolution', 'Local client saves only', 'Community support'],
-      popular: false,
-    },
-    {
-      name: 'Basic Creator',
-      priceMonthly: 259000,
-      priceAnnual: 259000 * 12,
-      desc: 'Perfect for custom sneaker designers.',
-      features: ['10 active projects', 'High-definition 3D meshes', '5GB Cloud scan storage', 'Standard KusStudio sync'],
-      popular: true,
-    },
-    {
-      name: 'Pro Designer',
-      priceMonthly: 649000,
-      priceAnnual: 649000 * 12,
-      desc: 'For professional sneaker workshops.',
-      features: ['50 active projects', 'Ultra-HD scan resolution', '50GB Cloud storage quota', 'Priority rendering & sync', 'OBJ, FBX, GLTF, USDZ exports'],
-      popular: false,
-    },
-  ];
+  useEffect(() => {
+    api.listPlans()
+      .then(setPlans)
+      .catch((caught) => setPlansError(caught instanceof Error ? caught.message : 'Unable to load plans.'));
+  }, []);
 
-  const comparisons = [
-    { name: 'Active Project Limit', free: '3 projects', basic: '10 projects', pro: '50 projects' },
-    { name: 'Scan Resolution', free: 'Standard', basic: 'High-Definition (HD)', pro: 'Ultra-High-Definition (UHD)' },
-    { name: 'Cloud Storage Vault', free: 'None (Local)', basic: '5 GB', pro: '50 GB' },
-    { name: 'Desktop Client Sync', free: false, basic: true, pro: true },
-    { name: 'File Export Formats', free: 'None', basic: 'OBJ, GLTF', pro: 'OBJ, FBX, GLTF, USDZ, STL' },
-    { name: 'Photogrammetry Engine', free: 'Standard API', freeDetail: '', basic: 'Kiri Engine API', pro: 'Kiri Engine API (Priority Queue)' },
-    { name: 'Customer Support', free: 'Forum', basic: 'Email support', pro: '24/7 Priority Discord & Phone' },
-  ];
+  const visiblePlans = useMemo(() => {
+    const cycle = isAnnual ? 'yearly' : 'monthly';
+    return plans
+      .filter((plan) => plan.billing_cycle === null || plan.billing_cycle === cycle)
+      .sort((a, b) => a.price_vnd - b.price_vnd);
+  }, [plans, isAnnual]);
+
+  const comparisons = useMemo(() => [
+    {
+      name: 'Active Project Limit',
+      values: visiblePlans.map((plan) => plan.max_projects === null ? 'Unlimited' : `${plan.max_projects} projects`),
+    },
+    {
+      name: 'Monthly Export Limit',
+      values: visiblePlans.map((plan) => plan.max_exports_per_month === null ? 'Unlimited' : `${plan.max_exports_per_month} exports`),
+    },
+    {
+      name: 'File Export Formats',
+      values: visiblePlans.map((plan) => plan.allowed_export_formats.map((item) => item.toUpperCase()).join(', ')),
+    },
+    {
+      name: 'Bake Priority',
+      values: visiblePlans.map((plan) => plan.bake_priority),
+    },
+    {
+      name: 'Desktop Client Sync',
+      values: visiblePlans.map(() => true),
+    },
+  ], [visiblePlans]);
 
   const faqs = [
     { q: 'How does the mobile scanning work?', a: 'You download our KusShoes app on iOS or Android, take 360° pictures of your sneaker, and the app uses the Kiri Engine API to stitch them into a high-poly 3D mesh automatically.' },
@@ -60,6 +62,25 @@ export const PricingPage: React.FC<PricingPageProps> = ({ navigate }) => {
     if (val === 0) return '0 VNĐ';
     return val.toLocaleString('vi-VN') + ' VNĐ';
   };
+
+  const planName = (plan: Plan) => {
+    const tier = plan.tier.replace(/_/g, ' ').replace(/\b\w/g, (char) => char.toUpperCase());
+    if (!plan.billing_cycle) return `${tier} Starter`;
+    return `${tier} ${plan.billing_cycle === 'yearly' ? 'Annual' : 'Monthly'}`;
+  };
+
+  const planDescription = (plan: Plan) => (
+    plan.tier === 'free'
+      ? 'Start with the default cloud workspace limits.'
+      : `${plan.bake_priority} queue priority with database-backed billing limits.`
+  );
+
+  const planFeatures = (plan: Plan) => [
+    plan.max_projects === null ? 'Unlimited active projects' : `${plan.max_projects} active projects`,
+    plan.max_exports_per_month === null ? 'Unlimited monthly exports' : `${plan.max_exports_per_month} exports per month`,
+    `Formats: ${plan.allowed_export_formats.map((item) => item.toUpperCase()).join(', ')}`,
+    `${plan.bake_priority} bake priority`,
+  ];
 
   return (
     <div className={styles.container}>
@@ -118,18 +139,21 @@ export const PricingPage: React.FC<PricingPageProps> = ({ navigate }) => {
       {/* Pricing Grid */}
       <section className={styles.pricingSection}>
         <div className={styles.pricingGrid}>
-          {plans.map((plan) => {
-            const displayPrice = isAnnual ? plan.priceAnnual : plan.priceMonthly;
+          {plansError && <p className={styles.desc}>{plansError}</p>}
+          {!plansError && visiblePlans.length === 0 && <p className={styles.desc}>Loading plans from server...</p>}
+          {visiblePlans.map((plan) => {
+            const displayPrice = plan.price_vnd;
+            const popular = plan.tier === 'creator';
             const cycleText = isAnnual ? '/ năm' : '/ tháng';
             
             return (
               <div 
-                key={plan.name}
-                className={`${styles.priceCard} ${plan.popular ? styles.popularCard : ''} glass-panel`}
+                key={plan.id}
+                className={`${styles.priceCard} ${popular ? styles.popularCard : ''} glass-panel`}
               >
-                {plan.popular && <span className={styles.popularBadge}>POPULAR</span>}
-                <h3 className={styles.planName}>{plan.name}</h3>
-                <p className={styles.planDescText}>{plan.desc}</p>
+                {popular && <span className={styles.popularBadge}>POPULAR</span>}
+                <h3 className={styles.planName}>{planName(plan)}</h3>
+                <p className={styles.planDescText}>{planDescription(plan)}</p>
 
                 <div className={styles.priceInfo}>
                   <AnimatedPrice price={displayPrice} formatPrice={formatPrice} />
@@ -139,7 +163,7 @@ export const PricingPage: React.FC<PricingPageProps> = ({ navigate }) => {
                 <div className={styles.divider} />
 
                 <ul className={styles.featuresList}>
-                  {plan.features.map((f) => (
+                  {planFeatures(plan).map((f) => (
                     <li key={f} className={styles.featureItem}>
                       <Check size={14} className={styles.checkIcon} />
                       <span>{f}</span>
@@ -148,7 +172,7 @@ export const PricingPage: React.FC<PricingPageProps> = ({ navigate }) => {
                 </ul>
 
                 <button 
-                  className={`${plan.popular ? 'btn-neon-orange' : 'btn-outline'} ${styles.cardCta}`}
+                  className={`${popular ? 'btn-neon-orange' : 'btn-outline'} ${styles.cardCta}`}
                   onClick={() => navigate('/login')}
                 >
                   Get Started
@@ -167,36 +191,22 @@ export const PricingPage: React.FC<PricingPageProps> = ({ navigate }) => {
             <thead>
               <tr>
                 <th>Features</th>
-                <th>Free Starter</th>
-                <th>Basic Creator</th>
-                <th>Pro Designer</th>
+                {visiblePlans.map((plan) => <th key={plan.id}>{planName(plan)}</th>)}
               </tr>
             </thead>
             <tbody>
               {comparisons.map((row) => (
                 <tr key={row.name}>
                   <td className={styles.featureName}>{row.name}</td>
-                  <td>
-                    {typeof row.free === 'boolean' ? (
-                      row.free ? <Check size={16} className={styles.check} /> : <X size={16} className={styles.cross} />
-                    ) : (
-                      row.free
-                    )}
-                  </td>
-                  <td>
-                    {typeof row.basic === 'boolean' ? (
-                      row.basic ? <Check size={16} className={styles.check} /> : <X size={16} className={styles.cross} />
-                    ) : (
-                      row.basic
-                    )}
-                  </td>
-                  <td>
-                    {typeof row.pro === 'boolean' ? (
-                      row.pro ? <Check size={16} className={styles.check} /> : <X size={16} className={styles.cross} />
-                    ) : (
-                      row.pro
-                    )}
-                  </td>
+                  {row.values.map((value, index) => (
+                    <td key={`${row.name}-${visiblePlans[index]?.id ?? index}`}>
+                      {typeof value === 'boolean' ? (
+                        value ? <Check size={16} className={styles.check} /> : <X size={16} className={styles.cross} />
+                      ) : (
+                        value
+                      )}
+                    </td>
+                  ))}
                 </tr>
               ))}
             </tbody>

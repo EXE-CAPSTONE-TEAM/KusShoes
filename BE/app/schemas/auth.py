@@ -118,7 +118,6 @@ class ResetPasswordRequest(BaseModel):
 
 class TokenResponse(BaseModel):
     access_token: str
-    refresh_token: str
     token_type: str = "bearer"
 
 
@@ -132,7 +131,7 @@ class AdminLoginResponse(TokenResponse):
 
 
 class RefreshTokenRequest(BaseModel):
-    refresh_token: str
+    refresh_token: str | None = None
 
 
 class AccessTokenResponse(BaseModel):
@@ -141,7 +140,7 @@ class AccessTokenResponse(BaseModel):
 
 
 class LogoutRequest(BaseModel):
-    refresh_token: str
+    refresh_token: str | None = None
 
 
 class SSOCreateRequest(BaseModel):
@@ -239,6 +238,19 @@ class EditorSessionResponse(BaseModel):
     project_id: uuid.UUID
     scopes: list[str]
     expires_at: int
+
+
+class SSODesktopSessionResponse(BaseModel):
+    access_token: str
+    token_type: str = "bearer"
+    user_id: uuid.UUID
+    project_id: uuid.UUID
+    email: str
+    username: str
+    name: str
+    role: str
+    created_at: datetime
+    updated_at: datetime
 
 
 class SessionResponse(BaseModel):

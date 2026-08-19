@@ -49,6 +49,19 @@ interface ShareMember {
 
 const INITIAL_MEMBERS: ShareMember[] = [];
 
+function deepLinkForDesktop(projectId: string, ssoToken: string, apiBaseUrl: string): string {
+  const params = new URLSearchParams({
+    projectId,
+    sso: ssoToken,
+    apiBase: apiBaseUrl,
+  });
+  return `kusshoes-editor://open?${params.toString()}`;
+}
+
+function logLine(message: string): string {
+  return `[${new Date().toLocaleTimeString()}] ${message}`;
+}
+
 export const ProjectDetails: React.FC<ProjectDetailsProps> = ({
   project,
   onBack

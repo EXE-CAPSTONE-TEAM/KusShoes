@@ -1,5 +1,6 @@
 import uuid
 from datetime import UTC, datetime
+from typing import TYPE_CHECKING
 
 from sqlalchemy import DateTime, ForeignKey, String, Text
 from sqlalchemy.dialects.postgresql import UUID
@@ -7,6 +8,9 @@ from sqlalchemy.orm import Mapped, mapped_column, relationship
 
 from app.database import Base
 from app.models.base import utcnow
+
+if TYPE_CHECKING:
+    from app.models.user import User
 
 
 class RefreshToken(Base):
@@ -28,7 +32,7 @@ class RefreshToken(Base):
         DateTime(timezone=True), default=utcnow, nullable=False
     )
 
-    user: Mapped["User"] = relationship(back_populates="refresh_tokens")  # noqa: F821
+    user: Mapped["User"] = relationship(back_populates="refresh_tokens")
 
     @property
     def is_valid(self) -> bool:

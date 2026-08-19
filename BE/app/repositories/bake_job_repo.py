@@ -1,11 +1,12 @@
 import uuid
 from datetime import UTC, datetime
 
-from sqlalchemy import delete, select
+from sqlalchemy import and_, delete, or_, select
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.models.bake_job import BakeJob
 from app.models.project import Project
+from app.types import JsonObject
 
 
 async def get_by_id(db: AsyncSession, job_id: uuid.UUID) -> BakeJob | None:
@@ -41,7 +42,7 @@ async def create(
     db: AsyncSession,
     *,
     project_id: uuid.UUID,
-    design_config: dict,
+    design_config: JsonObject,
     priority: str,
 ) -> BakeJob:
     job = BakeJob(
@@ -102,7 +103,15 @@ async def list_admin(
         query = query.where(BakeJob.project_id == project_id)
     if before is not None:
         if before_id is not None:
-            query = query.where((BakeJob.queued_at < before) | ((BakeJob.queued_at == before) & (BakeJob.id < before_id)))
+            query = query.where(
+                or_(
+                    BakeJob.queued_at < before,
+                    and_(
+                        BakeJob.queued_at == before,
+                        BakeJob.id < before_id,
+                    ),
+                )
+            )
         else:
             query = query.where(BakeJob.queued_at < before)
     query = query.order_by(BakeJob.queued_at.desc(), BakeJob.id.desc()).limit(limit)

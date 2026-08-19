@@ -16,16 +16,22 @@ interface ProductsPageProps {
   navigate: (path: string) => void;
 }
 
-const DESKTOP_OS_OPTIONS = [
+type DesktopOS = 'windows' | 'mac-silicon' | 'mac-intel';
+
+const DESKTOP_OS_OPTIONS: Array<{ value: DesktopOS; label: string }> = [
   { value: 'windows', label: 'Windows 10/11 (.EXE)' },
   { value: 'mac-silicon', label: 'macOS Apple Silicon (M1/M2/M3 .DMG)' },
   { value: 'mac-intel', label: 'macOS Intel Core (.DMG)' },
 ];
 
+function isDesktopOS(value: string): value is DesktopOS {
+  return DESKTOP_OS_OPTIONS.some((option) => option.value === value);
+}
+
 export const ProductsPage: React.FC<ProductsPageProps> = ({ navigate }) => {
   const { toast } = useToast();
   const [activeTab, setActiveTab] = useState<'ios' | 'android'>('ios');
-  const [desktopOS, setDesktopOS] = useState<'windows' | 'mac-silicon' | 'mac-intel'>('windows');
+  const [desktopOS, setDesktopOS] = useState<DesktopOS>('windows');
 
   const containerVariants = {
     hidden: { opacity: 0 },
@@ -206,7 +212,9 @@ export const ProductsPage: React.FC<ProductsPageProps> = ({ navigate }) => {
               <div className={styles.selectDropdownWrapper}>
                 <Select
                   value={desktopOS}
-                  onValueChange={(v) => setDesktopOS(v as any)}
+                  onValueChange={(value) => {
+                    if (isDesktopOS(value)) setDesktopOS(value);
+                  }}
                   options={DESKTOP_OS_OPTIONS}
                   ariaLabel="Select desktop operating system"
                 />

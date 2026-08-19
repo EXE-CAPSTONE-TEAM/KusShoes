@@ -1,4 +1,5 @@
 import uuid
+from collections.abc import Mapping
 from typing import Any
 
 import httpx
@@ -29,7 +30,7 @@ async def process_bake(
     db: AsyncSession,
     job_id: uuid.UUID,
     worker_id: str | None,
-) -> dict:
+) -> dict[str, object]:
     job = await bake_job_repo.get_by_id(db, job_id)
     if not job:
         return {"status": "ignored", "reason": "job_not_found"}
@@ -262,7 +263,7 @@ def _validate_exports(
     exports: list[dict[str, Any]] = []
     seen: set[str] = set()
     for item in value:
-        if not isinstance(item, dict):
+        if not isinstance(item, Mapping):
             raise ValueError("Export item không hợp lệ")
         export_format = item.get("format")
         expected = expected_outputs.get(export_format)

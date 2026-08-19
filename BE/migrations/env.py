@@ -1,4 +1,5 @@
 import asyncio
+from importlib import import_module
 from logging.config import fileConfig
 
 from alembic import context
@@ -7,7 +8,7 @@ from sqlalchemy.engine import Connection
 from sqlalchemy.ext.asyncio import async_engine_from_config
 
 # Import tất cả models để metadata nhận diện tables
-import app.models  # noqa: F401
+import_module("app.models")
 
 # Import config trước để load .env
 from app.config import settings

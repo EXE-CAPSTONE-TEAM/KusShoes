@@ -31,10 +31,14 @@ class Settings(BaseSettings):
     EDITOR_TOKEN_ISSUER: str = "kusshoes-api"
     EDITOR_TOKEN_AUDIENCE: str = "kusshoes-editor"
     EDITOR_DESKTOP_URL_SCHEME: str = "kusshoes-editor"
+    REFRESH_COOKIE_NAME: str = "kusshoes_refresh_token"
+    REFRESH_COOKIE_SAMESITE: str = "lax"
 
     # Authentication abuse protection
+    REGISTER_RATE_LIMIT: int = 5
+    REGISTER_RATE_WINDOW_SECONDS: int = 60
     LOGIN_RATE_LIMIT: int = 10
-    LOGIN_RATE_WINDOW_SECONDS: int = 900
+    LOGIN_RATE_WINDOW_SECONDS: int = 60
     REFRESH_RATE_LIMIT: int = 30
     REFRESH_RATE_WINDOW_SECONDS: int = 60
     PASSWORD_RESET_RATE_LIMIT: int = 3
@@ -72,6 +76,7 @@ class Settings(BaseSettings):
 
     # Sentry
     SENTRY_DSN: str = ""
+    SENTRY_TRACES_SAMPLE_RATE: float = 0.1
 
     # Polar (billing)
     POLAR_ACCESS_TOKEN: str = ""

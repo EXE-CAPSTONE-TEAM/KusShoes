@@ -25,7 +25,7 @@ const getSubPage = (): string => {
 };
 
 const AdminShell: React.FC = () => {
-  const { session } = useAdminAuth();
+  const { session, isRestoring } = useAdminAuth();
   const [page, setPage] = useState<string>(getSubPage());
 
   useEffect(() => {
@@ -41,6 +41,10 @@ const AdminShell: React.FC = () => {
     }
     setPage(nextPage);
   };
+
+  if (isRestoring) {
+    return <div style={{ padding: 24, color: 'var(--text-primary)' }}>Restoring session...</div>;
+  }
 
   if (!session) {
     return <AdminLogin />;

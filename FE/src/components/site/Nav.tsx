@@ -32,12 +32,20 @@ export function Nav({ onOpenStudio, onLogin, onRegister }: { onOpenStudio?: () =
 
   const handleLogin = () => {
     setMenuOpen(false);
-    onLogin ? onLogin() : onOpenStudio?.();
+    if (onLogin) {
+      onLogin();
+      return;
+    }
+    onOpenStudio?.();
   };
 
   const handleRegister = () => {
     setMenuOpen(false);
-    onRegister ? onRegister() : onOpenStudio?.();
+    if (onRegister) {
+      onRegister();
+      return;
+    }
+    onOpenStudio?.();
   };
 
   const handleLinkClick = () => setMenuOpen(false);

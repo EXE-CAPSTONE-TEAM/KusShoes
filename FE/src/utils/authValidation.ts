@@ -6,8 +6,6 @@ import { ApiError } from '../api/client';
 const EMAIL_MAX_LENGTH = 254;
 const EMAIL_FORMAT = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
 const USERNAME_FORMAT = /^[A-Za-z_][A-Za-z0-9_]{2,29}$/;
-const CONTROL_CHARS = /[\x00-\x1F\x7F]/;
-
 export type RegisterFields = {
   email: string;
   username: string;
@@ -61,6 +59,13 @@ function utf8ByteLength(value: string): number {
   return new TextEncoder().encode(value).length;
 }
 
+function containsControlChar(value: string): boolean {
+  return Array.from(value).some((char) => {
+    const code = char.charCodeAt(0);
+    return code <= 0x1f || code === 0x7f;
+  });
+}
+
 // Password is never trimmed/normalized - whitespace is significant.
 export function validatePassword(password: string): string | null {
   if (!password) return 'Password is required.';
@@ -79,7 +84,7 @@ export function validateConfirmPassword(password: string, confirmPassword: strin
 
 export function validateFullName(rawFullName: string): string | null {
   if (!rawFullName.trim()) return 'Full name is required.';
-  if (CONTROL_CHARS.test(rawFullName)) return 'Full name contains invalid characters.';
+  if (containsControlChar(rawFullName)) return 'Full name contains invalid characters.';
   const fullName = normalizeFullName(rawFullName);
   if (fullName.length < 2 || fullName.length > 100) return 'Full name must be 2-100 characters.';
   return null;

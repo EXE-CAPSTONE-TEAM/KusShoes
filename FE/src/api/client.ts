@@ -11,11 +11,13 @@ import type {
   ScanSession,
   User,
 } from "../types";
+import { toast as notifyToast } from "../context/ToastContext";
 
 const API_BASE_URL = import.meta.env.VITE_API_BASE_URL ?? `http://${window.location.hostname}:8000`;
 const STORAGE_PUBLIC_URL = import.meta.env.VITE_STORAGE_PUBLIC_URL ?? `http://${window.location.hostname}:9000/kusshoes`;
-const ACCESS_TOKEN_KEY = "kusshoes_access_token";
-const REFRESH_TOKEN_KEY = "kusshoes_refresh_token";
+const LEGACY_ACCESS_TOKEN_KEY = "kusshoes_access_token";
+const LEGACY_REFRESH_TOKEN_KEY = "kusshoes_refresh_token";
+let accessTokenInMemory: string | null = null;
 
 function getCsrfToken(): string | null {
   const match = document.cookie.match(/(?:^|;) ?kusshoes_csrf_token=([^;]*)(?:;|$)/);
@@ -43,7 +45,6 @@ export class ApiError extends Error {
 
 type AuthTokens = {
   access_token: string;
-  refresh_token: string;
   token_type: string;
 };
 
@@ -113,6 +114,7 @@ type ProjectResponse = {
   description: string | null;
   status: string;
   thumbnail_path: string | null;
+  design_config: Record<string, unknown> | null;
   editor_url: string;
   created_at: string;
   updated_at: string;
@@ -168,57 +170,112 @@ export type ProjectExport = {
   created_at: string;
 };
 
-const fallbackProjectImage = new URL("../assets/sneaker-hero.png", import.meta.url).href;
+export type DesktopLaunch = {
+  ssoToken: string;
+  expiresIn: number;
+  apiBaseUrl: string;
+};
+
+const FALLBACK_PROJECT_IMAGE = new URL("../assets/sneaker-hero.png", import.meta.url).href;
+const COMPLETED_PROJECT_STATUSES = new Set(["completed", "ready", "exported"]);
+const DESIGNING_PROJECT_STATUSES = new Set(["in_progress", "processing", "queued", "baking"]);
+
+function asRecord(value: unknown): Record<string, unknown> {
+  return value && typeof value === "object" && !Array.isArray(value)
+    ? (value as Record<string, unknown>)
+    : {};
+}
+
+function stringValue(value: unknown, fallback: string): string {
+  if (typeof value !== "string") return fallback;
+  const trimmed = value.trim();
+  return trimmed || fallback;
+}
+
+function numberValue(value: unknown, fallback: number): number {
+  return typeof value === "number" && Number.isFinite(value) ? value : fallback;
+}
+
+function formatProjectSize(value: unknown): string {
+  if (typeof value !== "number" || !Number.isFinite(value) || value <= 0) return "—";
+  return `${value.toFixed(value >= 100 ? 0 : 1)} MB`;
+}
+
+function storageUrl(path: string | null): string | undefined {
+  if (!path) return undefined;
+  if (/^https?:\/\//i.test(path) || path.startsWith("data:")) return path;
+  return `${STORAGE_PUBLIC_URL.replace(/\/$/, "")}/${path.replace(/^\/+/, "")}`;
+}
+
+function projectImageUrl(path: string | null): string {
+  return storageUrl(path) ?? FALLBACK_PROJECT_IMAGE;
+}
+
+function normalizeProjectStatus(status: string): PortalProject["status"] {
+  const normalizedStatus = status.toLowerCase();
+  if (COMPLETED_PROJECT_STATUSES.has(normalizedStatus)) return "Completed";
+  if (DESIGNING_PROJECT_STATUSES.has(normalizedStatus)) return "Designing";
+  return "Scanned";
+}
+
+function normalizeProjectVisibility(value: unknown): PortalProject["visibility"] {
+  if (value === "Private" || value === "Link" || value === "Public") return value;
+  if (typeof value === "string") {
+    const normalized = value.toLowerCase();
+    if (normalized === "private") return "Private";
+    if (normalized === "link") return "Link";
+    if (normalized === "public") return "Public";
+  }
+  return "Private";
+}
 
 function toPortalProject(project: ProjectResponse): PortalProject {
-  const normalizedStatus = project.status.toLowerCase();
-  const status: PortalProject["status"] = ["completed", "ready", "exported"].includes(normalizedStatus)
-    ? "Completed"
-    : ["in_progress", "processing", "queued", "baking"].includes(normalizedStatus)
-      ? "Designing"
-      : "Scanned";
+  const config = asRecord(project.design_config);
+  const scan = asRecord(config.scan);
+  const palette = asRecord(config.palette);
 
   return {
     id: project.id,
     name: project.name,
-    baseModel: "Custom sneaker model",
-    status,
+    baseModel: stringValue(config.base_model, "Custom sneaker model"),
+    status: normalizeProjectStatus(project.status),
     rawStatus: project.status,
-    visibility: "Private",
+    visibility: normalizeProjectVisibility(config.visibility),
     updatedAt: project.updated_at,
     createdAt: project.created_at,
-    imageUrl: fallbackProjectImage,
+    imageUrl: projectImageUrl(project.thumbnail_path),
     editorUrl: project.editor_url,
-    device: "KusStudio",
-    fileSize: "—",
-    photosCount: 0,
-    verticesCount: "—",
-    colorCode: "#FF5A36",
+    device: stringValue(scan.device, "KusStudio"),
+    fileSize: formatProjectSize(scan.file_size_mb),
+    photosCount: numberValue(scan.photos_count, 0),
+    verticesCount: stringValue(scan.vertices, "—"),
+    colorCode: stringValue(palette.primary, "#FF5A36"),
     description: project.description ?? "",
   };
 }
 
-function getStoredToken(key: string): string | null {
-  return sessionStorage.getItem(key) ?? localStorage.getItem(key);
-}
-
-function saveTokens(tokens: AuthTokens, remember: boolean): void {
-  clearTokens();
-  const storage = remember ? localStorage : sessionStorage;
-  storage.setItem(ACCESS_TOKEN_KEY, tokens.access_token);
-  storage.setItem(REFRESH_TOKEN_KEY, tokens.refresh_token);
-}
-
-function clearTokens(): void {
+function clearLegacyStoredTokens(): void {
   for (const storage of [localStorage, sessionStorage]) {
-    storage.removeItem(ACCESS_TOKEN_KEY);
-    storage.removeItem(REFRESH_TOKEN_KEY);
+    storage.removeItem(LEGACY_ACCESS_TOKEN_KEY);
+    storage.removeItem(LEGACY_REFRESH_TOKEN_KEY);
   }
 }
 
+clearLegacyStoredTokens();
+
+function saveTokens(tokens: AuthTokens, _remember: boolean): void {
+  accessTokenInMemory = tokens.access_token;
+  clearLegacyStoredTokens();
+}
+
+function clearTokens(): void {
+  accessTokenInMemory = null;
+  clearLegacyStoredTokens();
+}
+
 function replaceAccessToken(accessToken: string): void {
-  const storage = sessionStorage.getItem(REFRESH_TOKEN_KEY) ? sessionStorage : localStorage;
-  storage.setItem(ACCESS_TOKEN_KEY, accessToken);
+  accessTokenInMemory = accessToken;
+  clearLegacyStoredTokens();
 }
 
 let refreshPromise: Promise<string | null> | null = null;
@@ -227,14 +284,11 @@ async function refreshAccessToken(): Promise<string | null> {
   if (refreshPromise) return refreshPromise;
 
   refreshPromise = (async () => {
-    const refreshToken = getStoredToken(REFRESH_TOKEN_KEY);
-    if (!refreshToken) return null;
-
     try {
       const response = await fetch(`${API_BASE_URL}/api/v1/auth/refresh`, {
         method: "POST",
+        credentials: "include",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ refresh_token: refreshToken }),
       });
       if (!response.ok) {
         clearTokens();
@@ -262,11 +316,35 @@ function canRefreshRequest(path: string): boolean {
   ].includes(path);
 }
 
+function notifyApiError(error: ApiError, path: string): void {
+  if (responseIsAuthNoise(path)) return;
+  if (error.status >= 500) {
+    notifyToast.error("Server error. Please try again later.");
+    return;
+  }
+  if (error.status === 401) {
+    notifyToast.error("Session expired. Please sign in again.");
+    return;
+  }
+  if (error.status >= 400) {
+    notifyToast.error(error.message || "Request failed. Please check your input.");
+  }
+}
+
+function responseIsAuthNoise(path: string): boolean {
+  return [
+    "/api/v1/auth/login",
+    "/api/v1/auth/register",
+    "/api/v1/auth/verify-otp",
+    "/api/v1/auth/resend-otp",
+  ].includes(path);
+}
+
 async function request<T>(path: string, options: RequestInit = {}): Promise<T> {
   const headers: Record<string, string> = {
     "Content-Type": "application/json",
   };
-  const accessToken = getStoredToken(ACCESS_TOKEN_KEY);
+  const accessToken = accessTokenInMemory;
   if (accessToken) {
     headers.Authorization = `Bearer ${accessToken}`;
   }
@@ -302,7 +380,9 @@ async function request<T>(path: string, options: RequestInit = {}): Promise<T> {
   }
 
   if (!response.ok) {
-    throw await apiError(response);
+    const error = await apiError(response);
+    notifyApiError(error, path);
+    throw error;
   }
 
   return response.json() as Promise<T>;
@@ -335,12 +415,11 @@ async function apiError(response: Response): Promise<ApiError> {
   }
 }
 
-async function errorMessage(response: Response): Promise<string> {
-  return (await apiError(response)).message;
+async function throwApiResponseError(response: Response, path: string): Promise<never> {
+  const error = await apiError(response);
+  notifyApiError(error, path);
+  throw error;
 }
-
-// This backend exposes bearer tokens. "Remember me" chooses localStorage;
-// otherwise tokens live only for the current browser tab/session.
 
 function downloadBlob(blob: Blob, filename: string): void {
   const url = URL.createObjectURL(blob);
@@ -358,18 +437,12 @@ export const api = {
   baseUrl: API_BASE_URL,
 
   hasToken(): boolean {
-    return Boolean(getStoredToken(ACCESS_TOKEN_KEY));
+    return Boolean(accessTokenInMemory);
   },
 
   async logout(): Promise<void> {
-    const refreshToken = getStoredToken(REFRESH_TOKEN_KEY);
     try {
-      if (refreshToken) {
-        await request("/api/v1/auth/logout", {
-          method: "POST",
-          body: JSON.stringify({ refresh_token: refreshToken }),
-        });
-      }
+      await request("/api/v1/auth/logout", { method: "POST" });
     } catch {
       // Local logout must still succeed when the API/token is unavailable.
     } finally {
@@ -450,6 +523,18 @@ export const api = {
     };
   },
 
+  async createDesktopLaunch(projectId: string): Promise<DesktopLaunch> {
+    const payload = await request<{ sso_token: string; expires_in: number }>("/api/v1/auth/sso-token", {
+      method: "POST",
+      body: JSON.stringify({ project_id: projectId }),
+    });
+    return {
+      ssoToken: payload.sso_token,
+      expiresIn: payload.expires_in,
+      apiBaseUrl: API_BASE_URL,
+    };
+  },
+
   async createProject(payload: { name: string; description?: string | null }): Promise<PortalProject> {
     const project = await request<ProjectResponse>("/api/v1/projects", {
       method: "POST",
@@ -505,8 +590,7 @@ export const api = {
   },
 
   avatarUrl(path: string | null): string | undefined {
-    if (!path) return undefined;
-    return `${STORAGE_PUBLIC_URL.replace(/\/$/, '')}/${path.replace(/^\//, '')}`;
+    return storageUrl(path);
   },
 
   async uploadAvatar(file: File): Promise<UserProfile> {
@@ -635,7 +719,7 @@ export const api = {
       body: form,
     });
     if (!response.ok) {
-      throw new ApiError(await errorMessage(response), response.status);
+      await throwApiResponseError(response, "/api/models/import");
     }
     return response.json() as Promise<ModelImportResponse>;
   },
@@ -654,17 +738,18 @@ export const api = {
       body: form,
     });
     if (!response.ok) {
-      throw new ApiError(await errorMessage(response), response.status);
+      await throwApiResponseError(response, "/api/design-assets");
     }
     return response.json() as Promise<DesignAsset>;
   },
 
   async fetchDesignAssetBlobUrl(assetId: string): Promise<string> {
-    const response = await fetch(`${API_BASE_URL}/api/design-assets/${assetId}/download`, {
+    const path = `/api/design-assets/${assetId}/download`;
+    const response = await fetch(`${API_BASE_URL}${path}`, {
       credentials: "include",
     });
     if (!response.ok) {
-      throw new ApiError(await errorMessage(response), response.status);
+      await throwApiResponseError(response, path);
     }
     return URL.createObjectURL(await response.blob());
   },
@@ -674,7 +759,7 @@ export const api = {
       credentials: "include",
     });
     if (!response.ok) {
-      throw new ApiError(await errorMessage(response), response.status);
+      await throwApiResponseError(response, modelAsset.glbUrl);
     }
     return URL.createObjectURL(await response.blob());
   },
@@ -688,7 +773,7 @@ export const api = {
       cache: "no-store",
     });
     if (!response.ok) {
-      throw new ApiError(await errorMessage(response), response.status);
+      await throwApiResponseError(response, design.previewGlbUrl);
     }
     return URL.createObjectURL(await response.blob());
   },
@@ -722,7 +807,7 @@ export const api = {
       credentials: "include",
     });
     if (!response.ok) {
-      throw new ApiError(await errorMessage(response), response.status);
+      await throwApiResponseError(response, exportPackage.downloadUrl);
     }
 
     downloadBlob(await response.blob(), `${exportPackage.id}.zip`);
@@ -733,7 +818,7 @@ export const api = {
       credentials: "include",
     });
     if (!response.ok) {
-      throw new ApiError(await errorMessage(response), response.status);
+      await throwApiResponseError(response, urlPath);
     }
 
     downloadBlob(await response.blob(), filename);

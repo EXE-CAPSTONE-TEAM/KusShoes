@@ -8,6 +8,7 @@ from app.exceptions import DesignRevisionConflict
 from app.models.design_revision import DesignRevision
 from app.models.project import Project
 from app.models.user import User
+from app.types import JsonObject
 
 
 async def get_by_id(
@@ -147,7 +148,7 @@ async def save_design(
     db: AsyncSession,
     project: Project,
     *,
-    design_config: dict,
+    design_config: JsonObject,
     thumbnail_path: str | None,
     base_revision: int,
     author_user_id: uuid.UUID,
@@ -216,8 +217,13 @@ async def list_admin(
     if before is not None:
         if before_id is not None:
             query = query.where(
-                (Project.created_at < before)
-                | ((Project.created_at == before) & (Project.id < before_id))
+                or_(
+                    Project.created_at < before,
+                    and_(
+                        Project.created_at == before,
+                        Project.id < before_id,
+                    ),
+                )
             )
         else:
             query = query.where(Project.created_at < before)

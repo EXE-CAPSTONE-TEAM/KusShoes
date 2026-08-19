@@ -1,5 +1,6 @@
 import uuid
 from datetime import datetime
+from typing import TYPE_CHECKING
 
 from sqlalchemy import DateTime, ForeignKey, String, Text
 from sqlalchemy.dialects.postgresql import JSONB, UUID
@@ -7,6 +8,11 @@ from sqlalchemy.orm import Mapped, mapped_column, relationship
 
 from app.database import Base
 from app.models.base import utcnow
+from app.types import JsonObject
+
+if TYPE_CHECKING:
+    from app.models.export_record import ExportRecord
+    from app.models.project import Project
 
 
 class BakeJob(Base):
@@ -18,7 +24,7 @@ class BakeJob(Base):
     project_id: Mapped[uuid.UUID] = mapped_column(
         UUID(as_uuid=True), ForeignKey("projects.id"), nullable=False
     )
-    design_config_snapshot: Mapped[dict] = mapped_column(JSONB, nullable=False)
+    design_config_snapshot: Mapped[JsonObject] = mapped_column(JSONB, nullable=False)
     status: Mapped[str] = mapped_column(String(20), nullable=False, default="queued")
     # queued | processing | completed | failed | cancelled
     priority: Mapped[str] = mapped_column(String(20), nullable=False, default="low")
@@ -34,7 +40,5 @@ class BakeJob(Base):
     started_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True), nullable=True)
     completed_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True), nullable=True)
 
-    project: Mapped["Project"] = relationship(back_populates="bake_jobs")  # noqa: F821
-    export_records: Mapped[list["ExportRecord"]] = relationship(  # noqa: F821
-        back_populates="bake_job"
-    )
+    project: Mapped["Project"] = relationship(back_populates="bake_jobs")
+    export_records: Mapped[list["ExportRecord"]] = relationship(back_populates="bake_job")

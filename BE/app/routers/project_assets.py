@@ -55,9 +55,3 @@ async def delete_asset(
     user=Depends(get_current_user),
 ):
     return await asset_service.delete_asset(db, user, project_id, asset_id)
-
-# TODO: Phase 5 — implement Project Asset endpoints
-# POST   /{id}/assets/upload-url
-# POST   /{id}/assets/confirm
-# GET    /{id}/assets
-# DELETE /{id}/assets/{asset_id}

@@ -6,6 +6,7 @@ import json
 import re
 import secrets
 import uuid
+from dataclasses import dataclass
 from datetime import UTC, datetime, timedelta
 from urllib.parse import urlencode
 
@@ -51,20 +52,18 @@ from app.repositories import (
     user_repo,
 )
 from app.schemas.auth import (
-    AccessTokenResponse,
     EditorLaunchClaimResponse,
     EditorLaunchCreateResponse,
     EditorLaunchExchangeResponse,
     EditorSessionResponse,
     ForgotPasswordResponse,
-    GoogleLoginResponse,
     OTPResendResponse,
     RegisterResponse,
     SessionListResponse,
     SessionResponse,
+    SSODesktopSessionResponse,
     SSOCreateResponse,
     SSOVerifyResponse,
-    TokenResponse,
 )
 from app.utils.jwt import (
     create_access_token,
@@ -78,6 +77,13 @@ from app.utils.jwt import (
 )
 from app.utils.password import hash_password, verify_password
 
+
+@dataclass(frozen=True)
+class IssuedTokens:
+    access_token: str
+    refresh_token: str
+    token_type: str = "bearer"
+
 # ── UC-AUTH-001: Registration ────────────────────────────────────────────────
 
 
@@ -89,7 +95,18 @@ async def register_user(
     username: str,
     password: str,
     full_name: str,
+    client_ip: str,
 ) -> RegisterResponse:
+    from app.config import settings
+
+    await _enforce_rate_limit(
+        redis,
+        bucket="register-ip",
+        identifier=client_ip,
+        limit=settings.REGISTER_RATE_LIMIT,
+        window_seconds=settings.REGISTER_RATE_WINDOW_SECONDS,
+    )
+
     if await user_repo.get_by_email_any(db, email):
         raise EmailAlreadyTaken()
 
@@ -139,7 +156,7 @@ async def verify_otp(
     otp_code: str,
     user_agent: str | None = None,
     ip_address: str | None = None,
-) -> TokenResponse:
+) -> IssuedTokens:
     # Check lockout
     lock_ttl = await otp_store.get_lock_ttl(redis, user_id)
     if lock_ttl is not None:
@@ -222,7 +239,7 @@ async def login_user(
     password: str,
     client_ip: str,
     user_agent: str | None = None,
-) -> TokenResponse:
+) -> IssuedTokens:
     from app.config import settings
 
     await _enforce_rate_limit(
@@ -280,7 +297,7 @@ async def handle_google_callback(
     state: str,
     user_agent: str | None = None,
     ip_address: str | None = None,
-) -> GoogleLoginResponse:
+) -> dict:
     # Verify state
     state_key = f"oauth:state:{state}"
     if not await redis.get(state_key):
@@ -305,8 +322,10 @@ async def handle_google_callback(
     if existing:
         if existing.status != "active":
             raise AccountBanned()
-        tokens = await _issue_tokens(db, existing, user_agent=user_agent, ip_address=ip_address)
-        return GoogleLoginResponse(**tokens.model_dump(), is_new_user=False)
+        tokens = await _issue_tokens(
+            db, existing, user_agent=user_agent, ip_address=ip_address
+        )
+        return {**tokens.__dict__, "is_new_user": False, "linked": False}
 
     # AF-2: Auto-link — email/password account with same email
     by_email = await user_repo.get_by_email(db, email)
@@ -314,8 +333,10 @@ async def handle_google_callback(
         await user_repo.set_verified_google_link(db, by_email, google_id)
         if by_email.status != "active":
             raise AccountBanned()
-        tokens = await _issue_tokens(db, by_email, user_agent=user_agent, ip_address=ip_address)
-        return GoogleLoginResponse(**tokens.model_dump(), is_new_user=False, linked=True)
+        tokens = await _issue_tokens(
+            db, by_email, user_agent=user_agent, ip_address=ip_address
+        )
+        return {**tokens.__dict__, "is_new_user": False, "linked": True}
 
     # New user via Google
     username = await _generate_unique_username(db, given_name, family_name, email)
@@ -333,7 +354,7 @@ async def handle_google_callback(
     await monthly_usage_repo.create_for_user(db, user_id=new_user.id)
 
     tokens = await _issue_tokens(db, new_user, user_agent=user_agent, ip_address=ip_address)
-    return GoogleLoginResponse(**tokens.model_dump(), is_new_user=True)
+    return {**tokens.__dict__, "is_new_user": True, "linked": False}
 
 
 # ── UC-AUTH-005: Admin/Staff Login ───────────────────────────────────────────
@@ -366,7 +387,7 @@ async def login_admin(
         raise AccountBanned()
 
     tokens = await _issue_tokens(db, user, user_agent=user_agent, ip_address=client_ip)
-    return {**tokens.model_dump(), "role": user.role}
+    return {**tokens.__dict__, "role": user.role}
 
 
 async def authenticate_user_access_token(db: AsyncSession, raw_token: str):
@@ -412,7 +433,7 @@ async def refresh_access_token(
     raw_token: str,
     *,
     client_ip: str,
-) -> AccessTokenResponse:
+) -> IssuedTokens:
     from app.config import settings
 
     await _enforce_rate_limit(
@@ -429,7 +450,19 @@ async def refresh_access_token(
     if not user or user.status != "active":
         raise AuthRefreshInvalid()
     await refresh_token_repo.mark_used(db, token, ip_address=client_ip)
-    return AccessTokenResponse(access_token=create_access_token(str(user.id), role=user.role))
+    raw_refresh = create_raw_refresh_token()
+    await refresh_token_repo.create(
+        db,
+        user_id=user.id,
+        token_hash=hash_token(raw_refresh),
+        expires_at=datetime.now(UTC) + timedelta(days=settings.REFRESH_TOKEN_EXPIRE_DAYS),
+        user_agent=token.user_agent,
+        ip_address=client_ip,
+    )
+    return IssuedTokens(
+        access_token=create_access_token(str(user.id), role=user.role),
+        refresh_token=raw_refresh,
+    )
 
 
 async def logout(
@@ -718,6 +751,33 @@ async def create_editor_sso(
 async def verify_editor_sso(
     db: AsyncSession, redis: aioredis.Redis, token: str
 ) -> SSOVerifyResponse:
+    user, payload = await _consume_editor_sso(db, redis, token)
+    return SSOVerifyResponse(
+        user_id=user.id,
+        project_id=payload["project_id"],
+        email=user.email,
+        username=user.username,
+    )
+
+
+async def exchange_editor_sso(
+    db: AsyncSession, redis: aioredis.Redis, token: str
+) -> SSODesktopSessionResponse:
+    user, payload = await _consume_editor_sso(db, redis, token)
+    return SSODesktopSessionResponse(
+        access_token=create_access_token(str(user.id), role=user.role),
+        user_id=user.id,
+        project_id=payload["project_id"],
+        email=user.email,
+        username=user.username,
+        name=user.full_name.strip() or user.username,
+        role=user.role,
+        created_at=user.created_at,
+        updated_at=user.updated_at,
+    )
+
+
+async def _consume_editor_sso(db: AsyncSession, redis: aioredis.Redis, token: str):
     key = f"sso:{hash_token(token)}"
     try:
         payload = decode_sso_token(token)
@@ -735,12 +795,8 @@ async def verify_editor_sso(
     if not await project_repo.get_owned_by_id(db, project_id, user.id):
         raise AuthSSOInvalid()
 
-    return SSOVerifyResponse(
-        user_id=user.id,
-        project_id=project_id,
-        email=user.email,
-        username=user.username,
-    )
+    payload["project_id"] = project_id
+    return user, payload
 
 
 # ── Internal helpers ──────────────────────────────────────────────────────────
@@ -752,7 +808,7 @@ async def _issue_tokens(
     *,
     user_agent: str | None = None,
     ip_address: str | None = None,
-) -> TokenResponse:
+) -> IssuedTokens:
     from app.config import settings
 
     access_token = create_access_token(str(user.id), role=user.role)
@@ -769,7 +825,7 @@ async def _issue_tokens(
         ip_address=ip_address,
     )
 
-    return TokenResponse(access_token=access_token, refresh_token=raw_refresh)
+    return IssuedTokens(access_token=access_token, refresh_token=raw_refresh)
 
 
 async def _enforce_rate_limit(

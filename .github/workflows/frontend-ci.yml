@@ -1,0 +1,37 @@
+name: Frontend CI
+
+on:
+  pull_request:
+    paths:
+      - "FE/**"
+      - ".github/workflows/frontend-ci.yml"
+  push:
+    branches: ["main"]
+    paths:
+      - "FE/**"
+      - ".github/workflows/frontend-ci.yml"
+
+jobs:
+  frontend:
+    runs-on: ubuntu-latest
+    env:
+      VITE_API_BASE_URL: http://localhost:8000
+      VITE_STORAGE_PUBLIC_URL: http://localhost:9000/kusshoes
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Install dependencies
+        working-directory: FE
+        run: npm ci --no-audit --no-fund
+
+      - name: Lint
+        working-directory: FE
+        run: npm run lint
+
+      - name: Unit tests
+        working-directory: FE
+        run: npm run test:run
+
+      - name: Build
+        working-directory: FE
+        run: npm run build

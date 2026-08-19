@@ -151,10 +151,16 @@ async def change_plan(db: AsyncSession, user, *, tier: str, billing_cycle: str) 
 
 
 async def admin_list_subscriptions(
-    db: AsyncSession, *, tier: str | None, status: str | None, limit: int, before: datetime | None
+    db: AsyncSession,
+    *,
+    tier: str | None,
+    status: str | None,
+    limit: int,
+    before: datetime | None,
+    before_id: uuid.UUID | None = None,
 ) -> list[AdminSubscriptionResponse]:
     rows = await subscription_repo.list_all(
-        db, tier=tier, status=status, limit=limit, before=before
+        db, tier=tier, status=status, limit=limit, before=before, before_id=before_id
     )
     return [
         AdminSubscriptionResponse(
@@ -178,9 +184,10 @@ async def admin_list_invoices(
     user_id: uuid.UUID | None,
     limit: int,
     before: datetime | None,
+    before_id: uuid.UUID | None = None,
 ) -> list[AdminInvoiceResponse]:
     rows = await invoice_repo.list_all(
-        db, status=status, user_id=user_id, limit=limit, before=before
+        db, status=status, user_id=user_id, limit=limit, before=before, before_id=before_id
     )
     return [
         AdminInvoiceResponse(

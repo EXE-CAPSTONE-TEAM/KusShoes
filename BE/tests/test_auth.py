@@ -9,6 +9,8 @@ from datetime import UTC
 import pytest
 import pytest_asyncio
 
+from app.config import settings
+
 # ── Helpers ───────────────────────────────────────────────────────────────────
 
 REGISTER_URL = "/api/v1/auth/register"
@@ -118,6 +120,20 @@ async def test_register_duplicate_username(client):
     assert res.json()["code"] == "AUTH_USERNAME_TAKEN"
 
 
+@pytest.mark.asyncio
+async def test_register_rate_limit_returns_429(client, monkeypatch):
+    from app.config import settings
+
+    monkeypatch.setattr(settings, "REGISTER_RATE_LIMIT", 1)
+    first = await _register(client, email="first@example.com", username="firstuser")
+    blocked = await _register(client, email="second@example.com", username="seconduser")
+
+    assert first.status_code == 201
+    assert blocked.status_code == 429
+    assert blocked.json()["code"] == "AUTH_RATE_LIMITED"
+    assert int(blocked.headers["Retry-After"]) > 0
+
+
 # ── UC-AUTH-002: OTP Verification ─────────────────────────────────────────────
 
 @pytest.mark.asyncio
@@ -130,8 +146,9 @@ async def test_verify_otp_success(client, redis):
     assert res.status_code == 200
     body = res.json()
     assert "access_token" in body
-    assert "refresh_token" in body
+    assert "refresh_token" not in body
     assert body["token_type"] == "bearer"
+    assert settings.REFRESH_COOKIE_NAME in res.cookies
 
 
 @pytest.mark.asyncio
@@ -260,7 +277,9 @@ async def verified_user(client, redis):
     user_id = reg.json()["user_id"]
     otp = await _get_otp_from_redis(redis, user_id)
     tokens = await client.post(VERIFY_URL, json={"user_id": user_id, "otp_code": otp})
-    return {"email": email, "password": password, "tokens": tokens.json(), "user_id": user_id}
+    token_body = tokens.json()
+    token_body["refresh_token"] = tokens.cookies.get(settings.REFRESH_COOKIE_NAME)
+    return {"email": email, "password": password, "tokens": token_body, "user_id": user_id}
 
 
 @pytest.mark.asyncio
@@ -272,7 +291,28 @@ async def test_login_success(client, verified_user):
     assert res.status_code == 200
     body = res.json()
     assert "access_token" in body
-    assert "refresh_token" in body
+    assert "refresh_token" not in body
+    assert settings.REFRESH_COOKIE_NAME in res.cookies
+
+
+@pytest.mark.asyncio
+async def test_login_sets_refresh_cookie_and_refresh_uses_cookie(client, verified_user):
+    login = await client.post(
+        LOGIN_URL,
+        json={"email": verified_user["email"], "password": verified_user["password"]},
+    )
+    assert login.status_code == 200
+    set_cookie = login.headers.get("set-cookie", "")
+    assert "kusshoes_refresh_token=" in set_cookie
+    assert "HttpOnly" in set_cookie
+
+    refreshed = await client.post("/api/v1/auth/refresh")
+    assert refreshed.status_code == 200
+    assert refreshed.json()["access_token"]
+    assert "refresh_token" not in refreshed.json()
+    refreshed_cookie = refreshed.headers.get("set-cookie", "")
+    assert "kusshoes_refresh_token=" in refreshed_cookie
+    assert "HttpOnly" in refreshed_cookie
 
 
 @pytest.mark.asyncio
@@ -472,19 +512,22 @@ async def test_admin_login_banned(client, db, admin_user):
 
 @pytest.mark.asyncio
 async def test_refresh_and_logout(client, verified_user):
-    refresh_token = verified_user["tokens"]["refresh_token"]
-    refreshed = await client.post("/api/v1/auth/refresh", json={"refresh_token": refresh_token})
+    refreshed = await client.post("/api/v1/auth/refresh")
     assert refreshed.status_code == 200
     assert "access_token" in refreshed.json()
+    assert "refresh_token" not in refreshed.json()
+    rotated_refresh = refreshed.cookies.get(settings.REFRESH_COOKIE_NAME)
 
     headers = {"Authorization": f"Bearer {verified_user['tokens']['access_token']}"}
     logged_out = await client.post(
         "/api/v1/auth/logout",
         headers=headers,
-        json={"refresh_token": refresh_token},
     )
     assert logged_out.status_code == 200
-    rejected = await client.post("/api/v1/auth/refresh", json={"refresh_token": refresh_token})
+    rejected = await client.post(
+        "/api/v1/auth/refresh",
+        json={"refresh_token": rotated_refresh},
+    )
     assert rejected.status_code == 401
 
 
@@ -509,6 +552,35 @@ async def test_sso_token_is_one_time_use(client, verified_user, service_headers)
     replay = await client.post(
         "/api/v1/auth/verify-sso",
         headers=service_headers,
+        json={"sso_token": token},
+    )
+    assert replay.status_code == 401
+
+
+@pytest.mark.asyncio
+async def test_sso_desktop_session_exchanges_once(client, verified_user):
+    headers = {"Authorization": f"Bearer {verified_user['tokens']['access_token']}"}
+    project_id = str(uuid.uuid4())
+    created = await client.post(
+        "/api/v1/auth/sso-token",
+        headers=headers,
+        json={"project_id": project_id},
+    )
+    assert created.status_code == 200
+    token = created.json()["sso_token"]
+
+    exchanged = await client.post(
+        "/api/v1/auth/desktop-session",
+        json={"sso_token": token},
+    )
+    assert exchanged.status_code == 200
+    payload = exchanged.json()
+    assert payload["project_id"] == project_id
+    assert payload["token_type"] == "bearer"
+    assert payload["access_token"]
+
+    replay = await client.post(
+        "/api/v1/auth/desktop-session",
         json={"sso_token": token},
     )
     assert replay.status_code == 401

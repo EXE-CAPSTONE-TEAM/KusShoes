@@ -301,6 +301,7 @@ def _to_response(project) -> ProjectResponse:
         description=project.description,
         status=project.status,
         thumbnail_path=project.thumbnail_path,
+        design_config=project.design_config,
         editor_url=f"{EDITOR_BASE_URL}/{project.id}",
         created_at=project.created_at,
         updated_at=project.updated_at,
@@ -310,7 +311,6 @@ def _to_response(project) -> ProjectResponse:
 def _to_detail(project) -> ProjectDetailResponse:
     return ProjectDetailResponse(
         **_to_response(project).model_dump(),
-        design_config=project.design_config,
         canonical_model_asset_id=project.canonical_model_asset_id,
         revision=project.current_design_revision,
     )

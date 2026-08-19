@@ -3,7 +3,7 @@ import {
   Search, Plus, MoreVertical, Trash2, Edit3, Share2, 
   Globe, EyeOff, Link, Grid, List, Check, X, ArrowRight, 
   ArrowLeft, RefreshCw, Smartphone, Laptop, 
-  CheckSquare, Square, Camera, Cpu 
+  CheckCircle2, CheckSquare, Square, Camera, Cpu,
 } from 'lucide-react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { Select } from '../../components/Select/Select';
@@ -18,11 +18,47 @@ const SORT_OPTIONS = [
   { value: 'size', label: 'File Size' },
 ];
 
+type ProjectStatusFilter = 'All' | 'Scanned' | 'Designing' | 'Completed';
+type ProjectSortBy = 'name' | 'date' | 'size';
+type ProjectViewMode = 'grid' | 'list';
+type WizardStep = 1 | 2 | 3;
+type WizardSource = 'cloud' | 'upload';
+type WizardDesktopStatus = 'idle' | 'packaging' | 'launched';
+type ProjectVisibility = PortalProject['visibility'];
+
+const PROJECT_STATUS_OPTIONS: ProjectStatusFilter[] = ['All', 'Scanned', 'Designing', 'Completed'];
+const WIZARD_VISIBILITY_OPTIONS: Array<{
+  value: ProjectVisibility;
+  label: string;
+  desc: string;
+}> = [
+  { value: 'Private', label: 'Private', desc: 'Only you can view' },
+  { value: 'Link', label: 'Link Share', desc: 'Anyone with URL' },
+  { value: 'Public', label: 'Public Showcase', desc: 'Show to community' },
+];
+
 interface ProjectsProps {
   projects: PortalProject[];
   setProjects: React.Dispatch<React.SetStateAction<PortalProject[]>>;
   onViewDetails: (id: string) => void;
-  initialFilter?: 'All' | 'Scanned' | 'Designing' | 'Completed';
+  initialFilter?: ProjectStatusFilter;
+}
+
+function formatRelativeDate(value: string): string {
+  const timestamp = new Date(value).getTime();
+  if (!Number.isFinite(timestamp)) return 'Recently';
+  const diffMs = Date.now() - timestamp;
+  const minutes = Math.max(1, Math.floor(diffMs / 60000));
+  if (minutes < 60) return `${minutes} min ago`;
+  const hours = Math.floor(minutes / 60);
+  if (hours < 24) return `${hours} hour${hours === 1 ? '' : 's'} ago`;
+  const days = Math.floor(hours / 24);
+  if (days < 7) return `${days} day${days === 1 ? '' : 's'} ago`;
+  return new Date(value).toLocaleDateString();
+}
+
+function isProjectSortBy(value: string): value is ProjectSortBy {
+  return SORT_OPTIONS.some((option) => option.value === value);
 }
 
 export const Projects: React.FC<ProjectsProps> = ({
@@ -33,12 +69,12 @@ export const Projects: React.FC<ProjectsProps> = ({
 }) => {
   const { toast } = useToast();
   // View states
-  const [viewMode, setViewMode] = useState<'grid' | 'list'>('grid');
+  const [viewMode, setViewMode] = useState<ProjectViewMode>('grid');
   const [searchTerm, setSearchTerm] = useState('');
-  const [statusFilter, setStatusFilter] = useState<'All' | 'Scanned' | 'Designing' | 'Completed'>(
+  const [statusFilter, setStatusFilter] = useState<ProjectStatusFilter>(
     initialFilter || 'All'
   );
-  const [sortBy, setSortBy] = useState<'name' | 'date' | 'size'>('date');
+  const [sortBy, setSortBy] = useState<ProjectSortBy>('date');
   
   // Selection states
   const [selectedIds, setSelectedIds] = useState<string[]>([]);
@@ -65,8 +101,8 @@ export const Projects: React.FC<ProjectsProps> = ({
   
   // Step-Wizard (New Project) States
   const [isCreateWizardOpen, setIsCreateWizardOpen] = useState(false);
-  const [wizardStep, setWizardStep] = useState<1 | 2 | 3>(1);
-  const [wizardSource, setWizardSource] = useState<'cloud' | 'upload'>('cloud');
+  const [wizardStep, setWizardStep] = useState<WizardStep>(1);
+  const [wizardSource, setWizardSource] = useState<WizardSource>('cloud');
 
   // Trigger wizard if new=true parameter is present in browser query params
   useEffect(() => {
@@ -78,25 +114,37 @@ export const Projects: React.FC<ProjectsProps> = ({
     }
   }, []);
   
-  // Synced Cloud Scans for Step 1
-  const mockCloudScans = [
-    { id: 'cs-1', name: 'Scan #19 - Air Jordan 1 Retro', date: '10 mins ago', size: '72.4 MB', photos: 118, device: 'iPhone 15 Pro' },
-    { id: 'cs-2', name: 'Scan #18 - Adidas Campus 00s', date: '1 hour ago', size: '48.1 MB', photos: 72, device: 'iPad Pro' },
-    { id: 'cs-3', name: 'Scan #17 - Nike Air Max 90', date: 'Yesterday', size: '58.9 MB', photos: 90, device: 'Samsung Galaxy Fold' },
-    { id: 'cs-4', name: 'Scan #16 - Converse Chuck 70', date: '3 days ago', size: '36.5 MB', photos: 60, device: 'iPhone 14 Pro' },
-  ];
-  
-  const [selectedCloudScan, setSelectedCloudScan] = useState<string>('cs-1');
+  const cloudScans = useMemo(() => projects.map((project) => ({
+    id: project.id,
+    name: project.name,
+    baseModel: project.baseModel,
+    date: formatRelativeDate(project.updatedAt),
+    size: project.fileSize,
+    photos: project.photosCount,
+    device: project.device,
+  })), [projects]);
+
+  const [selectedCloudScan, setSelectedCloudScan] = useState<string>('');
   const [uploadedFile, setUploadedFile] = useState<File | null>(null);
   const fileInputRef = useRef<HTMLInputElement>(null);
   
   // Step 2 inputs
   const [wizardName, setWizardName] = useState('');
   const [wizardBaseModel, setWizardBaseModel] = useState('');
-  const [wizardVisibility, setWizardVisibility] = useState<'Private' | 'Link' | 'Public'>('Private');
+  const [wizardVisibility, setWizardVisibility] = useState<ProjectVisibility>('Private');
   
   // Step 3 Desktop simulation state
-  const [wizardDesktopStatus, setWizardDesktopStatus] = useState<'idle' | 'packaging' | 'launched'>('idle');
+  const [wizardDesktopStatus, setWizardDesktopStatus] = useState<WizardDesktopStatus>('idle');
+
+  useEffect(() => {
+    if (cloudScans.length === 0) {
+      setSelectedCloudScan('');
+      return;
+    }
+    setSelectedCloudScan((current) => (
+      cloudScans.some((scan) => scan.id === current) ? current : cloudScans[0].id
+    ));
+  }, [cloudScans]);
 
   // File size utility for sorting
   const parseSizeInMb = (sizeStr: string) => {
@@ -178,7 +226,7 @@ export const Projects: React.FC<ProjectsProps> = ({
 
   // Toggle single card selection
   const handleSelectCard = (e: React.MouseEvent, id: string) => {
-    e.stopPropagation(); // Avoid opening drawer
+    e.stopPropagation(); // Avoid opening project details.
     setSelectedIds(prev => 
       prev.includes(id) ? prev.filter(item => item !== id) : [...prev, id]
     );
@@ -220,12 +268,13 @@ export const Projects: React.FC<ProjectsProps> = ({
   const handleWizardNext = () => {
     if (wizardStep === 1) {
       if (wizardSource === 'cloud') {
-        const selectedScan = mockCloudScans.find(s => s.id === selectedCloudScan);
-        if (selectedScan) {
-          // Pre-fill Step 2 details
-          setWizardName(selectedScan.name.replace('Scan #', 'Project #'));
-          setWizardBaseModel(selectedScan.name.split(' - ')[1] || 'Custom Base');
+        const selectedScan = cloudScans.find(s => s.id === selectedCloudScan);
+        if (!selectedScan) {
+          toast('No cloud scans are available from the database yet.', 'error');
+          return;
         }
+        setWizardName(`${selectedScan.name} Remix`);
+        setWizardBaseModel(selectedScan.baseModel || 'Custom Base');
       }
       setWizardStep(2);
     } else if (wizardStep === 2) {
@@ -271,6 +320,10 @@ export const Projects: React.FC<ProjectsProps> = ({
     setWizardStep(1);
     setUploadedFile(null);
     setWizardDesktopStatus('idle');
+  };
+
+  const handleWizardBack = () => {
+    setWizardStep(wizardStep === 3 ? 2 : 1);
   };
 
   return (
@@ -364,7 +417,9 @@ export const Projects: React.FC<ProjectsProps> = ({
           <span className={styles.controlLabel}>Sort:</span>
           <Select
             value={sortBy}
-            onValueChange={(v) => setSortBy(v as 'name' | 'date' | 'size')}
+            onValueChange={(value) => {
+              if (isProjectSortBy(value)) setSortBy(value);
+            }}
             options={SORT_OPTIONS}
             ariaLabel="Sort projects"
           />
@@ -372,7 +427,7 @@ export const Projects: React.FC<ProjectsProps> = ({
 
         {/* Tab Filters */}
         <div className={`${styles.tabsWrapper} glass-panel`}>
-          {(['All', 'Scanned', 'Designing', 'Completed'] as const).map((tab) => (
+          {PROJECT_STATUS_OPTIONS.map((tab) => (
             <button
               key={tab}
               onClick={() => setStatusFilter(tab)}
@@ -438,7 +493,7 @@ export const Projects: React.FC<ProjectsProps> = ({
                       <button
                         className={`${styles.optionsBtn} glass-panel`}
                         onClick={(e) => {
-                          e.stopPropagation(); // Avoid opening drawer
+                          e.stopPropagation(); // Avoid opening project details.
                           setActiveMenuId(activeMenuId === proj.id ? null : proj.id);
                         }}
                       >
@@ -665,13 +720,11 @@ export const Projects: React.FC<ProjectsProps> = ({
 
           <div className={styles.pageNumbers}>
             <button className={`${styles.pageNumberBtn} ${styles.activePage}`}>1</button>
-            <button className={styles.pageNumberBtn} onClick={() => toast('Page 2 is not available in this demo.', 'info')}>2</button>
-            <button className={styles.pageNumberBtn} onClick={() => toast('Page 3 is not available in this demo.', 'info')}>3</button>
           </div>
 
           <button
             className={styles.pageBtn}
-            onClick={() => toast('No more pages in this demo.', 'info')}
+            disabled
           >
             <span>Next</span>
             <ArrowRight size={16} />
@@ -723,24 +776,7 @@ export const Projects: React.FC<ProjectsProps> = ({
             animate={{ opacity: 1, scale: 1 }}
           >
             <h3 className={styles.modalTitle}>Share Shoe Model</h3>
-            <p className={styles.modalDesc}>Anyone with the link will be able to preview the 3D shoe structure online.</p>
-            <div className={styles.linkCopyBox}>
-              <input
-                type="text"
-                readOnly
-                value={`https://sneakerflow.cloud/share/model-${sharingProject.id}`}
-                className={styles.modalInput}
-              />
-              <button 
-                className="btn-neon-orange"
-                onClick={() => {
-                  toast('Share links are not exposed by the backend yet.', 'info');
-                  setSharingProject(null);
-                }}
-              >
-                Copy
-              </button>
-            </div>
+            <p className={styles.modalDesc}>Share links are not exposed by the backend yet, so the web app will not generate a placeholder URL.</p>
             <div className={styles.modalActions} style={{ marginTop: '24px' }}>
               <button className="btn-outline" onClick={() => setSharingProject(null)}>Close</button>
             </div>
@@ -804,14 +840,27 @@ export const Projects: React.FC<ProjectsProps> = ({
                   {/* Sources Content */}
                   {wizardSource === 'cloud' ? (
                     <div className={styles.cloudScansList}>
-                      {mockCloudScans.map((scan) => (
+                      {cloudScans.length === 0 && (
+                        <div className={styles.cloudEmpty}>
+                          Seed or create projects first. Cloud source scans are loaded from the backend project database.
+                        </div>
+                      )}
+                      {cloudScans.map((scan) => (
                         <div 
                           key={scan.id}
                           className={`${styles.cloudScanCard} ${selectedCloudScan === scan.id ? styles.cloudScanCardSelected : ''}`}
                           onClick={() => setSelectedCloudScan(scan.id)}
                         >
                           <div className={styles.cloudScanCheck}>
-                            {selectedCloudScan === scan.id ? <CheckCircleIcon /> : <div className={styles.scanCheckCircle} />}
+                            {selectedCloudScan === scan.id ? (
+                              <CheckCircle2
+                                size={20}
+                                color="var(--color-orange)"
+                                strokeWidth={2.5}
+                              />
+                            ) : (
+                              <div className={styles.scanCheckCircle} />
+                            )}
                           </div>
                           <div className={styles.cloudScanInfo}>
                             <span className={styles.scanName}>{scan.name}</span>
@@ -889,15 +938,11 @@ export const Projects: React.FC<ProjectsProps> = ({
                     <div className={styles.wizardInputGroup}>
                       <label>Project Privacy Visibility</label>
                       <div className={styles.visibilityOptionsRow}>
-                        {[
-                          { value: 'Private', label: 'Private', desc: 'Only you can view' },
-                          { value: 'Link', label: 'Link Share', desc: 'Anyone with URL' },
-                          { value: 'Public', label: 'Public Showcase', desc: 'Show to community' }
-                        ].map((opt) => (
+                        {WIZARD_VISIBILITY_OPTIONS.map((opt) => (
                           <div 
                             key={opt.value}
                             className={`${styles.visOptionCard} ${wizardVisibility === opt.value ? styles.visOptionCardActive : ''}`}
-                            onClick={() => setWizardVisibility(opt.value as any)}
+                            onClick={() => setWizardVisibility(opt.value)}
                           >
                             <span className={styles.visOptionLabel}>{opt.label}</span>
                             <span className={styles.visOptionDesc}>{opt.desc}</span>
@@ -976,7 +1021,7 @@ export const Projects: React.FC<ProjectsProps> = ({
               {wizardStep > 1 ? (
                 <button 
                   className="btn-outline" 
-                  onClick={() => setWizardStep((prev) => (prev - 1) as any)}
+                  onClick={handleWizardBack}
                   disabled={wizardDesktopStatus === 'packaging'}
                 >
                   <ArrowLeft size={16} />
@@ -1038,11 +1083,3 @@ export const Projects: React.FC<ProjectsProps> = ({
     </div>
   );
 };
-
-// Internal icon helpers
-const CheckCircleIcon = () => (
-  <svg viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="var(--color-orange)" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
-    <path d="M22 11.08V12a10 10 0 1 1-5.93-9.14" />
-    <polyline points="22 4 12 14.01 9 11.01" />
-  </svg>
-);

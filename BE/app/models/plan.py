@@ -1,5 +1,6 @@
 import uuid
 from datetime import datetime
+from typing import TYPE_CHECKING
 
 from sqlalchemy import ARRAY, Boolean, CheckConstraint, Integer, String, UniqueConstraint
 from sqlalchemy.dialects.postgresql import UUID
@@ -7,6 +8,10 @@ from sqlalchemy.orm import Mapped, mapped_column, relationship
 
 from app.database import Base
 from app.models.base import utcnow
+
+if TYPE_CHECKING:
+    from app.models.invoice import Invoice
+    from app.models.subscription import Subscription
 
 
 class Plan(Base):
@@ -41,5 +46,5 @@ class Plan(Base):
 
     created_at: Mapped[datetime] = mapped_column(default=utcnow, nullable=False)
 
-    subscriptions: Mapped[list["Subscription"]] = relationship(back_populates="plan")  # noqa: F821
-    invoices: Mapped[list["Invoice"]] = relationship(back_populates="plan")  # noqa: F821
+    subscriptions: Mapped[list["Subscription"]] = relationship(back_populates="plan")
+    invoices: Mapped[list["Invoice"]] = relationship(back_populates="plan")

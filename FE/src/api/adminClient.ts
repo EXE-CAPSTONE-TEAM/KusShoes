@@ -21,7 +21,13 @@ import type {
   BakePriority,
   StaffCreateResponse,
 } from '../types/admin';
-import { getAdminSession, updateAccessToken, expireAdminSession } from './adminSession';
+import {
+  getAdminSession,
+  updateAccessToken,
+  expireAdminSession,
+  sessionFromAccessToken,
+  type AdminSession,
+} from './adminSession';
 
 const API_BASE_URL = import.meta.env.VITE_API_BASE_URL ?? `http://${window.location.hostname}:8000`;
 
@@ -78,14 +84,11 @@ async function refreshAccessToken(): Promise<string | null> {
   if (refreshPromise) return refreshPromise;
 
   refreshPromise = (async () => {
-    const refreshToken = getAdminSession()?.refreshToken;
-    if (!refreshToken) return null;
-
     try {
       const response = await fetch(`${API_BASE_URL}/api/v1/auth/refresh`, {
         method: 'POST',
+        credentials: 'include',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ refresh_token: refreshToken }),
       });
       if (!response.ok) return null;
 
@@ -111,6 +114,7 @@ async function request<T>(path: string, options: RequestInit = {}, retryOnUnauth
   try {
     response = await fetch(`${API_BASE_URL}${path}`, {
       ...options,
+      credentials: 'include',
       headers: { ...headers, ...options.headers },
       signal: options.signal,
     });
@@ -147,11 +151,14 @@ export const adminAuth = {
       method: 'POST',
       body: JSON.stringify({ email, password }),
     }, false),
-  logout: (refreshToken: string): Promise<void> =>
+  logout: (): Promise<void> =>
     request<void>('/api/v1/admin/auth/logout', {
       method: 'POST',
-      body: JSON.stringify({ refresh_token: refreshToken }),
     }, false),
+  async restoreSession(): Promise<AdminSession | null> {
+    const accessToken = await refreshAccessToken();
+    return accessToken ? sessionFromAccessToken(accessToken) : null;
+  },
 };
 
 export const adminDashboard = {

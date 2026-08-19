@@ -1,11 +1,14 @@
 import asyncio
+import os
 
 from app.database import AsyncSessionLocal
 from app.repositories import monthly_usage_repo, plan_repo, subscription_repo, user_repo
 from app.utils.password import hash_password
 
+SEED_USER_PASSWORD_ENV = "SEED_USER_PASSWORD"
 
-async def seed_users():
+
+async def seed_users() -> None:
     async with AsyncSessionLocal() as db:
         users_to_create = [
             {
@@ -35,7 +38,12 @@ async def seed_users():
                 }
             )
 
-        password_hash = hash_password("password123")
+        password = os.getenv(SEED_USER_PASSWORD_ENV)
+        if not password:
+            raise RuntimeError(
+                f"{SEED_USER_PASSWORD_ENV} must be set before running this script"
+            )
+        password_hash = hash_password(password)
         free_plan = await plan_repo.get_free_plan(db)
 
         for u in users_to_create:
@@ -65,5 +73,9 @@ async def seed_users():
         print("Successfully seeded users.")
 
 
-if __name__ == "__main__":
+def main() -> None:
     asyncio.run(seed_users())
+
+
+if __name__ == "__main__":
+    main()

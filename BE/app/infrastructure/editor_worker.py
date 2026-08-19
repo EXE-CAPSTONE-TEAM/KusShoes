@@ -3,12 +3,13 @@ import json
 import httpx
 
 from app.config import settings
+from app.types import JsonObject
 
 MAX_WORKER_RESPONSE_BYTES = 1024 * 1024
 TRANSIENT_CLIENT_STATUSES = {408, 425, 429}
 
 
-async def request_bake(payload: dict) -> dict:
+async def request_bake(payload: JsonObject) -> JsonObject:
     if not settings.EDITOR_WORKER_URL:
         raise ValueError("EDITOR_WORKER_URL chưa được cấu hình")
     if not settings.EDITOR_WORKER_SERVICE_TOKEN:
