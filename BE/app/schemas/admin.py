@@ -21,7 +21,7 @@ AdminSearchQuery = Annotated[
 ]
 UserRole = Literal["user", "staff", "admin"]
 UserStatus = Literal["active", "suspended"]
-SubscriptionStatus = Literal["active", "cancelled", "expired"]
+SubscriptionStatus = Literal["active", "grace", "cancelled", "expired"]
 InvoiceStatus = Literal["pending", "paid", "failed", "refunded"]
 BakeStatus = Literal["queued", "processing", "completed", "failed", "cancelled"]
 BakePriority = Literal["low", "normal", "high"]
@@ -29,8 +29,8 @@ ExportFormat = Literal["glb", "obj", "zip"]
 ProjectStatus = Literal["draft", "in_progress", "baking", "completed"]
 SubscriptionTier = Literal[
     "free",
-    "creator_monthly",
-    "creator_yearly",
+    "basic_monthly",
+    "basic_yearly",
     "pro_monthly",
     "pro_yearly",
 ]
@@ -67,6 +67,7 @@ class AdminUserListItem(BaseModel):
     role: str
     status: str
     is_verified: bool
+    is_internal: bool
     deleted_at: datetime | None
     created_at: datetime
 
@@ -84,6 +85,10 @@ class AdminUserDetailResponse(AdminUserListItem):
 
 class BanRequest(BaseModel):
     reason: str | None = Field(default=None, max_length=500)
+
+
+class SetInternalRequest(BaseModel):
+    is_internal: bool
 
 
 class StaffCreateRequest(BaseModel):
@@ -113,7 +118,11 @@ class AdminPlanResponse(BaseModel):
     allowed_export_formats: list[str]
     bake_priority: str
     is_active: bool
-    polar_product_id: str | None
+    max_ai_credits_per_cycle: int | None
+    max_scans_per_cycle: int | None
+    max_layers_per_zone: int
+    max_layers_per_project: int
+    allow_draw_artwork: bool
 
 
 class PlanUpdateRequest(BaseModel):
@@ -122,8 +131,12 @@ class PlanUpdateRequest(BaseModel):
     max_exports_per_month: int | None = Field(default=None, ge=0)
     allowed_export_formats: list[ExportFormat] | None = None
     bake_priority: BakePriority | None = None
-    polar_product_id: str | None = None
     is_active: bool | None = None
+    max_ai_credits_per_cycle: int | None = Field(default=None, ge=0)
+    max_scans_per_cycle: int | None = Field(default=None, ge=0)
+    max_layers_per_zone: int | None = Field(default=None, ge=0)
+    max_layers_per_project: int | None = Field(default=None, ge=0)
+    allow_draw_artwork: bool | None = None
 
 
 # --- Projects / Bake / Exports ---
@@ -194,4 +207,4 @@ class SystemHealthResponse(BaseModel):
 
 class RefundResponse(BaseModel):
     status: str
-    polar_refund_id: str
+    refund_id: uuid.UUID

@@ -233,9 +233,13 @@ export const adminBilling = {
     }),
   invoices: (query: InvoiceListQuery = {}, signal?: AbortSignal): Promise<CursorPage<AdminInvoice>> =>
     request(`/api/v1/admin/billing/invoices${queryString(query)}`, { signal }),
-  refund: (invoiceId: string): Promise<{ status: string; polar_refund_id: string }> =>
+  refund: (
+    invoiceId: string,
+    body: { amount_vnd: number; reason: string },
+  ): Promise<{ status: string; refund_id: string }> =>
     request(`/api/v1/admin/billing/invoices/${encodeURIComponent(invoiceId)}/refund`, {
       method: 'POST',
+      body: JSON.stringify(body),
     }),
 };
 

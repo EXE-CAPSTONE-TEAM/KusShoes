@@ -3,7 +3,7 @@ import uuid
 from datetime import datetime
 from typing import Literal
 
-from pydantic import BaseModel, Field, field_validator, model_validator
+from pydantic import BaseModel, EmailStr, Field, field_validator, model_validator
 
 
 class UpdateProfileRequest(BaseModel):
@@ -98,3 +98,106 @@ class UsageResponse(BaseModel):
 
 class MessageResponse(BaseModel):
     message: str
+
+
+# --- BR-15 Privacy ---
+
+
+class PrivacySettingsResponse(BaseModel):
+    is_profile_public: bool
+    show_designs_publicly: bool
+    is_searchable: bool
+    allow_analytics: bool
+    allow_ads_personalization: bool
+
+
+class UpdatePrivacySettingsRequest(BaseModel):
+    is_profile_public: bool | None = None
+    show_designs_publicly: bool | None = None
+    is_searchable: bool | None = None
+    allow_analytics: bool | None = None
+    allow_ads_personalization: bool | None = None
+
+
+# --- BR-12/13 Two-factor authentication ---
+
+
+class TwoFactorStatusResponse(BaseModel):
+    enabled: bool
+    method: str | None
+    recovery_email: str | None
+    recovery_email_verified: bool
+
+
+class SetRecoveryEmailRequest(BaseModel):
+    recovery_email: EmailStr
+
+
+class VerifyRecoveryEmailRequest(BaseModel):
+    code: str
+
+
+class TwoFactorSetupRequest(BaseModel):
+    method: Literal["totp", "email"]
+
+
+class TwoFactorSetupResponse(BaseModel):
+    method: Literal["totp", "email"]
+    totp_secret: str | None = None
+    provisioning_uri: str | None = None
+
+
+class TwoFactorEnableRequest(BaseModel):
+    method: Literal["totp", "email"]
+    code: str
+
+
+class TwoFactorEnableResponse(BaseModel):
+    message: str
+    recovery_codes: list[str]
+
+
+class TwoFactorDisableRequest(BaseModel):
+    password: str | None = None
+    code: str | None = None
+
+
+# --- BR-89 Consent ---
+
+
+class ConsentResponse(BaseModel):
+    id: uuid.UUID
+    type: str
+    doc_version: str
+    channel: str
+    created_at: datetime
+    revoked_at: datetime | None
+
+
+class RecordConsentRequest(BaseModel):
+    type: Literal["marketing_content", "academic_report", "cookie_analytics"]
+    doc_version: str = Field(default="1.0", max_length=20)
+    granted: bool = True
+
+
+# --- BR-18 Login history ---
+
+
+class LoginHistoryItem(BaseModel):
+    id: uuid.UUID
+    success: bool
+    ip_address: str | None
+    user_agent: str | None
+    created_at: datetime
+
+
+class LoginHistoryResponse(BaseModel):
+    items: list[LoginHistoryItem]
+
+
+# --- SF-11 Data export ---
+
+
+class DataExportResponse(BaseModel):
+    download_url: str
+    expires_in: int

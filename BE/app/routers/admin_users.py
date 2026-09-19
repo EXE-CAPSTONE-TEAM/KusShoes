@@ -1,5 +1,4 @@
 import uuid
-from datetime import datetime
 
 from fastapi import APIRouter, Depends, Query
 from sqlalchemy.ext.asyncio import AsyncSession
@@ -12,6 +11,7 @@ from app.schemas.admin import (
     AdminUserListItem,
     BanRequest,
     CursorPage,
+    SetInternalRequest,
     StaffCreateRequest,
     StaffCreateResponse,
     UserRole,
@@ -82,6 +82,17 @@ async def unban_user(
 ):
     await admin_service.unban_user(db, admin, user_id)
     return {"status": "unbanned"}
+
+
+@router.post("/users/{user_id}/internal")
+async def set_user_internal(
+    user_id: uuid.UUID,
+    body: SetInternalRequest,
+    db: AsyncSession = Depends(get_db),
+    admin=Depends(get_current_admin_write),
+):
+    await admin_service.set_user_internal(db, admin, user_id, is_internal=body.is_internal)
+    return {"status": "updated", "is_internal": body.is_internal}
 
 
 @router.post("/staff", response_model=StaffCreateResponse, status_code=201)

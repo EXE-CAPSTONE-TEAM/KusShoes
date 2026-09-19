@@ -1,7 +1,7 @@
 import uuid
 from datetime import UTC, datetime
 
-from sqlalchemy import select, text
+from sqlalchemy import func, select, text
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.models.user import User
@@ -40,6 +40,20 @@ async def get_by_username_any(db: AsyncSession, username: str) -> User | None:
     """Includes soft-deleted — used for duplicate registration check."""
     result = await db.execute(select(User).where(User.username == username))
     return result.scalar_one_or_none()
+
+
+async def get_by_username_case_insensitive(db: AsyncSession, username: str) -> User | None:
+    """BR-10: username uniqueness is case-insensitive."""
+    result = await db.execute(
+        select(User).where(func.lower(User.username) == username.lower())
+    )
+    return result.scalar_one_or_none()
+
+
+async def set_username(db: AsyncSession, user: User, username: str) -> None:
+    user.username = username
+    user.username_changed_at = datetime.now(UTC)
+    await db.flush()
 
 
 async def get_by_google_id(db: AsyncSession, google_id: str) -> User | None:
@@ -202,4 +216,39 @@ async def list_admin(
 
 async def set_status(db: AsyncSession, user: User, status: str) -> None:
     user.status = status
+    await db.flush()
+
+
+async def set_totp_pending(db: AsyncSession, user: User, secret: str) -> None:
+    """Secret is stored once setup starts; two_factor_enabled flips only on confirm."""
+    user.totp_secret = secret
+    await db.flush()
+
+
+async def enable_two_factor(db: AsyncSession, user: User, method: str) -> None:
+    user.two_factor_enabled = True
+    user.two_factor_method = method
+    await db.flush()
+
+
+async def disable_two_factor(db: AsyncSession, user: User) -> None:
+    user.two_factor_enabled = False
+    user.two_factor_method = None
+    user.totp_secret = None
+    await db.flush()
+
+
+async def set_recovery_email(db: AsyncSession, user: User, email: str) -> None:
+    user.recovery_email = email
+    user.recovery_email_verified = False
+    await db.flush()
+
+
+async def verify_recovery_email(db: AsyncSession, user: User) -> None:
+    user.recovery_email_verified = True
+    await db.flush()
+
+
+async def set_internal(db: AsyncSession, user: User, is_internal: bool) -> None:
+    user.is_internal = is_internal
     await db.flush()

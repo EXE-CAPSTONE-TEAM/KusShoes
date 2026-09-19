@@ -44,6 +44,36 @@ class User(Base, TimestampMixin):
     status: Mapped[str] = mapped_column(String(20), nullable=False, default="active")
     deleted_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True), nullable=True)
 
+    # BR-83: excluded from paying-customer KPIs, revenue, CAC, conversion.
+    is_internal: Mapped[bool] = mapped_column(Boolean, nullable=False, default=False)
+
+    # BR-15: privacy is opt-in by default (all off until the user turns them on).
+    is_profile_public: Mapped[bool] = mapped_column(Boolean, nullable=False, default=False)
+    show_designs_publicly: Mapped[bool] = mapped_column(Boolean, nullable=False, default=False)
+    is_searchable: Mapped[bool] = mapped_column(Boolean, nullable=False, default=False)
+    allow_analytics: Mapped[bool] = mapped_column(Boolean, nullable=False, default=False)
+    allow_ads_personalization: Mapped[bool] = mapped_column(Boolean, nullable=False, default=False)
+
+    # BR-10: 30-day cooldown between username changes.
+    username_changed_at: Mapped[datetime | None] = mapped_column(
+        DateTime(timezone=True), nullable=True
+    )
+
+    # BR-12/13: 2FA. totp_secret is base32, only ever set server-side.
+    two_factor_enabled: Mapped[bool] = mapped_column(Boolean, nullable=False, default=False)
+    two_factor_method: Mapped[str | None] = mapped_column(String(20), nullable=True)
+    totp_secret: Mapped[str | None] = mapped_column(String(64), nullable=True)
+    recovery_email: Mapped[str | None] = mapped_column(String(255), nullable=True)
+    recovery_email_verified: Mapped[bool] = mapped_column(
+        Boolean, nullable=False, default=False
+    )
+
+    # BR-84/85: first-touch acquisition, captured at registration.
+    acquisition_channel: Mapped[str | None] = mapped_column(String(30), nullable=True)
+    utm_source: Mapped[str | None] = mapped_column(String(100), nullable=True)
+    utm_campaign: Mapped[str | None] = mapped_column(String(100), nullable=True)
+    referral_code: Mapped[str | None] = mapped_column(String(30), nullable=True)
+
     # Relationships
     refresh_tokens: Mapped[list["RefreshToken"]] = relationship(
         back_populates="user", cascade="all, delete-orphan"

@@ -1,5 +1,5 @@
 from datetime import UTC, datetime, timedelta
-from unittest.mock import AsyncMock, patch
+from unittest.mock import patch
 
 import bcrypt
 import pytest
@@ -305,7 +305,7 @@ async def test_plan_update_and_validation(client, db):
     plans = await client.get("/api/v1/admin/plans", headers=admin_headers)
     assert plans.status_code == 200
     creator = next(
-        p for p in plans.json() if p["tier"] == "creator" and p["billing_cycle"] == "monthly"
+        p for p in plans.json() if p["tier"] == "basic" and p["billing_cycle"] == "monthly"
     )
 
     original_price = creator["price_vnd"]
@@ -319,7 +319,7 @@ async def test_plan_update_and_validation(client, db):
 
     public = await client.get("/api/v1/plans")
     public_creator = next(
-        p for p in public.json() if p["tier"] == "creator" and p["billing_cycle"] == "monthly"
+        p for p in public.json() if p["tier"] == "basic" and p["billing_cycle"] == "monthly"
     )
     assert public_creator["price_vnd"] == original_price + 1000
 
@@ -342,41 +342,38 @@ async def test_plan_update_and_validation(client, db):
 
 
 @pytest.mark.asyncio
-async def test_refund_paid_polar_invoice(client, db, authenticated_user):
+async def test_refund_paid_invoice_creates_ledger_entry(client, db, authenticated_user):
     admin_headers = await _admin_headers(db)
     from app.repositories import invoice_repo, plan_repo
 
-    plan = await plan_repo.get_by_tier_and_cycle(db, "creator", "monthly")
+    plan = await plan_repo.get_by_tier_and_cycle(db, "basic", "monthly")
     invoice = await invoice_repo.create_pending(
         db,
         user_id=authenticated_user.id,
         plan_id=plan.id,
-        plan_tier="creator",
+        plan_tier="basic",
         billing_cycle="monthly",
+        order_code=11111111,
+        listed_price_vnd=plan.price_vnd,
         amount_vnd=plan.price_vnd,
-        payment_method="polar",
+        payment_method="payos",
         gateway_transaction_id="checkout_refund_test",
     )
     await invoice_repo.mark_paid(
-        db, invoice, paid_at=datetime.now(UTC),
-        gateway_metadata_patch={"polar_order_id": "order_refund_test"},
+        db, invoice, paid_at=datetime.now(UTC), payment_reference="ref-refund-test",
     )
     await db.commit()
 
-    with patch(
-        "app.infrastructure.polar_client.create_refund",
-        new=AsyncMock(return_value="refund_123"),
-    ):
-        response = await client.post(
-            f"/api/v1/admin/billing/invoices/{invoice.id}/refund", headers=admin_headers
-        )
+    response = await client.post(
+        f"/api/v1/admin/billing/invoices/{invoice.id}/refund",
+        headers=admin_headers,
+        json={"amount_vnd": plan.price_vnd, "reason": "Khách yêu cầu trong 7 ngày"},
+    )
     assert response.status_code == 200
-    assert response.json()["polar_refund_id"] == "refund_123"
+    assert response.json()["status"] == "refunded"
 
-    # DB status vẫn 'paid' — webhook mới là write path
     await db.refresh(invoice)
-    assert invoice.status == "paid"
-    assert invoice.gateway_metadata["polar_refund_id"] == "refund_123"
+    assert invoice.status == "refunded"
 
 
 @pytest.mark.asyncio
@@ -384,20 +381,24 @@ async def test_refund_pending_invoice_rejected(client, db, authenticated_user):
     admin_headers = await _admin_headers(db)
     from app.repositories import invoice_repo, plan_repo
 
-    plan = await plan_repo.get_by_tier_and_cycle(db, "creator", "monthly")
+    plan = await plan_repo.get_by_tier_and_cycle(db, "basic", "monthly")
     invoice = await invoice_repo.create_pending(
         db,
         user_id=authenticated_user.id,
         plan_id=plan.id,
-        plan_tier="creator",
+        plan_tier="basic",
         billing_cycle="monthly",
+        order_code=22222222,
+        listed_price_vnd=plan.price_vnd,
         amount_vnd=plan.price_vnd,
-        payment_method="polar",
+        payment_method="payos",
     )
     await db.commit()
 
     response = await client.post(
-        f"/api/v1/admin/billing/invoices/{invoice.id}/refund", headers=admin_headers
+        f"/api/v1/admin/billing/invoices/{invoice.id}/refund",
+        headers=admin_headers,
+        json={"amount_vnd": plan.price_vnd, "reason": "test"},
     )
     assert response.status_code == 409
     assert response.json()["code"] == "INVOICE_NOT_REFUNDABLE"
@@ -505,16 +506,19 @@ async def test_admin_lists_include_display_fields(client, db, authenticated_user
             exports=[{"format": "glb", "file_path": "exports/display.glb"}],
         )
     )[0]
-    plan = await plan_repo.get_by_tier_and_cycle(db, "creator", "monthly")
+    plan = await plan_repo.get_by_tier_and_cycle(db, "basic", "monthly")
     invoice = await invoice_repo.create_pending(
         db,
         user_id=authenticated_user.id,
         plan_id=plan.id,
-        plan_tier="creator",
+        plan_tier="basic",
         billing_cycle="monthly",
+        order_code=33333333,
+        listed_price_vnd=plan.price_vnd,
         amount_vnd=plan.price_vnd,
-        gateway_metadata={"polar_order_id": "polar-display-order"},
+        payment_method="payos",
     )
+    invoice.payment_reference = "payos-display-order"
     await db.commit()
 
     subscriptions = await client.get(
@@ -528,7 +532,7 @@ async def test_admin_lists_include_display_fields(client, db, authenticated_user
     invoices = await client.get("/api/v1/admin/billing/invoices", headers=admin_headers)
     invoice_body = next(item for item in _items(invoices) if item["id"] == str(invoice.id))
     assert invoice_body["user_email"] == authenticated_user.email
-    assert invoice_body["polar_order_id"] == "polar-display-order"
+    assert invoice_body["payment_reference"] == "payos-display-order"
 
     projects = await client.get("/api/v1/admin/projects", headers=admin_headers)
     project_body = next(item for item in _items(projects) if item["id"] == str(project.id))
@@ -575,14 +579,17 @@ async def test_admin_display_lists_use_constant_query_count(db, authenticated_us
         user_id=authenticated_user.id,
         exports=[{"format": "glb", "file_path": "exports/query-count.glb"}],
     )
-    plan = await plan_repo.get_by_tier_and_cycle(db, "creator", "monthly")
+    plan = await plan_repo.get_by_tier_and_cycle(db, "basic", "monthly")
     await invoice_repo.create_pending(
         db,
         user_id=authenticated_user.id,
         plan_id=plan.id,
-        plan_tier="creator",
+        plan_tier="basic",
         billing_cycle="monthly",
+        order_code=44444444,
+        listed_price_vnd=plan.price_vnd,
         amount_vnd=plan.price_vnd,
+        payment_method="payos",
     )
     await audit_log_repo.create(
         db, actor_id=admin.id, actor_role="admin", action="query.count"
@@ -725,7 +732,7 @@ async def test_admin_query_validation_and_openapi(client, db):
     schemas = openapi["components"]["schemas"]
     expected_fields = {
         "AdminSubscriptionResponse": {"user_email"},
-        "AdminInvoiceResponse": {"user_email", "polar_order_id"},
+        "AdminInvoiceResponse": {"user_email", "payment_reference"},
         "AdminProjectListItem": {"owner_email"},
         "AdminBakeJobResponse": {"project_name"},
         "AdminBakeJobDetailResponse": {"project_name"},

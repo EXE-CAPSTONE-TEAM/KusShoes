@@ -135,6 +135,7 @@ export const Login: React.FC<LoginProps> = ({ setPage }) => {
           email: normalizeEmail(email),
           password,
           confirmPassword,
+          ageConfirmed: agreeTerms,
         });
         setPendingUserId(result.userId);
         setNotice(result.message || `A verification code was sent to ${result.email}.`);
@@ -531,7 +532,7 @@ export const Login: React.FC<LoginProps> = ({ setPage }) => {
                     ) : (
                       <Square size={16} className={styles.checkboxIcon} />
                     )}
-                    <span>I agree to the Terms of Service & Privacy</span>
+                    <span>I confirm I'm 16 or older and agree to the Terms of Service & Privacy</span>
                   </label>
                 </div>
               )}

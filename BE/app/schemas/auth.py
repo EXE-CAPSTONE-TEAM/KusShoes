@@ -11,6 +11,19 @@ class RegisterRequest(BaseModel):
     password: str
     confirm_password: str
     full_name: str
+    # BR-02: self-certified >=16, must be explicitly ticked.
+    age_confirmed: bool = False
+    # BR-84: first-touch attribution, optional — FE reads these from the URL/cookie.
+    utm_source: str | None = None
+    utm_campaign: str | None = None
+    referral_code: str | None = None
+
+    @field_validator("age_confirmed")
+    @classmethod
+    def validate_age_confirmed(cls, v: bool) -> bool:
+        if not v:
+            raise ValueError("Bạn cần xác nhận đã đủ 16 tuổi để đăng ký")
+        return v
 
     @field_validator("username")
     @classmethod
@@ -75,6 +88,28 @@ class OTPResendResponse(BaseModel):
 class LoginRequest(BaseModel):
     email: EmailStr
     password: str
+
+
+class LoginResult(BaseModel):
+    """Either tokens (no 2FA / already passed) or a challenge to complete."""
+
+    access_token: str | None = None
+    token_type: str = "bearer"
+    mfa_required: bool = False
+    challenge_token: str | None = None
+    method: str | None = None
+
+
+class TwoFactorLoginVerifyRequest(BaseModel):
+    challenge_token: str
+    code: str | None = None
+    recovery_code: str | None = None
+
+    @model_validator(mode="after")
+    def one_of_code_or_recovery(self) -> "TwoFactorLoginVerifyRequest":
+        if not self.code and not self.recovery_code:
+            raise ValueError("Cần nhập mã xác thực hoặc mã khôi phục")
+        return self
 
 
 class ForgotPasswordRequest(BaseModel):

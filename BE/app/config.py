@@ -60,11 +60,21 @@ class Settings(BaseSettings):
     SENTRY_DSN: str = ""
     SENTRY_TRACES_SAMPLE_RATE: float = 0.1
 
-    # Polar (billing)
-    POLAR_ACCESS_TOKEN: str = ""
-    POLAR_WEBHOOK_SECRET: str = ""
-    POLAR_SERVER: str = "sandbox"  # "sandbox" | "production"
-    POLAR_SUCCESS_URL: str = ""
+    # PayOS (billing) — https://payos.vn
+    PAYOS_CLIENT_ID: str = ""
+    PAYOS_API_KEY: str = ""
+    PAYOS_CHECKSUM_KEY: str = ""
+    PAYOS_BASE_URL: str = "https://api-merchant.payos.vn"
+    PAYOS_RETURN_URL: str = ""
+    PAYOS_CANCEL_URL: str = ""
+
+    # MoMo (billing) — https://developers.momo.vn
+    MOMO_PARTNER_CODE: str = ""
+    MOMO_ACCESS_KEY: str = ""
+    MOMO_SECRET_KEY: str = ""
+    MOMO_ENDPOINT: str = "https://test-payment.momo.vn/v2/gateway/api/create"
+    MOMO_REDIRECT_URL: str = ""
+    MOMO_IPN_URL: str = ""
 
     @property
     def is_production(self) -> bool:

@@ -4,9 +4,15 @@ from copy import deepcopy
 
 from sqlalchemy.ext.asyncio import AsyncSession
 
-from app.exceptions import AssetNotFound, ProjectAccessDenied, StorageFileNotFound
+from app.exceptions import (
+    AssetNotFound,
+    DesignLayerLimitExceeded,
+    ProjectAccessDenied,
+    ProjectLocked,
+    StorageFileNotFound,
+)
 from app.infrastructure import storage
-from app.repositories import project_asset_repo, project_repo
+from app.repositories import project_asset_repo, project_repo, subscription_repo
 from app.schemas.editor import (
     EditorContextResponse,
     EditorDesignResponse,
@@ -16,7 +22,7 @@ from app.schemas.editor import (
     EditorSaveDesignRequest,
     EditorUserResponse,
 )
-from app.services.project_service import require_owner
+from app.services.project_service import count_design_layers, require_owner
 from app.types import JsonObject
 
 
@@ -37,9 +43,15 @@ async def save_editor_design(
     body: EditorSaveDesignRequest,
 ) -> EditorDesignResponse:
     project = await require_owner(db, project_id, user)
+    if project.is_locked:
+        raise ProjectLocked()
     model_asset = await _get_canonical_model_asset(db, project)
     if not model_asset:
         raise AssetNotFound()
+    subscription = await subscription_repo.get_by_user(db, user.id)
+    max_layers = subscription.plan.max_layers_per_project if subscription else 30
+    if count_design_layers(body.designConfig) > max_layers:
+        raise DesignLayerLimitExceeded()
     design_config = _with_model_asset_id(body.designConfig, model_asset.id)
     await project_repo.save_design(
         db,

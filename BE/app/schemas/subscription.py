@@ -1,5 +1,6 @@
 import uuid
 from datetime import datetime
+from typing import Literal
 
 from pydantic import BaseModel, Field
 
@@ -13,6 +14,11 @@ class PlanResponse(BaseModel):
     max_exports_per_month: int | None
     allowed_export_formats: list[str]
     bake_priority: str
+    max_ai_credits_per_cycle: int | None
+    max_scans_per_cycle: int | None
+    max_layers_per_zone: int
+    max_layers_per_project: int
+    allow_draw_artwork: bool
 
 
 class SubscriptionResponse(BaseModel):
@@ -27,6 +33,7 @@ class SubscriptionResponse(BaseModel):
 class CheckoutRequest(BaseModel):
     tier: str
     billing_cycle: str
+    gateway: Literal["payos", "momo"]
 
 
 class CheckoutResponse(BaseModel):
@@ -37,19 +44,13 @@ class CancelSubscriptionRequest(BaseModel):
     immediate: bool = False
 
 
-class ChangePlanRequest(BaseModel):
-    tier: str
-    billing_cycle: str
-
-
-class PortalLinkResponse(BaseModel):
-    portal_url: str
-
-
 class InvoiceResponse(BaseModel):
     id: uuid.UUID
+    order_code: int
     plan_tier: str
     billing_cycle: str
+    listed_price_vnd: int
+    discount_vnd: int
     amount_vnd: int
     payment_method: str
     status: str
@@ -65,7 +66,12 @@ class AdminSubscriptionResponse(SubscriptionResponse):
 class AdminInvoiceResponse(InvoiceResponse):
     user_id: uuid.UUID
     user_email: str | None
-    polar_order_id: str | None
+    payment_reference: str | None
+
+
+class RefundRequest(BaseModel):
+    amount_vnd: int = Field(gt=0)
+    reason: str = Field(min_length=1, max_length=500)
 
 
 class InvoiceListQuery(BaseModel):

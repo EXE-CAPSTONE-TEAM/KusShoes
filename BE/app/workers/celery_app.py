@@ -29,13 +29,25 @@ celery_app.conf.update(
         "low": {"exchange": "low", "routing_key": "low"},
     },
     beat_schedule={
-        "expire-subscriptions-daily": {
-            "task": "app.workers.tasks.maintenance_tasks.expire_subscriptions",
+        "enter-grace-period-daily": {
+            "task": "app.workers.tasks.maintenance_tasks.enter_grace_period",
+            "schedule": 86400.0,  # 24h
+        },
+        "finalize-grace-expiry-daily": {
+            "task": "app.workers.tasks.maintenance_tasks.finalize_grace_expiry",
+            "schedule": 86400.0,  # 24h
+        },
+        "send-renewal-reminders-daily": {
+            "task": "app.workers.tasks.maintenance_tasks.send_renewal_reminders",
             "schedule": 86400.0,  # 24h
         },
         "cleanup-stale-uploads-hourly": {
             "task": "app.workers.tasks.maintenance_tasks.cleanup_stale_uploads",
             "schedule": 3600.0,  # 1h
+        },
+        "purge-old-login-history-daily": {
+            "task": "app.workers.tasks.maintenance_tasks.purge_old_login_history",
+            "schedule": 86400.0,  # 24h
         },
     },
 )

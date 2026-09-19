@@ -21,9 +21,24 @@ def cleanup_user_files(user_id: str) -> dict:
     return asyncio.run(_cleanup_user_files(uuid.UUID(user_id)))
 
 
-@celery_app.task(name="app.workers.tasks.maintenance_tasks.expire_subscriptions")
-def expire_subscriptions() -> dict:
-    return asyncio.run(_expire_subscriptions())
+@celery_app.task(name="app.workers.tasks.maintenance_tasks.enter_grace_period")
+def enter_grace_period() -> dict:
+    return asyncio.run(_enter_grace_period())
+
+
+@celery_app.task(name="app.workers.tasks.maintenance_tasks.finalize_grace_expiry")
+def finalize_grace_expiry() -> dict:
+    return asyncio.run(_finalize_grace_expiry())
+
+
+@celery_app.task(name="app.workers.tasks.maintenance_tasks.send_renewal_reminders")
+def send_renewal_reminders() -> dict:
+    return asyncio.run(_send_renewal_reminders())
+
+
+@celery_app.task(name="app.workers.tasks.maintenance_tasks.purge_old_login_history")
+def purge_old_login_history() -> dict:
+    return asyncio.run(_purge_old_login_history())
 
 
 @celery_app.task(name="app.workers.tasks.maintenance_tasks.cleanup_stale_uploads")
@@ -43,9 +58,24 @@ async def _cleanup_user_files(user_id: uuid.UUID) -> dict:
     return maintenance_service.delete_paths(paths)
 
 
-async def _expire_subscriptions() -> dict:
+async def _enter_grace_period() -> dict:
     async with AsyncSessionLocal() as db:
-        return await maintenance_service.expire_subscriptions(db)
+        return await maintenance_service.enter_grace_period(db)
+
+
+async def _finalize_grace_expiry() -> dict:
+    async with AsyncSessionLocal() as db:
+        return await maintenance_service.finalize_grace_expiry(db)
+
+
+async def _send_renewal_reminders() -> dict:
+    async with AsyncSessionLocal() as db:
+        return await maintenance_service.send_renewal_reminders(db)
+
+
+async def _purge_old_login_history() -> dict:
+    async with AsyncSessionLocal() as db:
+        return await maintenance_service.purge_old_login_history(db)
 
 
 async def _cleanup_stale_uploads() -> dict:

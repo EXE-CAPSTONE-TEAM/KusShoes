@@ -18,11 +18,11 @@ class Subscription(Base, TimestampMixin):
     __tablename__ = "subscriptions"
     __table_args__ = (
         CheckConstraint(
-            "status IN ('active', 'cancelled', 'expired')",
+            "status IN ('active', 'grace', 'cancelled', 'expired')",
             name="ck_subscriptions_status",
         ),
         CheckConstraint(
-            "tier IN ('free', 'creator_monthly', 'creator_yearly', 'pro_monthly', 'pro_yearly')",
+            "tier IN ('free', 'basic_monthly', 'basic_yearly', 'pro_monthly', 'pro_yearly')",
             name="ck_subscriptions_tier",
         ),
     )
@@ -49,11 +49,18 @@ class Subscription(Base, TimestampMixin):
     expires_at: Mapped[datetime | None] = mapped_column(
         DateTime(timezone=True), nullable=True
     )  # NULL = free plan (no expiry)
+    # BR-90: 3-day grace window after expires_at — set when entering GRACE,
+    # cleared on renewal or once grace elapses into a free downgrade.
+    grace_until: Mapped[datetime | None] = mapped_column(DateTime(timezone=True), nullable=True)
+    # BR-23 anchor: cycle quota (exports/AI credits) resets when the account
+    # crosses this date, not on the calendar month. Free tier rolls it forward
+    # by the caller (services.quota); paid tiers only move it on payment.
+    current_period_start: Mapped[datetime] = mapped_column(
+        DateTime(timezone=True), default=utcnow, nullable=False
+    )
     last_invoice_id: Mapped[uuid.UUID | None] = mapped_column(
         UUID(as_uuid=True), ForeignKey("invoices.id"), nullable=True
     )
-    polar_subscription_id: Mapped[str | None] = mapped_column(String(255), nullable=True)
-    polar_customer_id: Mapped[str | None] = mapped_column(String(255), nullable=True)
     cancel_at_period_end: Mapped[bool] = mapped_column(
         Boolean, nullable=False, default=False
     )
@@ -63,7 +70,7 @@ class Subscription(Base, TimestampMixin):
 
     @property
     def is_active(self) -> bool:
-        return self.status == "active"
+        return self.status in ("active", "grace")
 
     @property
     def is_free(self) -> bool:

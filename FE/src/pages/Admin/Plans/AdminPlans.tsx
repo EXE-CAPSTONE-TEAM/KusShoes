@@ -36,8 +36,12 @@ export const AdminPlans: React.FC = () => {
       max_exports_per_month: plan.max_exports_per_month,
       allowed_export_formats: plan.allowed_export_formats,
       bake_priority: plan.bake_priority,
-      polar_product_id: plan.polar_product_id,
       is_active: plan.is_active,
+      max_ai_credits_per_cycle: plan.max_ai_credits_per_cycle,
+      max_scans_per_cycle: plan.max_scans_per_cycle,
+      max_layers_per_zone: plan.max_layers_per_zone,
+      max_layers_per_project: plan.max_layers_per_project,
+      allow_draw_artwork: plan.allow_draw_artwork,
     });
   };
 
@@ -194,14 +198,55 @@ export const AdminPlans: React.FC = () => {
                     ))}
                   </div>
                 </div>
-                <div className={`${shared.inputGroup} ${shared.formGridFull}`}>
-                  <label>Polar Product ID</label>
+                <div className={shared.inputGroup}>
+                  <label>AI Credits/chu kỳ</label>
                   <input
                     className={shared.input}
-                    value={form.polar_product_id ?? ''}
-                    onChange={(e) => setForm({ ...form, polar_product_id: e.target.value })}
+                    type="number"
+                    min={0}
+                    value={form.max_ai_credits_per_cycle ?? 0}
+                    onChange={(e) => setForm({ ...form, max_ai_credits_per_cycle: Number(e.target.value) })}
                   />
-                  <span className={shared.formHint}>Phải là giá trị duy nhất trên toàn hệ thống.</span>
+                </div>
+                <div className={shared.inputGroup}>
+                  <label>Lượt quét/chu kỳ</label>
+                  <input
+                    className={shared.input}
+                    type="number"
+                    min={0}
+                    value={form.max_scans_per_cycle ?? 0}
+                    onChange={(e) => setForm({ ...form, max_scans_per_cycle: Number(e.target.value) })}
+                  />
+                </div>
+                <div className={shared.inputGroup}>
+                  <label>Layer/Zone</label>
+                  <input
+                    className={shared.input}
+                    type="number"
+                    min={0}
+                    value={form.max_layers_per_zone ?? 0}
+                    onChange={(e) => setForm({ ...form, max_layers_per_zone: Number(e.target.value) })}
+                  />
+                </div>
+                <div className={shared.inputGroup}>
+                  <label>Layer/Dự án</label>
+                  <input
+                    className={shared.input}
+                    type="number"
+                    min={0}
+                    value={form.max_layers_per_project ?? 0}
+                    onChange={(e) => setForm({ ...form, max_layers_per_project: Number(e.target.value) })}
+                  />
+                </div>
+                <div className={`${shared.inputGroup} ${shared.formGridFull}`}>
+                  <label className={shared.checkRow}>
+                    <input
+                      type="checkbox"
+                      checked={form.allow_draw_artwork ?? false}
+                      onChange={(e) => setForm({ ...form, allow_draw_artwork: e.target.checked })}
+                    />
+                    Cho phép Draw Artwork
+                  </label>
                 </div>
                 <div className={`${shared.inputGroup} ${shared.formGridFull}`}>
                   <label className={shared.checkRow}>

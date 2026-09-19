@@ -12,6 +12,7 @@ from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.exceptions import (
     AccountBanned,
+    AuthAccountLocked,
     AuthRateLimited,
     AuthRefreshInvalid,
     AuthRoleForbidden,
@@ -19,6 +20,8 @@ from app.exceptions import (
     AuthSSOInvalid,
     AuthTokenExpired,
     AuthTokenInvalid,
+    AuthTwoFactorChallengeInvalid,
+    AuthTwoFactorCodeInvalid,
     AuthUserSuspended,
     EmailAlreadyTaken,
     EmailNotVerified,
@@ -36,8 +39,18 @@ from app.exceptions import (
     PasswordResetLocked,
     UsernameAlreadyTaken,
 )
-from app.infrastructure import google_oauth, otp_store, rate_limiter, recovery_store, task_queue
+from app.infrastructure import (
+    google_oauth,
+    login_guard,
+    otp_store,
+    rate_limiter,
+    recovery_store,
+    task_queue,
+    twofa_store,
+)
 from app.repositories import (
+    consent_repo,
+    login_history_repo,
     monthly_usage_repo,
     plan_repo,
     refresh_token_repo,
@@ -46,14 +59,16 @@ from app.repositories import (
 )
 from app.schemas.auth import (
     ForgotPasswordResponse,
+    LoginResult,
     OTPResendResponse,
     RegisterResponse,
     SessionListResponse,
     SessionResponse,
-    SSODesktopSessionResponse,
     SSOCreateResponse,
+    SSODesktopSessionResponse,
     SSOVerifyResponse,
 )
+from app.services import twofa_service
 from app.utils.jwt import (
     create_access_token,
     create_raw_refresh_token,
@@ -82,6 +97,9 @@ async def register_user(
     password: str,
     full_name: str,
     client_ip: str,
+    utm_source: str | None = None,
+    utm_campaign: str | None = None,
+    referral_code: str | None = None,
 ) -> RegisterResponse:
     from app.config import settings
 
@@ -111,12 +129,26 @@ async def register_user(
         last_name=last_name,
     )
 
+    # BR-84/85: first-touch attribution, captured once at registration.
+    if utm_source or utm_campaign or referral_code:
+        user.acquisition_channel = "referral" if referral_code else (utm_source or "direct")
+        user.utm_source = utm_source
+        user.utm_campaign = utm_campaign
+        user.referral_code = referral_code
+
     # Create free subscription
     free_plan = await plan_repo.get_free_plan(db)
     if free_plan:
         await subscription_repo.create_free(db, user_id=user.id, plan_id=free_plan.id)
 
-    await monthly_usage_repo.create_for_user(db, user_id=user.id)
+    await monthly_usage_repo.create_for_user(
+        db, user_id=user.id, period_start=datetime.now(UTC)
+    )
+
+    # BR-02/BR-89: age self-certification + ToS/privacy consent, recorded at signup.
+    await consent_repo.create(db, user_id=user.id, type="age_confirmation", doc_version="1.0")
+    await consent_repo.create(db, user_id=user.id, type="tos", doc_version="1.0")
+    await consent_repo.create(db, user_id=user.id, type="privacy_policy", doc_version="1.0")
 
     # Make the account durable before creating external OTP/email side effects.
     await db.commit()
@@ -222,7 +254,7 @@ async def login_user(
     password: str,
     client_ip: str,
     user_agent: str | None = None,
-) -> IssuedTokens:
+) -> IssuedTokens | LoginResult:
     from app.config import settings
 
     await _enforce_rate_limit(
@@ -239,19 +271,45 @@ async def login_user(
         limit=settings.LOGIN_RATE_LIMIT,
         window_seconds=settings.LOGIN_RATE_WINDOW_SECONDS,
     )
+
+    # BR-86: 5 wrong-password attempts / 15 min, tracked per-account and per-IP —
+    # distinct from the generic rate limiter above (which counts every attempt).
+    for scope, identifier in (("account", email), ("ip", client_ip)):
+        lock_ttl = await login_guard.get_lock_ttl(redis, scope, identifier)
+        if lock_ttl is not None:
+            raise AuthAccountLocked(lock_ttl)
+
     user = await user_repo.get_by_email(db, email)
+
+    async def _record_failure() -> None:
+        await login_history_repo.record(
+            db,
+            user_id=user.id if user else None,
+            email_attempted=email,
+            success=False,
+            ip_address=client_ip,
+            user_agent=user_agent,
+        )
+        await db.commit()
+        locked_out = await login_guard.record_failure(redis, "account", email)
+        await login_guard.record_failure(redis, "ip", client_ip)
+        if locked_out and user:
+            task_queue.enqueue_account_locked_email(user.email)
 
     # User enumeration prevention: treat missing user same as wrong password
     if not user or not user.password_hash:
         if user and not user.password_hash:
             # Google-only account — reveal specific error (not enumeration risk,
             # because we already know the email belongs to a valid account)
+            await _record_failure()
             raise GoogleOnlyAccount()
         await asyncio.sleep(0.3)
+        await _record_failure()
         raise InvalidCredentials()
 
     if not verify_password(password, user.password_hash):
         await asyncio.sleep(0.3)
+        await _record_failure()
         raise InvalidCredentials()
 
     if not user.is_verified:
@@ -260,7 +318,69 @@ async def login_user(
     if user.status != "active":
         raise AccountBanned()
 
-    return await _issue_tokens(db, user, user_agent=user_agent, ip_address=client_ip)
+    await login_guard.reset(redis, "account", email)
+    await login_guard.reset(redis, "ip", client_ip)
+
+    if user.two_factor_enabled:
+        challenge_token = await twofa_store.create_challenge(redis, str(user.id))
+        await twofa_service.send_login_challenge_code(redis, user)
+        return LoginResult(
+            mfa_required=True, challenge_token=challenge_token, method=user.two_factor_method
+        )
+
+    return await _complete_login(db, user, ip_address=client_ip, user_agent=user_agent)
+
+
+async def verify_two_factor_login(
+    db: AsyncSession,
+    redis: aioredis.Redis,
+    *,
+    challenge_token: str,
+    code: str | None,
+    recovery_code: str | None,
+    client_ip: str,
+    user_agent: str | None = None,
+) -> IssuedTokens:
+    user_id = await twofa_store.peek_challenge(redis, challenge_token)
+    if not user_id:
+        raise AuthTwoFactorChallengeInvalid()
+    user = await user_repo.get_by_id(db, uuid.UUID(user_id))
+    if not user or user.status != "active":
+        raise AuthTwoFactorChallengeInvalid()
+
+    ok = await twofa_service.verify_login_code(
+        db, redis, user, code=code, recovery_code=recovery_code
+    )
+    if not ok:
+        raise AuthTwoFactorCodeInvalid()
+
+    await twofa_store.delete_challenge(redis, challenge_token)
+    return await _complete_login(db, user, ip_address=client_ip, user_agent=user_agent)
+
+
+async def _complete_login(
+    db: AsyncSession, user, *, ip_address: str | None, user_agent: str | None
+) -> IssuedTokens:
+    """Shared tail of every successful login path — BR-14 new-device email
+    (checked before recording this login) + BR-18 login history."""
+    is_new_device = not await login_history_repo.has_prior_successful_login(
+        db, user.id, ip_address=ip_address, user_agent=user_agent
+    )
+    await login_history_repo.record(
+        db,
+        user_id=user.id,
+        email_attempted=user.email,
+        success=True,
+        ip_address=ip_address,
+        user_agent=user_agent,
+    )
+    tokens = await _issue_tokens(db, user, user_agent=user_agent, ip_address=ip_address)
+    await db.commit()
+    if is_new_device:
+        task_queue.enqueue_new_device_login_email(
+            user.email, ip_address=ip_address, user_agent=user_agent
+        )
+    return tokens
 
 
 # ── UC-AUTH-004: Google OAuth ─────────────────────────────────────────────────
@@ -333,7 +453,9 @@ async def handle_google_callback(
     free_plan = await plan_repo.get_free_plan(db)
     if free_plan:
         await subscription_repo.create_free(db, user_id=new_user.id, plan_id=free_plan.id)
-    await monthly_usage_repo.create_for_user(db, user_id=new_user.id)
+    await monthly_usage_repo.create_for_user(
+        db, user_id=new_user.id, period_start=datetime.now(UTC)
+    )
 
     tokens = await _issue_tokens(db, new_user, user_agent=user_agent, ip_address=ip_address)
     return {**tokens.__dict__, "is_new_user": True, "linked": False}

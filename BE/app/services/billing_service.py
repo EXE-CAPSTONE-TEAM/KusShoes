@@ -1,24 +1,36 @@
+import json
+import math
 import uuid
 from datetime import UTC, datetime, timedelta
 
 from loguru import logger
 from sqlalchemy.ext.asyncio import AsyncSession
 
+from app.config import settings
 from app.exceptions import (
     InvoiceNotRefundable,
+    RefundInvalidAmount,
     SubAlreadyActive,
-    SubNoPolarCustomer,
+    SubInvalidGateway,
     SubNotFound,
     SubPaymentGatewayError,
     SubPlanNotFound,
-    SubPlanNotMappedToPolar,
+    SubPlanNotSellable,
 )
-from app.infrastructure import polar_client, task_queue
-from app.infrastructure.polar_client import WebhookUnknownTypeError, WebhookVerificationError
+from app.infrastructure import momo_client, payos_client, task_queue
+from app.infrastructure.momo_client import MoMoError, MoMoSignatureError
+from app.infrastructure.payos_client import PayOSError, PayOSSignatureError
 from app.models.invoice import Invoice
 from app.models.plan import Plan
 from app.models.subscription import Subscription
-from app.repositories import invoice_repo, plan_repo, subscription_repo, user_repo
+from app.repositories import (
+    invoice_repo,
+    plan_repo,
+    project_repo,
+    refund_repo,
+    subscription_repo,
+    user_repo,
+)
 from app.schemas.subscription import AdminInvoiceResponse, AdminSubscriptionResponse
 from app.services.audit import record_audit
 
@@ -26,6 +38,35 @@ _CYCLE_TIMEDELTA = {
     "monthly": timedelta(days=30),
     "yearly": timedelta(days=365),
 }
+
+
+def _generate_order_code() -> int:
+    """PayOS orderCode / MoMo orderId both need a compact unique identifier —
+    a random value, not the sequential invoice UUID."""
+    return uuid.uuid4().int & 0x7FFFFFFFFFFF
+
+
+def _is_midcycle_upgrade(
+    current: Subscription | None, *, new_billing_cycle: str, new_price_vnd: int, now: datetime
+) -> bool:
+    """BR-24: upgrading (not downgrading/switching cycle) while the current
+    paid cycle hasn't expired yet."""
+    if not current or current.tier == "free" or current.status != "active":
+        return False
+    if not current.expires_at or current.expires_at <= now:
+        return False
+    if current.billing_cycle != new_billing_cycle:
+        return False
+    return new_price_vnd > current.plan.price_vnd
+
+
+def _prorated_upgrade_amount(
+    *, old_price_vnd: int, new_price_vnd: int, expires_at: datetime, cycle_days: int, now: datetime
+) -> int:
+    """BR-24: (giá mới − giá cũ) × ngày còn lại ÷ ngày chu kỳ, làm tròn lên hàng nghìn."""
+    days_remaining = max((expires_at - now).days, 0)
+    raw = (new_price_vnd - old_price_vnd) * days_remaining / cycle_days
+    return max(math.ceil(raw / 1000) * 1000, 1000)
 
 
 # --- Public read endpoints ---
@@ -52,99 +93,99 @@ async def list_invoices(
 
 
 async def create_checkout_session(
-    db: AsyncSession, user, *, tier: str, billing_cycle: str
+    db: AsyncSession, user, *, tier: str, billing_cycle: str, gateway: str
 ) -> str:
+    # Note: BR-03 (unverified accounts can't pay) is already enforced upstream —
+    # get_current_user's authenticate_user_access_token rejects unverified
+    # users before any handler runs, so this endpoint is unreachable for them.
+    if gateway not in ("payos", "momo"):
+        raise SubInvalidGateway()
+
     plan = await plan_repo.get_by_tier_and_cycle(db, tier, billing_cycle)
     if not plan:
         raise SubPlanNotFound()
-    if not plan.polar_product_id:
-        raise SubPlanNotMappedToPolar()
+    if tier == "free" or plan.price_vnd <= 0:
+        raise SubPlanNotSellable()
 
     current = await subscription_repo.get_by_user(db, user.id)
     if current and current.tier == f"{tier}_{billing_cycle}" and current.status == "active":
         raise SubAlreadyActive()
 
+    now = datetime.now(UTC)
+    amount_vnd = plan.price_vnd
+    if _is_midcycle_upgrade(
+        current, new_billing_cycle=billing_cycle, new_price_vnd=plan.price_vnd, now=now
+    ):
+        cycle_days = 30 if billing_cycle == "monthly" else 365
+        amount_vnd = _prorated_upgrade_amount(
+            old_price_vnd=current.plan.price_vnd,
+            new_price_vnd=plan.price_vnd,
+            expires_at=current.expires_at,
+            cycle_days=cycle_days,
+            now=now,
+        )
+
+    order_code = _generate_order_code()
     invoice = await invoice_repo.create_pending(
         db,
         user_id=user.id,
         plan_id=plan.id,
         plan_tier=tier,
         billing_cycle=billing_cycle,
-        amount_vnd=plan.price_vnd,
-        payment_method="polar",
+        order_code=order_code,
+        listed_price_vnd=plan.price_vnd,
+        discount_vnd=plan.price_vnd - amount_vnd,
+        amount_vnd=amount_vnd,
+        payment_method=gateway,
     )
     await db.commit()
 
+    description = f"KusShoes {tier} {billing_cycle}"[:25]
     try:
-        checkout_id, checkout_url = await polar_client.create_checkout(
-            product_id=plan.polar_product_id,
-            external_customer_id=str(user.id),
-            metadata={
-                "invoice_id": str(invoice.id),
-                "user_id": str(user.id),
-                "tier": tier,
-                "billing_cycle": billing_cycle,
-            },
-        )
-    except Exception as exc:
-        logger.error(f"Polar checkout creation failed: {exc}")
+        if gateway == "payos":
+            checkout_url, payment_link_id = await payos_client.create_payment_link(
+                order_code=order_code,
+                amount=amount_vnd,
+                description=description,
+                return_url=settings.PAYOS_RETURN_URL,
+                cancel_url=settings.PAYOS_CANCEL_URL,
+            )
+            invoice.gateway_transaction_id = payment_link_id
+        else:
+            checkout_url, _deeplink = await momo_client.create_payment(
+                order_id=str(order_code),
+                amount=amount_vnd,
+                order_info=description,
+                redirect_url=settings.MOMO_REDIRECT_URL,
+                ipn_url=settings.MOMO_IPN_URL,
+            )
+    except (PayOSError, MoMoError) as exc:
+        logger.error(f"{gateway} checkout creation failed: {exc}")
         raise SubPaymentGatewayError() from exc
 
-    invoice.gateway_transaction_id = checkout_id
     invoice.gateway_payment_url = checkout_url
     await db.commit()
     return checkout_url
 
 
 # --- Self-service subscription management ---
-# These only trigger a change on Polar's side — the DB is updated later by the
-# resulting webhook, never here, so there is exactly one write path for subscription state.
-
-
-async def get_customer_portal_url(db: AsyncSession, user) -> str:
-    subscription = await subscription_repo.get_by_user(db, user.id)
-    if not subscription or not subscription.polar_customer_id:
-        raise SubNoPolarCustomer()
-    try:
-        return await polar_client.create_customer_portal_session(subscription.polar_customer_id)
-    except Exception as exc:
-        logger.error(f"Polar customer portal session creation failed: {exc}")
-        raise SubPaymentGatewayError() from exc
+# No stored card, no auto-renewal (NFR-SEC-04 / BR-25) — cancelling only
+# stops the domain-side renewal expectation, there is nothing to call on
+# a gateway that only ever processed a single one-off payment.
 
 
 async def cancel_subscription(db: AsyncSession, user, *, immediate: bool = False) -> None:
     subscription = await subscription_repo.get_by_user(db, user.id)
-    if not subscription or not subscription.polar_subscription_id:
+    if not subscription or subscription.is_free:
         raise SubNotFound()
-    if not immediate and subscription.cancel_at_period_end:
-        raise SubAlreadyActive()
-    try:
-        await polar_client.cancel_subscription(
-            subscription.polar_subscription_id, immediate=immediate
-        )
-    except Exception as exc:
-        logger.error(f"Polar subscription cancellation failed: {exc}")
-        raise SubPaymentGatewayError() from exc
-
-
-async def change_plan(db: AsyncSession, user, *, tier: str, billing_cycle: str) -> None:
-    subscription = await subscription_repo.get_by_user(db, user.id)
-    if not subscription or not subscription.polar_subscription_id:
-        raise SubNotFound()
-    if subscription.tier == f"{tier}_{billing_cycle}":
-        raise SubAlreadyActive()
-    new_plan = await plan_repo.get_by_tier_and_cycle(db, tier, billing_cycle)
-    if not new_plan:
-        raise SubPlanNotFound()
-    if not new_plan.polar_product_id:
-        raise SubPlanNotMappedToPolar()
-    try:
-        await polar_client.update_subscription_product(
-            subscription.polar_subscription_id, new_plan.polar_product_id
-        )
-    except Exception as exc:
-        logger.error(f"Polar subscription product update failed: {exc}")
-        raise SubPaymentGatewayError() from exc
+    if immediate:
+        await _downgrade_to_free(db, subscription)
+    else:
+        if subscription.cancel_at_period_end:
+            raise SubAlreadyActive()
+        subscription.cancel_at_period_end = True
+        await db.flush()
+    await db.commit()
 
 
 # --- Admin oversight ---
@@ -194,9 +235,12 @@ async def admin_list_invoices(
             id=invoice.id,
             user_id=invoice.user_id,
             user_email=user_email,
-            polar_order_id=(invoice.gateway_metadata or {}).get("polar_order_id"),
+            order_code=invoice.order_code,
+            payment_reference=invoice.payment_reference,
             plan_tier=invoice.plan_tier,
             billing_cycle=invoice.billing_cycle,
+            listed_price_vnd=invoice.listed_price_vnd,
+            discount_vnd=invoice.discount_vnd,
             amount_vnd=invoice.amount_vnd,
             payment_method=invoice.payment_method,
             status=invoice.status,
@@ -220,149 +264,156 @@ async def admin_force_downgrade(db: AsyncSession, admin, user_id: uuid.UUID) -> 
     await db.commit()
 
 
-async def admin_refund_invoice(db: AsyncSession, admin, invoice_id: uuid.UUID) -> str:
-    """Khởi tạo refund trên Polar. KHÔNG set status='refunded' tại đây —
-    webhook refund.created → _handle_refund_event là write path duy nhất."""
+async def admin_refund_invoice(
+    db: AsyncSession, admin, invoice_id: uuid.UUID, *, amount_vnd: int, reason: str
+) -> uuid.UUID:
+    """Creates a REFUND ledger entry (BR-97) — never calls the gateway. The
+    invoice itself stays immutable (BR-31); this is the auditable reversal."""
     invoice = await invoice_repo.get_by_id(db, invoice_id)
-    polar_order_id = (invoice.gateway_metadata or {}).get("polar_order_id") if invoice else None
-    if (
-        not invoice
-        or invoice.status != "paid"
-        or invoice.payment_method != "polar"
-        or not polar_order_id
-    ):
+    if not invoice or invoice.status != "paid":
         raise InvoiceNotRefundable()
+    if amount_vnd <= 0 or amount_vnd > invoice.amount_vnd:
+        raise RefundInvalidAmount()
 
-    try:
-        polar_refund_id = await polar_client.create_refund(
-            order_id=polar_order_id,
-            amount_vnd=invoice.amount_vnd,
-            comment=f"Refund by admin {admin.email}",
-        )
-    except Exception as exc:
-        logger.error(f"Polar refund creation failed for invoice={invoice_id}: {exc}")
-        raise SubPaymentGatewayError() from exc
-
-    invoice.gateway_metadata = {
-        **(invoice.gateway_metadata or {}),
-        "polar_refund_id": polar_refund_id,
-    }
+    refund = await refund_repo.create(
+        db, invoice_id=invoice.id, amount_vnd=amount_vnd, reason=reason, created_by=admin.id
+    )
+    await invoice_repo.mark_refunded(db, invoice)
     await record_audit(
         db, admin, "invoice.refund", target_type="invoice", target_id=invoice_id,
-        payload={"polar_refund_id": polar_refund_id, "amount_vnd": invoice.amount_vnd},
+        payload={"refund_id": str(refund.id), "amount_vnd": amount_vnd, "reason": reason},
     )
     await db.commit()
-    return polar_refund_id
+    return refund.id
 
 
-# --- Webhook handling ---
+# --- Webhook / IPN handling ---
 
 
-async def handle_polar_webhook(db: AsyncSession, *, raw_body: bytes, headers: dict) -> int:
+async def handle_payos_webhook(db: AsyncSession, *, raw_body: bytes) -> int:
     """Returns the HTTP status the router should respond with. Never raises for
-    business-logic failures — logs and acks instead, so Polar never retry-storms us."""
+    business-logic failures — logs and acks instead, so PayOS never retry-storms us."""
     try:
-        event = polar_client.verify_webhook_event(raw_body=raw_body, headers=headers)
-    except WebhookVerificationError:
-        logger.warning("Polar webhook signature invalid")
+        payload = json.loads(raw_body)
+        data = payos_client.verify_webhook_signature(payload)
+    except (PayOSSignatureError, ValueError):
+        logger.warning("PayOS webhook signature invalid")
         return 403
-    except WebhookUnknownTypeError:
-        logger.info("Polar webhook: unknown event type, ack without processing")
-        return 202
+
+    if data.get("code") != "00":
+        logger.info(f"PayOS webhook: non-success code={data.get('code')}, ack without processing")
+        return 200
 
     try:
-        await _dispatch_event(db, event)
+        await _activate_paid_invoice(
+            db,
+            order_code=int(data["orderCode"]),
+            amount_vnd=int(data["amount"]),
+            payment_reference=str(data.get("reference") or ""),
+            gateway_metadata_patch={"payos": data},
+        )
         await db.commit()
     except Exception:
         await db.rollback()
-        logger.exception(f"Polar webhook processing failed for event type={event.type}")
+        logger.exception("PayOS webhook processing failed")
         return 200
     return 200
 
 
-async def _dispatch_event(db: AsyncSession, event) -> None:
-    handlers = {
-        "checkout.created": _handle_checkout_updated,
-        "checkout.updated": _handle_checkout_updated,
-        "checkout.expired": _handle_checkout_expired,
-        "order.paid": _handle_order_paid,
-        "order.refunded": _handle_refund_event,
-        "refund.created": _handle_refund_event,
-        "refund.updated": _handle_refund_event,
-        "subscription.created": _handle_subscription_upsert,
-        "subscription.active": _handle_subscription_upsert,
-        "subscription.updated": _handle_subscription_upsert,
-        "subscription.canceled": _handle_subscription_upsert,
-        "subscription.uncanceled": _handle_subscription_upsert,
-        "subscription.past_due": _handle_subscription_past_due,
-        "subscription.revoked": _handle_subscription_revoked,
-    }
-    handler = handlers.get(event.type)
-    if handler:
-        await handler(db, event.data)
-    else:
-        logger.info(f"No handler for Polar event type={event.type}, ignoring")
+async def handle_momo_ipn(db: AsyncSession, *, payload: dict) -> int:
+    try:
+        momo_client.verify_ipn_signature(payload)
+    except MoMoSignatureError:
+        logger.warning("MoMo IPN signature invalid")
+        return 403
+
+    if payload.get("resultCode") != 0:
+        logger.info(f"MoMo IPN: resultCode={payload.get('resultCode')}, marking failed")
+        try:
+            invoice = await invoice_repo.get_by_order_code(db, int(payload["orderId"]))
+            if invoice and invoice.status == "pending":
+                await invoice_repo.mark_failed(db, invoice)
+                await db.commit()
+        except Exception:
+            await db.rollback()
+            logger.exception("MoMo IPN failure-path processing failed")
+        return 200
+
+    try:
+        await _activate_paid_invoice(
+            db,
+            order_code=int(payload["orderId"]),
+            amount_vnd=int(payload["amount"]),
+            payment_reference=str(payload.get("transId") or ""),
+            gateway_metadata_patch={"momo": payload},
+        )
+        await db.commit()
+    except Exception:
+        await db.rollback()
+        logger.exception("MoMo IPN processing failed")
+        return 200
+    return 200
 
 
-async def _handle_checkout_updated(db: AsyncSession, data) -> None:
-    invoice = await invoice_repo.get_by_gateway_transaction_id(db, data.id)
-    if not invoice or invoice.status != "pending":
-        return
-    logger.info(f"Polar checkout {data.id} status={getattr(data, 'status', None)}")
-
-
-async def _handle_checkout_expired(db: AsyncSession, data) -> None:
-    invoice = await invoice_repo.get_by_gateway_transaction_id(db, data.id)
-    if invoice and invoice.status == "pending":
-        await invoice_repo.mark_failed(db, invoice)
-
-
-async def _handle_order_paid(db: AsyncSession, data) -> None:
-    metadata = getattr(data, "metadata", None) or {}
-    invoice_id = metadata.get("invoice_id")
-    invoice = None
-    if invoice_id:
-        invoice = await invoice_repo.get_by_id(db, uuid.UUID(invoice_id))
+async def _activate_paid_invoice(
+    db: AsyncSession,
+    *,
+    order_code: int,
+    amount_vnd: int,
+    payment_reference: str,
+    gateway_metadata_patch: dict,
+) -> None:
+    invoice = await invoice_repo.get_by_order_code(db, order_code)
     if not invoice:
-        checkout_id = getattr(data, "checkout_id", None)
-        if checkout_id:
-            invoice = await invoice_repo.get_by_gateway_transaction_id(db, checkout_id)
-    if not invoice:
-        logger.warning(f"Polar order.paid: no matching invoice for order={data.id}")
+        logger.warning(f"Payment webhook: no invoice for order_code={order_code}")
         return
     if invoice.status == "paid":
-        return  # idempotent — already processed this order
+        return  # idempotent — already processed
+    if invoice.amount_vnd != amount_vnd:
+        logger.error(
+            f"Payment webhook: amount mismatch invoice={invoice.id} "
+            f"expected={invoice.amount_vnd} got={amount_vnd}"
+        )
+        return
 
     await invoice_repo.mark_paid(
         db,
         invoice,
         paid_at=datetime.now(UTC),
-        gateway_metadata_patch={"polar_order_id": data.id},
+        payment_reference=payment_reference,
+        gateway_metadata_patch=gateway_metadata_patch,
     )
 
-    subscription_data = getattr(data, "subscription", None)
     tier = invoice.plan_tier
     billing_cycle = invoice.billing_cycle
     full_tier = f"{tier}_{billing_cycle}"
-    expires_at = datetime.now(UTC) + _CYCLE_TIMEDELTA.get(billing_cycle, timedelta(days=30))
-    customer = getattr(data, "customer", None)
-    polar_customer_id = getattr(customer, "id", None)
-    polar_subscription_id = getattr(subscription_data, "id", None) or getattr(
-        data, "subscription_id", None
-    )
+    now = datetime.now(UTC)
 
-    await subscription_repo.upsert_from_polar(
+    # BR-24: a mid-cycle upgrade (signalled by the proration discount applied
+    # at checkout) keeps the existing anchor date and usage window instead of
+    # starting a fresh cycle.
+    current = await subscription_repo.get_by_user(db, invoice.user_id)
+    is_upgrade = invoice.discount_vnd > 0 and current and current.expires_at
+    if is_upgrade:
+        expires_at = current.expires_at
+        current_period_start = current.current_period_start
+    else:
+        expires_at = now + _CYCLE_TIMEDELTA.get(billing_cycle, timedelta(days=30))
+        current_period_start = now
+
+    await subscription_repo.upsert_after_payment(
         db,
         user_id=invoice.user_id,
         plan_id=invoice.plan_id,
         tier=full_tier,
         status="active",
         expires_at=expires_at,
-        polar_subscription_id=polar_subscription_id,
-        polar_customer_id=polar_customer_id,
+        current_period_start=current_period_start,
         cancel_at_period_end=False,
         last_invoice_id=invoice.id,
     )
+    # BR-27: renewing/upgrading immediately unlocks any read-only projects.
+    await project_repo.unlock_all_for_user(db, invoice.user_id)
 
     user = await user_repo.get_by_id(db, invoice.user_id)
     if user:
@@ -371,81 +422,21 @@ async def _handle_order_paid(db: AsyncSession, data) -> None:
         )
 
 
-async def _handle_subscription_upsert(db: AsyncSession, data) -> None:
-    customer = getattr(data, "customer", None)
-    external_id = getattr(customer, "external_id", None)
-    if not external_id:
-        logger.warning(f"Polar subscription event: no external_id on customer, sub={data.id}")
-        return
-
-    plan = await plan_repo.get_by_polar_product_id(db, getattr(data, "product_id", None) or "")
-    status = "active" if getattr(data, "status", "active") != "canceled" else "cancelled"
-    cancel_at_period_end = bool(getattr(data, "cancel_at_period_end", False))
-
-    existing = await subscription_repo.get_by_polar_subscription_id(db, data.id)
-    tier = existing.tier if existing and not plan else None
-    if plan:
-        tier = f"{plan.tier}_{plan.billing_cycle}"
-    if not tier:
-        logger.warning(f"Polar subscription event: cannot resolve plan for sub={data.id}")
-        return
-
-    current_period_end = getattr(data, "current_period_end", None)
-    expires_at = current_period_end if current_period_end else None
-
-    await subscription_repo.upsert_from_polar(
-        db,
-        user_id=uuid.UUID(external_id),
-        plan_id=plan.id if plan else existing.plan_id,
-        tier=tier,
-        status=status,
-        expires_at=expires_at,
-        polar_subscription_id=data.id,
-        polar_customer_id=getattr(customer, "id", None),
-        cancel_at_period_end=cancel_at_period_end,
-    )
-
-
-async def _handle_subscription_past_due(db: AsyncSession, data) -> None:
-    # No schema slot for "past_due" (status CHECK only allows active/cancelled/expired) —
-    # accepted MVP limitation: log only, rely on subscription.revoked for the definitive
-    # access-loss signal instead of widening the status contract.
-    logger.warning(f"Polar subscription past_due: sub={data.id}")
-
-
-async def _handle_subscription_revoked(db: AsyncSession, data) -> None:
-    subscription = await subscription_repo.get_by_polar_subscription_id(db, data.id)
-    if not subscription:
-        return
-    await _downgrade_to_free(db, subscription)
-
-
-async def _handle_refund_event(db: AsyncSession, data) -> None:
-    order_id = getattr(data, "order_id", None) or getattr(data, "id", None)
-    invoice = None
-    metadata = getattr(data, "metadata", None) or {}
-    invoice_id = metadata.get("invoice_id")
-    if invoice_id:
-        invoice = await invoice_repo.get_by_id(db, uuid.UUID(invoice_id))
-    if not invoice and order_id:
-        invoice = await invoice_repo.get_by_gateway_transaction_id(db, order_id)
-    if not invoice or invoice.status == "refunded":
-        return
-    await invoice_repo.mark_refunded(db, invoice)
-    logger.warning(
-        f"Invoice {invoice.id} marked refunded — subscription access NOT auto-revoked, "
-        "use admin force-downgrade if access removal is intended"
-    )
-
-
 async def _downgrade_to_free(db: AsyncSession, subscription: Subscription) -> None:
     free_plan = await plan_repo.get_free_plan(db)
     if not free_plan:
         logger.error("Cannot downgrade subscription to free: free plan not found")
         return
+    now = datetime.now(UTC)
     subscription.plan_id = free_plan.id
     subscription.tier = "free"
     subscription.status = "active"
     subscription.expires_at = None
+    subscription.grace_until = None
     subscription.cancel_at_period_end = False
+    subscription.current_period_start = now
     await db.flush()
+    # BR-27: lock any projects over the Free quota, most-recently-edited stay editable.
+    await project_repo.lock_excess_for_user(
+        db, subscription.user_id, free_plan.max_projects or 0
+    )

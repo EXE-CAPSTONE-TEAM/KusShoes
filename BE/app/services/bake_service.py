@@ -8,10 +8,10 @@ from app.infrastructure import editor_worker
 from app.repositories import (
     bake_job_repo,
     export_record_repo,
-    monthly_usage_repo,
     project_repo,
     subscription_repo,
 )
+from app.services import quota_service
 
 
 async def process_bake(
@@ -63,7 +63,7 @@ async def process_bake(
         user_id=project.user_id,
         exports=exports,
     )
-    await monthly_usage_repo.increment_exports(db, project.user_id, len(exports))
+    await quota_service.increment_exports(db, project.user_id, subscription, len(exports))
     bake_job_repo.mark_completed(job)
     await project_repo.set_status(db, project, "completed")
     await db.commit()

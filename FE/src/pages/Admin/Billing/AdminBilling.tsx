@@ -15,8 +15,8 @@ import shared from '../admin-shared.module.css';
 const TIER_OPTIONS = [
   { value: 'all', label: 'Tất cả gói' },
   { value: 'free', label: 'Free' },
-  { value: 'creator_monthly', label: 'Creator (Tháng)' },
-  { value: 'creator_yearly', label: 'Creator (Năm)' },
+  { value: 'basic_monthly', label: 'Basic (Tháng)' },
+  { value: 'basic_yearly', label: 'Basic (Năm)' },
   { value: 'pro_monthly', label: 'Pro (Tháng)' },
   { value: 'pro_yearly', label: 'Pro (Năm)' },
 ];
@@ -24,6 +24,7 @@ const TIER_OPTIONS = [
 const SUB_STATUS_OPTIONS = [
   { value: 'all', label: 'Tất cả trạng thái' },
   { value: 'active', label: 'Active' },
+  { value: 'grace', label: 'Grace' },
   { value: 'cancelled', label: 'Cancelled' },
   { value: 'expired', label: 'Expired' },
 ];
@@ -119,8 +120,11 @@ export const AdminBilling: React.FC = () => {
     if (!refundTarget || mutating) return;
     setMutating(true);
     try {
-      const res = await adminBilling.refund(refundTarget.id);
-      toast(`Yêu cầu hoàn tiền đã gửi (Polar refund: ${res.polar_refund_id})`);
+      await adminBilling.refund(refundTarget.id, {
+        amount_vnd: refundTarget.amount_vnd,
+        reason: 'Admin-initiated refund',
+      });
+      toast('Đã tạo bút toán hoàn tiền');
       setRefundTarget(null);
       reloadInvoices();
     } catch (err) {
@@ -271,7 +275,7 @@ export const AdminBilling: React.FC = () => {
                         <button
                           className={shared.iconBtn}
                           title={isAdmin ? 'Hoàn tiền' : 'Chỉ Admin mới được thực hiện'}
-                          disabled={!isAdmin || inv.status !== 'paid' || inv.payment_method !== 'polar' || !inv.polar_order_id || mutating}
+                          disabled={!isAdmin || inv.status !== 'paid' || mutating}
                           onClick={() => setRefundTarget(inv)}
                         >
                           <RotateCcw size={14} />
@@ -312,7 +316,7 @@ export const AdminBilling: React.FC = () => {
         open={refundTarget !== null}
         onOpenChange={(open) => !open && setRefundTarget(null)}
         title={`Hoàn tiền hóa đơn ${refundTarget?.id ?? ''}?`}
-        description="Yêu cầu hoàn tiền sẽ được gửi tới Polar. Trạng thái hóa đơn chỉ chuyển thành 'refunded' sau khi nhận webhook xác nhận."
+        description="Tạo một bút toán hoàn tiền cho toàn bộ số tiền hóa đơn. Hóa đơn gốc không bị thay đổi; trạng thái hiển thị chuyển thành 'refunded' ngay."
         confirmLabel="Yêu cầu hoàn tiền"
         onConfirm={handleRefund}
       />

@@ -15,6 +15,7 @@ from app.schemas.auth import (
     ForgotPasswordResponse,
     GoogleLoginResponse,
     LoginRequest,
+    LoginResult,
     LogoutRequest,
     OTPResendRequest,
     OTPResendResponse,
@@ -24,12 +25,13 @@ from app.schemas.auth import (
     RegisterResponse,
     ResetPasswordRequest,
     SessionListResponse,
-    SSODesktopSessionResponse,
     SSOCreateRequest,
     SSOCreateResponse,
+    SSODesktopSessionResponse,
     SSOVerifyRequest,
     SSOVerifyResponse,
     TokenResponse,
+    TwoFactorLoginVerifyRequest,
 )
 from app.services import auth_service
 
@@ -86,6 +88,9 @@ async def register(
         password=body.password,
         full_name=body.full_name,
         client_ip=_client_ip(request),
+        utm_source=body.utm_source,
+        utm_campaign=body.utm_campaign,
+        referral_code=body.referral_code,
     )
 
 
@@ -122,7 +127,7 @@ async def resend_otp(
     )
 
 
-@router.post("/login", response_model=TokenResponse)
+@router.post("/login", response_model=LoginResult)
 async def login(
     body: LoginRequest,
     request: Request,
@@ -135,6 +140,29 @@ async def login(
         redis,
         email=body.email,
         password=body.password,
+        client_ip=_client_ip(request),
+        user_agent=request.headers.get("user-agent"),
+    )
+    if isinstance(result, LoginResult):
+        return result
+    _set_refresh_cookie(response, result.refresh_token)
+    return LoginResult(access_token=result.access_token, token_type=result.token_type)
+
+
+@router.post("/2fa/verify", response_model=TokenResponse)
+async def verify_two_factor_login(
+    body: TwoFactorLoginVerifyRequest,
+    request: Request,
+    response: Response,
+    db: AsyncSession = Depends(get_db),
+    redis: aioredis.Redis = Depends(get_redis),
+):
+    result = await auth_service.verify_two_factor_login(
+        db,
+        redis,
+        challenge_token=body.challenge_token,
+        code=body.code,
+        recovery_code=body.recovery_code,
         client_ip=_client_ip(request),
         user_agent=request.headers.get("user-agent"),
     )

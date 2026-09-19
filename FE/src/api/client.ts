@@ -54,6 +54,7 @@ export type RegisterInput = {
   password: string;
   confirmPassword: string;
   fullName: string;
+  ageConfirmed: boolean;
 };
 
 export type RegisterResult = {
@@ -135,6 +136,11 @@ export type Plan = {
   max_exports_per_month: number | null;
   allowed_export_formats: string[];
   bake_priority: string;
+  max_ai_credits_per_cycle: number | null;
+  max_scans_per_cycle: number | null;
+  max_layers_per_zone: number;
+  max_layers_per_project: number;
+  allow_draw_artwork: boolean;
 };
 
 export type Subscription = {
@@ -148,10 +154,13 @@ export type Subscription = {
 
 export type Invoice = {
   id: string;
+  order_code: number;
   plan_tier: string;
   billing_cycle: string;
+  listed_price_vnd: number;
+  discount_vnd: number;
   amount_vnd: number;
-  payment_method: string;
+  payment_method: 'payos' | 'momo' | 'manual';
   status: string;
   paid_at: string | null;
   created_at: string;
@@ -454,6 +463,7 @@ export const api = {
         password: input.password,
         confirm_password: input.confirmPassword,
         full_name: input.fullName,
+        age_confirmed: input.ageConfirmed,
       }),
     });
     return { userId: payload.user_id, email: payload.email, message: payload.message };
@@ -619,19 +629,12 @@ export const api = {
     return request<Invoice[]>("/api/v1/subscription/invoices?limit=100");
   },
 
-  async createCheckout(tier: string, billingCycle: string): Promise<string> {
+  async createCheckout(tier: string, billingCycle: string, gateway: "payos" | "momo"): Promise<string> {
     const result = await request<{ checkout_url: string }>("/api/v1/subscription/checkout", {
       method: "POST",
-      body: JSON.stringify({ tier, billing_cycle: billingCycle }),
+      body: JSON.stringify({ tier, billing_cycle: billingCycle, gateway }),
     });
     return result.checkout_url;
-  },
-
-  async changePlan(tier: string, billingCycle: string): Promise<void> {
-    await request<{ status: string }>("/api/v1/subscription/change-plan", {
-      method: "POST",
-      body: JSON.stringify({ tier, billing_cycle: billingCycle }),
-    });
   },
 
   async cancelSubscription(immediate = false): Promise<void> {
@@ -639,13 +642,6 @@ export const api = {
       method: "POST",
       body: JSON.stringify({ immediate }),
     });
-  },
-
-  async billingPortal(): Promise<string> {
-    const result = await request<{ portal_url: string }>("/api/v1/subscription/portal", {
-      method: "POST",
-    });
-    return result.portal_url;
   },
 
   async listProjectExports(projectId: string): Promise<ProjectExport[]> {

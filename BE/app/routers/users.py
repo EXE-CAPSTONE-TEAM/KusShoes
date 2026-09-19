@@ -2,18 +2,32 @@ from fastapi import APIRouter, Depends
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.database import get_db
-from app.dependencies import get_current_user
+from app.dependencies import get_current_user, get_redis
 from app.schemas.user import (
     AvatarUploadRequest,
     AvatarUploadResponse,
     ChangePasswordRequest,
+    ConsentResponse,
+    DataExportResponse,
     DeleteAccountRequest,
+    LoginHistoryResponse,
     MessageResponse,
+    PrivacySettingsResponse,
+    RecordConsentRequest,
+    SetRecoveryEmailRequest,
+    TwoFactorDisableRequest,
+    TwoFactorEnableRequest,
+    TwoFactorEnableResponse,
+    TwoFactorSetupRequest,
+    TwoFactorSetupResponse,
+    TwoFactorStatusResponse,
+    UpdatePrivacySettingsRequest,
     UpdateProfileRequest,
     UsageResponse,
     UserDetailResponse,
+    VerifyRecoveryEmailRequest,
 )
-from app.services import user_service
+from app.services import twofa_service, user_service
 
 router = APIRouter()
 
@@ -70,3 +84,118 @@ async def get_usage(
     db: AsyncSession = Depends(get_db), user=Depends(get_current_user)
 ):
     return await user_service.get_usage(db, user)
+
+
+# --- BR-15 Privacy ---
+
+
+@router.get("/me/privacy", response_model=PrivacySettingsResponse)
+async def get_privacy_settings(user=Depends(get_current_user)):
+    return user_service.get_privacy_settings(user)
+
+
+@router.patch("/me/privacy", response_model=PrivacySettingsResponse)
+async def update_privacy_settings(
+    body: UpdatePrivacySettingsRequest,
+    db: AsyncSession = Depends(get_db),
+    user=Depends(get_current_user),
+):
+    return await user_service.update_privacy_settings(db, user, body)
+
+
+# --- BR-89 Consent ---
+
+
+@router.get("/me/consents", response_model=list[ConsentResponse])
+async def list_consents(
+    db: AsyncSession = Depends(get_db), user=Depends(get_current_user)
+):
+    return await user_service.list_consents(db, user)
+
+
+@router.post("/me/consents", response_model=ConsentResponse)
+async def record_consent(
+    body: RecordConsentRequest,
+    db: AsyncSession = Depends(get_db),
+    user=Depends(get_current_user),
+):
+    return await user_service.record_consent(db, user, body)
+
+
+# --- BR-18 Login history ---
+
+
+@router.get("/me/login-history", response_model=LoginHistoryResponse)
+async def get_login_history(
+    db: AsyncSession = Depends(get_db), user=Depends(get_current_user)
+):
+    return await user_service.get_login_history(db, user)
+
+
+# --- SF-11 Data export ---
+
+
+@router.post("/me/data-export", response_model=DataExportResponse)
+async def export_account_data(
+    db: AsyncSession = Depends(get_db),
+    redis=Depends(get_redis),
+    user=Depends(get_current_user),
+):
+    return await user_service.export_account_data(db, redis, user)
+
+
+# --- BR-12/13 Two-factor authentication ---
+
+
+@router.get("/me/2fa", response_model=TwoFactorStatusResponse)
+async def get_two_factor_status(user=Depends(get_current_user)):
+    return twofa_service.get_status(user)
+
+
+@router.post("/me/2fa/recovery-email", response_model=MessageResponse)
+async def set_recovery_email(
+    body: SetRecoveryEmailRequest,
+    db: AsyncSession = Depends(get_db),
+    redis=Depends(get_redis),
+    user=Depends(get_current_user),
+):
+    return await twofa_service.set_recovery_email(db, redis, user, body.recovery_email)
+
+
+@router.post("/me/2fa/recovery-email/verify", response_model=MessageResponse)
+async def verify_recovery_email(
+    body: VerifyRecoveryEmailRequest,
+    db: AsyncSession = Depends(get_db),
+    redis=Depends(get_redis),
+    user=Depends(get_current_user),
+):
+    return await twofa_service.verify_recovery_email(db, redis, user, body.code)
+
+
+@router.post("/me/2fa/setup", response_model=TwoFactorSetupResponse)
+async def setup_two_factor(
+    body: TwoFactorSetupRequest,
+    db: AsyncSession = Depends(get_db),
+    redis=Depends(get_redis),
+    user=Depends(get_current_user),
+):
+    return await twofa_service.start_setup(db, redis, user, body.method)
+
+
+@router.post("/me/2fa/enable", response_model=TwoFactorEnableResponse)
+async def enable_two_factor(
+    body: TwoFactorEnableRequest,
+    db: AsyncSession = Depends(get_db),
+    redis=Depends(get_redis),
+    user=Depends(get_current_user),
+):
+    return await twofa_service.enable(db, redis, user, method=body.method, code=body.code)
+
+
+@router.post("/me/2fa/disable", response_model=MessageResponse)
+async def disable_two_factor(
+    body: TwoFactorDisableRequest,
+    db: AsyncSession = Depends(get_db),
+    user=Depends(get_current_user),
+):
+    return await twofa_service.disable(db, user, password=body.password, code=body.code)
