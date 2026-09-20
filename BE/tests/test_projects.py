@@ -85,6 +85,7 @@ async def test_save_design_and_trigger_bake(client, db, service_headers, auth_he
     basic_plan = await plan_repo.get_by_tier_and_cycle(db, "basic", "monthly")
     subscription = await subscription_repo.get_by_user(db, authenticated_user.id)
     subscription.plan_id = basic_plan.id
+    subscription.plan = basic_plan
     subscription.tier = "basic_monthly"
     await db.commit()
 

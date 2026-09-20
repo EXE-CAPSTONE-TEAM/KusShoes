@@ -23,6 +23,7 @@ from app.exceptions import (
 from app.infrastructure import storage, task_queue
 from app.models.plan import Plan
 from app.models.user import User
+from app.policy import PROJECT_RESTORE_DAYS
 from app.repositories import (
     audit_log_repo,
     bake_job_repo,
@@ -336,7 +337,7 @@ async def delete_project_admin(db: AsyncSession, actor, project_id: uuid.UUID) -
     await project_repo.soft_delete(db, project)
     await record_audit(db, actor, "project.delete", target_type="project", target_id=project_id)
     await db.commit()
-    task_queue.enqueue_project_cleanup(str(project_id), countdown=7 * 24 * 3600)
+    task_queue.enqueue_project_cleanup(str(project_id), countdown=PROJECT_RESTORE_DAYS * 24 * 3600)
 
 
 async def list_exports_admin(

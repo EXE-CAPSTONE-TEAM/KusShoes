@@ -120,7 +120,7 @@ async def test_expired_trash_item_cannot_be_restored(client, db, auth_headers):
     with patch("app.infrastructure.task_queue.enqueue_project_cleanup"):
         await client.delete(f"/api/v1/projects/{project_id}", headers=auth_headers)
     project = await project_repo.get_deleted_by_id(db, project_id)
-    project.deleted_at = datetime.now(UTC) - timedelta(days=8)
+    project.deleted_at = datetime.now(UTC) - timedelta(days=31)  # BR-47: 30-day window
     await db.commit()
 
     restored = await client.post(
