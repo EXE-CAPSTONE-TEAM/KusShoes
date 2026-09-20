@@ -3,6 +3,7 @@ from datetime import datetime
 from typing import TYPE_CHECKING
 
 from sqlalchemy import Boolean, DateTime, ForeignKey, String, Text
+from sqlalchemy import DateTime, ForeignKey, Integer, String, Text
 from sqlalchemy.dialects.postgresql import JSONB, UUID
 from sqlalchemy.orm import Mapped, mapped_column, relationship
 
@@ -36,6 +37,9 @@ class Project(Base, TimestampMixin):
         nullable=True,
     )
     design_config: Mapped[JsonObject | None] = mapped_column(JSONB, nullable=True)
+    current_design_revision: Mapped[int] = mapped_column(
+        Integer, nullable=False, default=0
+    )
     thumbnail_path: Mapped[str | None] = mapped_column(Text, nullable=True)  # path in storage, NOT a URL
     # BR-27: set when a downgrade leaves this project over the new plan's
     # max_projects — viewable but not editable/deletable until re-upgrade.

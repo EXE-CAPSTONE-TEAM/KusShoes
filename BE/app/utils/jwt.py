@@ -41,6 +41,21 @@ def create_sso_token(user_id: str, project_id: str) -> str:
     return jwt.encode(payload, settings.SECRET_KEY, algorithm=ALGORITHM)
 
 
+def create_editor_access_token(user_id: str, project_id: str, scopes: list[str]) -> str:
+    now = datetime.now(UTC)
+    payload = {
+        "sub": user_id,
+        "project_id": project_id,
+        "scope": scopes,
+        "type": "editor",
+        "iss": settings.EDITOR_TOKEN_ISSUER,
+        "aud": settings.EDITOR_TOKEN_AUDIENCE,
+        "iat": now,
+        "exp": now + timedelta(minutes=settings.EDITOR_ACCESS_TOKEN_EXPIRE_MINUTES),
+    }
+    return jwt.encode(payload, settings.SECRET_KEY, algorithm=ALGORITHM)
+
+
 def decode_access_token(token: str) -> dict:
     """Raises jwt.ExpiredSignatureError hoặc jwt.InvalidTokenError nếu invalid."""
     return jwt.decode(token, settings.SECRET_KEY, algorithms=[ALGORITHM])
@@ -69,3 +84,14 @@ def create_impersonation_token(user_id: str, admin_id: str) -> tuple[str, dateti
         "exp": expires_at,
     }
     return jwt.encode(payload, settings.SECRET_KEY, algorithm=ALGORITHM), expires_at
+def decode_editor_access_token(token: str) -> dict:
+    payload = jwt.decode(
+        token,
+        settings.SECRET_KEY,
+        algorithms=[ALGORITHM],
+        audience=settings.EDITOR_TOKEN_AUDIENCE,
+        issuer=settings.EDITOR_TOKEN_ISSUER,
+    )
+    if payload.get("type") != "editor":
+        raise jwt.InvalidTokenError("Not an editor token")
+    return payload

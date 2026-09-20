@@ -29,6 +29,16 @@ async def get_current_user(
     return await auth_service.authenticate_user_access_token(db, credentials.credentials)
 
 
+async def get_editor_session(
+    credentials: HTTPAuthorizationCredentials | None = Security(security),
+    db: AsyncSession = Depends(get_db),
+):
+    """Validate a short-lived editor-only token and its project ownership."""
+    if credentials is None:
+        raise AuthTokenInvalid()
+    return await auth_service.authenticate_editor_session(db, credentials.credentials)
+
+
 async def get_current_admin(
     credentials: HTTPAuthorizationCredentials | None = Security(security),
     db: AsyncSession = Depends(get_db),
@@ -82,3 +92,7 @@ async def get_impersonator_id(
     if not admin_id:
         raise AuthTokenInvalid()
     return admin_id
+async def verify_mobile_compute_token(x_service_token: str = Header(...)) -> None:
+    expected = settings.MOBILE_COMPUTE_SERVICE_TOKEN
+    if not expected or not hmac.compare_digest(x_service_token, expected):
+        raise AuthTokenInvalid()

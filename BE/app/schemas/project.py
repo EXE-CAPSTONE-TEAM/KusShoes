@@ -19,6 +19,7 @@ class UpdateProjectRequest(BaseModel):
 class SaveDesignRequest(BaseModel):
     design_config: JsonObject
     thumbnail_path: str | None = Field(default=None, max_length=1000)
+    base_revision: int = Field(ge=0)
 
 
 class TriggerBakeRequest(BaseModel):
@@ -40,6 +41,7 @@ class ProjectResponse(BaseModel):
 
 class ProjectDetailResponse(ProjectResponse):
     canonical_model_asset_id: uuid.UUID | None
+    revision: int
 
 
 class ProjectListResponse(BaseModel):

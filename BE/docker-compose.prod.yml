@@ -1,0 +1,99 @@
+# Production Docker Compose — chạy trên DigitalOcean droplet
+#
+# Khác docker-compose.yml (dev):
+#   - KHÔNG có service `db`    → dùng Neon Postgres (managed)
+#   - KHÔNG có service `minio` → dùng Cloudflare R2 (managed)
+#   - Thêm nginx (reverse proxy + TLS) và certbot (auto-renew cert)
+#   - Không mount source code — image build cố định
+#
+# Sử dụng:
+#   cp .env.production.example .env.production   # điền giá trị thật
+#   docker compose -f docker-compose.prod.yml up -d --build
+#
+# Xem hướng dẫn đầy đủ: ../SETUP_CLOUD_SERVICES.md
+
+services:
+  redis:
+    image: redis:7-alpine
+    container_name: kusshoes_redis
+    # Không publish port ra ngoài — chỉ dùng trong mạng nội bộ compose
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 5s
+      timeout: 3s
+      retries: 10
+    restart: unless-stopped
+
+  api:
+    build: .
+    container_name: kusshoes_api
+    env_file: .env.production
+    # Entrypoint mặc định của image: chờ DB (Neon) + chạy alembic upgrade head
+    expose:
+      - "8000"
+    depends_on:
+      redis:
+        condition: service_healthy
+    healthcheck:
+      test: ["CMD", "python", "-c", "import urllib.request; urllib.request.urlopen('http://127.0.0.1:8000/health', timeout=5)"]
+      interval: 15s
+      timeout: 5s
+      retries: 3
+      start_period: 30s
+    restart: unless-stopped
+
+  worker:
+    build: .
+    container_name: kusshoes_worker
+    env_file: .env.production
+    # Bỏ entrypoint (migration) — chỉ api chạy migration, tránh 3 container
+    # cùng alembic upgrade một lúc trên Neon
+    entrypoint: []
+    command: celery -A app.workers.celery_app worker --loglevel=info -Q high,normal,low,bake
+    depends_on:
+      redis:
+        condition: service_healthy
+      api:
+        condition: service_healthy
+    restart: unless-stopped
+
+  beat:
+    build: .
+    container_name: kusshoes_beat
+    env_file: .env.production
+    entrypoint: []
+    command: celery -A app.workers.celery_app beat --loglevel=info
+    depends_on:
+      redis:
+        condition: service_healthy
+      api:
+        condition: service_healthy
+    restart: unless-stopped
+
+  nginx:
+    image: nginx:1.27-alpine
+    container_name: kusshoes_nginx
+    ports:
+      - "80:80"
+      - "443:443"
+    volumes:
+      - ./deploy/nginx:/etc/nginx/conf.d:ro
+      - certbot_www:/var/www/certbot:ro
+      - certbot_conf:/etc/letsencrypt:ro
+    depends_on:
+      - api
+    restart: unless-stopped
+
+  # Tự gia hạn chứng chỉ Let's Encrypt mỗi 12h
+  certbot:
+    image: certbot/certbot
+    container_name: kusshoes_certbot
+    volumes:
+      - certbot_www:/var/www/certbot
+      - certbot_conf:/etc/letsencrypt
+    entrypoint: /bin/sh -c 'trap exit TERM; while :; do certbot renew --webroot -w /var/www/certbot --quiet; sleep 12h & wait $${!}; done;'
+    restart: unless-stopped
+
+volumes:
+  certbot_www:
+  certbot_conf:
