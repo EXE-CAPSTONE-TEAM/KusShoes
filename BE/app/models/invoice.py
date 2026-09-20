@@ -2,7 +2,16 @@ import uuid
 from datetime import datetime
 from typing import TYPE_CHECKING
 
-from sqlalchemy import BigInteger, CheckConstraint, DateTime, ForeignKey, Integer, String, Text
+from sqlalchemy import (
+    BigInteger,
+    Boolean,
+    CheckConstraint,
+    DateTime,
+    ForeignKey,
+    Integer,
+    String,
+    Text,
+)
 from sqlalchemy.dialects.postgresql import JSONB, UUID
 from sqlalchemy.orm import Mapped, mapped_column, relationship
 
@@ -18,7 +27,7 @@ class Invoice(Base, TimestampMixin):
     __tablename__ = "invoices"
     __table_args__ = (
         CheckConstraint(
-            "status IN ('pending', 'paid', 'failed', 'refunded')",
+            "status IN ('pending', 'awaiting_approval', 'paid', 'failed', 'cancelled', 'refunded')",
             name="ck_invoices_status",
         ),
         CheckConstraint(
@@ -57,7 +66,26 @@ class Invoice(Base, TimestampMixin):
     payment_reference: Mapped[str | None] = mapped_column(String(255), nullable=True)
     gateway_metadata: Mapped[dict | None] = mapped_column(JSONB, nullable=True)
     status: Mapped[str] = mapped_column(String(20), nullable=False, default="pending")
+    # BR-31: immutable KUS-xxx receipt, issued when the payment is confirmed.
+    receipt_number: Mapped[str | None] = mapped_column(String(30), unique=True, nullable=True)
+    receipt_path: Mapped[str | None] = mapped_column(Text, nullable=True)
+    # Frozen at issue time so a re-rendered receipt is byte-for-byte the same content (BR-09/31).
+    receipt_snapshot: Mapped[dict | None] = mapped_column(JSONB, nullable=True)
+    # BR-24: set when checkout priced this as a mid-cycle upgrade (keeps expiry/anchor on activation).
+    is_upgrade: Mapped[bool] = mapped_column(Boolean, nullable=False, default=False)
+    coupon_code: Mapped[str | None] = mapped_column(String(40), nullable=True)
+    # BR-95: off-gateway payments recorded by an admin, approved by a different admin.
+    is_manual: Mapped[bool] = mapped_column(Boolean, nullable=False, default=False)
+    proof_path: Mapped[str | None] = mapped_column(Text, nullable=True)
+    collected_by: Mapped[str | None] = mapped_column(String(100), nullable=True)
+    manual_reason: Mapped[str | None] = mapped_column(Text, nullable=True)
+    created_by: Mapped[uuid.UUID | None] = mapped_column(
+        UUID(as_uuid=True), ForeignKey("users.id"), nullable=True
+    )
+    approved_by: Mapped[uuid.UUID | None] = mapped_column(
+        UUID(as_uuid=True), ForeignKey("users.id"), nullable=True
+    )
     paid_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True), nullable=True)
 
-    user: Mapped["User"] = relationship(back_populates="invoices")
+    user: Mapped["User"] = relationship(back_populates="invoices", foreign_keys=[user_id])
     plan: Mapped["Plan | None"] = relationship(back_populates="invoices")

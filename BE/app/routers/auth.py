@@ -16,6 +16,7 @@ from app.dependencies import (
 from app.exceptions import AuthRefreshInvalid
 from app.schemas.auth import (
     AccessTokenResponse,
+    AccountRestoreConfirmRequest,
     EditorLaunchClaimRequest,
     EditorLaunchClaimResponse,
     EditorLaunchCreateRequest,
@@ -375,3 +376,30 @@ async def create_desktop_session(
 
 def _client_ip(request: Request) -> str:
     return request.client.host if request.client else "unknown"
+
+
+@router.post(
+    "/restore-account/request",
+    response_model=ForgotPasswordResponse,
+    status_code=status.HTTP_202_ACCEPTED,
+)
+async def request_account_restore(
+    body: ForgotPasswordRequest,
+    request: Request,
+    db: AsyncSession = Depends(get_db),
+    redis: aioredis.Redis = Depends(get_redis),
+):
+    return await auth_service.request_account_restore(
+        db, redis, email=body.email, client_ip=_client_ip(request)
+    )
+
+
+@router.post("/restore-account/confirm")
+async def confirm_account_restore(
+    body: AccountRestoreConfirmRequest,
+    db: AsyncSession = Depends(get_db),
+    redis: aioredis.Redis = Depends(get_redis),
+):
+    return await auth_service.confirm_account_restore(
+        db, redis, email=body.email, otp_code=body.otp_code
+    )

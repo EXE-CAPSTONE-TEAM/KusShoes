@@ -216,7 +216,7 @@ async def set_canonical_asset(
 
 
 async def get_by_id_any(db: AsyncSession, project_id: uuid.UUID) -> Project | None:
-    """Includes soft-deleted — for admin detail views."""
+    """Includes soft-deleted rows."""
     return await db.get(Project, project_id)
 
 
@@ -256,3 +256,13 @@ async def list_admin(
     query = query.order_by(Project.created_at.desc(), Project.id.desc()).limit(limit)
     result = await db.execute(query)
     return [(project, owner_email) for project, owner_email in result.all()]
+
+
+
+async def list_expired_trash(db: AsyncSession, *, deleted_before: datetime) -> list[Project]:
+    result = await db.execute(
+        select(Project).where(
+            Project.deleted_at.is_not(None), Project.deleted_at <= deleted_before
+        )
+    )
+    return list(result.scalars())

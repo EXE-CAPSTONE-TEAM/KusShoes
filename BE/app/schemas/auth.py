@@ -2,7 +2,7 @@ import re
 import uuid
 from datetime import datetime
 
-from pydantic import BaseModel, EmailStr, field_validator, model_validator
+from pydantic import BaseModel, EmailStr, Field, field_validator, model_validator
 
 
 class RegisterRequest(BaseModel):
@@ -299,3 +299,8 @@ class SessionResponse(BaseModel):
 
 class SessionListResponse(BaseModel):
     items: list[SessionResponse]
+
+
+class AccountRestoreConfirmRequest(BaseModel):
+    email: EmailStr
+    otp_code: str = Field(min_length=6, max_length=6)

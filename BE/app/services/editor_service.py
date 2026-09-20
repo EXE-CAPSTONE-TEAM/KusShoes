@@ -39,6 +39,7 @@ from app.schemas.editor import (
     EditorProjectResponse,
     EditorUserResponse,
 )
+from app.services import guardrail_service, version_service
 from app.services.project_service import count_design_layers, require_owner
 from app.types import JsonObject
 from app.schemas.project import TriggerBakeRequest
@@ -119,6 +120,8 @@ async def save_design(
     if count_design_layers(body.designConfig) > max_layers:
         raise DesignLayerLimitExceeded()
     design_config = _with_model_asset_id(body.designConfig, model_asset.id)
+    await guardrail_service.assert_not_exporting(db, project_id)
+    await guardrail_service.check_design(db, design_config)
     _require_scope(session, "editor:write")
     project = await require_editor_project(db, session, project_id, for_update=True)
     asset = await _canonical_asset(db, project)
@@ -179,6 +182,14 @@ async def trigger_bake(
         project.id,
         TriggerBakeRequest(design_config=project.design_config),
     )
+    await version_service.snapshot(
+        db,
+        project,
+        design_config=design_config,
+        thumbnail_path=project.thumbnail_path,
+    )
+    await db.commit()
+    return _to_design(project, model_asset)
     job = await bake_job_repo.get_by_id(db, result.job_id)
     if not job:
         raise AppException(500, "EDITOR_JOB_NOT_CREATED", "Bake job could not be created.")

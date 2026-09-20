@@ -16,6 +16,7 @@ from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.exceptions import (
     AccountBanned,
+    AccountRestoreInvalid,
     AuthAccountLocked,
     AuthEditorLaunchInvalid,
     AuthRateLimited,
@@ -54,6 +55,7 @@ from app.infrastructure import (
     task_queue,
     twofa_store,
 )
+from app.policy import ACCOUNT_RESTORE_DAYS
 from app.repositories import (
     consent_repo,
     login_history_repo,
@@ -1000,3 +1002,55 @@ def _split_full_name(full_name: str) -> tuple[str, str]:
     if len(parts) == 1:
         return parts[0], ""
     return parts[0], parts[1]
+
+
+RESTORE_NAMESPACE = "account-restore"
+
+
+async def request_account_restore(
+    db: AsyncSession, redis: aioredis.Redis, *, email: str, client_ip: str
+) -> ForgotPasswordResponse:
+    """Uniform answer whether or not a restorable account exists (no enumeration)."""
+    from app.config import settings
+
+    for bucket, identifier in (("restore-ip", client_ip), ("restore-email", email)):
+        await _enforce_rate_limit(
+            redis,
+            bucket=bucket,
+            identifier=identifier,
+            limit=settings.PASSWORD_RESET_RATE_LIMIT,
+            window_seconds=settings.PASSWORD_RESET_RATE_WINDOW_SECONDS,
+        )
+    user = await user_repo.get_deleted_by_email(db, email)
+    if user and user.status == "active" and _within_restore_window(user):
+        code = otp_store.generate_otp()
+        await recovery_store.set_code(redis, user.email, code, namespace=RESTORE_NAMESPACE)
+        task_queue.enqueue_account_restore_email(user.email, code)
+    return ForgotPasswordResponse(
+        message="Nếu tài khoản đủ điều kiện khôi phục, mã xác nhận sẽ được gửi qua email."
+    )
+
+
+async def confirm_account_restore(
+    db: AsyncSession, redis: aioredis.Redis, *, email: str, otp_code: str
+) -> dict[str, str]:
+    result = await recovery_store.verify_code(
+        redis, email, otp_code, namespace=RESTORE_NAMESPACE
+    )
+    if result == "locked":
+        raise PasswordResetLocked()
+    if result != "valid":
+        raise AccountRestoreInvalid()
+    user = await user_repo.get_deleted_by_email(db, email)
+    if not user or user.status != "active" or not _within_restore_window(user):
+        raise AccountRestoreInvalid()
+    await user_repo.restore(db, user)
+    await db.commit()
+    await recovery_store.delete_code(redis, email, namespace=RESTORE_NAMESPACE)
+    return {"message": "Đã khôi phục tài khoản. Vui lòng đăng nhập."}
+
+
+def _within_restore_window(user) -> bool:
+    return user.deleted_at is not None and datetime.now(UTC) < user.deleted_at + timedelta(
+        days=ACCOUNT_RESTORE_DAYS
+    )

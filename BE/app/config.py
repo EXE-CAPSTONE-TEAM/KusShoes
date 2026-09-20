@@ -94,6 +94,9 @@ class Settings(BaseSettings):
     MOMO_REDIRECT_URL: str = ""
     MOMO_IPN_URL: str = ""
 
+    # BR-101: public artisan viewer page the owner shares (QR / link)
+    ARTISAN_VIEWER_BASE_URL: str = "http://localhost:5173/artisan"
+
     @property
     def is_production(self) -> bool:
         return self.APP_ENV == "production"

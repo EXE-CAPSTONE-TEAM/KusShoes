@@ -316,7 +316,7 @@ class ProjectTrashNotFound(AppException):
 
 class ProjectRestoreExpired(AppException):
     def __init__(self):
-        super().__init__(410, "PROJ_RESTORE_EXPIRED", "Project đã quá thời hạn khôi phục 7 ngày")
+        super().__init__(410, "PROJ_RESTORE_EXPIRED", "Project đã quá thời hạn khôi phục 30 ngày")
 
 
 class BakeJobNotFound(AppException):
@@ -417,6 +417,65 @@ class SubNotFound(AppException):
         super().__init__(404, "SUB_NOT_FOUND", "Bạn chưa có gói đăng ký trả phí nào")
 
 
+class InvoiceNotFound(AppException):
+    def __init__(self):
+        super().__init__(404, "INVOICE_NOT_FOUND", "Không tìm thấy giao dịch")
+
+
+class ReceiptUnavailable(AppException):
+    def __init__(self):
+        super().__init__(409, "RECEIPT_UNAVAILABLE", "Biên nhận chỉ có cho giao dịch đã thanh toán")
+
+
+class CouponInvalid(AppException):
+    def __init__(self):
+        super().__init__(
+            422,
+            "COUPON_INVALID",
+            "Mã không hợp lệ, đã hết hạn, đã dùng hoặc không áp dụng cho gói này.",
+        )
+
+
+class PeriodLocked(AppException):
+    def __init__(self):
+        super().__init__(
+            409,
+            "PERIOD_LOCKED",
+            "Kỳ báo cáo này đã khoá sổ. Hãy tạo bút toán điều chỉnh ở kỳ đang mở.",
+        )
+
+
+class ReportingPeriodInvalid(AppException):
+    def __init__(self, message: str = "Kỳ báo cáo không hợp lệ"):
+        super().__init__(422, "REPORTING_PERIOD_INVALID", message)
+
+
+class ManualPaymentInvalid(AppException):
+    def __init__(self, message: str):
+        super().__init__(422, "MANUAL_PAYMENT_INVALID", message)
+
+
+class ManualPaymentSelfApproval(AppException):
+    def __init__(self):
+        super().__init__(
+            403, "MANUAL_PAYMENT_SELF_APPROVAL", "Người tạo giao dịch không được tự duyệt"
+        )
+
+
+class InvoiceNotAwaitingApproval(AppException):
+    def __init__(self):
+        super().__init__(409, "INVOICE_NOT_AWAITING_APPROVAL", "Giao dịch không ở trạng thái chờ duyệt")
+
+
+class RefundPolicyViolation(AppException):
+    def __init__(self, reason: str):
+        super().__init__(
+            409,
+            "REFUND_POLICY_VIOLATION",
+            f"Không đủ điều kiện hoàn tiền tự động: {reason}. Dùng override để duyệt ngoại lệ.",
+        )
+
+
 class InvoiceNotRefundable(AppException):
     def __init__(self):
         super().__init__(409, "INVOICE_NOT_REFUNDABLE", "Hóa đơn không thể hoàn tiền")
@@ -462,6 +521,144 @@ class BakeJobNotRequeueable(AppException):
 class BakeJobNotCancellable(AppException):
     def __init__(self):
         super().__init__(409, "BAKE_JOB_NOT_CANCELLABLE", "Chỉ có thể hủy bake job đang chờ xử lý")
+
+
+class AccountRestoreInvalid(AppException):
+    def __init__(self):
+        super().__init__(
+            400, "AUTH_RESTORE_INVALID", "Mã khôi phục không hợp lệ hoặc tài khoản không thể khôi phục"
+        )
+
+
+class FeedbackNotFound(AppException):
+    def __init__(self):
+        super().__init__(404, "FEEDBACK_NOT_FOUND", "Không tìm thấy phản hồi")
+
+
+class FeedbackTooSoon(AppException):
+    def __init__(self, next_allowed_at):
+        super().__init__(
+            429,
+            "FEEDBACK_TOO_SOON",
+            "Bạn đã gửi phản hồi gần đây, vui lòng quay lại sau",
+            extra={"next_allowed_at": next_allowed_at.isoformat()},
+        )
+
+
+class ImpersonationRequires2FA(AppException):
+    def __init__(self):
+        super().__init__(
+            403,
+            "IMPERSONATION_REQUIRES_2FA",
+            "Chỉ Admin đã bật xác thực hai lớp mới được đăng nhập thay người dùng",
+        )
+
+
+class ImpersonationRestricted(AppException):
+    def __init__(self):
+        super().__init__(
+            403,
+            "IMPERSONATION_RESTRICTED",
+            "Không thực hiện được trong phiên đăng nhập thay người dùng",
+        )
+
+
+class ImpersonationTargetInvalid(AppException):
+    def __init__(self):
+        super().__init__(
+            400, "IMPERSONATION_TARGET_INVALID", "Chỉ có thể đăng nhập thay tài khoản người dùng"
+        )
+
+
+class AdminResetNotAllowed(AppException):
+    def __init__(self):
+        super().__init__(
+            400,
+            "ADMIN_RESET_NOT_ALLOWED",
+            "Tài khoản này không dùng mật khẩu (đăng nhập Google) nên không đặt lại được",
+        )
+
+
+# --- Studio: versions, guardrail, templates, artisan links ---
+class ProjectExporting(AppException):
+    def __init__(self):
+        super().__init__(
+            409,
+            "PROJECT_EXPORTING",
+            "Dự án đang được xuất file, vui lòng chờ hoàn tất rồi chỉnh sửa tiếp",
+        )
+
+
+class ContentBanned(AppException):
+    def __init__(self):
+        super().__init__(
+            422, "CONTENT_BANNED", "Nội dung chứa từ ngữ không được phép, vui lòng chỉnh lại"
+        )
+
+
+class ContentTrademarkUnconfirmed(AppException):
+    def __init__(self, terms: list[str]):
+        super().__init__(
+            422,
+            "CONTENT_TRADEMARK_CONFIRM_REQUIRED",
+            "Nội dung có thể chứa thương hiệu được bảo hộ, cần xác nhận bản quyền để tiếp tục",
+            extra={"terms": terms},
+        )
+
+
+class ContentTextTooLong(AppException):
+    def __init__(self, max_length: int):
+        super().__init__(
+            422, "CONTENT_TEXT_TOO_LONG", f"Văn bản trên thiết kế tối đa {max_length} ký tự"
+        )
+
+
+class GuardrailRuleNotFound(AppException):
+    def __init__(self):
+        super().__init__(404, "GUARDRAIL_RULE_NOT_FOUND", "Không tìm thấy quy tắc")
+
+
+class GuardrailRuleExists(AppException):
+    def __init__(self):
+        super().__init__(409, "GUARDRAIL_RULE_EXISTS", "Từ khóa này đã có trong danh sách")
+
+
+class DesignVersionNotFound(AppException):
+    def __init__(self):
+        super().__init__(404, "DESIGN_VERSION_NOT_FOUND", "Không tìm thấy phiên bản thiết kế")
+
+
+class TemplateNotFound(AppException):
+    def __init__(self):
+        super().__init__(404, "TEMPLATE_NOT_FOUND", "Không tìm thấy template")
+
+
+class ArtisanLinkPlanRequired(AppException):
+    def __init__(self):
+        super().__init__(
+            403,
+            "ARTISAN_LINK_PLAN_REQUIRED",
+            "Chia sẻ link cho nghệ nhân chỉ dành cho gói trả phí đang hoạt động",
+        )
+
+
+class ArtisanLinkNotFound(AppException):
+    def __init__(self):
+        super().__init__(404, "ARTISAN_LINK_NOT_FOUND", "Không tìm thấy link chia sẻ")
+
+
+class ArtisanLinkInvalid(AppException):
+    def __init__(self):
+        super().__init__(
+            410,
+            "ARTISAN_LINK_INVALID",
+            "Link không hợp lệ hoặc đã hết hạn. Vui lòng liên hệ chủ thiết kế để lấy link mới",
+        )
+
+
+class ExportNotReady(AppException):
+    def __init__(self):
+        super().__init__(409, "EXPORT_NOT_READY", "Dự án chưa có bản xuất nào để chia sẻ")
 
 
 class MobileComputeUnavailable(AppException):

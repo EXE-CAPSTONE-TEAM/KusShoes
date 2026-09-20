@@ -68,6 +68,22 @@ def decode_sso_token(token: str) -> dict:
     return payload
 
 
+IMPERSONATION_MINUTES = 30  # BR-80
+
+
+def create_impersonation_token(user_id: str, admin_id: str) -> tuple[str, datetime]:
+    """Access token for the target user carrying the impersonating admin. No refresh
+    token is ever issued for it, so the session cannot outlive 30 minutes."""
+    expires_at = datetime.now(UTC) + timedelta(minutes=IMPERSONATION_MINUTES)
+    payload = {
+        "sub": user_id,
+        "role": "user",
+        "type": "access",
+        "imp": admin_id,
+        "iat": datetime.now(UTC),
+        "exp": expires_at,
+    }
+    return jwt.encode(payload, settings.SECRET_KEY, algorithm=ALGORITHM), expires_at
 def decode_editor_access_token(token: str) -> dict:
     payload = jwt.decode(
         token,

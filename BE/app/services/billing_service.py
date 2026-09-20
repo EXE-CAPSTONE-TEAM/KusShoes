@@ -8,8 +8,11 @@ from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.config import settings
 from app.exceptions import (
+    CouponInvalid,
+    InvoiceNotFound,
     InvoiceNotRefundable,
     RefundInvalidAmount,
+    RefundPolicyViolation,
     SubAlreadyActive,
     SubInvalidGateway,
     SubNotFound,
@@ -24,6 +27,7 @@ from app.models.invoice import Invoice
 from app.models.plan import Plan
 from app.models.subscription import Subscription
 from app.repositories import (
+    export_record_repo,
     invoice_repo,
     plan_repo,
     project_repo,
@@ -32,6 +36,7 @@ from app.repositories import (
     user_repo,
 )
 from app.schemas.subscription import AdminInvoiceResponse, AdminSubscriptionResponse
+from app.services import coupon_service, period_service, receipt_service
 from app.services.audit import record_audit
 
 _CYCLE_TIMEDELTA = {
@@ -93,7 +98,13 @@ async def list_invoices(
 
 
 async def create_checkout_session(
-    db: AsyncSession, user, *, tier: str, billing_cycle: str, gateway: str
+    db: AsyncSession,
+    user,
+    *,
+    tier: str,
+    billing_cycle: str,
+    gateway: str,
+    coupon_code: str | None = None,
 ) -> str:
     # Note: BR-03 (unverified accounts can't pay) is already enforced upstream —
     # get_current_user's authenticate_user_access_token rejects unverified
@@ -113,9 +124,18 @@ async def create_checkout_session(
 
     now = datetime.now(UTC)
     amount_vnd = plan.price_vnd
-    if _is_midcycle_upgrade(
+    is_upgrade = _is_midcycle_upgrade(
         current, new_billing_cycle=billing_cycle, new_price_vnd=plan.price_vnd, now=now
-    ):
+    )
+    coupon = None
+    if coupon_code:
+        if is_upgrade:  # a prorated upgrade is already discounted; codes don't stack (BR-26)
+            raise CouponInvalid()
+        coupon, coupon_discount = await coupon_service.evaluate(
+            db, user, coupon_code, plan, plan.price_vnd
+        )
+        amount_vnd = plan.price_vnd - coupon_discount
+    if is_upgrade:
         cycle_days = 30 if billing_cycle == "monthly" else 365
         amount_vnd = _prorated_upgrade_amount(
             old_price_vnd=current.plan.price_vnd,
@@ -135,6 +155,8 @@ async def create_checkout_session(
         order_code=order_code,
         listed_price_vnd=plan.price_vnd,
         discount_vnd=plan.price_vnd - amount_vnd,
+        coupon_code=coupon.code if coupon else None,
+        is_upgrade=is_upgrade,
         amount_vnd=amount_vnd,
         payment_method=gateway,
     )
@@ -166,6 +188,20 @@ async def create_checkout_session(
     invoice.gateway_payment_url = checkout_url
     await db.commit()
     return checkout_url
+
+
+async def preview_coupon(
+    db: AsyncSession, user, *, tier: str, billing_cycle: str, coupon_code: str
+) -> dict:
+    plan = await plan_repo.get_by_tier_and_cycle(db, tier, billing_cycle)
+    if not plan or tier == "free":
+        raise SubPlanNotFound()
+    _coupon, discount = await coupon_service.evaluate(db, user, coupon_code, plan, plan.price_vnd)
+    return {
+        "listed_price_vnd": plan.price_vnd,
+        "discount_vnd": discount,
+        "amount_vnd": plan.price_vnd - discount,
+    }
 
 
 # --- Self-service subscription management ---
@@ -218,6 +254,31 @@ async def admin_list_subscriptions(
     ]
 
 
+def to_admin_invoice(invoice: Invoice, user_email: str | None) -> AdminInvoiceResponse:
+    return AdminInvoiceResponse(
+        id=invoice.id,
+        user_id=invoice.user_id,
+        user_email=user_email,
+        order_code=invoice.order_code,
+        payment_reference=invoice.payment_reference,
+        receipt_number=invoice.receipt_number,
+        coupon_code=invoice.coupon_code,
+        is_manual=invoice.is_manual,
+        collected_by=invoice.collected_by,
+        created_by=invoice.created_by,
+        approved_by=invoice.approved_by,
+        plan_tier=invoice.plan_tier,
+        billing_cycle=invoice.billing_cycle,
+        listed_price_vnd=invoice.listed_price_vnd,
+        discount_vnd=invoice.discount_vnd,
+        amount_vnd=invoice.amount_vnd,
+        payment_method=invoice.payment_method,
+        status=invoice.status,
+        paid_at=invoice.paid_at,
+        created_at=invoice.created_at,
+    )
+
+
 async def admin_list_invoices(
     db: AsyncSession,
     *,
@@ -226,29 +287,26 @@ async def admin_list_invoices(
     limit: int,
     before: datetime | None,
     before_id: uuid.UUID | None = None,
+    payment_method: str | None = None,
+    is_manual: bool | None = None,
+    exclude_internal: bool = False,
+    date_from: datetime | None = None,
+    date_to: datetime | None = None,
 ) -> list[AdminInvoiceResponse]:
     rows = await invoice_repo.list_all(
-        db, status=status, user_id=user_id, limit=limit, before=before, before_id=before_id
+        db,
+        status=status,
+        user_id=user_id,
+        payment_method=payment_method,
+        is_manual=is_manual,
+        exclude_internal=exclude_internal,
+        date_from=date_from,
+        date_to=date_to,
+        limit=limit,
+        before=before,
+        before_id=before_id,
     )
-    return [
-        AdminInvoiceResponse(
-            id=invoice.id,
-            user_id=invoice.user_id,
-            user_email=user_email,
-            order_code=invoice.order_code,
-            payment_reference=invoice.payment_reference,
-            plan_tier=invoice.plan_tier,
-            billing_cycle=invoice.billing_cycle,
-            listed_price_vnd=invoice.listed_price_vnd,
-            discount_vnd=invoice.discount_vnd,
-            amount_vnd=invoice.amount_vnd,
-            payment_method=invoice.payment_method,
-            status=invoice.status,
-            paid_at=invoice.paid_at,
-            created_at=invoice.created_at,
-        )
-        for invoice, user_email in rows
-    ]
+    return [to_admin_invoice(invoice, user_email) for invoice, user_email in rows]
 
 
 async def admin_force_downgrade(db: AsyncSession, admin, user_id: uuid.UUID) -> None:
@@ -264,27 +322,96 @@ async def admin_force_downgrade(db: AsyncSession, admin, user_id: uuid.UUID) -> 
     await db.commit()
 
 
+REFUND_WINDOW_DAYS = 7
+
+
+def _aware(value: datetime) -> datetime:
+    return value if value.tzinfo else value.replace(tzinfo=UTC)
+
+
+async def _refund_policy_violation(db: AsyncSession, invoice: Invoice) -> str | None:
+    """BR-97: automatic refund needs <=7 days since payment AND no export in that cycle."""
+    if invoice.paid_at is None:
+        return None
+    paid_at = _aware(invoice.paid_at)
+    if datetime.now(UTC) - paid_at > timedelta(days=REFUND_WINDOW_DAYS):
+        return "đã quá 7 ngày kể từ ngày thanh toán"
+    if await export_record_repo.count_for_user_since(db, invoice.user_id, paid_at) > 0:
+        return "đã xuất file sau khi thanh toán"
+    return None
+
+
 async def admin_refund_invoice(
-    db: AsyncSession, admin, invoice_id: uuid.UUID, *, amount_vnd: int, reason: str
+    db: AsyncSession,
+    admin,
+    invoice_id: uuid.UUID,
+    *,
+    amount_vnd: int,
+    reason: str,
+    override: bool = False,
 ) -> uuid.UUID:
     """Creates a REFUND ledger entry (BR-97) — never calls the gateway. The
-    invoice itself stays immutable (BR-31); this is the auditable reversal."""
+    invoice itself stays immutable (BR-31); this is the auditable reversal.
+    A full refund of the account's current plan payment drops it back to Free."""
     invoice = await invoice_repo.get_by_id(db, invoice_id)
     if not invoice or invoice.status != "paid":
         raise InvoiceNotRefundable()
     if amount_vnd <= 0 or amount_vnd > invoice.amount_vnd:
         raise RefundInvalidAmount()
+    # BR-98: the refund is a new entry dated today — it can't land in a locked period.
+    await period_service.assert_open(db, datetime.now(UTC))
+    violation = await _refund_policy_violation(db, invoice)
+    if violation and not override:
+        raise RefundPolicyViolation(violation)
 
     refund = await refund_repo.create(
         db, invoice_id=invoice.id, amount_vnd=amount_vnd, reason=reason, created_by=admin.id
     )
     await invoice_repo.mark_refunded(db, invoice)
+    if amount_vnd == invoice.amount_vnd:
+        subscription = await subscription_repo.get_by_user(db, invoice.user_id)
+        if subscription and subscription.last_invoice_id == invoice.id and not subscription.is_free:
+            await _downgrade_to_free(db, subscription)
     await record_audit(
         db, admin, "invoice.refund", target_type="invoice", target_id=invoice_id,
-        payload={"refund_id": str(refund.id), "amount_vnd": amount_vnd, "reason": reason},
+        payload={
+            "refund_id": str(refund.id),
+            "amount_vnd": amount_vnd,
+            "reason": reason,
+            "policy_override": bool(violation and override),
+            "policy_violation": violation,
+        },
     )
     await db.commit()
     return refund.id
+
+
+# --- User-facing invoice/receipt (MSG29 polling, BR-31 download) ---
+
+
+async def get_user_invoice(db: AsyncSession, user, invoice_id: uuid.UUID) -> Invoice:
+    invoice = await invoice_repo.get_by_id(db, invoice_id)
+    if not invoice or invoice.user_id != user.id:
+        raise InvoiceNotFound()
+    return invoice
+
+
+async def get_receipt_url(db: AsyncSession, user, invoice_id: uuid.UUID) -> str:
+    invoice = await get_user_invoice(db, user, invoice_id)
+    url = await receipt_service.get_download_url(invoice)
+    await db.commit()
+    return url
+
+
+async def cancel_stale_pending_invoices(db: AsyncSession) -> int:
+    """SF-06 / BR-30: gateway invoices still PENDING after 30 minutes become
+    CANCELLED. A late SUCCESS webhook still activates them (see below)."""
+    cutoff = datetime.now(UTC) - timedelta(minutes=30)
+    stale = await invoice_repo.list_stale_pending(db, before=cutoff)
+    for invoice in stale:
+        await invoice_repo.mark_cancelled(db, invoice)
+    await db.commit()
+    return len(stale)
 
 
 # --- Webhook / IPN handling ---
@@ -369,14 +496,20 @@ async def _activate_paid_invoice(
         return
     if invoice.status == "paid":
         return  # idempotent — already processed
+    if invoice.status not in ("pending", "cancelled", "failed"):
+        logger.warning(f"Payment webhook ignored: invoice={invoice.id} status={invoice.status}")
+        return
     if invoice.amount_vnd != amount_vnd:
         logger.error(
             f"Payment webhook: amount mismatch invoice={invoice.id} "
             f"expected={invoice.amount_vnd} got={amount_vnd}"
         )
         return
+    if invoice.status == "cancelled":
+        # BR-30: money was collected, so the entitlement is delivered anyway.
+        logger.warning(f"LATE_PAYMENT_AFTER_CANCEL invoice={invoice.id} order={order_code}")
 
-    await invoice_repo.mark_paid(
+    await activate_invoice(
         db,
         invoice,
         paid_at=datetime.now(UTC),
@@ -384,22 +517,40 @@ async def _activate_paid_invoice(
         gateway_metadata_patch=gateway_metadata_patch,
     )
 
-    tier = invoice.plan_tier
-    billing_cycle = invoice.billing_cycle
-    full_tier = f"{tier}_{billing_cycle}"
+
+async def activate_invoice(
+    db: AsyncSession,
+    invoice: Invoice,
+    *,
+    paid_at: datetime,
+    payment_reference: str | None = None,
+    gateway_metadata_patch: dict | None = None,
+) -> None:
+    """Single write path that turns a confirmed payment (gateway webhook or a
+    second admin's approval of a manual entry) into an active subscription,
+    a redeemed coupon and an immutable receipt."""
+    await invoice_repo.mark_paid(
+        db,
+        invoice,
+        paid_at=paid_at,
+        payment_reference=payment_reference,
+        gateway_metadata_patch=gateway_metadata_patch,
+    )
+
+    full_tier = f"{invoice.plan_tier}_{invoice.billing_cycle}"
     now = datetime.now(UTC)
 
-    # BR-24: a mid-cycle upgrade (signalled by the proration discount applied
-    # at checkout) keeps the existing anchor date and usage window instead of
-    # starting a fresh cycle.
+    # BR-24: a mid-cycle upgrade keeps the existing anchor date and usage window
+    # instead of starting a fresh cycle.
     current = await subscription_repo.get_by_user(db, invoice.user_id)
-    is_upgrade = invoice.discount_vnd > 0 and current and current.expires_at
-    if is_upgrade:
+    if invoice.is_upgrade and current and current.expires_at:
         expires_at = current.expires_at
         current_period_start = current.current_period_start
     else:
-        expires_at = now + _CYCLE_TIMEDELTA.get(billing_cycle, timedelta(days=30))
-        current_period_start = now
+        # A manual entry's cycle runs from the day the money was actually collected.
+        base = paid_at if invoice.is_manual else now
+        expires_at = base + _CYCLE_TIMEDELTA.get(invoice.billing_cycle, timedelta(days=30))
+        current_period_start = base
 
     await subscription_repo.upsert_after_payment(
         db,
@@ -417,8 +568,10 @@ async def _activate_paid_invoice(
 
     user = await user_repo.get_by_id(db, invoice.user_id)
     if user:
+        await coupon_service.redeem(db, invoice)
+        await receipt_service.issue_receipt(db, invoice, user)
         task_queue.enqueue_payment_confirmation_email(
-            user.email, invoice.plan_tier, invoice.amount_vnd
+            user.email, invoice.plan_tier, invoice.amount_vnd, invoice.receipt_number
         )
 
 

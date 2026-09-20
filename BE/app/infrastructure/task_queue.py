@@ -17,10 +17,12 @@ def enqueue_password_reset_email(email: str, otp_code: str) -> None:
     )
 
 
-def enqueue_payment_confirmation_email(email: str, plan_tier: str, amount_vnd: int) -> None:
+def enqueue_payment_confirmation_email(
+    email: str, plan_tier: str, amount_vnd: int, receipt_number: str | None = None
+) -> None:
     celery_app.send_task(
         "app.workers.tasks.email_tasks.send_payment_confirmation_email",
-        args=[email, plan_tier, amount_vnd],
+        args=[email, plan_tier, amount_vnd, receipt_number],
         queue="normal",
     )
 
@@ -90,4 +92,20 @@ def enqueue_user_cleanup(user_id: str, *, countdown: int) -> None:
         args=[user_id],
         queue="low",
         countdown=countdown,
+    )
+
+
+def enqueue_account_restore_email(email: str, otp_code: str) -> None:
+    celery_app.send_task(
+        "app.workers.tasks.email_tasks.send_account_restore_email",
+        args=[email, otp_code],
+        queue="normal",
+    )
+
+
+def enqueue_impersonation_notice_email(email: str, reason: str) -> None:
+    celery_app.send_task(
+        "app.workers.tasks.email_tasks.send_impersonation_notice_email",
+        args=[email, reason],
+        queue="normal",
     )

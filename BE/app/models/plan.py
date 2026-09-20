@@ -51,6 +51,8 @@ class Plan(Base):
     max_layers_per_zone: Mapped[int] = mapped_column(Integer, nullable=False, default=5)
     max_layers_per_project: Mapped[int] = mapped_column(Integer, nullable=False, default=30)
     allow_draw_artwork: Mapped[bool] = mapped_column(Boolean, nullable=False, default=False)
+    # BR-46: unpinned design versions kept per project (oldest pruned first)
+    max_versions_per_project: Mapped[int] = mapped_column(Integer, nullable=False, default=20)
 
     created_at: Mapped[datetime] = mapped_column(default=utcnow, nullable=False)
 
