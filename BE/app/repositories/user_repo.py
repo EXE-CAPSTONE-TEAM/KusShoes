@@ -179,7 +179,7 @@ async def set_password_hash(db: AsyncSession, user: User, password_hash: str) ->
 
 
 async def get_by_id_any(db: AsyncSession, user_id: uuid.UUID) -> User | None:
-    """Includes soft-deleted — for admin detail views."""
+    """Includes soft-deleted rows."""
     return await db.get(User, user_id)
 
 
@@ -251,4 +251,44 @@ async def verify_recovery_email(db: AsyncSession, user: User) -> None:
 
 async def set_internal(db: AsyncSession, user: User, is_internal: bool) -> None:
     user.is_internal = is_internal
+    await db.flush()
+
+
+async def get_deleted_by_email(db: AsyncSession, email: str) -> User | None:
+    result = await db.execute(
+        select(User).where(User.email == email, User.deleted_at.is_not(None))
+    )
+    return result.scalar_one_or_none()
+
+
+async def restore(db: AsyncSession, user: User) -> None:
+    user.deleted_at = None
+    await db.flush()
+
+
+
+async def list_purgeable(db: AsyncSession, *, deleted_before: datetime) -> list[User]:
+    """BR-06: soft-deleted accounts past the 30-day restore window that have
+    not been anonymized yet."""
+    result = await db.execute(
+        select(User).where(
+            User.deleted_at.is_not(None),
+            User.deleted_at <= deleted_before,
+            ~User.email.like("%@deleted.invalid"),
+        )
+    )
+    return list(result.scalars())
+
+
+async def anonymize(db: AsyncSession, user: User) -> None:
+    """Drop every personal field but keep the row: invoices/receipts must
+    outlive the account for accounting."""
+    user.email = f"deleted-{user.id}@deleted.invalid"
+    user.username = f"deleted_{user.id.hex[:16]}"
+    user.first_name = "Deleted"
+    user.last_name = "User"
+    user.password_hash = None
+    user.google_id = None
+    user.avatar_path = None
+    user.recovery_email = None
     await db.flush()

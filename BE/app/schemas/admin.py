@@ -22,7 +22,9 @@ AdminSearchQuery = Annotated[
 UserRole = Literal["user", "staff", "admin"]
 UserStatus = Literal["active", "suspended"]
 SubscriptionStatus = Literal["active", "grace", "cancelled", "expired"]
-InvoiceStatus = Literal["pending", "paid", "failed", "refunded"]
+InvoiceStatus = Literal[
+    "pending", "awaiting_approval", "paid", "failed", "cancelled", "refunded"
+]
 BakeStatus = Literal["queued", "processing", "completed", "failed", "cancelled"]
 BakePriority = Literal["low", "normal", "high"]
 ExportFormat = Literal["glb", "obj", "zip"]
@@ -123,6 +125,7 @@ class AdminPlanResponse(BaseModel):
     max_layers_per_zone: int
     max_layers_per_project: int
     allow_draw_artwork: bool
+    max_versions_per_project: int
 
 
 class PlanUpdateRequest(BaseModel):
@@ -137,6 +140,7 @@ class PlanUpdateRequest(BaseModel):
     max_layers_per_zone: int | None = Field(default=None, ge=0)
     max_layers_per_project: int | None = Field(default=None, ge=0)
     allow_draw_artwork: bool | None = None
+    max_versions_per_project: int | None = Field(default=None, ge=1)
 
 
 # --- Projects / Bake / Exports ---
@@ -208,3 +212,14 @@ class SystemHealthResponse(BaseModel):
 class RefundResponse(BaseModel):
     status: str
     refund_id: uuid.UUID
+
+
+class ImpersonateRequest(BaseModel):
+    reason: str = Field(min_length=5, max_length=500)  # reason or ticket id
+
+
+class ImpersonateResponse(BaseModel):
+    access_token: str
+    expires_at: datetime
+    target_user_id: uuid.UUID
+    banner: str

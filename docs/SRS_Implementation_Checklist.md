@@ -8,7 +8,8 @@ Legend: `[x]` done · `[~]` partial · `[ ]` not done · `[-]` out of scope
 
 - Code compiles, lints (ruff) and type-checks (`tsc --noEmit`) on both sides.
 - Tests have **not** been run (Docker was not available).
-- Migrations `017`–`019` are written but **not applied** to the Neon database.
+- Migrations `017`–`022` are written but **not applied** to the Neon database. `021`/`022` were only checked by compiling and by rendering the model DDL.
+- Everything added after the first push (receipts, coupons, manual transactions, period lock, version history, guardrail, templates, artisan links, feedback, analytics, reports, impersonation, account restore, retention) has **never run against a database**; only the pure metric functions and the PDF/CSV/XLSX renderers were executed.
 - PayOS / MoMo clients follow the public specs; they have not been tried against a real sandbox.
 - TOTP is a from-scratch RFC 6238 implementation (stdlib only, no new dependency) — not tried against a real authenticator app.
 
@@ -38,24 +39,26 @@ Legend: `[x]` done · `[~]` partial · `[ ]` not done · `[-]` out of scope
 - [x] No card fields on our pages (BR-96)
 - [x] Invoice stores list price, discount, amount paid, gateway reference and order code (BR-31 data)
 - [x] Refund ledger entry created by an admin; original invoice stays unchanged (BR-97)
-- [~] Refund policy (7 days, no usage) is not checked; a refund does not downgrade the subscription
-- [ ] Receipt PDF with KUS-xxx numbering (SF-18, BR-31) — the SRS says a missing receipt fails the course
-- [ ] PENDING-over-30-minutes cancel job (SF-06, BR-30)
-- [ ] "Đang xác nhận" status for a returning customer (MSG29)
-- [ ] Coupons (BR-26), VAT toggle (BR-28), Early Bird (BR-91)
-- [ ] Manual transactions with two-person approval (BR-95, UC-28)
-- [ ] Reporting-period lock (BR-98, UC-29)
+- [x] Refund policy (BR-97): automatic only within 7 days and with no export since payment; otherwise needs an explicit admin override; a full refund of the current plan downgrades to Free
+- [x] Receipt PDF (SF-18, BR-31): immutable `KUS-00001` number from a DB sequence, content frozen in `receipt_snapshot`, bundled Roboto font for Vietnamese, name shortened only with academic-report consent (BR-88), masked email, file name `KUS-{n}-{slug}-{ddmmyy}.pdf`, 15-min signed download
+- [x] PENDING-over-30-minutes cancel job (SF-06, BR-30), every 5 minutes; a late webhook on a cancelled invoice still activates and is logged
+- [x] "Đang xác nhận" (MSG29): `GET /subscription/invoices/{id}` for the success page to poll; receipt returns 409 until issued
+- [x] Coupons (BR-26): percent / fixed / fixed-price, plan filter, validity window, use cap, 1 use per account, 1,000đ minimum charge, no stacking with proration; Early Bird (BR-91) is a first-payment-only fixed-price coupon
+- [ ] VAT toggle (BR-28)
+- [x] Manual transactions (BR-95, UC-28): maker/checker (self-approval blocked), proof-image upload, approve → activates plan + receipt, reject; audited
+- [x] Reporting-period lock (BR-98, UC-29): open/lock periods; manual transactions and refunds dated inside a locked period are rejected
+- [x] COMP grants (BR-103): flagged on the subscription, no invoice, excluded from revenue metrics
 
 ## Studio, export and content
 
 - [x] Locked projects cannot be edited, deleted or baked (BR-27)
-- [ ] Content guardrail (SF-04, BR-73)
+- [x] Content guardrail (SF-04, BR-54): text ≤ 20 chars; banned terms block the save; trademark terms need `copyrightConfirmed`; whole-word, accent-insensitive matching; admin CRUD with audit; also applied to templates and on bake
 - [ ] AI background removal (SF-03)
-- [ ] Template gallery (UC-15)
-- [ ] Version history (BR-44)
-- [ ] Export locks editing (BR-45) and two-device lock (BR-100)
-- [ ] Reference-pack PDF (SF-07, BR-71)
-- [ ] Artisan links (UC-26, SF-20, BR-101)
+- [x] Template gallery (UC-15): approved templates listed, applied to a project with the layer cap, guardrail and edit lock; admin create / approve / reject
+- [x] Version history (BR-46): a version per distinct save, restore writes a new latest version, unpinned versions capped per plan (20 / 20 / 50), the config sent to a bake is pinned and never pruned
+- [~] Export locks editing (BR-45): saves are rejected (`PROJECT_EXPORTING`) while a bake queued < 5 min ago is still active; the two-device lock (BR-100) is not built
+- [~] Reference-pack PDF (SF-07, BR-71): disclaimer, colours, text/fonts, layer list, version and date, QR; **no** 4-angle renders or flattened zone images (there is no server-side renderer)
+- [x] Artisan links (UC-26, SF-20, BR-101): paid plan and not in grace, from an export, only the SHA-256 of the token is stored, 30 days / 20 downloads, revoke and renew, public no-auth endpoints with IP rate limit, signed URLs ≤ 15 min, every failure answers the same 410 (MSG48)
 - [ ] Free-tier watermark (BR-65)
 
 ## Account and security (UC-01 to UC-07)
@@ -69,24 +72,25 @@ Legend: `[x]` done · `[~]` partial · `[ ]` not done · `[-]` out of scope
 - [x] Consent records (BR-89): ToS + privacy-policy + age-confirmation written at registration; opt-in/revocable marketing-content, academic-report and cookie consents via `/users/me/consents`
 - [x] Data export (SF-11, BR-19): zips profile + project metadata + consents + login history, 1/24h, 15-min signed URL — binary assets (GLB/textures) are **not** bundled (simplification)
 - [ ] Data import from backup (BR-20) — not built
-- [ ] Delete-account 30-day *recovery* (an email link to undo a delete) — soft-delete + scheduled 30-day hard purge already existed before this pass, but there's no restore flow
+- [x] Delete-account recovery and purge (BR-06): restore by emailed 6-digit code within 30 days (uniform answer, no enumeration, 5 attempts); after 30 days the row is anonymised (invoices kept for accounting) and files/projects removed; a stale scheduled task can never purge a restored account
 - [x] Username rules (BR-10): reserved-word blocklist, case-insensitive uniqueness (functional index), 30-day change cooldown
 - [x] Age check (BR-02): required `age_confirmed` flag on registration (schema-validated) + FE checkbox now sends it; a consent record is written
 - [x] Unverified accounts blocked from paying and exporting (BR-03): payment was already covered by the existing global email-verification gate on `get_current_user`; added an explicit check to the export/bake path, which runs behind the service token and previously bypassed that gate entirely
 - [~] UTM/referral attribution (BR-84/85): captured and stored on the user at registration; no sales-rep ref-code admin management, no 30-day first-touch cookie capture (inherently a frontend concern), and it isn't locked at first payment
-- [x] Internal-account flag (BR-83): `User.is_internal` + admin toggle endpoint (`POST /admin/users/{id}/internal`); not yet wired into any analytics exclusion since no analytics exist yet
+- [x] Internal-account flag (BR-83): `User.is_internal` + admin toggle endpoint; now excluded from analytics, reports and feedback statistics
 
 Already present before this work and untouched: register, login, Google OAuth, OTP verification, password reset, listing and revoking sessions.
 
 ## Admin, reporting and other
 
-- [ ] Impersonation and admin password reset (BR-80)
-- [ ] Real analytics: MRR, ARR, ARPU, churn, NRR/GRR, repeat-customer rate (§5.4, BR-103–105)
-- [ ] Report generation and scheduling (SF-16, UC-22)
-- [ ] Feedback module (UC-25, BR-109)
+- [x] Impersonation (BR-80): admin with 2FA only, reason required, 30-minute token with no refresh, blocked from payment / password / account deletion / 2FA settings, audited start and end, customer emailed afterwards; the response carries the banner text
+- [x] Admin-initiated password reset: the customer is emailed the usual recovery code, the admin never sees or sets a password; audited
+- [x] Analytics (§5.4, BR-83/103/104/105): MRR, ARR, ARPU, paying customers, recognised revenue (paid − refunds) with previous-period comparison, churn (EXE201 definition), NRR/GRR, Free→paid, repeat rate with the not-yet-due group split out, failed payments (30 d), revenue by plan, monthly series, revenue movement, top customers. Movement and NRR/GRR are cash-based approximations because there is no MRR history table
+- [~] Reports (SF-16, UC-22): revenue, users, `Sổ giao dịch EXE201` (BR-106 column order) and channel funnel by week (BR-107) as CSV / XLSX / PDF on demand; **not** built: scheduled reports with email delivery, design / plan / export-activity / moderation reports, API cost by day (BR-108)
+- [x] Feedback module (UC-25, BR-109): rating 1–5, one form per 14 days, 4P group, admin triage NEW → REVIEWED → PLANNED → DONE / WONT_DO with a public "what changed" note, internal accounts excluded, XLSX export, summary
 - [ ] Content moderation (BR-77)
 - [ ] API cost tracker (SF-14)
-- [ ] Data retention job (SF-10)
+- [~] Data retention (SF-10): trashed projects now kept 30 days then purged (BR-47, was 7), deleted accounts purged after 30 days, login history 90 days; other retention classes not covered
 - [-] Scan pipeline (SF-01/02, UC-10/11, BR-33–42) — mobile is out of scope
 
 ## Supporting changes
@@ -100,7 +104,11 @@ Already present before this work and untouched: register, login, Google OAuth, O
 
 ## Files added or changed (main ones)
 
-- Migrations: `017_rebuild_payment_gateway.py`, `018_subscription_grace_and_quota_anchor.py`, `019_account_security.py`
+- Migrations: `017_rebuild_payment_gateway.py`, `018_subscription_grace_and_quota_anchor.py`, `019_account_security.py`, `020_finance_receipts_coupons_periods.py`, `021_studio_versions_guardrail_templates_artisan.py`, `022_feedback.py`
+- New (finance): `receipt_service`, `coupon_service`, `finance_service`, `period_service`, `app/assets/fonts`
+- New (studio): `version_service`, `guardrail_service`, `template_service`, `artisan_service`, `reference_pack_service`
+- New (admin): `feedback_service`, `analytics_service`, `report_service`; impersonation in `admin_service`
+- New tests: `test_finance.py`, `test_studio.py`, `test_retention.py`, `test_feedback.py`, `test_analytics.py`, `test_impersonation.py`
 - New (billing): `payos_client.py`, `momo_client.py`, `quota_service.py`, `refund.py` (model), `refund_repo.py`
 - New (account/security): `totp.py`, `twofa_store.py`, `login_guard.py`, `twofa_service.py`, `consent_record.py`/`login_history.py`/`recovery_code.py` (models) + matching repos
 - Rewritten: `billing_service.py`, `maintenance_service.py`

@@ -3,7 +3,7 @@ from collections.abc import Sequence
 from datetime import datetime
 from typing import TypedDict
 
-from sqlalchemy import and_, delete, or_, select
+from sqlalchemy import and_, delete, func, or_, select
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.models.export_record import ExportRecord
@@ -146,3 +146,37 @@ async def list_admin(
         (record, project_name, user_email)
         for record, project_name, user_email in result.all()
     ]
+
+
+async def count_for_user_since(db: AsyncSession, user_id: uuid.UUID, since: datetime) -> int:
+    result = await db.execute(
+        select(func.count(ExportRecord.id)).where(
+            ExportRecord.user_id == user_id, ExportRecord.created_at >= since
+        )
+    )
+    return result.scalar_one()
+
+
+async def get_for_project(
+    db: AsyncSession, export_id: uuid.UUID, project_id: uuid.UUID
+) -> ExportRecord | None:
+    result = await db.execute(
+        select(ExportRecord).where(
+            ExportRecord.id == export_id, ExportRecord.project_id == project_id
+        )
+    )
+    return result.scalar_one_or_none()
+
+
+async def get_by_id(db: AsyncSession, export_id: uuid.UUID) -> ExportRecord | None:
+    return await db.get(ExportRecord, export_id)
+
+
+async def latest_for_project(db: AsyncSession, project_id: uuid.UUID) -> ExportRecord | None:
+    result = await db.execute(
+        select(ExportRecord)
+        .where(ExportRecord.project_id == project_id)
+        .order_by(ExportRecord.created_at.desc(), ExportRecord.id.desc())
+        .limit(1)
+    )
+    return result.scalar_one_or_none()

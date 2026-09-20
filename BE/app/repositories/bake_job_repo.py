@@ -137,3 +137,19 @@ async def mark_cancelled(db: AsyncSession, job: BakeJob) -> None:
 
 async def delete_for_project(db: AsyncSession, project_id: uuid.UUID) -> None:
     await db.execute(delete(BakeJob).where(BakeJob.project_id == project_id))
+
+
+async def get_recent_active_for_project(
+    db: AsyncSession, project_id: uuid.UUID, since: datetime
+) -> BakeJob | None:
+    """Queued/processing job queued after `since` — BR-45 edit lock window."""
+    result = await db.execute(
+        select(BakeJob)
+        .where(
+            BakeJob.project_id == project_id,
+            BakeJob.status.in_(["queued", "processing"]),
+            BakeJob.queued_at >= since,
+        )
+        .limit(1)
+    )
+    return result.scalar_one_or_none()

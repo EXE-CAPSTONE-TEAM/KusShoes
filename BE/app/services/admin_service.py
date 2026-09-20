@@ -6,11 +6,14 @@ from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.exceptions import (
     AdminCannotModifyPrivileged,
+    AdminResetNotAllowed,
     AdminUserNotFound,
     BakeJobNotCancellable,
     BakeJobNotFound,
     BakeJobNotRequeueable,
     EmailAlreadyTaken,
+    ImpersonationRequires2FA,
+    ImpersonationTargetInvalid,
     PlanUpdateInvalid,
     ProjectBakeInProgress,
     ProjectNotFound,
@@ -46,6 +49,7 @@ from app.schemas.admin import (
 )
 from app.services import quota_service
 from app.services.audit import record_audit
+from app.utils.jwt import create_impersonation_token
 from app.utils.password import hash_password
 
 
@@ -517,3 +521,60 @@ async def list_audit_logs(
         )
         for log, actor_email in rows
     ]
+
+
+async def start_impersonation(db: AsyncSession, admin, user_id: uuid.UUID, *, reason: str) -> dict:
+    """BR-80: admin with 2FA, reason required, 30 minutes, audited."""
+    if admin.role != "admin" or not admin.two_factor_enabled:
+        raise ImpersonationRequires2FA()
+    target = await user_repo.get_by_id(db, user_id)
+    if not target:
+        raise AdminUserNotFound()
+    if target.role != "user" or target.status != "active":
+        raise ImpersonationTargetInvalid()
+    token, expires_at = create_impersonation_token(str(target.id), str(admin.id))
+    await record_audit(
+        db, admin, "impersonation.start", target_type="user", target_id=target.id,
+        payload={"reason": reason, "expires_at": expires_at.isoformat()},
+    )
+    await db.commit()
+    return {
+        "access_token": token,
+        "expires_at": expires_at,
+        "target_user_id": target.id,
+        "banner": f"Đang đăng nhập thay {target.email} — phiên tối đa 30 phút",
+    }
+
+
+async def end_impersonation(db: AsyncSession, admin_id: str, target) -> dict[str, str]:
+    admin = await user_repo.get_by_id(db, admin_id)
+    if admin:
+        await record_audit(
+            db, admin, "impersonation.end", target_type="user", target_id=target.id
+        )
+        await db.commit()
+    task_queue.enqueue_impersonation_notice_email(target.email, "hỗ trợ kỹ thuật")
+    return {"message": "Đã kết thúc phiên đăng nhập thay"}
+
+
+async def admin_reset_user_password(
+    db: AsyncSession, redis, actor, user_id: uuid.UUID
+) -> dict[str, str]:
+    """The admin never sees or sets a password: the customer receives the usual
+    recovery code by email."""
+    from app.infrastructure import otp_store, recovery_store
+
+    user = await user_repo.get_by_id(db, user_id)
+    if not user:
+        raise AdminUserNotFound()
+    _require_bannable_target(actor, user)
+    if not user.password_hash:
+        raise AdminResetNotAllowed()
+    code = otp_store.generate_otp()
+    await recovery_store.set_code(redis, user.email, code)
+    task_queue.enqueue_password_reset_email(user.email, code)
+    await record_audit(
+        db, actor, "user.admin_reset_password", target_type="user", target_id=user.id
+    )
+    await db.commit()
+    return {"message": "Đã gửi mã đặt lại mật khẩu tới email của khách"}

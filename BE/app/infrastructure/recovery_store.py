@@ -16,18 +16,22 @@ def _code_digest(code: str) -> str:
     return hashlib.sha256(code.encode()).hexdigest()
 
 
-def _key(email: str) -> str:
-    return f"password-reset:{_email_digest(email)}"
+def _key(email: str, namespace: str) -> str:
+    return f"{namespace}:{_email_digest(email)}"
 
 
-async def set_code(redis: aioredis.Redis, email: str, code: str) -> None:
+async def set_code(
+    redis: aioredis.Redis, email: str, code: str, namespace: str = "password-reset"
+) -> None:
     data = {"code_hash": _code_digest(code), "attempts": 0}
-    await redis.set(_key(email), json.dumps(data), ex=RESET_TTL_SECONDS)
+    await redis.set(_key(email, namespace), json.dumps(data), ex=RESET_TTL_SECONDS)
 
 
-async def verify_code(redis: aioredis.Redis, email: str, code: str) -> str:
+async def verify_code(
+    redis: aioredis.Redis, email: str, code: str, namespace: str = "password-reset"
+) -> str:
     """Return valid, invalid, locked, or expired without exposing stored codes."""
-    key = _key(email)
+    key = _key(email, namespace)
     raw = await redis.get(key)
     if raw is None:
         return "expired"
@@ -44,5 +48,7 @@ async def verify_code(redis: aioredis.Redis, email: str, code: str) -> str:
     return "locked" if data["attempts"] >= MAX_ATTEMPTS else "invalid"
 
 
-async def delete_code(redis: aioredis.Redis, email: str) -> None:
-    await redis.delete(_key(email))
+async def delete_code(
+    redis: aioredis.Redis, email: str, namespace: str = "password-reset"
+) -> None:
+    await redis.delete(_key(email, namespace))

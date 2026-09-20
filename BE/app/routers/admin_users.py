@@ -1,23 +1,27 @@
 import uuid
 
+import redis.asyncio as aioredis
 from fastapi import APIRouter, Depends, Query
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.database import get_db
-from app.dependencies import get_current_admin, get_current_admin_write
+from app.dependencies import get_current_admin, get_current_admin_write, get_redis
 from app.schemas.admin import (
     AdminSearchQuery,
     AdminUserDetailResponse,
     AdminUserListItem,
     BanRequest,
     CursorPage,
+    ImpersonateRequest,
+    ImpersonateResponse,
     SetInternalRequest,
     StaffCreateRequest,
     StaffCreateResponse,
     UserRole,
     UserStatus,
 )
-from app.services import admin_service
+from app.schemas.finance import GrantCompRequest
+from app.services import admin_service, finance_service
 from app.utils.pagination import decode_cursor, encode_cursor
 
 router = APIRouter()
@@ -110,3 +114,36 @@ async def create_staff(
         first_name=body.first_name,
         last_name=body.last_name,
     )
+
+
+@router.post("/users/{user_id}/grant-plan")
+async def grant_comp_plan(
+    user_id: uuid.UUID,
+    body: GrantCompRequest,
+    db: AsyncSession = Depends(get_db),
+    admin=Depends(get_current_admin_write),
+):
+    subscription = await finance_service.grant_comp_plan(
+        db, admin, user_id, **body.model_dump()
+    )
+    return {"status": "granted", "tier": subscription.tier, "is_comp": True}
+
+
+@router.post("/users/{user_id}/impersonate", response_model=ImpersonateResponse)
+async def impersonate_user(
+    user_id: uuid.UUID,
+    body: ImpersonateRequest,
+    db: AsyncSession = Depends(get_db),
+    admin=Depends(get_current_admin_write),
+):
+    return await admin_service.start_impersonation(db, admin, user_id, reason=body.reason)
+
+
+@router.post("/users/{user_id}/reset-password")
+async def admin_reset_password(
+    user_id: uuid.UUID,
+    db: AsyncSession = Depends(get_db),
+    redis: aioredis.Redis = Depends(get_redis),
+    admin=Depends(get_current_admin_write),
+):
+    return await admin_service.admin_reset_user_password(db, redis, admin, user_id)

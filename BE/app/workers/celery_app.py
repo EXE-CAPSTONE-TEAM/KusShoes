@@ -45,6 +45,18 @@ celery_app.conf.update(
             "task": "app.workers.tasks.maintenance_tasks.cleanup_stale_uploads",
             "schedule": 3600.0,  # 1h
         },
+        "cancel-stale-pending-invoices": {
+            "task": "app.workers.tasks.maintenance_tasks.cancel_stale_pending_invoices",
+            "schedule": 300.0,  # SF-06: every 5 min
+        },
+        "purge-expired-trash-daily": {
+            "task": "app.workers.tasks.maintenance_tasks.purge_expired_trash",
+            "schedule": 86400.0,  # BR-47
+        },
+        "purge-deleted-accounts-daily": {
+            "task": "app.workers.tasks.maintenance_tasks.purge_deleted_accounts",
+            "schedule": 86400.0,  # BR-06
+        },
         "purge-old-login-history-daily": {
             "task": "app.workers.tasks.maintenance_tasks.purge_old_login_history",
             "schedule": 86400.0,  # 24h

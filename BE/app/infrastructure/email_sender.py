@@ -27,12 +27,16 @@ def send_otp_email(user_email: str, otp_code: str) -> None:
     )
 
 
-def send_payment_confirmation_email(user_email: str, plan_tier: str, amount_vnd: int) -> None:
+def send_payment_confirmation_email(
+    user_email: str, plan_tier: str, amount_vnd: int, receipt_number: str | None = None
+) -> None:
     _send(
         user_email,
         "Xác nhận thanh toán KusShoes",
         f"Xin chào,\n\nThanh toán của bạn cho gói {plan_tier} đã thành công.\n"
-        f"Số tiền: {amount_vnd:,} VND\n\n"
+        f"Số tiền: {amount_vnd:,} VND\n"
+        + (f"Biên nhận: {receipt_number} (tải trong mục Billing)\n" if receipt_number else "")
+        + "\n"
         "Cảm ơn bạn đã sử dụng dịch vụ của KusShoes.",
     )
 
@@ -88,4 +92,23 @@ def send_grace_period_email(user_email: str) -> None:
         "Sau 3 ngày, tài khoản sẽ chuyển về gói Free và một số dự án có thể chuyển sang "
         "chế độ chỉ xem nếu vượt hạn mức.\n\n"
         "Vui lòng gia hạn trong Billing để giữ nguyên quyền lợi.",
+    )
+
+
+def send_account_restore_email(user_email: str, otp_code: str) -> None:
+    _send(
+        user_email,
+        "Khôi phục tài khoản KusShoes",
+        f"Xin chào,\n\nMã khôi phục tài khoản KusShoes của bạn là: {otp_code}\n\n"
+        "Mã này sẽ hết hạn sau 15 phút. Nếu bạn không yêu cầu khôi phục, hãy bỏ qua email này.",
+    )
+
+
+def send_impersonation_notice_email(user_email: str, reason: str) -> None:
+    _send(
+        user_email,
+        "Đội ngũ KusShoes đã truy cập tài khoản của bạn",
+        "Xin chào,\n\nMột quản trị viên KusShoes vừa truy cập tài khoản của bạn để hỗ trợ "
+        f"(lý do: {reason}). Phiên đã kết thúc.\n\nNếu bạn không yêu cầu hỗ trợ, "
+        "vui lòng đổi mật khẩu và liên hệ chúng tôi.",
     )

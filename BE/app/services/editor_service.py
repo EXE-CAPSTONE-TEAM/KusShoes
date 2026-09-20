@@ -22,6 +22,7 @@ from app.schemas.editor import (
     EditorSaveDesignRequest,
     EditorUserResponse,
 )
+from app.services import guardrail_service, version_service
 from app.services.project_service import count_design_layers, require_owner
 from app.types import JsonObject
 
@@ -53,7 +54,15 @@ async def save_editor_design(
     if count_design_layers(body.designConfig) > max_layers:
         raise DesignLayerLimitExceeded()
     design_config = _with_model_asset_id(body.designConfig, model_asset.id)
+    await guardrail_service.assert_not_exporting(db, project_id)
+    await guardrail_service.check_design(db, design_config)
     await project_repo.save_design(
+        db,
+        project,
+        design_config=design_config,
+        thumbnail_path=project.thumbnail_path,
+    )
+    await version_service.snapshot(
         db,
         project,
         design_config=design_config,

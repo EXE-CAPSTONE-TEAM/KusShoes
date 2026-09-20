@@ -81,7 +81,9 @@ class User(Base, TimestampMixin):
     subscription: Mapped["Subscription | None"] = relationship(
         back_populates="user", uselist=False
     )
-    invoices: Mapped[list["Invoice"]] = relationship(back_populates="user")
+    invoices: Mapped[list["Invoice"]] = relationship(
+        back_populates="user", foreign_keys="Invoice.user_id"
+    )
     projects: Mapped[list["Project"]] = relationship(
         back_populates="user", cascade="all, delete-orphan"
     )

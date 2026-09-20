@@ -61,6 +61,8 @@ class Subscription(Base, TimestampMixin):
     last_invoice_id: Mapped[uuid.UUID | None] = mapped_column(
         UUID(as_uuid=True), ForeignKey("invoices.id"), nullable=True
     )
+    # BR-103: admin-granted plan (support/compensation) — no revenue, not a paying customer.
+    is_comp: Mapped[bool] = mapped_column(Boolean, nullable=False, default=False)
     cancel_at_period_end: Mapped[bool] = mapped_column(
         Boolean, nullable=False, default=False
     )

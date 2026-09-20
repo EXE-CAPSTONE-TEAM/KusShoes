@@ -1,8 +1,8 @@
-from contextlib import asynccontextmanager
-from contextvars import ContextVar
 import os
 import sys
 import uuid
+from contextlib import asynccontextmanager
+from contextvars import ContextVar
 from time import monotonic
 
 import sentry_sdk
@@ -16,17 +16,23 @@ from app.config import settings
 from app.exceptions import register_exception_handlers
 from app.metrics import observe_request, render_prometheus
 from app.routers import (
+    admin_analytics,
     admin_auth,
     admin_billing,
     admin_dashboard,
+    admin_feedback,
     admin_ops,
     admin_plans,
+    admin_studio,
     admin_users,
     auth,
     editor,
     exports,
+    feedback,
     project_assets,
     projects,
+    public_artisan,
+    studio,
     subscriptions,
     users,
     webhooks,
@@ -122,11 +128,19 @@ app.include_router(admin_billing.router, prefix="/api/v1/admin", tags=["Admin Bi
 app.include_router(admin_dashboard.router, prefix="/api/v1/admin", tags=["Admin Dashboard"])
 app.include_router(admin_users.router, prefix="/api/v1/admin", tags=["Admin Users"])
 app.include_router(admin_plans.router, prefix="/api/v1/admin", tags=["Admin Plans"])
+app.include_router(admin_studio.router, prefix="/api/v1/admin", tags=["Admin Studio"])
+app.include_router(admin_feedback.router, prefix="/api/v1/admin", tags=["Admin Feedback"])
+app.include_router(admin_analytics.router, prefix="/api/v1/admin", tags=["Admin Analytics"])
 app.include_router(admin_ops.router, prefix="/api/v1/admin", tags=["Admin Ops"])
 app.include_router(users.router, prefix="/api/v1/users", tags=["Users"])
 app.include_router(projects.router, prefix="/api/v1/projects", tags=["Projects"])
 app.include_router(project_assets.router, prefix="/api/v1/projects", tags=["Assets"])
 app.include_router(editor.router, prefix="/api/v1/editor", tags=["Editor"])
+app.include_router(studio.router, prefix="/api/v1", tags=["Studio"])
+app.include_router(
+    public_artisan.router, prefix="/api/v1/public/artisan", tags=["Public Artisan"]
+)
+app.include_router(feedback.router, prefix="/api/v1", tags=["Feedback"])
 app.include_router(exports.router, prefix="/api/v1", tags=["Exports"])
 app.include_router(subscriptions.router, prefix="/api/v1", tags=["Subscription"])
 app.include_router(webhooks.router, prefix="/api/v1/webhooks", tags=["Webhooks"])
@@ -140,6 +154,7 @@ async def health():
 @app.get("/health/ready", tags=["Health"])
 async def ready():
     import asyncio
+
     import redis.asyncio as aioredis
     from sqlalchemy import text
 

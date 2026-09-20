@@ -41,7 +41,7 @@ async def clean_db(db):
     await db.execute(
         text(
             "TRUNCATE TABLE refresh_tokens, monthly_usage, subscriptions, users, "
-            "invoices, refunds RESTART IDENTITY CASCADE"
+            "invoices, refunds, coupons, reporting_periods, feedbacks RESTART IDENTITY CASCADE"
         )
     )
     await db.commit()
@@ -56,7 +56,13 @@ async def redis():
 
     from app.config import settings
     r = aioredis.from_url(settings.REDIS_URL, decode_responses=True)
-    patterns = ("rate-limit:*", "password-reset:*", "login-fail:*", "login-lock:*")
+    patterns = (
+        "rate-limit:*",
+        "password-reset:*",
+        "account-restore:*",
+        "login-fail:*",
+        "login-lock:*",
+    )
     keys = []
     for pattern in patterns:
         keys.extend([key async for key in r.scan_iter(pattern)])
@@ -147,4 +153,23 @@ def mock_send_otp_email():
 def mock_send_password_reset_email():
     """Never send recovery email from integration tests."""
     with patch("app.infrastructure.task_queue.enqueue_password_reset_email") as mock:
+        yield mock
+
+
+@pytest.fixture(autouse=True)
+def mock_send_account_restore_email():
+    with patch("app.infrastructure.task_queue.enqueue_account_restore_email") as mock:
+        yield mock
+
+
+@pytest.fixture(autouse=True)
+def mock_send_impersonation_notice():
+    with patch("app.infrastructure.task_queue.enqueue_impersonation_notice_email") as mock:
+        yield mock
+
+
+@pytest.fixture(autouse=True)
+def mock_storage_upload():
+    """Receipts/exports upload to S3 — never reach for MinIO from unit-level tests."""
+    with patch("app.infrastructure.storage.upload_bytes") as mock:
         yield mock

@@ -44,6 +44,7 @@ async def upsert_after_payment(
     subscription.status = status
     subscription.expires_at = expires_at
     subscription.grace_until = None
+    subscription.is_comp = False
     subscription.current_period_start = current_period_start
     subscription.cancel_at_period_end = cancel_at_period_end
     if last_invoice_id is not None:

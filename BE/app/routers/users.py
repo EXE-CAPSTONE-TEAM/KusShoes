@@ -2,7 +2,12 @@ from fastapi import APIRouter, Depends
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.database import get_db
-from app.dependencies import get_current_user, get_redis
+from app.dependencies import (
+    forbid_impersonation,
+    get_current_user,
+    get_impersonator_id,
+    get_redis,
+)
 from app.schemas.user import (
     AvatarUploadRequest,
     AvatarUploadResponse,
@@ -27,7 +32,7 @@ from app.schemas.user import (
     UserDetailResponse,
     VerifyRecoveryEmailRequest,
 )
-from app.services import twofa_service, user_service
+from app.services import admin_service, twofa_service, user_service
 
 router = APIRouter()
 
@@ -61,7 +66,7 @@ async def delete_avatar(
     return await user_service.delete_avatar(db, user)
 
 
-@router.put("/me/password", response_model=MessageResponse)
+@router.put("/me/password", response_model=MessageResponse, dependencies=[Depends(forbid_impersonation)])
 async def change_password(
     body: ChangePasswordRequest,
     db: AsyncSession = Depends(get_db),
@@ -70,7 +75,7 @@ async def change_password(
     return await user_service.change_password(db, user, body)
 
 
-@router.delete("/me", response_model=MessageResponse)
+@router.delete("/me", response_model=MessageResponse, dependencies=[Depends(forbid_impersonation)])
 async def delete_account(
     body: DeleteAccountRequest,
     db: AsyncSession = Depends(get_db),
@@ -147,12 +152,12 @@ async def export_account_data(
 # --- BR-12/13 Two-factor authentication ---
 
 
-@router.get("/me/2fa", response_model=TwoFactorStatusResponse)
+@router.get("/me/2fa", response_model=TwoFactorStatusResponse, dependencies=[Depends(forbid_impersonation)])
 async def get_two_factor_status(user=Depends(get_current_user)):
     return twofa_service.get_status(user)
 
 
-@router.post("/me/2fa/recovery-email", response_model=MessageResponse)
+@router.post("/me/2fa/recovery-email", response_model=MessageResponse, dependencies=[Depends(forbid_impersonation)])
 async def set_recovery_email(
     body: SetRecoveryEmailRequest,
     db: AsyncSession = Depends(get_db),
@@ -162,7 +167,7 @@ async def set_recovery_email(
     return await twofa_service.set_recovery_email(db, redis, user, body.recovery_email)
 
 
-@router.post("/me/2fa/recovery-email/verify", response_model=MessageResponse)
+@router.post("/me/2fa/recovery-email/verify", response_model=MessageResponse, dependencies=[Depends(forbid_impersonation)])
 async def verify_recovery_email(
     body: VerifyRecoveryEmailRequest,
     db: AsyncSession = Depends(get_db),
@@ -172,7 +177,7 @@ async def verify_recovery_email(
     return await twofa_service.verify_recovery_email(db, redis, user, body.code)
 
 
-@router.post("/me/2fa/setup", response_model=TwoFactorSetupResponse)
+@router.post("/me/2fa/setup", response_model=TwoFactorSetupResponse, dependencies=[Depends(forbid_impersonation)])
 async def setup_two_factor(
     body: TwoFactorSetupRequest,
     db: AsyncSession = Depends(get_db),
@@ -182,7 +187,7 @@ async def setup_two_factor(
     return await twofa_service.start_setup(db, redis, user, body.method)
 
 
-@router.post("/me/2fa/enable", response_model=TwoFactorEnableResponse)
+@router.post("/me/2fa/enable", response_model=TwoFactorEnableResponse, dependencies=[Depends(forbid_impersonation)])
 async def enable_two_factor(
     body: TwoFactorEnableRequest,
     db: AsyncSession = Depends(get_db),
@@ -192,10 +197,19 @@ async def enable_two_factor(
     return await twofa_service.enable(db, redis, user, method=body.method, code=body.code)
 
 
-@router.post("/me/2fa/disable", response_model=MessageResponse)
+@router.post("/me/2fa/disable", response_model=MessageResponse, dependencies=[Depends(forbid_impersonation)])
 async def disable_two_factor(
     body: TwoFactorDisableRequest,
     db: AsyncSession = Depends(get_db),
     user=Depends(get_current_user),
 ):
     return await twofa_service.disable(db, user, password=body.password, code=body.code)
+
+
+@router.post("/me/impersonation/end", response_model=MessageResponse)
+async def end_impersonation(
+    db: AsyncSession = Depends(get_db),
+    user=Depends(get_current_user),
+    admin_id: str = Depends(get_impersonator_id),
+):
+    return await admin_service.end_impersonation(db, admin_id, user)

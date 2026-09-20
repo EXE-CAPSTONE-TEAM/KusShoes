@@ -127,3 +127,8 @@ async def delete_stale_uploads(db: AsyncSession, *, before: datetime) -> list[st
     if assets:
         await db.execute(delete(ProjectAsset).where(ProjectAsset.id.in_([a.id for a in assets])))
     return paths
+
+
+async def list_project_ids_for_user(db: AsyncSession, user_id: uuid.UUID) -> list[uuid.UUID]:
+    result = await db.execute(select(Project.id).where(Project.user_id == user_id))
+    return list(result.scalars())

@@ -36,9 +36,24 @@ def send_renewal_reminders() -> dict:
     return asyncio.run(_send_renewal_reminders())
 
 
+@celery_app.task(name="app.workers.tasks.maintenance_tasks.cancel_stale_pending_invoices")
+def cancel_stale_pending_invoices() -> dict:
+    return asyncio.run(_cancel_stale_pending_invoices())
+
+
 @celery_app.task(name="app.workers.tasks.maintenance_tasks.purge_old_login_history")
 def purge_old_login_history() -> dict:
     return asyncio.run(_purge_old_login_history())
+
+
+@celery_app.task(name="app.workers.tasks.maintenance_tasks.purge_expired_trash")
+def purge_expired_trash() -> dict:
+    return asyncio.run(_purge_expired_trash())
+
+
+@celery_app.task(name="app.workers.tasks.maintenance_tasks.purge_deleted_accounts")
+def purge_deleted_accounts() -> dict:
+    return asyncio.run(_purge_deleted_accounts())
 
 
 @celery_app.task(name="app.workers.tasks.maintenance_tasks.cleanup_stale_uploads")
@@ -54,8 +69,7 @@ async def _cleanup_project_files(project_id: uuid.UUID) -> dict:
 
 async def _cleanup_user_files(user_id: uuid.UUID) -> dict:
     async with AsyncSessionLocal() as db:
-        paths = await maintenance_service.get_user_file_paths(db, user_id)
-    return maintenance_service.delete_paths(paths)
+        return await maintenance_service.finalize_account_deletion(db, user_id)
 
 
 async def _enter_grace_period() -> dict:
@@ -73,6 +87,11 @@ async def _send_renewal_reminders() -> dict:
         return await maintenance_service.send_renewal_reminders(db)
 
 
+async def _cancel_stale_pending_invoices() -> dict:
+    async with AsyncSessionLocal() as db:
+        return await maintenance_service.cancel_stale_pending_invoices(db)
+
+
 async def _purge_old_login_history() -> dict:
     async with AsyncSessionLocal() as db:
         return await maintenance_service.purge_old_login_history(db)
@@ -82,3 +101,13 @@ async def _cleanup_stale_uploads() -> dict:
     async with AsyncSessionLocal() as db:
         paths = await maintenance_service.remove_stale_upload_records(db)
     return maintenance_service.delete_paths(paths)
+
+
+async def _purge_expired_trash() -> dict:
+    async with AsyncSessionLocal() as db:
+        return await maintenance_service.purge_expired_trash(db)
+
+
+async def _purge_deleted_accounts() -> dict:
+    async with AsyncSessionLocal() as db:
+        return await maintenance_service.purge_deleted_accounts(db)

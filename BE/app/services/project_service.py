@@ -23,6 +23,7 @@ from app.exceptions import (
     SubGracePeriodExportBlocked,
 )
 from app.infrastructure import task_queue
+from app.policy import PROJECT_RESTORE_DAYS
 from app.repositories import (
     bake_job_repo,
     export_record_repo,
@@ -47,19 +48,10 @@ from app.schemas.project import (
     TriggerBakeRequest,
     UpdateProjectRequest,
 )
-from app.services import quota_service
+from app.services import guardrail_service, quota_service, version_service
+from app.services.project_access import require_owner
 
 EDITOR_BASE_URL = "https://app.kusshoes.vn/editor"
-PROJECT_RESTORE_DAYS = 7
-
-
-async def require_owner(db: AsyncSession, project_id: uuid.UUID, user) -> object:
-    project = await project_repo.get_by_id(db, project_id)
-    if not project:
-        raise ProjectNotFound()
-    if project.user_id != user.id:
-        raise ProjectAccessDenied()
-    return project
 
 
 async def list_projects(
@@ -139,7 +131,7 @@ async def delete_project(db: AsyncSession, user, project_id: uuid.UUID) -> dict[
     await project_repo.soft_delete(db, project)
     await quota_service.increment_projects(db, user.id, subscription, -1)
     await db.commit()
-    task_queue.enqueue_project_cleanup(str(project.id), countdown=7 * 24 * 3600)
+    task_queue.enqueue_project_cleanup(str(project.id), countdown=PROJECT_RESTORE_DAYS * 24 * 3600)
     return {"message": "Đã xóa project"}
 
 
@@ -200,7 +192,15 @@ async def save_design(
     max_layers = subscription.plan.max_layers_per_project if subscription else 30
     if count_design_layers(body.design_config) > max_layers:
         raise DesignLayerLimitExceeded()
+    await guardrail_service.assert_not_exporting(db, project_id)
+    await guardrail_service.check_design(db, body.design_config)
     await project_repo.save_design(
+        db,
+        project,
+        design_config=body.design_config,
+        thumbnail_path=body.thumbnail_path,
+    )
+    await version_service.snapshot(
         db,
         project,
         design_config=body.design_config,
@@ -246,11 +246,21 @@ async def trigger_bake(
     max_exports = subscription.plan.max_exports_per_month if subscription else 0
     if max_exports is not None and usage.exports_count + len(formats) > max_exports:
         raise QuotaExportExceeded()
+    await guardrail_service.check_design(db, body.design_config)
     job = await bake_job_repo.create(
         db,
         project_id=project_id,
         design_config=body.design_config,
         priority=priority,
+    )
+    # BR-46: the exact config sent to the factory is pinned so pruning keeps it.
+    await version_service.snapshot(
+        db,
+        project,
+        design_config=body.design_config,
+        thumbnail_path=project.thumbnail_path,
+        pin=True,
+        bake_job_id=job.id,
     )
     await project_repo.set_status(db, project, "baking")
     await db.commit()

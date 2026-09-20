@@ -37,6 +37,12 @@ dependencies = [
 
     # Logging
     "loguru>=0.7.0",
+
+    # PDF receipts / reference packs / reports
+    "fpdf2>=2.8.0",
+    "qrcode>=7.4",
+    "openpyxl>=3.1.0",
+    "pillow>=10.0.0",
     "sentry-sdk[fastapi]>=2.0.0",
 ]
 
