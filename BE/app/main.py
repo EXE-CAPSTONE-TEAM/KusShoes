@@ -12,6 +12,8 @@ from fastapi.responses import PlainTextResponse
 from loguru import logger
 from sentry_sdk.integrations.fastapi import FastApiIntegration
 
+from app.api_docs import API_DESCRIPTION, TAGS
+from app.api_docs import install as install_api_docs
 from app.config import settings
 from app.exceptions import register_exception_handlers
 from app.metrics import observe_request, render_prometheus
@@ -78,7 +80,8 @@ async def lifespan(app: FastAPI):
 app = FastAPI(
     title="KusShoes Platform API",
     version="0.1.0",
-    description="Business Layer Backend for kusshoes.vn",
+    description=API_DESCRIPTION,
+    openapi_tags=TAGS,
     docs_url="/docs" if not settings.is_production else None,
     redoc_url="/redoc" if not settings.is_production else None,
     lifespan=lifespan,
@@ -106,6 +109,7 @@ app.add_middleware(
 )
 
 register_exception_handlers(app)
+install_api_docs(app)
 
 
 @app.middleware("http")

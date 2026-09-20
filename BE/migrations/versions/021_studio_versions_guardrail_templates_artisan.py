@@ -5,6 +5,7 @@ Revises: 020
 Create Date: 2026-09-21
 """
 import uuid
+from datetime import UTC, datetime
 
 import sqlalchemy as sa
 from alembic import op
@@ -61,7 +62,7 @@ def upgrade() -> None:
         sa.Column("updated_at", sa.DateTime(timezone=True), nullable=False),
         sa.CheckConstraint("kind IN ('banned', 'trademark')", name="ck_guardrail_rules_kind"),
     )
-    now = sa.func.now()
+    now = datetime.now(UTC)
     op.bulk_insert(
         guardrail,
         [

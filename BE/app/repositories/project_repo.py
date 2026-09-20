@@ -192,7 +192,13 @@ async def lock_excess_for_user(db: AsyncSession, user_id: uuid.UUID, keep_count:
     excess_ids = [row for row in result.scalars()]
     if not excess_ids:
         return 0
-    await db.execute(update(Project).where(Project.id.in_(excess_ids)).values(is_locked=True))
+    # Keep updated_at as is: locking is not an edit, and the column's onupdate would
+    # otherwise make locked projects look like the most recently edited ones.
+    await db.execute(
+        update(Project)
+        .where(Project.id.in_(excess_ids))
+        .values(is_locked=True, updated_at=Project.updated_at)
+    )
     await db.flush()
     return len(excess_ids)
 
@@ -201,7 +207,7 @@ async def unlock_all_for_user(db: AsyncSession, user_id: uuid.UUID) -> None:
     await db.execute(
         update(Project)
         .where(Project.user_id == user_id, Project.is_locked.is_(True))
-        .values(is_locked=False)
+        .values(is_locked=False, updated_at=Project.updated_at)
     )
     await db.flush()
 
