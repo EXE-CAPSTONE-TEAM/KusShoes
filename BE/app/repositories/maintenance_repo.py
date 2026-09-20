@@ -1,5 +1,5 @@
 import uuid
-from datetime import datetime
+from datetime import datetime, timedelta
 
 from sqlalchemy import delete, select
 from sqlalchemy.ext.asyncio import AsyncSession
@@ -9,6 +9,8 @@ from app.models.project import Project
 from app.models.project_asset import ProjectAsset
 from app.models.subscription import Subscription
 from app.models.user import User
+
+GRACE_PERIOD = timedelta(days=3)
 
 
 async def list_project_file_paths(db: AsyncSession, project_id: uuid.UUID) -> list[str]:
@@ -40,12 +42,15 @@ async def list_user_file_paths(db: AsyncSession, user_id: uuid.UUID) -> list[str
     return paths
 
 
-async def list_expired_subscriptions(
+async def list_subscriptions_entering_grace(
     db: AsyncSession, *, at: datetime
 ) -> list[Subscription]:
+    """BR-90: paid subscriptions whose cycle just ended — move to GRACE
+    instead of downgrading immediately."""
     result = await db.execute(
         select(Subscription).where(
             Subscription.status == "active",
+            Subscription.tier != "free",
             Subscription.expires_at.is_not(None),
             Subscription.expires_at <= at,
         )
@@ -53,17 +58,60 @@ async def list_expired_subscriptions(
     return list(result.scalars())
 
 
+async def enter_grace(
+    db: AsyncSession, subscriptions: list[Subscription], *, at: datetime
+) -> None:
+    for subscription in subscriptions:
+        subscription.status = "grace"
+        subscription.grace_until = at + GRACE_PERIOD
+    await db.flush()
+
+
+async def list_grace_expired(db: AsyncSession, *, at: datetime) -> list[Subscription]:
+    result = await db.execute(
+        select(Subscription).where(
+            Subscription.status == "grace",
+            Subscription.grace_until.is_not(None),
+            Subscription.grace_until <= at,
+        )
+    )
+    return list(result.scalars())
+
+
+async def list_expiring_for_reminder(
+    db: AsyncSession, *, window_start: datetime, window_end: datetime
+) -> list[tuple[Subscription, str]]:
+    """SF-17: active paid subscriptions expiring within [window_start, window_end),
+    joined with the owner's email for the reminder."""
+    result = await db.execute(
+        select(Subscription, User.email)
+        .join(User, User.id == Subscription.user_id)
+        .where(
+            Subscription.status == "active",
+            Subscription.tier != "free",
+            Subscription.expires_at.is_not(None),
+            Subscription.expires_at >= window_start,
+            Subscription.expires_at < window_end,
+        )
+    )
+    return [(sub, email) for sub, email in result.all()]
+
+
 async def downgrade_to_free(
     db: AsyncSession,
     subscriptions: list[Subscription],
     *,
     free_plan_id: uuid.UUID,
+    at: datetime,
 ) -> None:
     for subscription in subscriptions:
         subscription.plan_id = free_plan_id
         subscription.tier = "free"
         subscription.status = "active"
         subscription.expires_at = None
+        subscription.grace_until = None
+        subscription.cancel_at_period_end = False
+        subscription.current_period_start = at
     await db.flush()
 
 

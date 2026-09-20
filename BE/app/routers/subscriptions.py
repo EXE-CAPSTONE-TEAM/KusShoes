@@ -7,12 +7,10 @@ from app.database import get_db
 from app.dependencies import get_current_user
 from app.schemas.subscription import (
     CancelSubscriptionRequest,
-    ChangePlanRequest,
     CheckoutRequest,
     CheckoutResponse,
     InvoiceResponse,
     PlanResponse,
-    PortalLinkResponse,
     SubscriptionResponse,
 )
 from app.services import billing_service
@@ -50,7 +48,7 @@ async def create_checkout(
     user=Depends(get_current_user),
 ):
     checkout_url = await billing_service.create_checkout_session(
-        db, user, tier=body.tier, billing_cycle=body.billing_cycle
+        db, user, tier=body.tier, billing_cycle=body.billing_cycle, gateway=body.gateway
     )
     return CheckoutResponse(checkout_url=checkout_url)
 
@@ -63,22 +61,3 @@ async def cancel_subscription(
 ):
     await billing_service.cancel_subscription(db, user, immediate=body.immediate)
     return {"status": "requested"}
-
-
-@router.post("/subscription/change-plan")
-async def change_plan(
-    body: ChangePlanRequest,
-    db: AsyncSession = Depends(get_db),
-    user=Depends(get_current_user),
-):
-    await billing_service.change_plan(db, user, tier=body.tier, billing_cycle=body.billing_cycle)
-    return {"status": "requested"}
-
-
-@router.post("/subscription/portal", response_model=PortalLinkResponse)
-async def get_portal_link(
-    db: AsyncSession = Depends(get_db),
-    user=Depends(get_current_user),
-):
-    portal_url = await billing_service.get_customer_portal_url(db, user)
-    return PortalLinkResponse(portal_url=portal_url)

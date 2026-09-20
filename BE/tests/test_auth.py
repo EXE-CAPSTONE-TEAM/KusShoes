@@ -28,6 +28,7 @@ async def _register(client, email="test@example.com", username="testuser1"):
             "password": "Password1",
             "confirm_password": "Password1",
             "full_name": "Test User",
+            "age_confirmed": True,
         },
     )
 
@@ -271,6 +272,7 @@ async def verified_user(client, redis):
             "password": password,
             "confirm_password": password,
             "full_name": "Verified User",
+            "age_confirmed": True,
         },
     )
     user_id = reg.json()["user_id"]

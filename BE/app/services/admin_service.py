@@ -24,7 +24,6 @@ from app.repositories import (
     audit_log_repo,
     bake_job_repo,
     export_record_repo,
-    monthly_usage_repo,
     plan_repo,
     project_asset_repo,
     project_repo,
@@ -45,6 +44,7 @@ from app.schemas.admin import (
     MonthlyPoint,
     SystemHealthResponse,
 )
+from app.services import quota_service
 from app.services.audit import record_audit
 from app.utils.password import hash_password
 
@@ -131,7 +131,7 @@ async def update_plan(db: AsyncSession, actor, plan_id: uuid.UUID, changes: dict
         await plan_repo.update_fields(db, plan, changes)
     except IntegrityError as exc:
         await db.rollback()
-        raise PlanUpdateInvalid("polar_product_id đã được gán cho gói khác") from exc
+        raise PlanUpdateInvalid("Cập nhật gói vi phạm ràng buộc dữ liệu") from exc
 
     await record_audit(
         db, actor, "plan.update", target_type="plan", target_id=plan_id,
@@ -170,7 +170,7 @@ async def get_user_detail(db: AsyncSession, user_id: uuid.UUID) -> AdminUserDeta
     if not user:
         raise AdminUserNotFound()
     subscription = await subscription_repo.get_by_user(db, user_id)
-    usage = await monthly_usage_repo.get_or_create_current_month(db, user_id)
+    usage = await quota_service.get_usage(db, user_id, subscription)
     total_projects = await project_repo.count_for_user(db, user_id)
     return AdminUserDetailResponse(
         id=user.id,
@@ -180,6 +180,7 @@ async def get_user_detail(db: AsyncSession, user_id: uuid.UUID) -> AdminUserDeta
         role=user.role,
         status=user.status,
         is_verified=user.is_verified,
+        is_internal=user.is_internal,
         deleted_at=user.deleted_at,
         created_at=user.created_at,
         first_name=user.first_name,
@@ -218,6 +219,22 @@ async def unban_user(db: AsyncSession, actor, user_id: uuid.UUID) -> None:
     _require_bannable_target(actor, user)
     await user_repo.set_status(db, user, "active")
     await record_audit(db, actor, "user.unban", target_type="user", target_id=user_id)
+    await db.commit()
+
+
+async def set_user_internal(
+    db: AsyncSession, actor, user_id: uuid.UUID, *, is_internal: bool
+) -> None:
+    """BR-83: flags a VietStride/demo/test account so it's excluded from
+    paying-customer KPIs, revenue, CAC and conversion metrics."""
+    user = await user_repo.get_by_id_any(db, user_id)
+    if not user:
+        raise AdminUserNotFound()
+    await user_repo.set_internal(db, user, is_internal)
+    await record_audit(
+        db, actor, "user.set_internal", target_type="user", target_id=user_id,
+        payload={"is_internal": is_internal},
+    )
     await db.commit()
 
 

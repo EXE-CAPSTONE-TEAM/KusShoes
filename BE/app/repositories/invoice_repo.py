@@ -15,8 +15,11 @@ async def create_pending(
     plan_id: uuid.UUID | None,
     plan_tier: str,
     billing_cycle: str,
+    order_code: int,
+    listed_price_vnd: int,
     amount_vnd: int,
-    payment_method: str = "polar",
+    payment_method: str,
+    discount_vnd: int = 0,
     gateway_transaction_id: str | None = None,
     gateway_payment_url: str | None = None,
     gateway_metadata: dict | None = None,
@@ -26,6 +29,9 @@ async def create_pending(
         plan_id=plan_id,
         plan_tier=plan_tier,
         billing_cycle=billing_cycle,
+        order_code=order_code,
+        listed_price_vnd=listed_price_vnd,
+        discount_vnd=discount_vnd,
         amount_vnd=amount_vnd,
         payment_method=payment_method,
         gateway_transaction_id=gateway_transaction_id,
@@ -42,6 +48,11 @@ async def get_by_id(db: AsyncSession, invoice_id: uuid.UUID) -> Invoice | None:
     return await db.get(Invoice, invoice_id)
 
 
+async def get_by_order_code(db: AsyncSession, order_code: int) -> Invoice | None:
+    result = await db.execute(select(Invoice).where(Invoice.order_code == order_code))
+    return result.scalar_one_or_none()
+
+
 async def get_by_gateway_transaction_id(
     db: AsyncSession, gateway_transaction_id: str
 ) -> Invoice | None:
@@ -52,11 +63,19 @@ async def get_by_gateway_transaction_id(
 
 
 async def mark_paid(
-    db: AsyncSession, invoice: Invoice, *, paid_at: datetime, gateway_metadata_patch: dict
+    db: AsyncSession,
+    invoice: Invoice,
+    *,
+    paid_at: datetime,
+    payment_reference: str | None = None,
+    gateway_metadata_patch: dict | None = None,
 ) -> Invoice:
     invoice.status = "paid"
     invoice.paid_at = paid_at
-    invoice.gateway_metadata = {**(invoice.gateway_metadata or {}), **gateway_metadata_patch}
+    if payment_reference is not None:
+        invoice.payment_reference = payment_reference
+    if gateway_metadata_patch:
+        invoice.gateway_metadata = {**(invoice.gateway_metadata or {}), **gateway_metadata_patch}
     await db.flush()
     return invoice
 

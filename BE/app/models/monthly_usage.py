@@ -1,8 +1,8 @@
 import uuid
-from datetime import date, datetime
+from datetime import datetime
 from typing import TYPE_CHECKING
 
-from sqlalchemy import Date, ForeignKey, Integer, UniqueConstraint
+from sqlalchemy import DateTime, ForeignKey, Integer, UniqueConstraint
 from sqlalchemy.dialects.postgresql import UUID
 from sqlalchemy.orm import Mapped, mapped_column, relationship
 
@@ -14,9 +14,13 @@ if TYPE_CHECKING:
 
 
 class MonthlyUsage(Base):
+    """Per-cycle export/AI-credit counters — keyed by the subscription's own
+    `current_period_start` (BR-23), not the calendar month despite the class
+    name (kept to avoid a wider rename)."""
+
     __tablename__ = "monthly_usage"
     __table_args__ = (
-        UniqueConstraint("user_id", "year_month", name="uq_monthly_usage_user_month"),
+        UniqueConstraint("user_id", "period_start", name="uq_monthly_usage_user_period"),
     )
 
     id: Mapped[uuid.UUID] = mapped_column(
@@ -25,7 +29,7 @@ class MonthlyUsage(Base):
     user_id: Mapped[uuid.UUID] = mapped_column(
         UUID(as_uuid=True), ForeignKey("users.id", ondelete="CASCADE"), nullable=False
     )
-    year_month: Mapped[date] = mapped_column(Date, nullable=False)  # Luôn là ngày đầu tháng
+    period_start: Mapped[datetime] = mapped_column(DateTime(timezone=True), nullable=False)
 
     projects_count: Mapped[int] = mapped_column(Integer, nullable=False, default=0)
     exports_count: Mapped[int] = mapped_column(Integer, nullable=False, default=0)

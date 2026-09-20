@@ -29,9 +29,11 @@ async def test_project_crud_and_usage(client, db, auth_headers, authenticated_us
     assert updated.status_code == 200
     assert updated.json()["name"] == "Updated Shoe"
 
-    from app.repositories import monthly_usage_repo
+    from app.repositories import subscription_repo
+    from app.services import quota_service
 
-    usage = await monthly_usage_repo.get_or_create_current_month(db, authenticated_user.id)
+    subscription = await subscription_repo.get_by_user(db, authenticated_user.id)
+    usage = await quota_service.get_usage(db, authenticated_user.id, subscription)
     await db.refresh(usage)
     assert usage.projects_count == 1
 
@@ -76,7 +78,16 @@ async def test_project_ownership(client, db, auth_headers):
 
 
 @pytest.mark.asyncio
-async def test_save_design_and_trigger_bake(client, service_headers, auth_headers):
+async def test_save_design_and_trigger_bake(client, db, service_headers, auth_headers, authenticated_user):
+    # Free tier has 0 exports/cycle (BR-99) — bump to Basic so bake/export can succeed.
+    from app.repositories import plan_repo, subscription_repo
+
+    basic_plan = await plan_repo.get_by_tier_and_cycle(db, "basic", "monthly")
+    subscription = await subscription_repo.get_by_user(db, authenticated_user.id)
+    subscription.plan_id = basic_plan.id
+    subscription.tier = "basic_monthly"
+    await db.commit()
+
     project_id = (await _create_project(client, auth_headers)).json()["id"]
     saved = await client.put(
         f"/api/v1/projects/{project_id}/design",

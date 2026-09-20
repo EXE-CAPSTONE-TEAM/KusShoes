@@ -177,3 +177,11 @@ def file_exists(file_path: str) -> bool:
 
 def delete_file(file_path: str) -> None:
     _get_client().delete_object(Bucket=settings.STORAGE_BUCKET, Key=file_path)
+
+
+def upload_bytes(file_path: str, data: bytes, content_type: str) -> None:
+    """Server-side write — for generated files (e.g. SF-11 data export zips),
+    as opposed to the presigned client-upload flow above."""
+    _get_client().put_object(
+        Bucket=settings.STORAGE_BUCKET, Key=file_path, Body=data, ContentType=content_type
+    )

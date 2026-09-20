@@ -15,6 +15,7 @@ from app.repositories import (
     project_repo,
     subscription_repo,
 )
+from app.services import quota_service
 
 SUPPORTED_EXPORTS: dict[str, tuple[str, str]] = {
     "glb": ("final_shoe.glb", "model/gltf-binary"),
@@ -86,7 +87,7 @@ async def process_bake(
         user_id=project.user_id,
         exports=exports,
     )
-    await monthly_usage_repo.increment_exports(db, project.user_id, len(exports))
+    await quota_service.increment_exports(db, project.user_id, subscription, len(exports))
     bake_job_repo.mark_completed(job)
     await project_repo.set_status(db, project, "completed")
     await db.commit()

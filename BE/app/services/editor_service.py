@@ -9,6 +9,15 @@ from typing import Any
 
 from sqlalchemy.ext.asyncio import AsyncSession
 
+from app.exceptions import (
+    AssetNotFound,
+    DesignLayerLimitExceeded,
+    ProjectAccessDenied,
+    ProjectLocked,
+    StorageFileNotFound,
+)
+from app.infrastructure import storage
+from app.repositories import project_asset_repo, project_repo, subscription_repo
 from app.exceptions import AppException, AssetNotFound, ProjectNotFound, StorageFileNotFound
 from app.infrastructure import storage
 from app.repositories import (
@@ -30,6 +39,8 @@ from app.schemas.editor import (
     EditorProjectResponse,
     EditorUserResponse,
 )
+from app.services.project_service import count_design_layers, require_owner
+from app.types import JsonObject
 from app.schemas.project import TriggerBakeRequest
 from app.services import project_service
 
@@ -97,6 +108,17 @@ async def save_design(
     project_id: uuid.UUID,
     body: EditorDesignSaveRequest,
 ) -> EditorDesignResponse:
+    project = await require_owner(db, project_id, user)
+    if project.is_locked:
+        raise ProjectLocked()
+    model_asset = await _get_canonical_model_asset(db, project)
+    if not model_asset:
+        raise AssetNotFound()
+    subscription = await subscription_repo.get_by_user(db, user.id)
+    max_layers = subscription.plan.max_layers_per_project if subscription else 30
+    if count_design_layers(body.designConfig) > max_layers:
+        raise DesignLayerLimitExceeded()
+    design_config = _with_model_asset_id(body.designConfig, model_asset.id)
     _require_scope(session, "editor:write")
     project = await require_editor_project(db, session, project_id, for_update=True)
     asset = await _canonical_asset(db, project)

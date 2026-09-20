@@ -25,6 +25,40 @@ def enqueue_payment_confirmation_email(email: str, plan_tier: str, amount_vnd: i
     )
 
 
+def enqueue_renewal_reminder_email(email: str, days_before: int) -> None:
+    celery_app.send_task(
+        "app.workers.tasks.email_tasks.send_renewal_reminder_email",
+        args=[email, days_before],
+        queue="normal",
+    )
+
+
+def enqueue_grace_period_email(email: str) -> None:
+    celery_app.send_task(
+        "app.workers.tasks.email_tasks.send_grace_period_email",
+        args=[email],
+        queue="normal",
+    )
+
+
+def enqueue_new_device_login_email(
+    email: str, *, ip_address: str | None, user_agent: str | None
+) -> None:
+    celery_app.send_task(
+        "app.workers.tasks.email_tasks.send_new_device_login_email",
+        args=[email, ip_address, user_agent],
+        queue="normal",
+    )
+
+
+def enqueue_account_locked_email(email: str) -> None:
+    celery_app.send_task(
+        "app.workers.tasks.email_tasks.send_account_locked_email",
+        args=[email],
+        queue="normal",
+    )
+
+
 def enqueue_bake(job_id: str, priority: str) -> None:
     celery_app.send_task(
         "app.workers.tasks.bake_tasks.bake_shoe",

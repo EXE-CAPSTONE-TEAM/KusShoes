@@ -31,6 +31,7 @@ class ProjectResponse(BaseModel):
     name: str
     description: str | None
     status: str
+    is_locked: bool
     thumbnail_path: str | None
     design_config: JsonObject | None = None
     editor_url: str

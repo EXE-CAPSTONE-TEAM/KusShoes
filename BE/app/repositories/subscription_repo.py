@@ -25,18 +25,7 @@ async def get_by_user(db: AsyncSession, user_id: uuid.UUID) -> Subscription | No
     return result.scalar_one_or_none()
 
 
-async def get_by_polar_subscription_id(
-    db: AsyncSession, polar_subscription_id: str
-) -> Subscription | None:
-    result = await db.execute(
-        select(Subscription)
-        .options(joinedload(Subscription.plan))
-        .where(Subscription.polar_subscription_id == polar_subscription_id)
-    )
-    return result.scalar_one_or_none()
-
-
-async def upsert_from_polar(
+async def upsert_after_payment(
     db: AsyncSession,
     *,
     user_id: uuid.UUID,
@@ -44,8 +33,7 @@ async def upsert_from_polar(
     tier: str,
     status: str,
     expires_at: datetime | None,
-    polar_subscription_id: str,
-    polar_customer_id: str | None = None,
+    current_period_start: datetime,
     cancel_at_period_end: bool = False,
     last_invoice_id: uuid.UUID | None = None,
 ) -> Subscription:
@@ -55,9 +43,8 @@ async def upsert_from_polar(
     subscription.tier = tier
     subscription.status = status
     subscription.expires_at = expires_at
-    subscription.polar_subscription_id = polar_subscription_id
-    if polar_customer_id is not None:
-        subscription.polar_customer_id = polar_customer_id
+    subscription.grace_until = None
+    subscription.current_period_start = current_period_start
     subscription.cancel_at_period_end = cancel_at_period_end
     if last_invoice_id is not None:
         subscription.last_invoice_id = last_invoice_id

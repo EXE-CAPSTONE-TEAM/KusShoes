@@ -30,13 +30,6 @@ async def get_by_tier_and_cycle(
     return result.scalar_one_or_none()
 
 
-async def get_by_polar_product_id(db: AsyncSession, polar_product_id: str) -> Plan | None:
-    result = await db.execute(
-        select(Plan).where(Plan.polar_product_id == polar_product_id)
-    )
-    return result.scalar_one_or_none()
-
-
 async def list_active(db: AsyncSession) -> list[Plan]:
     result = await db.execute(select(Plan).where(Plan.is_active.is_(True)))
     return list(result.scalars())

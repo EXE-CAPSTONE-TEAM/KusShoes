@@ -143,7 +143,7 @@ export const PricingPage: React.FC<PricingPageProps> = ({ navigate }) => {
           {!plansError && visiblePlans.length === 0 && <p className={styles.desc}>Loading plans from server...</p>}
           {visiblePlans.map((plan) => {
             const displayPrice = plan.price_vnd;
-            const popular = plan.tier === 'creator';
+            const popular = plan.tier === 'basic';
             const cycleText = isAnnual ? '/ năm' : '/ tháng';
             
             return (

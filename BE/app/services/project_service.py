@@ -6,27 +6,31 @@ from datetime import UTC, datetime, timedelta
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.exceptions import (
+    ActionRequiresVerifiedEmail,
     BakeJobNotCancellable,
     BakeJobNotFound,
     BakeJobNotRequeueable,
+    DesignLayerLimitExceeded,
     ProjectAccessDenied,
     ProjectBakeInProgress,
     ProjectCursorInvalid,
+    ProjectLocked,
     ProjectNotFound,
     ProjectQuotaExceeded,
     ProjectRestoreExpired,
     ProjectTrashNotFound,
     QuotaExportExceeded,
+    SubGracePeriodExportBlocked,
 )
 from app.infrastructure import task_queue
 from app.repositories import (
     bake_job_repo,
     export_record_repo,
     maintenance_repo,
-    monthly_usage_repo,
     project_asset_repo,
     project_repo,
     subscription_repo,
+    user_repo,
 )
 from app.schemas.project import (
     BakeJobResponse,
@@ -43,6 +47,7 @@ from app.schemas.project import (
     TriggerBakeRequest,
     UpdateProjectRequest,
 )
+from app.services import quota_service
 
 EDITOR_BASE_URL = "https://app.kusshoes.vn/editor"
 PROJECT_RESTORE_DAYS = 7
@@ -90,10 +95,12 @@ async def list_trash(
 async def create_project(
     db: AsyncSession, user, body: CreateProjectRequest
 ) -> ProjectResponse:
-    usage = await monthly_usage_repo.get_or_create_current_month(db, user.id, for_update=True)
     subscription = await subscription_repo.get_by_user(db, user.id)
     max_projects = subscription.plan.max_projects if subscription else 0
-    if max_projects is not None and usage.projects_count >= max_projects:
+    # BR-46: "dự án lưu tối đa" is a total-inventory cap, not a per-cycle
+    # rate — gate on the live count, never on the cycle usage counter.
+    live_count = await project_repo.count_for_user(db, user.id)
+    if max_projects is not None and live_count >= max_projects:
         raise ProjectQuotaExceeded()
     project = await project_repo.create(
         db,
@@ -101,7 +108,7 @@ async def create_project(
         name=body.name.strip(),
         description=body.description,
     )
-    await monthly_usage_repo.increment_projects(db, user.id, 1)
+    await quota_service.increment_projects(db, user.id, subscription, 1)
     return _to_response(project)
 
 
@@ -114,6 +121,8 @@ async def update_project(
     db: AsyncSession, user, project_id: uuid.UUID, body: UpdateProjectRequest
 ) -> ProjectResponse:
     project = await require_owner(db, project_id, user)
+    if project.is_locked:
+        raise ProjectLocked()
     changes = {
         field: value.strip() if field == "name" else value
         for field, value in body.model_dump(exclude_unset=True).items()
@@ -124,8 +133,11 @@ async def update_project(
 
 async def delete_project(db: AsyncSession, user, project_id: uuid.UUID) -> dict[str, str]:
     project = await require_owner(db, project_id, user)
+    if project.is_locked:
+        raise ProjectLocked()
+    subscription = await subscription_repo.get_by_user(db, user.id)
     await project_repo.soft_delete(db, project)
-    await monthly_usage_repo.increment_projects(db, user.id, -1)
+    await quota_service.increment_projects(db, user.id, subscription, -1)
     await db.commit()
     task_queue.enqueue_project_cleanup(str(project.id), countdown=7 * 24 * 3600)
     return {"message": "Đã xóa project"}
@@ -144,14 +156,14 @@ async def restore_project(
     ):
         raise ProjectRestoreExpired()
 
-    usage = await monthly_usage_repo.get_or_create_current_month(db, user.id, for_update=True)
     subscription = await subscription_repo.get_by_user(db, user.id)
     max_projects = subscription.plan.max_projects if subscription else 0
-    if max_projects is not None and usage.projects_count >= max_projects:
+    live_count = await project_repo.count_for_user(db, user.id)
+    if max_projects is not None and live_count >= max_projects:
         raise ProjectQuotaExceeded()
 
     await project_repo.restore(db, project)
-    await monthly_usage_repo.increment_projects(db, user.id, 1)
+    await quota_service.increment_projects(db, user.id, subscription, 1)
     return _to_response(project)
 
 
@@ -182,6 +194,12 @@ async def save_design(
     project = await project_repo.get_by_id(db, project_id, for_update=True)
     if not project:
         raise ProjectNotFound()
+    if project.is_locked:
+        raise ProjectLocked()
+    subscription = await subscription_repo.get_by_user(db, project.user_id)
+    max_layers = subscription.plan.max_layers_per_project if subscription else 30
+    if count_design_layers(body.design_config) > max_layers:
+        raise DesignLayerLimitExceeded()
     await project_repo.save_design(
         db,
         project,
@@ -194,17 +212,39 @@ async def save_design(
     return {"message": "Đã lưu thiết kế"}
 
 
+def count_design_layers(design_config: object) -> int:
+    """Total sticker+text layers (BR-52) — the studio has no per-zone
+    grouping today, so only the project-wide cap is enforceable."""
+    if not isinstance(design_config, dict):
+        return 0
+    count = 0
+    for key in ("stickers", "texts"):
+        value = design_config.get(key)
+        if isinstance(value, list):
+            count += len(value)
+    return count
+
+
 async def trigger_bake(
     db: AsyncSession, project_id: uuid.UUID, body: TriggerBakeRequest
 ) -> BakeJobResponse:
     project = await project_repo.get_by_id(db, project_id)
     if not project:
         raise ProjectNotFound()
+    if project.is_locked:
+        raise ProjectLocked()
     if await bake_job_repo.get_active_for_project(db, project_id):
         raise ProjectBakeInProgress()
+    # BR-03: this endpoint runs behind the service token, not get_current_user,
+    # so the global email-verification gate never applies here — check directly.
+    owner = await user_repo.get_by_id(db, project.user_id)
+    if not owner or not owner.is_verified:
+        raise ActionRequiresVerifiedEmail()
     subscription = await subscription_repo.get_by_user(db, project.user_id)
+    if subscription and subscription.status == "grace":
+        raise SubGracePeriodExportBlocked()
     priority = subscription.plan.bake_priority if subscription else "low"
-    usage = await monthly_usage_repo.get_or_create_current_month(db, project.user_id)
+    usage = await quota_service.get_usage(db, project.user_id, subscription)
     formats = subscription.plan.allowed_export_formats if subscription else ["glb"]
     max_exports = subscription.plan.max_exports_per_month if subscription else 0
     if max_exports is not None and usage.exports_count + len(formats) > max_exports:
@@ -300,6 +340,7 @@ def _to_response(project) -> ProjectResponse:
         name=project.name,
         description=project.description,
         status=project.status,
+        is_locked=project.is_locked,
         thumbnail_path=project.thumbnail_path,
         design_config=project.design_config,
         editor_url=f"{EDITOR_BASE_URL}/{project.id}",

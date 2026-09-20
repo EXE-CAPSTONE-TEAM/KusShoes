@@ -1,20 +1,18 @@
-from datetime import UTC, datetime
+import hashlib
+import hmac
 from unittest.mock import AsyncMock, patch
 
 import bcrypt
 import pytest
 
-from app.infrastructure.polar_client import WebhookVerificationError
+from app.config import settings
 from app.utils.jwt import create_access_token
 
 
-async def _make_creator_plan(db):
+async def _make_basic_plan(db):
     from app.repositories import plan_repo
 
-    plan = await plan_repo.get_by_tier_and_cycle(db, "creator", "monthly")
-    plan.polar_product_id = "prod_creator_monthly"
-    await db.commit()
-    return plan
+    return await plan_repo.get_by_tier_and_cycle(db, "basic", "monthly")
 
 
 async def _make_admin(db):
@@ -34,12 +32,29 @@ async def _make_admin(db):
     return admin
 
 
+def _payos_signature(data: dict) -> str:
+    raw = "&".join(f"{k}={data[k]}" for k in sorted(data.keys()))
+    return hmac.new(settings.PAYOS_CHECKSUM_KEY.encode(), raw.encode(), hashlib.sha256).hexdigest()
+
+
+def _momo_ipn_signature(data: dict) -> str:
+    fields = [
+        "accessKey", "amount", "extraData", "message", "orderId", "orderInfo",
+        "orderType", "partnerCode", "payType", "requestId", "responseTime",
+        "resultCode", "transId",
+    ]
+    payload = {**data, "accessKey": settings.MOMO_ACCESS_KEY}
+    raw = "&".join(f"{f}={payload.get(f, '')}" for f in fields)
+    return hmac.new(settings.MOMO_SECRET_KEY.encode(), raw.encode(), hashlib.sha256).hexdigest()
+
+
 @pytest.mark.asyncio
 async def test_list_plans_public(client):
     response = await client.get("/api/v1/plans")
     assert response.status_code == 200
     tiers = {p["tier"] for p in response.json()}
     assert "free" in tiers
+    assert "basic" in tiers
 
 
 @pytest.mark.asyncio
@@ -54,73 +69,83 @@ async def test_checkout_plan_not_found(client, auth_headers):
     response = await client.post(
         "/api/v1/subscription/checkout",
         headers=auth_headers,
-        json={"tier": "creator", "billing_cycle": "quarterly"},
+        json={"tier": "basic", "billing_cycle": "quarterly", "gateway": "payos"},
     )
     assert response.status_code == 404
     assert response.json()["code"] == "SUB_PLAN_NOT_FOUND"
 
 
 @pytest.mark.asyncio
-async def test_checkout_plan_not_mapped_to_polar(client, auth_headers):
+async def test_checkout_free_plan_not_sellable(client, auth_headers):
     response = await client.post(
         "/api/v1/subscription/checkout",
         headers=auth_headers,
-        json={"tier": "creator", "billing_cycle": "monthly"},
+        json={"tier": "free", "billing_cycle": "monthly", "gateway": "payos"},
     )
-    assert response.status_code == 502
-    assert response.json()["code"] == "SUB_PLAN_GATEWAY_UNAVAILABLE"
+    assert response.status_code == 404  # free plan has no monthly row -> not found first
+    assert response.json()["code"] == "SUB_PLAN_NOT_FOUND"
 
 
 @pytest.mark.asyncio
-async def test_checkout_creates_pending_invoice(client, db, auth_headers, authenticated_user):
-    await _make_creator_plan(db)
+async def test_checkout_invalid_gateway_rejected(client, auth_headers):
+    response = await client.post(
+        "/api/v1/subscription/checkout",
+        headers=auth_headers,
+        json={"tier": "basic", "billing_cycle": "monthly", "gateway": "vnpay"},
+    )
+    assert response.status_code == 422
+
+
+@pytest.mark.asyncio
+async def test_checkout_creates_pending_invoice_via_payos(
+    client, db, auth_headers, authenticated_user
+):
     with patch(
-        "app.infrastructure.polar_client.create_checkout",
-        new=AsyncMock(return_value=("checkout_123", "https://polar.sh/checkout/123")),
+        "app.infrastructure.payos_client.create_payment_link",
+        new=AsyncMock(return_value=("https://pay.payos.vn/web/abc", "link_123")),
     ):
         response = await client.post(
             "/api/v1/subscription/checkout",
             headers=auth_headers,
-            json={"tier": "creator", "billing_cycle": "monthly"},
+            json={"tier": "basic", "billing_cycle": "monthly", "gateway": "payos"},
         )
     assert response.status_code == 200
-    assert response.json()["checkout_url"] == "https://polar.sh/checkout/123"
+    assert response.json()["checkout_url"] == "https://pay.payos.vn/web/abc"
 
     from app.repositories import invoice_repo
 
     invoices = await invoice_repo.list_by_user(db, authenticated_user.id, limit=10)
     assert len(invoices) == 1
     assert invoices[0].status == "pending"
-    assert invoices[0].payment_method == "polar"
-    assert invoices[0].gateway_transaction_id == "checkout_123"
+    assert invoices[0].payment_method == "payos"
+    assert invoices[0].gateway_transaction_id == "link_123"
+    assert invoices[0].order_code > 0
 
 
 @pytest.mark.asyncio
-async def test_portal_link_requires_polar_customer(client, auth_headers):
-    response = await client.post("/api/v1/subscription/portal", headers=auth_headers)
-    assert response.status_code == 404
-    assert response.json()["code"] == "SUB_NO_POLAR_CUSTOMER"
-
-
-@pytest.mark.asyncio
-async def test_portal_link_returns_url(client, db, auth_headers, authenticated_user):
-    from app.repositories import subscription_repo
-
-    sub = await subscription_repo.get_by_user(db, authenticated_user.id)
-    sub.polar_customer_id = "cus_123"
-    await db.commit()
-
+async def test_checkout_creates_pending_invoice_via_momo(
+    client, db, auth_headers, authenticated_user
+):
     with patch(
-        "app.infrastructure.polar_client.create_customer_portal_session",
-        new=AsyncMock(return_value="https://polar.sh/portal/abc"),
+        "app.infrastructure.momo_client.create_payment",
+        new=AsyncMock(return_value=("https://payment.momo.vn/pay/xyz", "momo://deeplink")),
     ):
-        response = await client.post("/api/v1/subscription/portal", headers=auth_headers)
+        response = await client.post(
+            "/api/v1/subscription/checkout",
+            headers=auth_headers,
+            json={"tier": "basic", "billing_cycle": "monthly", "gateway": "momo"},
+        )
     assert response.status_code == 200
-    assert response.json()["portal_url"] == "https://polar.sh/portal/abc"
+    assert response.json()["checkout_url"] == "https://payment.momo.vn/pay/xyz"
+
+    from app.repositories import invoice_repo
+
+    invoices = await invoice_repo.list_by_user(db, authenticated_user.id, limit=10)
+    assert invoices[0].payment_method == "momo"
 
 
 @pytest.mark.asyncio
-async def test_cancel_subscription_requires_active_polar_sub(client, auth_headers):
+async def test_cancel_subscription_requires_paid_sub(client, auth_headers):
     response = await client.post(
         "/api/v1/subscription/cancel", headers=auth_headers, json={"immediate": False}
     )
@@ -129,160 +154,157 @@ async def test_cancel_subscription_requires_active_polar_sub(client, auth_header
 
 
 @pytest.mark.asyncio
-async def test_cancel_subscription_calls_polar(client, db, auth_headers, authenticated_user):
+async def test_cancel_subscription_immediate_downgrades_now(
+    client, db, auth_headers, authenticated_user
+):
     from app.repositories import subscription_repo
 
+    plan = await _make_basic_plan(db)
     sub = await subscription_repo.get_by_user(db, authenticated_user.id)
-    sub.polar_subscription_id = "sub_123"
+    sub.plan_id = plan.id
+    sub.tier = "basic_monthly"
+    sub.status = "active"
     await db.commit()
 
-    with patch(
-        "app.infrastructure.polar_client.cancel_subscription", new=AsyncMock()
-    ) as mock_cancel:
-        response = await client.post(
-            "/api/v1/subscription/cancel", headers=auth_headers, json={"immediate": False}
-        )
+    response = await client.post(
+        "/api/v1/subscription/cancel", headers=auth_headers, json={"immediate": True}
+    )
     assert response.status_code == 200
-    mock_cancel.assert_awaited_once_with("sub_123", immediate=False)
 
-    # DB state is untouched until the webhook arrives
     await db.refresh(sub)
-    assert sub.status == "active"
+    assert sub.tier == "free"
 
 
 @pytest.mark.asyncio
-async def test_change_plan_calls_polar(client, db, auth_headers, authenticated_user):
-    plan = await _make_creator_plan(db)
+async def test_cancel_subscription_deferred_sets_flag(
+    client, db, auth_headers, authenticated_user
+):
     from app.repositories import subscription_repo
 
+    plan = await _make_basic_plan(db)
     sub = await subscription_repo.get_by_user(db, authenticated_user.id)
-    sub.polar_subscription_id = "sub_123"
+    sub.plan_id = plan.id
+    sub.tier = "basic_monthly"
+    sub.status = "active"
     await db.commit()
 
-    with patch(
-        "app.infrastructure.polar_client.update_subscription_product", new=AsyncMock()
-    ) as mock_update:
-        response = await client.post(
-            "/api/v1/subscription/change-plan",
-            headers=auth_headers,
-            json={"tier": "creator", "billing_cycle": "monthly"},
-        )
+    response = await client.post(
+        "/api/v1/subscription/cancel", headers=auth_headers, json={"immediate": False}
+    )
     assert response.status_code == 200
-    mock_update.assert_awaited_once_with("sub_123", plan.polar_product_id)
+
+    await db.refresh(sub)
+    assert sub.tier == "basic_monthly"  # unchanged until expiry — no auto-renew, no gateway call
+    assert sub.cancel_at_period_end is True
 
 
 @pytest.mark.asyncio
-async def test_webhook_invalid_signature(client):
-    with patch(
-        "app.infrastructure.polar_client.verify_webhook_event",
-        side_effect=WebhookVerificationError("bad signature"),
-    ):
-        response = await client.post("/api/v1/webhooks/polar", content=b"{}")
+async def test_payos_webhook_invalid_signature(client):
+    response = await client.post(
+        "/api/v1/webhooks/payos",
+        json={"code": "00", "data": {"orderCode": 1}, "signature": "bad"},
+    )
     assert response.status_code == 403
 
 
 @pytest.mark.asyncio
-async def test_webhook_order_paid_idempotent(client, db, auth_headers, authenticated_user):
-    plan = await _make_creator_plan(db)
+async def test_payos_webhook_activates_subscription_idempotently(
+    client, db, auth_headers, authenticated_user
+):
+    plan = await _make_basic_plan(db)
     from app.repositories import invoice_repo
 
     invoice = await invoice_repo.create_pending(
         db,
         user_id=authenticated_user.id,
         plan_id=plan.id,
-        plan_tier="creator",
+        plan_tier="basic",
         billing_cycle="monthly",
+        order_code=555555,
+        listed_price_vnd=plan.price_vnd,
         amount_vnd=plan.price_vnd,
-        payment_method="polar",
-        gateway_transaction_id="checkout_123",
+        payment_method="payos",
     )
     await db.commit()
 
-    fake_event = type(
-        "Event",
-        (),
-        {
-            "type": "order.paid",
-            "data": type(
-                "Data",
-                (),
-                {
-                    "id": "order_123",
-                    "metadata": {"invoice_id": str(invoice.id)},
-                    "subscription": type("Sub", (), {"id": "sub_123"})(),
-                    "subscription_id": "sub_123",
-                    "customer": type(
-                        "Customer", (), {"id": "cus_123", "external_id": str(authenticated_user.id)}
-                    )(),
-                },
-            )(),
-        },
-    )()
+    data = {
+        "orderCode": 555555,
+        "amount": plan.price_vnd,
+        "description": "KusShoes basic monthly",
+        "reference": "FT123456",
+        "code": "00",
+        "desc": "success",
+    }
+    payload = {"code": "00", "desc": "success", "success": True, "data": data,
+               "signature": _payos_signature(data)}
 
-    with patch(
-        "app.infrastructure.polar_client.verify_webhook_event", return_value=fake_event
-    ), patch("app.infrastructure.task_queue.enqueue_payment_confirmation_email") as mock_email:
-        response1 = await client.post("/api/v1/webhooks/polar", content=b"{}")
-        response2 = await client.post("/api/v1/webhooks/polar", content=b"{}")
+    with patch("app.infrastructure.task_queue.enqueue_payment_confirmation_email") as mock_email:
+        response1 = await client.post("/api/v1/webhooks/payos", json=payload)
+        response2 = await client.post("/api/v1/webhooks/payos", json=payload)
 
     assert response1.status_code == 200
     assert response2.status_code == 200
 
     await db.refresh(invoice)
     assert invoice.status == "paid"
+    assert invoice.payment_reference == "FT123456"
     assert mock_email.call_count == 1  # not double-fired on redelivery
 
     from app.repositories import subscription_repo
 
     sub = await subscription_repo.get_by_user(db, authenticated_user.id)
-    assert sub.tier == "creator_monthly"
+    assert sub.tier == "basic_monthly"
     assert sub.status == "active"
 
 
 @pytest.mark.asyncio
-async def test_webhook_refund_marks_invoice_refunded_without_touching_subscription(
-    client, db, auth_headers, authenticated_user
-):
-    plan = await _make_creator_plan(db)
-    from app.repositories import invoice_repo, subscription_repo
+async def test_momo_ipn_invalid_signature(client):
+    response = await client.post(
+        "/api/v1/webhooks/momo", json={"orderId": "1", "resultCode": 0, "signature": "bad"},
+    )
+    assert response.status_code == 403
+
+
+@pytest.mark.asyncio
+async def test_momo_ipn_activates_subscription(client, db, auth_headers, authenticated_user):
+    plan = await _make_basic_plan(db)
+    from app.repositories import invoice_repo
 
     invoice = await invoice_repo.create_pending(
         db,
         user_id=authenticated_user.id,
         plan_id=plan.id,
-        plan_tier="creator",
+        plan_tier="basic",
         billing_cycle="monthly",
+        order_code=666666,
+        listed_price_vnd=plan.price_vnd,
         amount_vnd=plan.price_vnd,
-        payment_method="polar",
-        gateway_transaction_id="order_999",
+        payment_method="momo",
     )
-    await invoice_repo.mark_paid(
-        db, invoice, paid_at=datetime.now(UTC), gateway_metadata_patch={}
-    )
-    sub_before = await subscription_repo.get_by_user(db, authenticated_user.id)
-    sub_before.status = "active"
-    sub_before.tier = "creator_monthly"
     await db.commit()
 
-    fake_event = type(
-        "Event",
-        (),
-        {
-            "type": "order.refunded",
-            "data": type("Data", (), {"id": "order_999", "order_id": "order_999", "metadata": {}})(),
-        },
-    )()
+    data = {
+        "orderId": "666666",
+        "amount": plan.price_vnd,
+        "extraData": "",
+        "message": "Success",
+        "orderInfo": "KusShoes basic monthly",
+        "orderType": "momo_wallet",
+        "partnerCode": settings.MOMO_PARTNER_CODE,
+        "payType": "qr",
+        "requestId": "req-1",
+        "responseTime": 1234567890,
+        "resultCode": 0,
+        "transId": "MOMO123",
+    }
+    payload = {**data, "signature": _momo_ipn_signature(data)}
 
-    with patch("app.infrastructure.polar_client.verify_webhook_event", return_value=fake_event):
-        response = await client.post("/api/v1/webhooks/polar", content=b"{}")
+    response = await client.post("/api/v1/webhooks/momo", json=payload)
     assert response.status_code == 200
 
     await db.refresh(invoice)
-    assert invoice.status == "refunded"
-
-    sub_after = await subscription_repo.get_by_user(db, authenticated_user.id)
-    assert sub_after.tier == "creator_monthly"
-    assert sub_after.status == "active"
+    assert invoice.status == "paid"
+    assert invoice.payment_reference == "MOMO123"
 
 
 @pytest.mark.asyncio

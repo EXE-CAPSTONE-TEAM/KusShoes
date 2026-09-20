@@ -1,7 +1,7 @@
 import uuid
 from datetime import UTC, datetime
 
-from sqlalchemy import and_, func, or_, select
+from sqlalchemy import and_, func, or_, select, update
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.exceptions import DesignRevisionConflict
@@ -177,6 +177,32 @@ async def save_design(
 
 async def set_status(db: AsyncSession, project: Project, status: str) -> None:
     project.status = status
+    await db.flush()
+
+
+async def lock_excess_for_user(db: AsyncSession, user_id: uuid.UUID, keep_count: int) -> int:
+    """BR-27: on downgrade, keep the `keep_count` most-recently-edited
+    projects editable and lock the rest read-only. Returns count locked."""
+    result = await db.execute(
+        select(Project.id)
+        .where(Project.user_id == user_id, Project.deleted_at.is_(None))
+        .order_by(Project.updated_at.desc(), Project.id.desc())
+        .offset(max(keep_count, 0))
+    )
+    excess_ids = [row for row in result.scalars()]
+    if not excess_ids:
+        return 0
+    await db.execute(update(Project).where(Project.id.in_(excess_ids)).values(is_locked=True))
+    await db.flush()
+    return len(excess_ids)
+
+
+async def unlock_all_for_user(db: AsyncSession, user_id: uuid.UUID) -> None:
+    await db.execute(
+        update(Project)
+        .where(Project.user_id == user_id, Project.is_locked.is_(True))
+        .values(is_locked=False)
+    )
     await db.flush()
 
 

@@ -72,8 +72,8 @@ async def test_user_can_cancel_and_retry_bake_job(client, db, auth_headers):
 async def test_project_trash_and_restore_are_cleanup_safe(
     client, db, auth_headers, authenticated_user
 ):
-    from app.repositories import monthly_usage_repo, project_asset_repo
-    from app.services import maintenance_service
+    from app.repositories import project_asset_repo, subscription_repo
+    from app.services import maintenance_service, quota_service
 
     project_id = await _create_project(client, auth_headers)
     await project_asset_repo.create_upload(
@@ -106,7 +106,8 @@ async def test_project_trash_and_restore_are_cleanup_safe(
     assert restored.json()["id"] == project_id
     assert await maintenance_service.get_scheduled_project_cleanup_paths(db, project_id) == []
 
-    usage = await monthly_usage_repo.get_or_create_current_month(db, authenticated_user.id)
+    subscription = await subscription_repo.get_by_user(db, authenticated_user.id)
+    usage = await quota_service.get_usage(db, authenticated_user.id, subscription)
     await db.refresh(usage)
     assert usage.projects_count == 1
 

@@ -105,18 +105,13 @@ export const Billing: React.FC = () => {
     };
   });
 
-  const handleChoosePlan = async (plan: Plan) => {
+  const handleChoosePlan = async (plan: Plan, gateway: 'payos' | 'momo') => {
     try {
-      if (subscription) {
-        await api.changePlan(plan.tier, plan.billing_cycle ?? 'monthly');
-        toast('Plan change requested. Billing status will update after provider confirmation.');
-      } else {
-        const checkoutUrl = await api.createCheckout(plan.tier, plan.billing_cycle ?? 'monthly');
-        window.location.assign(checkoutUrl);
-      }
+      const checkoutUrl = await api.createCheckout(plan.tier, plan.billing_cycle ?? 'monthly', gateway);
+      window.location.assign(checkoutUrl);
       setShowUpgradeModal(false);
     } catch (caught) {
-      toast(caught instanceof Error ? caught.message : 'Unable to change plan.', 'error');
+      toast(caught instanceof Error ? caught.message : 'Unable to start checkout.', 'error');
     }
   };
 
@@ -126,14 +121,6 @@ export const Billing: React.FC = () => {
       toast('Cancellation requested. Access remains active until the period ends.');
     } catch (caught) {
       toast(caught instanceof Error ? caught.message : 'Unable to cancel subscription.', 'error');
-    }
-  };
-
-  const handleOpenBillingPortal = async () => {
-    try {
-      window.location.assign(await api.billingPortal());
-    } catch (caught) {
-      toast(caught instanceof Error ? caught.message : 'Unable to open billing portal.', 'error');
     }
   };
 
@@ -180,14 +167,7 @@ export const Billing: React.FC = () => {
             <div className={styles.metaItem}>
               <CreditCard size={16} className={styles.metaIcon} />
               <div className={styles.paymentMethodWrapper}>
-                <span>Payment management: <strong>Polar customer portal</strong></span>
-                <button
-                  className={styles.editPaymentBtn}
-                  onClick={handleOpenBillingPortal}
-                  title="Edit Payment Method"
-                >
-                  <ArrowUpRight size={12} />
-                </button>
+                <span>Payment: <strong>PayOS / MoMo</strong> (no card stored — pay-per-cycle)</span>
               </div>
             </div>
           </div>
@@ -411,14 +391,30 @@ export const Billing: React.FC = () => {
                       ))}
                     </ul>
 
-                    <button 
-                      className={`${tier.popular ? 'btn-neon-orange' : 'btn-outline'} ${styles.pricingCta}`}
-                      onClick={() => handleChoosePlan(tier.plan)}
-                      disabled={tier.isCurrent}
-                    >
-                      <span>{tier.cta}</span>
-                      <ArrowUpRight size={16} />
-                    </button>
+                    {tier.isCurrent || tier.plan.tier === 'free' ? (
+                      <button
+                        className={`${tier.popular ? 'btn-neon-orange' : 'btn-outline'} ${styles.pricingCta}`}
+                        disabled
+                      >
+                        <span>{tier.cta}</span>
+                        <ArrowUpRight size={16} />
+                      </button>
+                    ) : (
+                      <div style={{ display: 'flex', gap: 8 }}>
+                        <button
+                          className={`${tier.popular ? 'btn-neon-orange' : 'btn-outline'} ${styles.pricingCta}`}
+                          onClick={() => handleChoosePlan(tier.plan, 'payos')}
+                        >
+                          <span>Pay via PayOS</span>
+                        </button>
+                        <button
+                          className={`btn-outline ${styles.pricingCta}`}
+                          onClick={() => handleChoosePlan(tier.plan, 'momo')}
+                        >
+                          <span>Pay via MoMo</span>
+                        </button>
+                      </div>
+                    )}
                   </div>
                 ))}
               </div>

@@ -40,12 +40,10 @@ async def clean_db(db):
     from sqlalchemy import text
     await db.execute(
         text(
-            "TRUNCATE TABLE refresh_tokens, monthly_usage, subscriptions, users RESTART IDENTITY CASCADE"
+            "TRUNCATE TABLE refresh_tokens, monthly_usage, subscriptions, users, "
+            "invoices, refunds RESTART IDENTITY CASCADE"
         )
     )
-    # Billing tests map plans to temporary Polar product IDs. Restore the seeded
-    # baseline so repeated and order-independent test runs stay deterministic.
-    await db.execute(text("UPDATE plans SET polar_product_id = NULL"))
     await db.commit()
     yield
 
@@ -58,14 +56,15 @@ async def redis():
 
     from app.config import settings
     r = aioredis.from_url(settings.REDIS_URL, decode_responses=True)
+    patterns = ("rate-limit:*", "password-reset:*", "login-fail:*", "login-lock:*")
     keys = []
-    for pattern in ("rate-limit:*", "password-reset:*"):
+    for pattern in patterns:
         keys.extend([key async for key in r.scan_iter(pattern)])
     if keys:
         await r.delete(*keys)
     yield r
     keys = []
-    for pattern in ("rate-limit:*", "password-reset:*"):
+    for pattern in patterns:
         keys.extend([key async for key in r.scan_iter(pattern)])
     if keys:
         await r.delete(*keys)
@@ -103,6 +102,8 @@ async def service_headers():
 
 @pytest_asyncio.fixture(scope="function")
 async def authenticated_user(db):
+    from datetime import UTC, datetime
+
     import bcrypt
 
     from app.repositories import monthly_usage_repo, plan_repo, subscription_repo, user_repo
@@ -118,7 +119,9 @@ async def authenticated_user(db):
     user.is_verified = True
     plan = await plan_repo.get_free_plan(db)
     await subscription_repo.create_free(db, user_id=user.id, plan_id=plan.id)
-    await monthly_usage_repo.create_for_user(db, user_id=user.id)
+    await monthly_usage_repo.create_for_user(
+        db, user_id=user.id, period_start=datetime.now(UTC)
+    )
     await db.commit()
     return user
 

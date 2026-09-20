@@ -27,7 +27,7 @@ export interface MonthlyPoint {
   value: number;
 }
 
-export type PlanTier = 'free' | 'creator_monthly' | 'creator_yearly' | 'pro_monthly' | 'pro_yearly';
+export type PlanTier = 'free' | 'basic_monthly' | 'basic_yearly' | 'pro_monthly' | 'pro_yearly';
 export type UserStatus = 'active' | 'suspended';
 
 export interface RecentUser {
@@ -68,7 +68,7 @@ export type BakePriority = 'low' | 'normal' | 'high';
 
 export interface AdminPlan {
   id: string;
-  tier: 'free' | 'creator' | 'pro';
+  tier: 'free' | 'basic' | 'pro';
   billing_cycle: 'monthly' | 'yearly' | null;
   price_vnd: number;
   max_projects: number | null;
@@ -76,10 +76,14 @@ export interface AdminPlan {
   allowed_export_formats: ExportFormat[];
   bake_priority: BakePriority;
   is_active: boolean;
-  polar_product_id: string | null;
+  max_ai_credits_per_cycle: number | null;
+  max_scans_per_cycle: number | null;
+  max_layers_per_zone: number;
+  max_layers_per_project: number;
+  allow_draw_artwork: boolean;
 }
 
-export type SubscriptionStatus = 'active' | 'cancelled' | 'expired';
+export type SubscriptionStatus = 'active' | 'grace' | 'cancelled' | 'expired';
 
 export interface AdminSubscription {
   id: string;
@@ -98,12 +102,15 @@ export interface AdminInvoice {
   id: string;
   user_id: string;
   user_email: string | null;
-  plan_tier: 'free' | 'creator' | 'pro';
+  order_code: number;
+  plan_tier: 'free' | 'basic' | 'pro';
   billing_cycle: 'monthly' | 'yearly';
+  listed_price_vnd: number;
+  discount_vnd: number;
   amount_vnd: number;
-  payment_method: 'polar' | 'manual';
+  payment_method: 'payos' | 'momo' | 'manual';
   status: InvoiceStatus;
-  polar_order_id: string | null;
+  payment_reference: string | null;
   paid_at: string | null;
   created_at: string;
 }

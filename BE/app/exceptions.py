@@ -197,6 +197,76 @@ class AccountBanned(AppException):
         )
 
 
+class AuthAccountLocked(AppException):
+    def __init__(self, retry_after: int):
+        super().__init__(
+            429,
+            "AUTH_ACCOUNT_LOCKED",
+            "Sai mật khẩu quá 5 lần. Tài khoản tạm khóa 15 phút.",
+            extra={"retry_after": retry_after},
+            headers={"Retry-After": str(retry_after)},
+        )
+
+
+class AuthTwoFactorChallengeInvalid(AppException):
+    def __init__(self):
+        super().__init__(
+            401, "AUTH_2FA_CHALLENGE_INVALID", "Phiên xác thực 2 lớp không hợp lệ hoặc đã hết hạn"
+        )
+
+
+class AuthTwoFactorCodeInvalid(AppException):
+    def __init__(self):
+        super().__init__(400, "AUTH_2FA_CODE_INVALID", "Mã xác thực 2 lớp không đúng")
+
+
+class AuthTwoFactorAlreadyEnabled(AppException):
+    def __init__(self):
+        super().__init__(409, "AUTH_2FA_ALREADY_ENABLED", "Xác thực 2 lớp đã được bật")
+
+
+class AuthTwoFactorNotEnabled(AppException):
+    def __init__(self):
+        super().__init__(409, "AUTH_2FA_NOT_ENABLED", "Xác thực 2 lớp chưa được bật")
+
+
+class AuthTwoFactorRecoveryEmailRequired(AppException):
+    def __init__(self):
+        super().__init__(
+            422,
+            "AUTH_2FA_RECOVERY_EMAIL_REQUIRED",
+            "Cần xác thực email khôi phục trước khi bật xác thực 2 lớp qua Email",
+        )
+
+
+class UsernameChangeCooldown(AppException):
+    def __init__(self, days_remaining: int):
+        super().__init__(
+            429,
+            "USERNAME_CHANGE_COOLDOWN",
+            f"Bạn chỉ có thể đổi tên đăng nhập 1 lần/30 ngày. Còn {days_remaining} ngày.",
+        )
+
+
+class UsernameReserved(AppException):
+    def __init__(self):
+        super().__init__(409, "USERNAME_RESERVED", "Tên đăng nhập này không thể sử dụng")
+
+
+class ActionRequiresVerifiedEmail(AppException):
+    def __init__(self):
+        super().__init__(
+            403,
+            "EMAIL_VERIFICATION_REQUIRED",
+            "Vui lòng xác minh email trước khi thực hiện thao tác này",
+        )
+
+
+class ConsentNotFound(AppException):
+    def __init__(self):
+        super().__init__(404, "CONSENT_NOT_FOUND", "Không tìm thấy bản ghi đồng ý")
+
+
 # --- Projects ---
 class ProjectNotFound(AppException):
     def __init__(self):
@@ -279,6 +349,31 @@ class StorageFileNotFound(AppException):
         super().__init__(422, "STORAGE_FILE_NOT_FOUND", "File chưa tồn tại trên storage")
 
 
+class DesignLayerLimitExceeded(AppException):
+    def __init__(self):
+        super().__init__(
+            403, "DESIGN_LAYER_LIMIT_EXCEEDED", "Đã đạt giới hạn số layer cho dự án này"
+        )
+
+
+class ProjectLocked(AppException):
+    def __init__(self):
+        super().__init__(
+            403,
+            "PROJECT_LOCKED",
+            "Dự án đang ở chế độ chỉ xem do vượt hạn mức gói. Nâng cấp gói để mở khoá.",
+        )
+
+
+class SubGracePeriodExportBlocked(AppException):
+    def __init__(self):
+        super().__init__(
+            403,
+            "SUB_GRACE_EXPORT_BLOCKED",
+            "Gói đã hết hạn, đang trong thời gian ân hạn — không thể xuất file. Vui lòng gia hạn.",
+        )
+
+
 # --- Subscription ---
 class QuotaExportExceeded(AppException):
     def __init__(self):
@@ -290,11 +385,14 @@ class SubPlanNotFound(AppException):
         super().__init__(404, "SUB_PLAN_NOT_FOUND", "Gói dịch vụ không tồn tại")
 
 
-class SubPlanNotMappedToPolar(AppException):
+class SubPlanNotSellable(AppException):
     def __init__(self):
-        super().__init__(
-            502, "SUB_PLAN_GATEWAY_UNAVAILABLE", "Gói dịch vụ chưa được cấu hình thanh toán"
-        )
+        super().__init__(409, "SUB_PLAN_NOT_SELLABLE", "Gói dịch vụ này không thể thanh toán trực tiếp")
+
+
+class SubInvalidGateway(AppException):
+    def __init__(self):
+        super().__init__(422, "SUB_INVALID_GATEWAY", "Phương thức thanh toán không hợp lệ")
 
 
 class SubPaymentGatewayError(AppException):
@@ -319,18 +417,14 @@ class SubNotFound(AppException):
         super().__init__(404, "SUB_NOT_FOUND", "Bạn chưa có gói đăng ký trả phí nào")
 
 
-class SubNoPolarCustomer(AppException):
-    def __init__(self):
-        super().__init__(
-            404,
-            "SUB_NO_POLAR_CUSTOMER",
-            "Bạn chưa từng thanh toán, chưa có tài khoản trên cổng thanh toán",
-        )
-
-
 class InvoiceNotRefundable(AppException):
     def __init__(self):
         super().__init__(409, "INVOICE_NOT_REFUNDABLE", "Hóa đơn không thể hoàn tiền")
+
+
+class RefundInvalidAmount(AppException):
+    def __init__(self):
+        super().__init__(422, "REFUND_INVALID_AMOUNT", "Số tiền hoàn không hợp lệ")
 
 
 # --- Admin ---

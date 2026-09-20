@@ -1,13 +1,18 @@
 import uuid
-from datetime import datetime
 
 from fastapi import APIRouter, Depends, Query
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.database import get_db
 from app.dependencies import get_current_admin, get_current_admin_write
-from app.schemas.admin import CursorPage, InvoiceStatus, RefundResponse, SubscriptionStatus, SubscriptionTier
-from app.schemas.subscription import AdminInvoiceResponse, AdminSubscriptionResponse
+from app.schemas.admin import (
+    CursorPage,
+    InvoiceStatus,
+    RefundResponse,
+    SubscriptionStatus,
+    SubscriptionTier,
+)
+from app.schemas.subscription import AdminInvoiceResponse, AdminSubscriptionResponse, RefundRequest
 from app.services import billing_service
 from app.utils.pagination import decode_cursor, encode_cursor
 
@@ -79,8 +84,11 @@ async def force_downgrade(
 @router.post("/billing/invoices/{invoice_id}/refund", response_model=RefundResponse)
 async def refund_invoice(
     invoice_id: uuid.UUID,
+    body: RefundRequest,
     db: AsyncSession = Depends(get_db),
     admin=Depends(get_current_admin_write),
 ):
-    polar_refund_id = await billing_service.admin_refund_invoice(db, admin, invoice_id)
-    return RefundResponse(status="refund_requested", polar_refund_id=polar_refund_id)
+    refund_id = await billing_service.admin_refund_invoice(
+        db, admin, invoice_id, amount_vnd=body.amount_vnd, reason=body.reason
+    )
+    return RefundResponse(status="refunded", refund_id=refund_id)

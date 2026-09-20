@@ -42,7 +42,15 @@ class Plan(Base):
     )
     bake_priority: Mapped[str] = mapped_column(String(20), nullable=False, default="low")
     is_active: Mapped[bool] = mapped_column(Boolean, nullable=False, default=True)
-    polar_product_id: Mapped[str | None] = mapped_column(String(255), nullable=True)
+
+    # §3.2.8 quota columns — dashboard/pricing read these as the single source
+    # of truth (BR-92). max_scans_per_cycle is display-only for now: no scan
+    # pipeline exists yet (mobile scanning is out of scope for this backend).
+    max_ai_credits_per_cycle: Mapped[int | None] = mapped_column(Integer, nullable=True)
+    max_scans_per_cycle: Mapped[int | None] = mapped_column(Integer, nullable=True)
+    max_layers_per_zone: Mapped[int] = mapped_column(Integer, nullable=False, default=5)
+    max_layers_per_project: Mapped[int] = mapped_column(Integer, nullable=False, default=30)
+    allow_draw_artwork: Mapped[bool] = mapped_column(Boolean, nullable=False, default=False)
 
     created_at: Mapped[datetime] = mapped_column(default=utcnow, nullable=False)
 
