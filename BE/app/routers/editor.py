@@ -5,41 +5,169 @@ from fastapi.responses import StreamingResponse
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.database import get_db
-from app.dependencies import get_current_user
+from app.dependencies import get_editor_session
+from app.exceptions import AppException
+from app.schemas.auth import EditorSessionResponse
 from app.schemas.editor import (
     EditorContextResponse,
     EditorDesignResponse,
-    EditorSaveDesignRequest,
+    EditorDesignSaveRequest,
+    EditorExportPackageResponse,
+    EditorJobResponse,
+    EditorUserResponse,
 )
-from app.services import editor_service
+from app.schemas.project_asset import (
+    AssetConfirmRequest,
+    AssetResponse,
+    AssetUploadURLRequest,
+    AssetUploadURLResponse,
+)
+from app.services import asset_service, editor_service
 
 router = APIRouter()
+EDITOR_UPLOAD_ASSET_TYPES = {"sticker", "texture", "reference_image"}
+# Tạm thời cho phép KusStudio import thủ công model 3D khi project chưa có model
+# canonical (đứng thay cho luồng scan mobile — xem docs/integration-runbook.md).
+EDITOR_IMPORT_ASSET_TYPES = {"source_model"}
+EDITOR_ASSET_TYPES = EDITOR_UPLOAD_ASSET_TYPES | EDITOR_IMPORT_ASSET_TYPES
+
+
+async def _require_importable_project(db: AsyncSession, session: EditorSessionResponse):
+    """Chỉ cho import source model khi project chưa có model canonical."""
+    project = await editor_service.require_editor_project(db, session)
+    if project.canonical_model_asset_id:
+        raise AppException(
+            403,
+            "EDITOR_ASSET_TYPE_FORBIDDEN",
+            "KusStudio cannot replace the canonical source model.",
+        )
+    return project
+
+
+@router.get("/me", response_model=EditorUserResponse)
+async def get_me(
+    db: AsyncSession = Depends(get_db),
+    session: EditorSessionResponse = Depends(get_editor_session),
+):
+    return await editor_service.get_me(db, session)
 
 
 @router.get("/projects/{project_id}/context", response_model=EditorContextResponse)
-async def get_editor_context(
+async def get_project_context(
     project_id: uuid.UUID,
     db: AsyncSession = Depends(get_db),
-    user=Depends(get_current_user),
+    session: EditorSessionResponse = Depends(get_editor_session),
 ):
-    return await editor_service.get_editor_context(db, user, project_id)
+    return await editor_service.get_context(db, session, project_id)
 
 
-@router.put("/projects/{project_id}/design", response_model=EditorDesignResponse)
-async def save_editor_design(
+@router.post("/projects/{project_id}/designs", response_model=EditorDesignResponse)
+async def save_project_design(
     project_id: uuid.UUID,
-    body: EditorSaveDesignRequest,
+    body: EditorDesignSaveRequest,
     db: AsyncSession = Depends(get_db),
-    user=Depends(get_current_user),
+    session: EditorSessionResponse = Depends(get_editor_session),
 ):
-    return await editor_service.save_editor_design(db, user, project_id, body)
+    return await editor_service.save_design(db, session, project_id, body)
 
 
-@router.get("/assets/{asset_id}/download")
-async def download_editor_asset(
+@router.get("/designs/{design_id}", response_model=EditorDesignResponse)
+async def get_design(
+    design_id: uuid.UUID,
+    db: AsyncSession = Depends(get_db),
+    session: EditorSessionResponse = Depends(get_editor_session),
+):
+    return await editor_service.get_design(db, session, design_id)
+
+
+@router.post("/designs/{design_id}/bake", response_model=EditorJobResponse, status_code=202)
+async def bake_design(
+    design_id: uuid.UUID,
+    db: AsyncSession = Depends(get_db),
+    session: EditorSessionResponse = Depends(get_editor_session),
+):
+    return await editor_service.trigger_bake(db, session, design_id)
+
+
+@router.get("/jobs/{job_id}", response_model=EditorJobResponse)
+async def get_job(
+    job_id: uuid.UUID,
+    db: AsyncSession = Depends(get_db),
+    session: EditorSessionResponse = Depends(get_editor_session),
+):
+    return await editor_service.get_job(db, session, job_id)
+
+
+@router.post(
+    "/designs/{design_id}/export",
+    response_model=EditorExportPackageResponse,
+)
+async def export_design(
+    design_id: uuid.UUID,
+    db: AsyncSession = Depends(get_db),
+    session: EditorSessionResponse = Depends(get_editor_session),
+):
+    return await editor_service.get_export_package(db, session, design_id)
+
+
+@router.post("/assets/upload-url", response_model=AssetUploadURLResponse)
+async def create_asset_upload_url(
+    body: AssetUploadURLRequest,
+    db: AsyncSession = Depends(get_db),
+    session: EditorSessionResponse = Depends(get_editor_session),
+):
+    if body.asset_type not in EDITOR_ASSET_TYPES:
+        raise AppException(
+            403,
+            "EDITOR_ASSET_TYPE_FORBIDDEN",
+            "KusStudio cannot upload this asset type.",
+        )
+    user = await editor_service.get_editor_user(db, session)
+    if body.asset_type in EDITOR_IMPORT_ASSET_TYPES:
+        await _require_importable_project(db, session)
+    else:
+        await editor_service.require_editor_project(db, session)
+    return await asset_service.create_upload_url(db, user, session.project_id, body)
+
+
+@router.post("/assets/confirm", response_model=AssetResponse)
+async def confirm_asset_upload(
+    body: AssetConfirmRequest,
+    db: AsyncSession = Depends(get_db),
+    session: EditorSessionResponse = Depends(get_editor_session),
+):
+    asset = await editor_service.get_uploaded_asset_for_session(
+        db, session, body.asset_id, EDITOR_ASSET_TYPES
+    )
+    user = await editor_service.get_editor_user(db, session)
+    if asset.asset_type in EDITOR_IMPORT_ASSET_TYPES:
+        await _require_importable_project(db, session)
+    return await asset_service.confirm_upload(db, user, session.project_id, body)
+
+
+@router.get("/assets/{asset_id}/content")
+async def get_asset_content(
     asset_id: uuid.UUID,
     db: AsyncSession = Depends(get_db),
-    user=Depends(get_current_user),
+    session: EditorSessionResponse = Depends(get_editor_session),
 ):
-    stream, media_type = await editor_service.open_asset_download(db, user, asset_id)
-    return StreamingResponse(stream, media_type=media_type)
+    download = await editor_service.open_asset_content(db, session, asset_id)
+    return StreamingResponse(
+        download.chunks,
+        media_type=download.media_type,
+        headers=download.headers,
+    )
+
+
+@router.get("/exports/{export_id}/content")
+async def get_export_content(
+    export_id: uuid.UUID,
+    db: AsyncSession = Depends(get_db),
+    session: EditorSessionResponse = Depends(get_editor_session),
+):
+    download = await editor_service.open_export_content(db, session, export_id)
+    return StreamingResponse(
+        download.chunks,
+        media_type=download.media_type,
+        headers=download.headers,
+    )

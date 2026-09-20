@@ -4,15 +4,38 @@ from datetime import UTC, datetime
 from sqlalchemy import and_, func, or_, select, update
 from sqlalchemy.ext.asyncio import AsyncSession
 
+from app.exceptions import DesignRevisionConflict
+from app.models.design_revision import DesignRevision
 from app.models.project import Project
 from app.models.user import User
 from app.types import JsonObject
 
 
-async def get_by_id(db: AsyncSession, project_id: uuid.UUID) -> Project | None:
-    result = await db.execute(
-        select(Project).where(Project.id == project_id, Project.deleted_at.is_(None))
+async def get_by_id(
+    db: AsyncSession, project_id: uuid.UUID, *, for_update: bool = False
+) -> Project | None:
+    query = select(Project).where(Project.id == project_id, Project.deleted_at.is_(None))
+    if for_update:
+        query = query.with_for_update()
+    result = await db.execute(query)
+    return result.scalar_one_or_none()
+
+
+async def get_owned_by_id(
+    db: AsyncSession,
+    project_id: uuid.UUID,
+    user_id: uuid.UUID,
+    *,
+    for_update: bool = False,
+) -> Project | None:
+    query = select(Project).where(
+        Project.id == project_id,
+        Project.user_id == user_id,
+        Project.deleted_at.is_(None),
     )
+    if for_update:
+        query = query.with_for_update()
+    result = await db.execute(query)
     return result.scalar_one_or_none()
 
 
@@ -127,10 +150,28 @@ async def save_design(
     *,
     design_config: JsonObject,
     thumbnail_path: str | None,
+    base_revision: int,
+    author_user_id: uuid.UUID,
+    client: str | None,
 ) -> None:
+    """Caller must already hold the row lock (fetch with for_update=True)."""
+    if project.current_design_revision != base_revision:
+        raise DesignRevisionConflict(project)
+
+    next_revision = project.current_design_revision + 1
+    db.add(
+        DesignRevision(
+            project_id=project.id,
+            revision=next_revision,
+            design_config=design_config,
+            author_user_id=author_user_id,
+            client=client,
+        )
+    )
     project.design_config = design_config
     project.thumbnail_path = thumbnail_path
     project.status = "in_progress"
+    project.current_design_revision = next_revision
     await db.flush()
 
 

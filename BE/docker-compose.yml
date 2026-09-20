@@ -80,6 +80,10 @@ services:
       - "8000:8000"   # API:     http://localhost:8000
                       # Swagger: http://localhost:8000/docs
     env_file: .env
+    # Bake worker (ar-ai-exe/backend) chạy ở compose khác trên host:8010 →
+    # host.docker.internal cho phép container gọi ngược ra host trên Linux.
+    extra_hosts:
+      - "host.docker.internal:host-gateway"
     depends_on:
       db:
         condition: service_healthy
@@ -100,6 +104,8 @@ services:
     build: .
     container_name: kusshoes_worker
     env_file: .env
+    extra_hosts:
+      - "host.docker.internal:host-gateway"
     depends_on:
       db:
         condition: service_healthy

@@ -127,6 +127,11 @@ export type ProjectPage = {
   hasNext: boolean;
 };
 
+export type EditorLaunch = {
+  desktopUrl: string;
+  expiresIn: number;
+};
+
 export type Plan = {
   id: string;
   tier: string;
@@ -172,12 +177,6 @@ export type ProjectExport = {
   file_size_bytes: number | null;
   download_count: number;
   created_at: string;
-};
-
-export type DesktopLaunch = {
-  ssoToken: string;
-  expiresIn: number;
-  apiBaseUrl: string;
 };
 
 const FALLBACK_PROJECT_IMAGE = new URL("../assets/sneaker-hero.png", import.meta.url).href;
@@ -513,15 +512,18 @@ export const api = {
     return toPortalProject(project);
   },
 
-  async createDesktopLaunch(projectId: string): Promise<DesktopLaunch> {
-    const payload = await request<{ sso_token: string; expires_in: number }>("/api/v1/auth/sso-token", {
+  async createEditorLaunch(projectId: string): Promise<EditorLaunch> {
+    const launch = await request<{
+      launch_ticket: string;
+      desktop_url: string;
+      expires_in: number;
+    }>("/api/v1/auth/editor/launch", {
       method: "POST",
       body: JSON.stringify({ project_id: projectId }),
     });
     return {
-      ssoToken: payload.sso_token,
-      expiresIn: payload.expires_in,
-      apiBaseUrl: API_BASE_URL,
+      desktopUrl: launch.desktop_url,
+      expiresIn: launch.expires_in,
     };
   },
 

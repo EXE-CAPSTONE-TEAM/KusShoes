@@ -25,6 +25,7 @@ from app.routers import (
     auth,
     editor,
     exports,
+    mobile,
     project_assets,
     projects,
     subscriptions,
@@ -85,6 +86,8 @@ app.add_middleware(
         "http://localhost:3000",  # local FE dev
         "http://localhost:5173",  # Vite local FE dev
         "http://127.0.0.1:5173",
+        "http://localhost:5174",  # KusStudio editor dev (ar-ai-exe/frontend)
+        "http://127.0.0.1:5174",
         "http://localhost:1420",  # Tauri dev server
         "http://127.0.0.1:1420",
         "http://tauri.localhost",  # Tauri desktop webview
@@ -116,7 +119,13 @@ async def add_request_id(request, call_next):
     response.headers["X-Request-ID"] = request_id
     return response
 
+
 app.include_router(auth.router, prefix="/api/v1/auth", tags=["Auth"])
+app.include_router(editor.router, prefix="/api/v1/editor", tags=["Editor"])
+app.include_router(mobile.router, prefix="/api/v1/mobile", tags=["Mobile"])
+app.include_router(
+    mobile.internal_router, prefix="/api/v1/internal/mobile", tags=["Mobile Internal"]
+)
 app.include_router(admin_auth.router, prefix="/api/v1/admin", tags=["Admin Auth"])
 app.include_router(admin_billing.router, prefix="/api/v1/admin", tags=["Admin Billing"])
 app.include_router(admin_dashboard.router, prefix="/api/v1/admin", tags=["Admin Dashboard"])
@@ -126,7 +135,6 @@ app.include_router(admin_ops.router, prefix="/api/v1/admin", tags=["Admin Ops"])
 app.include_router(users.router, prefix="/api/v1/users", tags=["Users"])
 app.include_router(projects.router, prefix="/api/v1/projects", tags=["Projects"])
 app.include_router(project_assets.router, prefix="/api/v1/projects", tags=["Assets"])
-app.include_router(editor.router, prefix="/api/v1/editor", tags=["Editor"])
 app.include_router(exports.router, prefix="/api/v1", tags=["Exports"])
 app.include_router(subscriptions.router, prefix="/api/v1", tags=["Subscription"])
 app.include_router(webhooks.router, prefix="/api/v1/webhooks", tags=["Webhooks"])
