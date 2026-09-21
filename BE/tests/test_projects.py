@@ -142,8 +142,9 @@ async def test_save_design_revision_conflict(client, db, service_headers, auth_h
     )
     assert second.status_code == 200
 
-    from app.models.design_revision import DesignRevision
     from sqlalchemy import select
+
+    from app.models.design_revision import DesignRevision
 
     revisions = (
         await db.execute(

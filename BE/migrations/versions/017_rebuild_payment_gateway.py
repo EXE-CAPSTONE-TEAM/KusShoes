@@ -1,7 +1,7 @@
 """rebuild payment gateway: drop Polar, add PayOS/MoMo + refunds ledger
 
 Revision ID: 017
-Revises: 016
+Revises: 016b
 Create Date: 2026-09-18
 """
 import uuid
@@ -11,7 +11,7 @@ from alembic import op
 from sqlalchemy.dialects import postgresql
 
 revision = "017"
-down_revision = "016"
+down_revision = "016b"
 branch_labels = None
 depends_on = None
 

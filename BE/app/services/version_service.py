@@ -70,7 +70,7 @@ async def restore_version(
 ) -> DesignVersionItem:
     """Restoring writes the old config back as a NEW latest version, so history
     is never rewritten."""
-    project = await require_owner(db, project_id, user)
+    project = await require_owner(db, project_id, user, for_update=True)
     if project.is_locked:
         raise ProjectLocked()
     version = await design_version_repo.get(db, project_id, version_id)
@@ -82,6 +82,9 @@ async def restore_version(
         project,
         design_config=version.design_config,
         thumbnail_path=version.thumbnail_path or project.thumbnail_path,
+        base_revision=project.current_design_revision,
+        author_user_id=user.id,
+        client="web",
     )
     restored = await snapshot(
         db,

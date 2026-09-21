@@ -40,7 +40,9 @@ TAGS = [
     {"name": "Users", "description": "Hồ sơ cá nhân, quyền riêng tư, đồng ý dữ liệu, lịch sử đăng nhập, 2FA, xuất dữ liệu, xóa tài khoản."},
     {"name": "Projects", "description": "Dự án thiết kế, thùng rác, lưu thiết kế, bake/export 3D."},
     {"name": "Assets", "description": "Tệp của dự án (model 3D, texture) qua presigned URL."},
-    {"name": "Editor", "description": "API dành cho ứng dụng KusStudio (desktop)."},
+    {"name": "Editor", "description": "API của cầu nối KusStudio (desktop): dùng editor session token lấy từ vé mở editor."},
+    {"name": "Mobile", "description": "Cầu nối ứng dụng di động (quét giày). Ngoài phạm vi web portal."},
+    {"name": "Mobile Internal", "description": "Endpoint nội bộ cho dịch vụ tính toán quét; xác thực bằng token dịch vụ riêng."},
     {"name": "Studio", "description": "Lịch sử phiên bản, template, link chia sẻ cho nghệ nhân, gói tham khảo PDF."},
     {"name": "Public Artisan", "description": "Endpoint công khai (không đăng nhập) để nghệ nhân xem/tải bản xuất qua link chia sẻ."},
     {"name": "Exports", "description": "Lịch sử file đã xuất và link tải."},
@@ -64,6 +66,8 @@ _B = "Bearer."
 _A = "Admin (Bearer)."
 _AW = "Admin ghi (Bearer, staff bị 403)."
 _S = "Service token (`X-Service-Token`)."
+_E = "Editor session token (Bearer, cấp bởi `/auth/editor/launch/exchange`)."
+_M = "Token tính toán di động (dịch vụ nội bộ)."
 _P = "Công khai."
 
 # "METHOD /path": (summary, description)
@@ -88,6 +92,10 @@ DOCS: dict[str, tuple[str, str]] = {
     "POST /api/v1/auth/desktop-session": ("Đổi mã SSO lấy phiên desktop", "Tương tự verify-sso nhưng trả access token cho ứng dụng desktop. " + _S),
     "POST /api/v1/auth/restore-account/request": ("Yêu cầu khôi phục tài khoản đã xóa", "Gửi mã 6 số tới email nếu tài khoản đã xóa còn trong 30 ngày (BR-06). Luôn trả cùng một thông báo. " + _P),
     "POST /api/v1/auth/restore-account/confirm": ("Xác nhận khôi phục tài khoản", "Nhập email + mã để hủy xóa tài khoản; sau đó đăng nhập lại. Sai/hết hạn trả `AUTH_RESTORE_INVALID`. " + _P),
+    "POST /api/v1/auth/editor/launch": ("Tạo vé mở KusStudio", "Tạo vé mở editor dùng một lần, sống ngắn, gắn với một dự án; trả URL/ticket để mở ứng dụng desktop. " + _B),
+    "POST /api/v1/auth/editor/launch/claim": ("Desktop nhận vé mở editor", "Ứng dụng desktop trình vé để nhận thông tin phiên khởi tạo; vé chỉ dùng được một lần. " + _P),
+    "POST /api/v1/auth/editor/launch/exchange": ("Đổi vé lấy editor session", "Đổi vé đã nhận lấy editor session token (scope theo quyền của người dùng). " + _P),
+    "GET /api/v1/auth/editor/session": ("Phiên editor hiện tại", "Trả thông tin và scope của editor session đang dùng. " + _E),
     # ---- Admin Auth ----
     "POST /api/v1/admin/auth/login": ("Đăng nhập quản trị", "Đăng nhập cho role admin/staff, giới hạn tần suất theo IP. " + _P),
     "POST /api/v1/admin/auth/logout": ("Đăng xuất quản trị", "Thu hồi phiên quản trị hiện tại. " + _A),
@@ -195,8 +203,21 @@ DOCS: dict[str, tuple[str, str]] = {
     "DELETE /api/v1/projects/{project_id}/assets/{asset_id}": ("Xóa tệp", "Xóa bản ghi và tệp lưu trữ. " + _B),
     # ---- Editor ----
     "GET /api/v1/editor/projects/{project_id}/context": ("Ngữ cảnh mở editor", "Người dùng, dự án, model gốc, thiết kế gần nhất và quyền. Dùng cho KusStudio desktop. " + _B),
-    "PUT /api/v1/editor/projects/{project_id}/design": ("Lưu thiết kế từ editor", "Giống lưu thiết kế: kiểm tra layer, khóa xuất, guardrail và tạo phiên bản. " + _B),
-    "GET /api/v1/editor/assets/{asset_id}/download": ("Tải tệp model cho editor", "Stream tệp; chỉ chủ sở hữu dự án. " + _B),
+    "GET /api/v1/editor/me": ("Người dùng của editor session", "Thông tin người dùng gắn với editor session. " + _E),
+    "POST /api/v1/editor/projects/{project_id}/designs": ("Lưu thiết kế từ editor", "Cần scope `editor:write`. Kiểm tra model gốc sẵn sàng, `base_revision` khớp bản hiện tại (xung đột trả lỗi revision), khóa xuất (`PROJECT_EXPORTING`) và guardrail nội dung; mỗi lần lưu tạo revision và một phiên bản lịch sử. " + _E),
+    "GET /api/v1/editor/designs/{design_id}": ("Lấy thiết kế", "Thiết kế hiện tại của dự án kèm bake job và file xuất gần nhất. " + _E),
+    "POST /api/v1/editor/designs/{design_id}/bake": ("Bắt đầu bake từ editor", "Cần scope `editor:write` và thiết kế đã lưu; dùng cùng quy tắc hạn mức như bake của portal (202). " + _E),
+    "GET /api/v1/editor/jobs/{job_id}": ("Trạng thái bake job", "Trạng thái xử lý của một bake job do editor tạo. " + _E),
+    "POST /api/v1/editor/designs/{design_id}/export": ("Lấy gói export", "Trả các file đã xuất của thiết kế để editor tải về. " + _E),
+    "POST /api/v1/editor/assets/upload-url": ("Xin URL tải tệp (editor)", "Presigned URL để editor tải model/texture lên dự án. " + _E),
+    "POST /api/v1/editor/assets/confirm": ("Xác nhận tệp đã tải (editor)", "Xác nhận tệp đã có trong kho lưu trữ và ghi nhận vào dự án. " + _E),
+    "GET /api/v1/editor/assets/{asset_id}/content": ("Tải nội dung tệp", "Stream nội dung một tệp của dự án; chỉ tệp thuộc phiên editor. " + _E),
+    "GET /api/v1/editor/exports/{export_id}/content": ("Tải nội dung file xuất", "Stream nội dung một file đã xuất; chỉ file thuộc phiên editor. " + _E),
+    # ---- Mobile ----
+    "POST /api/v1/mobile/scans/bootstrap": ("Khởi tạo phiên quét", "Ứng dụng di động bắt đầu một phiên quét cho người dùng đã đăng nhập. Ngoài phạm vi web portal. " + _B),
+    "POST /api/v1/internal/mobile/compute-grants/claim": ("Nhận quyền tính toán quét", "Dịch vụ tính toán nhận một compute grant. " + _M),
+    "POST /api/v1/internal/mobile/scans/output-upload": ("Xin URL tải kết quả quét", "Dịch vụ tính toán xin presigned URL để tải kết quả lên. " + _M),
+    "POST /api/v1/internal/mobile/scans/output-confirm": ("Xác nhận kết quả quét", "Dịch vụ tính toán xác nhận kết quả đã tải lên. " + _M),
     # ---- Studio ----
     "GET /api/v1/projects/{project_id}/versions": ("Lịch sử phiên bản", "Các phiên bản thiết kế, mới nhất trước; bản đã xuất được ghim và không bị xóa khi dọn (BR-46). " + _B),
     "GET /api/v1/projects/{project_id}/versions/{version_id}": ("Chi tiết phiên bản", "Kèm toàn bộ `design_config`. " + _B),

@@ -4,9 +4,9 @@ from app.models.audit_log import AuditLog
 from app.models.bake_job import BakeJob
 from app.models.consent_record import ConsentRecord
 from app.models.coupon import Coupon, CouponRedemption
+from app.models.design_revision import DesignRevision
 from app.models.design_template import DesignTemplate
 from app.models.design_version import DesignVersion
-from app.models.design_revision import DesignRevision
 from app.models.export_record import ExportRecord
 from app.models.feedback import Feedback
 from app.models.guardrail_rule import GuardrailRule

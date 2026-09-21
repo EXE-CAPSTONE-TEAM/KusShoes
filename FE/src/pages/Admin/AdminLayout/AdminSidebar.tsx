@@ -1,7 +1,7 @@
 import React from 'react';
 import {
   LayoutDashboard, Users, Package, CreditCard, FolderKanban,
-  Flame, Download, Activity, ScrollText, LogOut,
+  Flame, Download, Activity, ScrollText, LogOut, BarChart3, Sparkles, MessageSquare,
 } from 'lucide-react';
 import * as Tooltip from '@radix-ui/react-tooltip';
 import { useAdminAuth } from '../../../context/AdminAuthContext';
@@ -19,12 +19,15 @@ export const AdminSidebar: React.FC<AdminSidebarProps> = ({ activePage, navigate
 
   const menuItems = [
     { id: 'dashboard', label: 'Dashboard', icon: LayoutDashboard },
+    { id: 'analytics', label: 'Analytics', icon: BarChart3 },
     { id: 'users', label: 'Users', icon: Users },
     { id: 'plans', label: 'Plans', icon: Package },
     { id: 'billing', label: 'Billing', icon: CreditCard },
     { id: 'projects', label: 'Projects', icon: FolderKanban },
     { id: 'bake-jobs', label: 'Bake Jobs', icon: Flame },
     { id: 'exports', label: 'Exports', icon: Download },
+    { id: 'content', label: 'Content', icon: Sparkles },
+    { id: 'feedback', label: 'Feedback', icon: MessageSquare },
     { id: 'system', label: 'System Health', icon: Activity },
     ...(isAdmin ? [{ id: 'audit-logs', label: 'Audit Logs', icon: ScrollText }] : []),
   ];

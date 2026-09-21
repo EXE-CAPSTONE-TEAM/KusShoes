@@ -96,7 +96,7 @@ export interface AdminSubscription {
   cancel_at_period_end: boolean;
 }
 
-export type InvoiceStatus = 'pending' | 'paid' | 'failed' | 'refunded';
+export type InvoiceStatus = 'pending' | 'awaiting_approval' | 'paid' | 'failed' | 'cancelled' | 'refunded';
 
 export interface AdminInvoice {
   id: string;
@@ -111,6 +111,12 @@ export interface AdminInvoice {
   payment_method: 'payos' | 'momo' | 'manual';
   status: InvoiceStatus;
   payment_reference: string | null;
+  receipt_number?: string | null;
+  coupon_code?: string | null;
+  is_manual?: boolean;
+  collected_by?: string | null;
+  created_by?: string | null;
+  approved_by?: string | null;
   paid_at: string | null;
   created_at: string;
 }
@@ -200,4 +206,125 @@ export interface StaffCreateResponse {
   username: string;
   account_code: string;
   role: 'staff';
+}
+
+// ---- Analytics (SRS 5.4) ----
+export interface PeriodValue { current: number; previous: number }
+export interface AdminAnalytics {
+  date_from: string;
+  date_to: string;
+  mrr_vnd: number;
+  arr_vnd: number;
+  arpu_vnd: number;
+  paying_customers: number;
+  revenue_vnd: PeriodValue;
+  refunds_vnd: PeriodValue;
+  new_paying_customers: PeriodValue;
+  churn: { due: number; churned: number; rate: number | null };
+  retention: { month: string; nrr: number | null; grr: number | null };
+  free_to_paid: { numerator: number; denominator: number; rate: number | null };
+  repeat: {
+    paying_customers: number;
+    repeat_customers: number;
+    not_yet_due: number;
+    rate: number | null;
+    raw_rate: number | null;
+  };
+  failed_payments: { count_30d: number; amount_30d_vnd: number };
+  revenue_by_plan: { plan_tier: string; revenue_vnd: number; share: number }[];
+  revenue_series: { month: string; revenue_vnd: number }[];
+  mrr_movement: {
+    month: string;
+    new: number;
+    expansion: number;
+    reactivation: number;
+    contraction: number;
+    churn: number;
+    net_new: number;
+  };
+  top_customers: { user_id: string; email: string | null; net_paid_vnd: number; orders: number }[];
+}
+
+export type ReportType = 'revenue' | 'users' | 'transactions' | 'channel-funnel';
+export type ReportFormat = 'csv' | 'xlsx' | 'pdf';
+
+// ---- Content guardrail & templates ----
+export interface GuardrailRule { id: string; kind: 'banned' | 'trademark'; term: string; is_active: boolean }
+export interface AdminTemplate {
+  id: string;
+  name: string;
+  description: string | null;
+  category: string | null;
+  thumbnail_path: string | null;
+  layer_count: number;
+  use_count: number;
+  status: 'pending' | 'approved' | 'rejected';
+  created_at: string;
+}
+
+// ---- Feedback ----
+export type FeedbackStatus = 'new' | 'reviewed' | 'planned' | 'done' | 'wont_do';
+export interface AdminFeedback {
+  id: string;
+  rating: number;
+  marketing_group: 'product' | 'price' | 'place' | 'promotion';
+  message: string;
+  status: FeedbackStatus;
+  changed_what: string | null;
+  created_at: string;
+  user_id: string;
+  user_email: string | null;
+  is_internal: boolean;
+  reviewed_at: string | null;
+}
+export interface FeedbackSummary {
+  count: number;
+  average_rating: number;
+  by_status: Record<string, number>;
+  by_group: Record<string, number>;
+}
+
+// ---- Finance ----
+export interface ReportingPeriod {
+  id: string;
+  name: string;
+  start_date: string;
+  end_date: string;
+  status: 'open' | 'locked';
+  locked_by: string | null;
+  locked_at: string | null;
+}
+export interface AdminCoupon {
+  id: string;
+  code: string;
+  discount_type: 'percent' | 'fixed' | 'fixed_price';
+  value: number;
+  plan_tiers: string[] | null;
+  max_uses: number | null;
+  used_count: number;
+  valid_from: string | null;
+  valid_until: string | null;
+  is_active: boolean;
+}
+export interface ManualTransactionInput {
+  user_id: string;
+  tier: 'basic' | 'pro';
+  billing_cycle: 'monthly' | 'yearly';
+  amount_vnd: number;
+  paid_on: string;
+  collected_by: string;
+  proof_path: string;
+  reason: string;
+}
+export interface GrantPlanInput {
+  tier: 'basic' | 'pro';
+  billing_cycle: 'monthly' | 'yearly';
+  days: number;
+  reason: string;
+}
+export interface ImpersonationResult {
+  access_token: string;
+  expires_at: string;
+  target_user_id: string;
+  banner: string;
 }

@@ -10,7 +10,6 @@ from app.infrastructure import editor_worker, storage
 from app.repositories import (
     bake_job_repo,
     export_record_repo,
-    monthly_usage_repo,
     project_asset_repo,
     project_repo,
     subscription_repo,

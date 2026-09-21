@@ -8,8 +8,10 @@ from app.exceptions import ProjectAccessDenied, ProjectNotFound
 from app.repositories import project_repo
 
 
-async def require_owner(db: AsyncSession, project_id: uuid.UUID, user):
-    project = await project_repo.get_by_id(db, project_id)
+async def require_owner(
+    db: AsyncSession, project_id: uuid.UUID, user, *, for_update: bool = False
+):
+    project = await project_repo.get_by_id(db, project_id, for_update=for_update)
     if not project:
         raise ProjectNotFound()
     if project.user_id != user.id:

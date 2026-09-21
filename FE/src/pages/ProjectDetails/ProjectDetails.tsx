@@ -1,19 +1,14 @@
 import React, { useState, useEffect, useRef } from 'react';
 import {
   ArrowLeft, Laptop, RefreshCw, Check, Download, FileText,
-  Globe, Link, EyeOff, Terminal, Share2, UserPlus, X, ChevronDown
+  Globe, Link, EyeOff, Terminal, Share2, History, Lock
 } from 'lucide-react';
-import * as DropdownMenu from '@radix-ui/react-dropdown-menu';
-import { Select } from '../../components/Select/Select';
 import { ConfirmDialog } from '../../components/ConfirmDialog/ConfirmDialog';
 import { useToast } from '../../context/ToastContext';
 import { api, type PortalProject, type ProjectExport } from '../../api/client';
+import { VersionHistoryPanel } from './VersionHistoryPanel';
+import { ArtisanSharePanel } from './ArtisanSharePanel';
 import styles from './ProjectDetails.module.css';
-
-const ROLE_OPTIONS = [
-  { value: 'View', label: 'View' },
-  { value: 'Edit', label: 'Edit' },
-];
 
 interface ProjectDetailsProps {
   project: PortalProject;
@@ -21,65 +16,15 @@ interface ProjectDetailsProps {
   setProjects: React.Dispatch<React.SetStateAction<PortalProject[]>>;
 }
 
-// Avatar color palette for member initials
-const AVATAR_COLORS = [
-  '#FF5A36', '#6C63FF', '#34d399', '#F59E0B', '#E61E43',
-  '#3B82F6', '#EC4899', '#14B8A6', '#A855F7', '#F97316'
-];
-
-function getAvatarColor(email: string): string {
-  let hash = 0;
-  for (let i = 0; i < email.length; i++) hash = email.charCodeAt(i) + ((hash << 5) - hash);
-  return AVATAR_COLORS[Math.abs(hash) % AVATAR_COLORS.length];
-}
-
-function getInitials(email: string): string {
-  const name = email.split('@')[0];
-  const parts = name.split(/[._-]/);
-  if (parts.length >= 2) return (parts[0][0] + parts[1][0]).toUpperCase();
-  return name.slice(0, 2).toUpperCase();
-}
-
-interface ShareMember {
-  id: string;
-  email: string;
-  role: 'Edit' | 'View';
-  joinedAt: string;
-}
-
-const INITIAL_MEMBERS: ShareMember[] = [];
-
 export const ProjectDetails: React.FC<ProjectDetailsProps> = ({
   project,
   onBack
 }) => {
   const { toast } = useToast();
-  const [activeTab, setActiveTab] = useState<'overview' | 'share'>('overview');
+  const [activeTab, setActiveTab] = useState<'overview' | 'history' | 'share'>('overview');
   const [confirmResetOpen, setConfirmResetOpen] = useState(false);
 
-  // Share tab state
-  const [members, setMembers] = useState<ShareMember[]>(INITIAL_MEMBERS);
-  const [inviteEmail, setInviteEmail] = useState('');
-  const [inviteRole, setInviteRole] = useState<'Edit' | 'View'>('View');
-  const [inviteError, setInviteError] = useState('');
   const [exports, setExports] = useState<ProjectExport[]>([]);
-
-  const handleInvite = () => {
-    const trimmed = inviteEmail.trim().toLowerCase();
-    if (!trimmed) { setInviteError('Please enter an email address.'); return; }
-    const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
-    if (!emailRegex.test(trimmed)) { setInviteError('Please enter a valid email address.'); return; }
-    if (members.some(m => m.email.toLowerCase() === trimmed)) { setInviteError('This person is already in the project.'); return; }
-    setInviteError('Project sharing is not exposed by the backend yet.');
-  };
-
-  const handleChangeRole = (id: string, role: 'Edit' | 'View') => {
-    setMembers(prev => prev.map(m => m.id === id ? { ...m, role } : m));
-  };
-
-  const handleRemoveMember = (id: string) => {
-    setMembers(prev => prev.filter(m => m.id !== id));
-  };
 
   const [syncStatus, setSyncStatus] = useState<'idle' | 'connecting' | 'launched' | 'error'>('idle');
   const [logs, setLogs] = useState<string[]>([]);
@@ -209,6 +154,11 @@ export const ProjectDetails: React.FC<ProjectDetailsProps> = ({
               <span className={`${styles.statusBadge} ${styles[project.status.toLowerCase()]}`}>
                 {project.status}
               </span>
+              {project.isLocked && (
+                <span className={styles.statusBadge} title="Read-only after a plan downgrade. Upgrade to edit it again.">
+                  <Lock size={12} /> Read-only
+                </span>
+              )}
             </div>
             <p className={styles.projectSubtitle}>
               Base Model: <strong>{project.baseModel}</strong>
@@ -225,14 +175,18 @@ export const ProjectDetails: React.FC<ProjectDetailsProps> = ({
               Overview
             </button>
             <button
+              className={`${styles.tabBtn} ${activeTab === 'history' ? styles.tabBtnActive : ''}`}
+              onClick={() => setActiveTab('history')}
+            >
+              <History size={14} />
+              History &amp; Templates
+            </button>
+            <button
               className={`${styles.tabBtn} ${activeTab === 'share' ? styles.tabBtnActive : ''}`}
               onClick={() => setActiveTab('share')}
             >
               <Share2 size={14} />
-              Share
-              {members.length > 0 && (
-                <span className={styles.tabCount}>{members.length}</span>
-              )}
+              Share with artisan
             </button>
           </div>
 
@@ -369,130 +323,14 @@ export const ProjectDetails: React.FC<ProjectDetailsProps> = ({
             </>
           )}
 
+          {/* ========================= HISTORY TAB ========================= */}
+          {activeTab === 'history' && (
+            <VersionHistoryPanel projectId={project.id} locked={project.isLocked} />
+          )}
+
           {/* ========================= SHARE TAB ========================= */}
           {activeTab === 'share' && (
-            <div className={styles.sharePanel}>
-
-              {/* Invite Section */}
-              <div className={styles.sectionBlock}>
-                <h3 className={styles.sectionHeading}>Invite People</h3>
-                <p className={styles.shareDesc}>
-                  Share this project with teammates. Choose their access level below.
-                </p>
-                <div className={styles.inviteForm}>
-                  <div className={styles.inviteInputRow}>
-                    <div className={styles.emailInputWrap}>
-                      <UserPlus size={15} className={styles.emailInputIcon} />
-                      <input
-                        type="email"
-                        className={styles.emailInput}
-                        placeholder="Enter email address..."
-                        value={inviteEmail}
-                        onChange={e => { setInviteEmail(e.target.value); setInviteError(''); }}
-                        onKeyDown={e => e.key === 'Enter' && handleInvite()}
-                      />
-                    </div>
-                    <div className={styles.roleSelectWrap}>
-                      <Select
-                        value={inviteRole}
-                        onValueChange={(v) => setInviteRole(v as 'Edit' | 'View')}
-                        options={ROLE_OPTIONS}
-                        ariaLabel="Select invite role"
-                      />
-                    </div>
-                    <button className={styles.inviteBtn} onClick={handleInvite}>
-                      Invite
-                    </button>
-                  </div>
-                  {inviteError && <p className={styles.inviteError}>{inviteError}</p>}
-                </div>
-              </div>
-
-              {/* Members List */}
-              <div className={styles.sectionBlock}>
-                <h3 className={styles.sectionHeading}>
-                  Project Members
-                  <span className={styles.memberCountBadge}>{members.length}</span>
-                </h3>
-
-                {members.length === 0 ? (
-                  <div className={styles.emptyMembers}>
-                    <Share2 size={32} className={styles.emptyIcon} />
-                    <p>No members yet. Invite someone above.</p>
-                  </div>
-                ) : (
-                  <div className={styles.memberList}>
-                    {members.map((member) => (
-                      <div key={member.id} className={styles.memberRow}>
-                        <div
-                          className={styles.memberAvatar}
-                          style={{ background: getAvatarColor(member.email) }}
-                        >
-                          {getInitials(member.email)}
-                        </div>
-                        <div className={styles.memberInfo}>
-                          <span className={styles.memberEmail}>{member.email}</span>
-                          <span className={styles.memberJoined}>Joined {member.joinedAt}</span>
-                        </div>
-                        <div className={styles.memberRoleWrap}>
-                          <DropdownMenu.Root>
-                            <DropdownMenu.Trigger asChild>
-                              <button
-                                className={`${styles.roleBadge} ${member.role === 'Edit' ? styles.roleBadgeEdit : styles.roleBadgeView}`}
-                              >
-                                {member.role}
-                                <ChevronDown size={11} />
-                              </button>
-                            </DropdownMenu.Trigger>
-                            <DropdownMenu.Portal>
-                              <DropdownMenu.Content className={styles.roleDropdown} sideOffset={6} align="end">
-                                {(['Edit', 'View'] as const).map(r => (
-                                  <DropdownMenu.Item
-                                    key={r}
-                                    className={`${styles.roleOption} ${member.role === r ? styles.roleOptionActive : ''}`}
-                                    onSelect={() => handleChangeRole(member.id, r)}
-                                  >
-                                    {r}
-                                    {member.role === r && <Check size={12} />}
-                                  </DropdownMenu.Item>
-                                ))}
-                              </DropdownMenu.Content>
-                            </DropdownMenu.Portal>
-                          </DropdownMenu.Root>
-                        </div>
-                        <button
-                          className={styles.removeBtn}
-                          onClick={() => handleRemoveMember(member.id)}
-                          title="Remove from project"
-                        >
-                          <X size={14} />
-                        </button>
-                      </div>
-                    ))}
-                  </div>
-                )}
-              </div>
-
-              {/* Visibility note */}
-              <div className={styles.visibilityNote}>
-                <div className={styles.visibilityNoteIcon}>
-                  {project.visibility === 'Public'
-                    ? <Globe size={14} />
-                    : project.visibility === 'Link'
-                    ? <Link size={14} />
-                    : <EyeOff size={14} />}
-                </div>
-                <div>
-                  <span className={styles.visNoteLabel}>Project is {project.visibility}</span>
-                  <p className={styles.visNoteDesc}>
-                    {project.visibility === 'Private' && 'Only invited members can access this project.'}
-                    {project.visibility === 'Link' && 'Anyone with the link can view this project.'}
-                    {project.visibility === 'Public' && 'This project is publicly visible to everyone.'}
-                  </p>
-                </div>
-              </div>
-
-            </div>
+            <ArtisanSharePanel projectId={project.id} onUpgrade={() => window.location.assign('/billing')} />
           )}
 
         </div>
