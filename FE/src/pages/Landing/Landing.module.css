@@ -1149,3 +1149,184 @@
   white-space: nowrap;
 }
 
+
+/* =====================================================================================
+   Phones. Designed against an iPhone (390 x 844 pt, notch + home indicator) and checked from
+   360 (small Android) to 430 (Pro Max). Safe-area insets keep content clear of the notch when
+   the phone is held sideways or the page is added to the home screen.
+   ===================================================================================== */
+.container {
+  overflow-x: clip; /* framer-motion slide-ins start off-screen; never let them add a horizontal scrollbar */
+}
+
+@media (max-width: 600px) {
+  /* Decorative layers that only add weight on a small screen */
+  .topoLeft,
+  .topoRight {
+    display: none;
+  }
+
+  /* ---- Hero ---- */
+  .heroSection {
+    padding:
+      calc(96px + env(safe-area-inset-top))
+      max(20px, env(safe-area-inset-right))
+      48px
+      max(20px, env(safe-area-inset-left));
+    min-height: 100svh;
+  }
+  .heroContent {
+    gap: 18px;
+    width: 100%;
+  }
+  .heroBadge {
+    max-width: 100%;
+    font-size: 0.62rem;
+    letter-spacing: 1px;
+    line-height: 1.5;
+    padding: 6px 12px;
+    text-align: center;
+    white-space: normal;
+  }
+  /* The two headline lines never wrap (typewriter effect), so the type scales with the screen:
+     "SCAN WITH KUSSHOES." must fit the 350px content width of a 390px iPhone. */
+  .heroTitle {
+    font-size: clamp(1.4rem, 6.9vw, 2.4rem);
+    letter-spacing: -0.02em;
+  }
+  .heroDesc {
+    font-size: 0.95rem;
+    line-height: 1.55;
+  }
+  .heroActions {
+    flex-direction: column;
+    align-items: stretch;
+    width: 100%;
+    gap: 12px;
+    margin-top: 8px;
+  }
+  /* The buttons carry inline padding/font-size from the markup, hence !important */
+  .heroActions > * {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    min-height: 52px;
+    padding: 14px 20px !important;
+    font-size: 1rem !important;
+    width: 100%;
+  }
+
+  /* ---- Sections ---- */
+  .productsSection,
+  .workflowSection,
+  .featuresSection,
+  .pricingSection,
+  .showcaseSection,
+  .newsletterSection {
+    padding: 48px max(20px, env(safe-area-inset-right)) 48px max(20px, env(safe-area-inset-left));
+  }
+  .sectionHeader {
+    margin-bottom: 28px;
+  }
+  .sectionTitle {
+    font-size: 1.75rem;
+    line-height: 1.15;
+  }
+  .sectionSubtitle {
+    font-size: 0.95rem;
+  }
+
+  /* ---- Cards ---- */
+  .productsGrid,
+  .stepsGrid,
+  .featuresGrid,
+  .pricingGrid {
+    grid-template-columns: minmax(0, 1fr);
+    gap: 16px;
+  }
+  .productCard {
+    padding: 24px 20px;
+    gap: 14px;
+  }
+  .productTitle {
+    font-size: 1.5rem;
+  }
+  .screenshotFrame {
+    height: auto;
+    min-height: 260px;
+    margin-top: 8px;
+  }
+  .desktopMockup {
+    width: 100%;
+    max-width: 320px;
+    height: 210px;
+  }
+  .stepCard,
+  .featCard {
+    padding: 24px 20px;
+  }
+  .stepNum {
+    font-size: 1.8rem;
+  }
+  .priceCard {
+    padding: 28px 22px;
+  }
+
+  /* ---- Pricing toggle (tap targets) ---- */
+  .toggleContainer {
+    gap: 12px;
+    font-size: 0.9rem;
+  }
+  .toggleSwitch {
+    width: 56px;
+    height: 32px;
+  }
+  .switchKnob {
+    width: 26px;
+    height: 26px;
+  }
+
+  /* ---- Showcase ---- */
+  .showcaseTabs {
+    width: 100%;
+  }
+  .showcaseTabBtn {
+    flex: 1;
+    min-height: 44px;
+  }
+  .browserUrlBar {
+    max-width: 130px;
+  }
+
+  /* ---- Newsletter ---- */
+  .newsletterBox {
+    padding: 28px 20px;
+    border-radius: var(--border-radius-md);
+  }
+  .newsTitle {
+    font-size: 1.6rem;
+  }
+  .inputContainer {
+    width: 100%;
+  }
+  /* 16px stops iOS Safari from zooming the page when the field is focused */
+  .newsInput {
+    font-size: 1rem;
+    min-height: 48px;
+  }
+
+  /* ---- Footer ---- */
+  .footer {
+    padding: 40px max(20px, env(safe-area-inset-right)) calc(24px + env(safe-area-inset-bottom)) max(20px, env(safe-area-inset-left));
+  }
+}
+
+/* Touch screens: no hover, so drop the lift effect that would otherwise stick after a tap */
+@media (hover: none) {
+  .productCard:hover,
+  .stepCard:hover,
+  .featCard:hover,
+  .priceCard:hover {
+    transform: none;
+  }
+}

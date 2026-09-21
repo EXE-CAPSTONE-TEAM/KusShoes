@@ -11,10 +11,13 @@ import { AdminBakeJobs } from './BakeJobs/AdminBakeJobs';
 import { AdminExports } from './Exports/AdminExports';
 import { AdminSystemHealth } from './SystemHealth/AdminSystemHealth';
 import { AdminAuditLogs } from './AuditLogs/AdminAuditLogs';
+import { AdminAnalytics } from './Analytics/AdminAnalytics';
+import { AdminContent } from './Content/AdminContent';
+import { AdminFeedbackPage } from './Feedback/AdminFeedbackPage';
 
 const VALID_PAGES = [
-  'dashboard', 'users', 'plans', 'billing', 'projects',
-  'bake-jobs', 'exports', 'system', 'audit-logs',
+  'dashboard', 'analytics', 'users', 'plans', 'billing', 'projects',
+  'bake-jobs', 'exports', 'content', 'feedback', 'system', 'audit-logs',
 ];
 
 const getSubPage = (): string => {
@@ -55,12 +58,15 @@ const AdminShell: React.FC = () => {
       <AdminSidebar activePage={page} navigate={navigate} />
       <main style={{ flexGrow: 1, backgroundColor: 'var(--bg-primary)', height: '100vh', overflowY: 'auto', display: 'flex', flexDirection: 'column' }}>
         {page === 'dashboard' && <AdminDashboard />}
+        {page === 'analytics' && <AdminAnalytics />}
         {page === 'users' && <AdminUsers />}
         {page === 'plans' && <AdminPlans />}
         {page === 'billing' && <AdminBilling />}
         {page === 'projects' && <AdminProjects />}
         {page === 'bake-jobs' && <AdminBakeJobs />}
         {page === 'exports' && <AdminExports />}
+        {page === 'content' && <AdminContent />}
+        {page === 'feedback' && <AdminFeedbackPage />}
         {page === 'system' && <AdminSystemHealth />}
         {page === 'audit-logs' && <AdminAuditLogs />}
       </main>

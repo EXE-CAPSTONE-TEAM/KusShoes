@@ -9,15 +9,6 @@ from typing import Any
 
 from sqlalchemy.ext.asyncio import AsyncSession
 
-from app.exceptions import (
-    AssetNotFound,
-    DesignLayerLimitExceeded,
-    ProjectAccessDenied,
-    ProjectLocked,
-    StorageFileNotFound,
-)
-from app.infrastructure import storage
-from app.repositories import project_asset_repo, project_repo, subscription_repo
 from app.exceptions import AppException, AssetNotFound, ProjectNotFound, StorageFileNotFound
 from app.infrastructure import storage
 from app.repositories import (
@@ -39,11 +30,8 @@ from app.schemas.editor import (
     EditorProjectResponse,
     EditorUserResponse,
 )
-from app.services import guardrail_service, version_service
-from app.services.project_service import count_design_layers, require_owner
-from app.types import JsonObject
 from app.schemas.project import TriggerBakeRequest
-from app.services import project_service
+from app.services import guardrail_service, project_service, version_service
 
 
 async def get_editor_user(db: AsyncSession, session: EditorSessionResponse):
@@ -109,19 +97,6 @@ async def save_design(
     project_id: uuid.UUID,
     body: EditorDesignSaveRequest,
 ) -> EditorDesignResponse:
-    project = await require_owner(db, project_id, user)
-    if project.is_locked:
-        raise ProjectLocked()
-    model_asset = await _get_canonical_model_asset(db, project)
-    if not model_asset:
-        raise AssetNotFound()
-    subscription = await subscription_repo.get_by_user(db, user.id)
-    max_layers = subscription.plan.max_layers_per_project if subscription else 30
-    if count_design_layers(body.designConfig) > max_layers:
-        raise DesignLayerLimitExceeded()
-    design_config = _with_model_asset_id(body.designConfig, model_asset.id)
-    await guardrail_service.assert_not_exporting(db, project_id)
-    await guardrail_service.check_design(db, design_config)
     _require_scope(session, "editor:write")
     project = await require_editor_project(db, session, project_id, for_update=True)
     asset = await _canonical_asset(db, project)
@@ -139,6 +114,8 @@ async def save_design(
     if body.name:
         metadata["designName"] = body.name.strip()
     design_config["metadata"] = metadata
+    await guardrail_service.assert_not_exporting(db, project_id)
+    await guardrail_service.check_design(db, design_config)
     await project_repo.save_design(
         db,
         project,
@@ -147,6 +124,9 @@ async def save_design(
         base_revision=body.base_revision,
         author_user_id=session.user_id,
         client="editor",
+    )
+    await version_service.snapshot(
+        db, project, design_config=design_config, thumbnail_path=project.thumbnail_path
     )
     return _design_response(project, asset, None, [])
 
@@ -182,14 +162,6 @@ async def trigger_bake(
         project.id,
         TriggerBakeRequest(design_config=project.design_config),
     )
-    await version_service.snapshot(
-        db,
-        project,
-        design_config=design_config,
-        thumbnail_path=project.thumbnail_path,
-    )
-    await db.commit()
-    return _to_design(project, model_asset)
     job = await bake_job_repo.get_by_id(db, result.job_id)
     if not job:
         raise AppException(500, "EDITOR_JOB_NOT_CREATED", "Bake job could not be created.")

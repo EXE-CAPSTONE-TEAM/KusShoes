@@ -1,6 +1,6 @@
 import React, { useEffect, useState } from 'react';
 import {
-  User, Shield, Eye, Smartphone, Save, Key, AlertTriangle,
+  User, Shield, Eye, Smartphone, Save, Key, Palette,
   Instagram, Globe, Camera, Award, X, Upload, RefreshCw
 } from 'lucide-react';
 import { motion, AnimatePresence } from 'framer-motion';
@@ -8,10 +8,12 @@ import * as Tabs from '@radix-ui/react-tabs';
 import styles from './Settings.module.css';
 import { useTheme } from '../../context/ThemeContext';
 import { useToast } from '../../context/ToastContext';
-import { ConfirmDialog } from '../../components/ConfirmDialog/ConfirmDialog';
-import { api } from '../../api/client';
+import { api, type Usage } from '../../api/client';
+import { TwoFactorPanel } from './TwoFactorPanel';
+import { SessionsPanel } from './SessionsPanel';
+import { PrivacyPanel } from './PrivacyPanel';
 
-type SettingTab = 'profile' | 'security' | 'privacy';
+type SettingTab = 'profile' | 'security' | 'privacy' | 'appearance';
 
 interface PresetAvatar {
   name: string;
@@ -22,7 +24,6 @@ export const Settings: React.FC = () => {
   const [activeTab, setActiveTab] = useState<SettingTab>('profile');
   const { theme, setTheme } = useTheme();
   const { toast } = useToast();
-  const [confirmDeleteAccountOpen, setConfirmDeleteAccountOpen] = useState(false);
 
   // Curated Preset Avatars
   const presetAvatars: PresetAvatar[] = [
@@ -47,6 +48,7 @@ export const Settings: React.FC = () => {
     tiktok: ''
   });
   const [saving, setSaving] = useState(false);
+  const [usage, setUsage] = useState<Usage | null>(null);
 
   useEffect(() => {
     api.profile()
@@ -62,21 +64,21 @@ export const Settings: React.FC = () => {
       .catch((caught) => toast(caught instanceof Error ? caught.message : 'Unable to load profile.', 'error'));
   }, [toast]);
 
+  useEffect(() => {
+    api.usage().then(setUsage).catch(() => setUsage(null)); // the banner degrades to name + email
+  }, []);
+
   // Avatar Modal State
   const [isAvatarModalOpen, setIsAvatarModalOpen] = useState(false);
   const [uploadProgress, setUploadProgress] = useState(false);
 
   // Security settings
-  const [is2FaEnabled, setIs2FaEnabled] = useState(true);
   const [passwordForm, setPasswordForm] = useState({
     currentPassword: '',
     newPassword: '',
     confirmPassword: '',
   });
 
-  // Privacy settings
-  const [shoeVisibility, setShoeVisibility] = useState('link'); // 'private' | 'link' | 'public'
-  const [allowCloudSync, setAllowCloudSync] = useState(true);
 
   const handleProfileSave = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -156,7 +158,52 @@ export const Settings: React.FC = () => {
         className={styles.settingsLayout}
         style={{ display: 'contents' }}
       >
-        {/* Navigation Tabs */}
+        {/* Profile banner: who you are and what you use, in one row */}
+        <div className={`${styles.profileBanner} glass-panel`}>
+          <div className={styles.bannerAvatar} onClick={() => setIsAvatarModalOpen(true)} title="Change photo">
+            <img src={profileData.avatar} alt="Avatar" className={styles.bannerAvatarImg} />
+            <div className={styles.bannerAvatarOverlay}><Camera size={16} /></div>
+          </div>
+          <div className={styles.bannerIdentity}>
+            <h3 className={styles.bannerName}>{profileData.name || 'Your profile'}</h3>
+            <p className={styles.bannerEmail}>{profileData.email}</p>
+          </div>
+          <div className={styles.bannerChips}>
+            {usage && (
+              <>
+                <span className={styles.bannerChip}>
+                  <Award size={12} className={styles.badgeIcon} />
+                  <span style={{ textTransform: 'capitalize' }}>{usage.tier.replace(/_/g, ' ')}</span>
+                </span>
+                <span className={styles.bannerChip}>
+                  {usage.projects_count} / {usage.max_projects ?? '∞'} projects
+                </span>
+                <span className={styles.bannerChip}>
+                  {usage.exports_count} / {usage.max_exports_per_month ?? '∞'} exports
+                </span>
+              </>
+            )}
+          </div>
+          <div className={styles.socialLinksRow}>
+            {profileData.instagram && (
+              <a href={`https://instagram.com/${profileData.instagram.replace('@', '')}`} target="_blank" rel="noreferrer" className={styles.socialIconBtn} title="Instagram Portfolio">
+                <Instagram size={16} />
+              </a>
+            )}
+            {profileData.behance && (
+              <a href={`https://behance.net/${profileData.behance}`} target="_blank" rel="noreferrer" className={styles.socialIconBtn} title="Behance Portfolio">
+                <Globe size={16} />
+              </a>
+            )}
+            {profileData.tiktok && (
+              <a href={`https://tiktok.com/${profileData.tiktok}`} target="_blank" rel="noreferrer" className={styles.socialIconBtn} title="TikTok Designs">
+                <Smartphone size={16} />
+              </a>
+            )}
+          </div>
+        </div>
+
+        {/* Navigation Tabs (horizontal) */}
         <Tabs.List className={`${styles.tabsColumn} glass-panel`}>
           <Tabs.Trigger value="profile" className={`${styles.tabItem} ${activeTab === 'profile' ? styles.active : ''}`}>
             <User size={18} />
@@ -168,100 +215,13 @@ export const Settings: React.FC = () => {
           </Tabs.Trigger>
           <Tabs.Trigger value="privacy" className={`${styles.tabItem} ${activeTab === 'privacy' ? styles.active : ''}`}>
             <Eye size={18} />
-            <span>Model Privacy</span>
+            <span>Privacy & Data</span>
+          </Tabs.Trigger>
+          <Tabs.Trigger value="appearance" className={`${styles.tabItem} ${activeTab === 'appearance' ? styles.active : ''}`}>
+            <Palette size={18} />
+            <span>Appearance</span>
           </Tabs.Trigger>
         </Tabs.List>
-
-        {/* Persistent Designer Profile Card */}
-        <div className={`${styles.designerCard} glass-panel`}>
-          <div className={styles.avatarWrapper} onClick={() => setIsAvatarModalOpen(true)}>
-            <img src={profileData.avatar} alt="Avatar" className={styles.avatarLarge} />
-            <div className={styles.avatarOverlay}>
-              <Camera size={18} />
-              <span>Change Photo</span>
-            </div>
-          </div>
-          
-          <h3 className={styles.cardName}>{profileData.name}</h3>
-          <p className={styles.cardRoleText}>{profileData.role}</p>
-
-          <div className={styles.badgeRow}>
-            <span className={styles.badgeLabel}>
-              <Award size={12} className={styles.badgeIcon} />
-              <span>Pro Creator</span>
-            </span>
-            <span className={styles.badgeLabel}>Level 4</span>
-          </div>
-
-          <div className={styles.cardDivider} />
-
-          {/* Stats */}
-          <div className={styles.cardStatsGrid}>
-            <div className={styles.cardStat}>
-              <span className={styles.cardStatNum}>18</span>
-              <span className={styles.cardStatLabel}>Cloud Scans</span>
-            </div>
-            <div className={styles.cardStat}>
-              <span className={styles.cardStatNum}>42.5h</span>
-              <span className={styles.cardStatLabel}>Studio Time</span>
-            </div>
-          </div>
-
-          <div className={styles.cardDivider} />
-
-          {/* Storage progress */}
-          <div className={styles.cardStorageBox}>
-            <div className={styles.storageHeader}>
-              <span>Cloud Storage</span>
-              <span>1.4 / 5.0 GB</span>
-            </div>
-            <div className={styles.storageBarBg}>
-              <div className={styles.storageBarFill} style={{ width: '28%' }} />
-            </div>
-          </div>
-
-          <div className={styles.cardDivider} />
-
-          {/* Social links */}
-          <div className={styles.socialQuickPanel}>
-            <span className={styles.socialPanelTitle}>Studio Links</span>
-            <div className={styles.socialLinksRow}>
-              {profileData.instagram && (
-                <a 
-                  href={`https://instagram.com/${profileData.instagram.replace('@', '')}`} 
-                  target="_blank" 
-                  rel="noreferrer" 
-                  className={styles.socialIconBtn}
-                  title="Instagram Portfolio"
-                >
-                  <Instagram size={16} />
-                </a>
-              )}
-              {profileData.behance && (
-                <a 
-                  href={`https://behance.net/${profileData.behance}`} 
-                  target="_blank" 
-                  rel="noreferrer" 
-                  className={styles.socialIconBtn}
-                  title="Behance Portfolio"
-                >
-                  <Globe size={16} />
-                </a>
-              )}
-              {profileData.tiktok && (
-                <a 
-                  href={`https://tiktok.com/${profileData.tiktok}`} 
-                  target="_blank" 
-                  rel="noreferrer" 
-                  className={styles.socialIconBtn}
-                  title="TikTok Designs"
-                >
-                  <Smartphone size={16} />
-                </a>
-              )}
-            </div>
-          </div>
-        </div>
 
         {/* Tab Content Panel */}
         <div className={`${styles.contentColumn} glass-panel`}>
@@ -277,8 +237,8 @@ export const Settings: React.FC = () => {
                 className={styles.tabContent}
               >
                 {/* Right Column: Profile forms */}
-                <form onSubmit={handleProfileSave} className={styles.form}>
-                  <div className={styles.sectionHeaderCompact}>
+                <form onSubmit={handleProfileSave} className={`${styles.form} ${styles.profileColumns}`}>
+                  <div className={`${styles.sectionHeaderCompact} ${styles.spanAll}`}>
                     <h2 className={styles.sectionTitle}>Profile Details</h2>
                     <p className={styles.sectionSubtitle}>Manage public information regarding your designer account profile.</p>
                   </div>
@@ -346,7 +306,7 @@ export const Settings: React.FC = () => {
                     </div>
 
                     {/* Group C: Connected Portfolios */}
-                    <div className={styles.formSectionGroup}>
+                    <div className={`${styles.formSectionGroup} ${styles.spanAll}`}>
                       <h4 className={styles.formGroupTitle}>Connected Showcase Handles</h4>
                       <div className={styles.formGrid}>
                         <div className={styles.inputGroup}>
@@ -391,8 +351,114 @@ export const Settings: React.FC = () => {
                       </div>
                     </div>
 
-                    {/* Group D: Theme Preferences */}
-                    <div className={styles.formSectionGroup}>
+                    <button type="submit" className={`btn-neon-orange ${styles.spanAll}`} style={{ justifySelf: 'flex-start' }} disabled={saving}>
+                      <Save size={16} />
+                      <span>Save Profile Settings</span>
+                    </button>
+                  </form>
+              </motion.div>
+              </Tabs.Content>
+            )}
+
+            {activeTab === 'security' && (
+              <Tabs.Content value="security" forceMount asChild>
+              <motion.div
+                key="security"
+                initial={{ opacity: 0, x: 10 }}
+                animate={{ opacity: 1, x: 0 }}
+                exit={{ opacity: 0, x: -10 }}
+                transition={{ duration: 0.2 }}
+                className={styles.tabContent}
+              >
+                <h2 className={styles.sectionTitle}>Security & Credentials</h2>
+                <p className={styles.sectionSubtitle}>Change password tokens and adjust identity verification credentials.</p>
+
+                <div className={styles.twoColGrid}>
+                {/* 2FA (real: setup / enable / disable / recovery codes) */}
+                <TwoFactorPanel />
+
+                {/* Change Password Form */}
+                <form onSubmit={handlePasswordSave} className={`${styles.form} ${styles.passwordCard} glass-panel`}>
+                  <h3 className={styles.subFormTitle}>
+                    <Key size={16} />
+                    Update Password
+                  </h3>
+                  <div className={styles.formGrid}>
+                    <div className={styles.inputGroup}>
+                      <label>Current Password</label>
+                      <input
+                        type="password"
+                        placeholder="••••••••"
+                        value={passwordForm.currentPassword}
+                        onChange={(e) => setPasswordForm({ ...passwordForm, currentPassword: e.target.value })}
+                        className={styles.input}
+                      />
+                    </div>
+                    <div className={styles.inputGroup}>
+                      <label>New Password</label>
+                      <input
+                        type="password"
+                        placeholder="••••••••"
+                        value={passwordForm.newPassword}
+                        onChange={(e) => setPasswordForm({ ...passwordForm, newPassword: e.target.value })}
+                        className={styles.input}
+                      />
+                    </div>
+                    <div className={styles.inputGroup}>
+                      <label>Confirm New Password</label>
+                      <input
+                        type="password"
+                        placeholder="••••••••"
+                        value={passwordForm.confirmPassword}
+                        onChange={(e) => setPasswordForm({ ...passwordForm, confirmPassword: e.target.value })}
+                        className={styles.input}
+                      />
+                    </div>
+                  </div>
+
+                  <button type="submit" className="btn-neon-orange" style={{ alignSelf: 'flex-start' }} disabled={saving}>
+                    <Save size={16} />
+                    Update Password
+                  </button>
+                </form>
+
+                <SessionsPanel />
+                </div>
+              </motion.div>
+              </Tabs.Content>
+            )}
+
+            {activeTab === 'privacy' && (
+              <Tabs.Content value="privacy" forceMount asChild>
+              <motion.div
+                key="privacy"
+                initial={{ opacity: 0, x: 10 }}
+                animate={{ opacity: 1, x: 0 }}
+                exit={{ opacity: 0, x: -10 }}
+                transition={{ duration: 0.2 }}
+                className={styles.tabContent}
+              >
+                <h2 className={styles.sectionTitle}>Privacy & Data</h2>
+                <p className={styles.sectionSubtitle}>Control who can see your work, what you consent to, and your personal data.</p>
+
+                <PrivacyPanel />
+              </motion.div>
+              </Tabs.Content>
+            )}
+
+            {activeTab === 'appearance' && (
+              <Tabs.Content value="appearance" forceMount asChild>
+              <motion.div
+                key="appearance"
+                initial={{ opacity: 0, x: 10 }}
+                animate={{ opacity: 1, x: 0 }}
+                exit={{ opacity: 0, x: -10 }}
+                transition={{ duration: 0.2 }}
+                className={styles.tabContent}
+              >
+                <h2 className={styles.sectionTitle}>Appearance</h2>
+                <p className={styles.sectionSubtitle}>Pick how the KusShoes workspace looks. The choice is remembered on this device.</p>
+                    <div className={styles.appearanceGroup}>
                       <h4 className={styles.formGroupTitle}>Theme Preferences</h4>
                       <p className={styles.inputLabelDesc} style={{ marginBottom: '16px' }}>
                         Choose the primary look and feel for your KusShoes workspace.
@@ -445,182 +511,12 @@ export const Settings: React.FC = () => {
                       </div>
                     </div>
 
-                    <button type="submit" className="btn-neon-orange" style={{ alignSelf: 'flex-start' }} disabled={saving}>
-                      <Save size={16} />
-                      <span>Save Profile Settings</span>
-                    </button>
-                  </form>
-              </motion.div>
-              </Tabs.Content>
-            )}
-
-            {activeTab === 'security' && (
-              <Tabs.Content value="security" forceMount asChild>
-              <motion.div
-                key="security"
-                initial={{ opacity: 0, x: 10 }}
-                animate={{ opacity: 1, x: 0 }}
-                exit={{ opacity: 0, x: -10 }}
-                transition={{ duration: 0.2 }}
-                className={styles.tabContent}
-              >
-                <h2 className={styles.sectionTitle}>Security & Credentials</h2>
-                <p className={styles.sectionSubtitle}>Change password tokens and adjust identity verification credentials.</p>
-
-                {/* 2FA Section */}
-                <div className={`${styles.securityBox} glass-panel`}>
-                  <div className={styles.securityBoxHeader}>
-                    <Smartphone size={20} className={styles.securityIcon} />
-                    <div>
-                      <h4 className={styles.securityBoxTitle}>Two-Factor Authentication (2FA)</h4>
-                      <p className={styles.securityBoxDesc}>Add an extra layer of security to prevent unauthorized sync actions.</p>
-                    </div>
-                    <button 
-                      className={`${styles.toggleBtn} ${is2FaEnabled ? styles.toggleActive : ''}`}
-                      onClick={() => setIs2FaEnabled(!is2FaEnabled)}
-                    >
-                      <div className={styles.toggleKnob} />
-                    </button>
-                  </div>
-                </div>
-
-                {/* Change Password Form */}
-                <form onSubmit={handlePasswordSave} className={styles.form} style={{ marginTop: '12px' }}>
-                  <h3 className={styles.subFormTitle}>
-                    <Key size={16} />
-                    Update Password
-                  </h3>
-                  <div className={styles.formGrid}>
-                    <div className={styles.inputGroup}>
-                      <label>Current Password</label>
-                      <input
-                        type="password"
-                        placeholder="••••••••"
-                        value={passwordForm.currentPassword}
-                        onChange={(e) => setPasswordForm({ ...passwordForm, currentPassword: e.target.value })}
-                        className={styles.input}
-                      />
-                    </div>
-                    <div className={styles.inputGroup}>
-                      <label>New Password</label>
-                      <input
-                        type="password"
-                        placeholder="••••••••"
-                        value={passwordForm.newPassword}
-                        onChange={(e) => setPasswordForm({ ...passwordForm, newPassword: e.target.value })}
-                        className={styles.input}
-                      />
-                    </div>
-                    <div className={styles.inputGroup}>
-                      <label>Confirm New Password</label>
-                      <input
-                        type="password"
-                        placeholder="••••••••"
-                        value={passwordForm.confirmPassword}
-                        onChange={(e) => setPasswordForm({ ...passwordForm, confirmPassword: e.target.value })}
-                        className={styles.input}
-                      />
-                    </div>
-                  </div>
-
-                  <button type="submit" className="btn-neon-orange" style={{ alignSelf: 'flex-start' }} disabled={saving}>
-                    <Save size={16} />
-                    Update Password
-                  </button>
-                </form>
-              </motion.div>
-              </Tabs.Content>
-            )}
-
-            {activeTab === 'privacy' && (
-              <Tabs.Content value="privacy" forceMount asChild>
-              <motion.div
-                key="privacy"
-                initial={{ opacity: 0, x: 10 }}
-                animate={{ opacity: 1, x: 0 }}
-                exit={{ opacity: 0, x: -10 }}
-                transition={{ duration: 0.2 }}
-                className={styles.tabContent}
-              >
-                <h2 className={styles.sectionTitle}>Model Visibility & Sync Privacy</h2>
-                <p className={styles.sectionSubtitle}>Define who can preview your sneaker designs and control cloud uploads.</p>
-
-                <div className={styles.form}>
-                  {/* Default visibility select */}
-                  <div className={styles.inputGroup}>
-                    <label>Default Project Visibility</label>
-                    <p className={styles.inputLabelDesc}>Default setting when a shoe model is synchronized from the mobile scanner.</p>
-                    
-                    <div className={styles.radioGrid}>
-                      {[
-                        { value: 'private', title: 'Private', desc: 'Only visible to you and your synced desktop client.' },
-                        { value: 'link', title: 'Shareable Link', desc: 'Anyone with the secure preview URL can rotate the shoe model.' },
-                        { value: 'public', title: 'Public Community', desc: 'Discoverable in the KusShoes community showcase.' },
-                      ].map((option) => (
-                        <div 
-                          key={option.value} 
-                          className={`${styles.radioCard} ${shoeVisibility === option.value ? styles.radioActive : ''}`}
-                          onClick={() => setShoeVisibility(option.value)}
-                        >
-                          <div className={styles.radioIndicator}>
-                            {shoeVisibility === option.value && <div className={styles.radioDot} />}
-                          </div>
-                          <div>
-                            <h4 className={styles.radioTitle}>{option.title}</h4>
-                            <p className={styles.radioDesc}>{option.desc}</p>
-                          </div>
-                        </div>
-                      ))}
-                    </div>
-                  </div>
-
-                  {/* Sync switch */}
-                  <div className={styles.divider} />
-
-                  <div className={styles.toggleRow}>
-                    <div>
-                      <h4 className={styles.toggleLabel}>Automatic Cloud Optimization</h4>
-                      <p className={styles.toggleDesc}>Process shoe textures in high resolution inside our cloud photogrammetry server.</p>
-                    </div>
-                    <button 
-                      className={`${styles.toggleBtn} ${allowCloudSync ? styles.toggleActive : ''}`}
-                      onClick={() => setAllowCloudSync(!allowCloudSync)}
-                    >
-                      <div className={styles.toggleKnob} />
-                    </button>
-                  </div>
-
-                  {/* Danger zone */}
-                  <div className={styles.dangerZone}>
-                    <div className={styles.dangerHeader}>
-                      <AlertTriangle size={18} className={styles.dangerIcon} />
-                      <h4 className={styles.dangerTitle}>Danger Zone</h4>
-                    </div>
-                    <p className={styles.dangerDesc}>Permanently delete your account profile and erase all 3D shoe designs. This action is irreversible.</p>
-                    <button
-                      type="button"
-                      className={styles.deleteAccountBtn}
-                      onClick={() => setConfirmDeleteAccountOpen(true)}
-                    >
-                      Delete Account
-                    </button>
-                  </div>
-                </div>
               </motion.div>
               </Tabs.Content>
             )}
           </AnimatePresence>
         </div>
       </Tabs.Root>
-
-      <ConfirmDialog
-        open={confirmDeleteAccountOpen}
-        onOpenChange={setConfirmDeleteAccountOpen}
-        title="Permanently delete your account?"
-        description="This is a critical action: your KusShoes account, profile, and all 3D cloud shoe designs will be permanently erased. This cannot be undone."
-        confirmLabel="Delete Account"
-        onConfirm={() => toast('Account deletion requires password re-authentication, which this dialog does not collect.', 'error')}
-      />
 
       {/* Interactive Avatar Picker Selector Modal */}
       {isAvatarModalOpen && (

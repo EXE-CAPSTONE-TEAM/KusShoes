@@ -11,6 +11,8 @@ interface ConfirmDialogProps {
   cancelLabel?: string;
   danger?: boolean;
   onConfirm: () => void;
+  /** Optional extra content (e.g. a password field) shown between the description and the buttons. */
+  children?: React.ReactNode;
 }
 
 export const ConfirmDialog: React.FC<ConfirmDialogProps> = ({
@@ -22,6 +24,7 @@ export const ConfirmDialog: React.FC<ConfirmDialogProps> = ({
   cancelLabel = 'Cancel',
   danger = true,
   onConfirm,
+  children,
 }) => {
   return (
     <AlertDialog.Root open={open} onOpenChange={onOpenChange}>
@@ -32,6 +35,7 @@ export const ConfirmDialog: React.FC<ConfirmDialogProps> = ({
           <AlertDialog.Description className={styles.description}>
             {description}
           </AlertDialog.Description>
+          {children}
           <div className={styles.actions}>
             <AlertDialog.Cancel asChild>
               <button className="btn-outline">{cancelLabel}</button>

@@ -33,7 +33,7 @@ async def test_save_design_rejects_over_layer_limit(client, service_headers, aut
     response = await client.put(
         f"/api/v1/projects/{project_id}/design",
         headers=service_headers,
-        json={"design_config": design_config},
+        json={"design_config": design_config, "base_revision": 0},
     )
     assert response.status_code == 403
     assert response.json()["code"] == "DESIGN_LAYER_LIMIT_EXCEEDED"
@@ -49,7 +49,7 @@ async def test_save_design_within_layer_limit_succeeds(client, service_headers, 
     response = await client.put(
         f"/api/v1/projects/{project_id}/design",
         headers=service_headers,
-        json={"design_config": design_config},
+        json={"design_config": design_config, "base_revision": 0},
     )
     assert response.status_code == 200
 

@@ -1,13 +1,14 @@
 import base64
 import json
 import uuid
-from datetime import datetime, timezone
+from datetime import UTC, datetime
+
 
 def encode_cursor(dt: datetime, record_id: uuid.UUID | str) -> str:
     """Mã hóa datetime và ID thành chuỗi opaque cursor an toàn (urlsafe)."""
     # Đảm bảo dt có múi giờ, sau đó chuyển về UTC timestamp float
     if dt.tzinfo is None:
-        dt = dt.replace(tzinfo=timezone.utc)
+        dt = dt.replace(tzinfo=UTC)
     
     data = {
         "ts": dt.timestamp(),
@@ -29,7 +30,7 @@ def decode_cursor(cursor: str) -> tuple[datetime, uuid.UUID] | None:
         json_bytes = base64.urlsafe_b64decode(cursor.encode("ascii"))
         data = json.loads(json_bytes)
         
-        dt = datetime.fromtimestamp(data["ts"], tz=timezone.utc)
+        dt = datetime.fromtimestamp(data["ts"], tz=UTC)
         record_id = uuid.UUID(data["id"])
         return dt, record_id
     except Exception:

@@ -17,7 +17,7 @@ async def list_public(db: AsyncSession, *, category: str | None):
 async def apply_to_project(
     db: AsyncSession, user, project_id: uuid.UUID, template_id: uuid.UUID
 ) -> dict[str, str]:
-    project = await require_owner(db, project_id, user)
+    project = await require_owner(db, project_id, user, for_update=True)
     if project.is_locked:
         raise ProjectLocked()
     template = await design_template_repo.get_by_id(db, template_id)
@@ -30,7 +30,13 @@ async def apply_to_project(
         raise DesignLayerLimitExceeded()
     design_config = dict(template.design_config)
     await project_repo.save_design(
-        db, project, design_config=design_config, thumbnail_path=project.thumbnail_path
+        db,
+        project,
+        design_config=design_config,
+        thumbnail_path=project.thumbnail_path,
+        base_revision=project.current_design_revision,
+        author_user_id=user.id,
+        client="web",
     )
     await version_service.snapshot(
         db, project, design_config=design_config, thumbnail_path=project.thumbnail_path

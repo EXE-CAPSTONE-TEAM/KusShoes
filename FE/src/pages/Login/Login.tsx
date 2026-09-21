@@ -1,8 +1,7 @@
 import React, { useState, useEffect } from 'react';
-import { Mail, Lock, ArrowLeft, Disc, CheckCircle2, UserPlus, LogIn, Eye, EyeOff, CheckSquare, Square, UserRound, KeyRound, AlertCircle, Info } from 'lucide-react';
+import { Mail, Lock, ArrowLeft, Disc, CheckCircle2, UserPlus, LogIn, Eye, EyeOff, CheckSquare, Square, UserRound, KeyRound, AlertCircle, Info, ShieldCheck } from 'lucide-react';
 import { motion } from 'framer-motion';
 import { api, ApiError } from '../../api/client';
-import { useToast } from '../../context/ToastContext';
 import {
   normalizeEmail,
   normalizeFullName,
@@ -13,6 +12,7 @@ import {
   type RegisterFieldErrors,
   type LoginFieldErrors,
 } from '../../utils/authValidation';
+import { AccountRecovery, type RecoveryMode } from './AccountRecovery';
 import styles from './Login.module.css';
 
 interface LoginProps {
@@ -20,7 +20,6 @@ interface LoginProps {
 }
 
 export const Login: React.FC<LoginProps> = ({ setPage }) => {
-  const { toast } = useToast();
   const [isLoginTab, setIsLoginTab] = useState(true);
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
@@ -30,6 +29,12 @@ export const Login: React.FC<LoginProps> = ({ setPage }) => {
   const [rememberMe, setRememberMe] = useState(true);
   const [pendingUserId, setPendingUserId] = useState<string | null>(null);
   const [otpCode, setOtpCode] = useState('');
+  // 2FA: set when the password step succeeded but a second factor is still required (BR-12).
+  const [mfaChallenge, setMfaChallenge] = useState<{ token: string; method: 'totp' | 'email' } | null>(null);
+  const [mfaCode, setMfaCode] = useState('');
+  const [useRecoveryCode, setUseRecoveryCode] = useState(false);
+  // Password reset / deleted-account restore (both are emailed-code flows)
+  const [recoveryMode, setRecoveryMode] = useState<RecoveryMode | null>(null);
   
   const [showPassword, setShowPassword] = useState(false);
   const [showConfirmPassword, setShowConfirmPassword] = useState(false);
@@ -126,7 +131,16 @@ export const Login: React.FC<LoginProps> = ({ setPage }) => {
     setLoading(true);
     try {
       if (isLoginTab) {
-        await api.login(normalizeEmail(email), password, rememberMe);
+        const outcome = await api.login(normalizeEmail(email), password, rememberMe);
+        if (outcome.mfaRequired) {
+          setMfaChallenge({ token: outcome.challengeToken, method: outcome.method });
+          setNotice(
+            outcome.method === 'email'
+              ? 'We sent a verification code to your email.'
+              : 'Enter the 6-digit code from your authenticator app.',
+          );
+          return;
+        }
         finishAuthentication();
       } else {
         const result = await api.register({
@@ -181,6 +195,41 @@ export const Login: React.FC<LoginProps> = ({ setPage }) => {
     }
   };
 
+  const handleVerifyMfa = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!mfaChallenge) return;
+
+    setError('');
+    setNotice('');
+    setLoading(true);
+    try {
+      const credential = useRecoveryCode
+        ? { recoveryCode: mfaCode.trim() }
+        : { code: mfaCode.trim() };
+      await api.verifyTwoFactorLogin(mfaChallenge.token, credential, rememberMe);
+      finishAuthentication();
+    } catch (caught) {
+      if (caught instanceof ApiError && caught.status === 401) {
+        // The challenge expired or was consumed: start over from the password step.
+        setMfaChallenge(null);
+        setMfaCode('');
+        setError('Your verification session expired. Please sign in again.');
+      } else {
+        setError(caught instanceof Error ? caught.message : 'Verification failed.');
+      }
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const leaveMfa = () => {
+    setMfaChallenge(null);
+    setMfaCode('');
+    setUseRecoveryCode(false);
+    setError('');
+    setNotice('');
+  };
+
   const handleResendOtp = async () => {
     if (!pendingUserId) return;
 
@@ -233,6 +282,89 @@ export const Login: React.FC<LoginProps> = ({ setPage }) => {
             </motion.div>
             <h3>Access Granted</h3>
             <p>Redirecting to KusShoes Portal...</p>
+          </div>
+        ) : recoveryMode ? (
+          <AccountRecovery
+            mode={recoveryMode}
+            initialEmail={email}
+            onBack={() => {
+              setRecoveryMode(null);
+              setError('');
+              setNotice('');
+            }}
+          />
+        ) : mfaChallenge ? (
+          <div className={styles.otpSection}>
+            <ShieldCheck size={42} className={styles.otpIcon} />
+            <h3>Two-step verification</h3>
+            <p>
+              {useRecoveryCode
+                ? 'Enter one of your one-time recovery codes.'
+                : mfaChallenge.method === 'email'
+                  ? 'Enter the 6-digit code we emailed you.'
+                  : 'Enter the 6-digit code from your authenticator app.'}
+            </p>
+
+            {notice && (
+              <div className={styles.noticeMessage} role="status">
+                <Info size={16} />
+                <span>{notice}</span>
+              </div>
+            )}
+            {error && (
+              <div className={styles.errorMessage} role="alert">
+                <AlertCircle size={16} />
+                <span>{error}</span>
+              </div>
+            )}
+
+            <form onSubmit={handleVerifyMfa} className={styles.form} noValidate>
+              <div className={styles.inputGroup}>
+                <label htmlFor="mfa-code">{useRecoveryCode ? 'Recovery code' : 'Verification code'}</label>
+                <input
+                  id="mfa-code"
+                  type="text"
+                  inputMode={useRecoveryCode ? 'text' : 'numeric'}
+                  autoComplete="one-time-code"
+                  maxLength={useRecoveryCode ? 32 : 6}
+                  placeholder={useRecoveryCode ? 'xxxx-xxxx' : '123456'}
+                  value={mfaCode}
+                  onChange={(event) =>
+                    setMfaCode(useRecoveryCode ? event.target.value : event.target.value.replace(/\D/g, ''))
+                  }
+                  className={`${styles.input} ${styles.otpInput}`}
+                  autoFocus
+                  required
+                />
+              </div>
+              <button
+                type="submit"
+                className="btn-neon-orange"
+                style={{ width: '100%', justifyContent: 'center' }}
+                disabled={loading || (useRecoveryCode ? mfaCode.trim().length < 6 : mfaCode.length !== 6)}
+              >
+                <CheckCircle2 size={18} />
+                <span>{loading ? 'Verifying...' : 'Verify & Continue'}</span>
+              </button>
+            </form>
+
+            <div className={styles.otpActions}>
+              <button
+                type="button"
+                className={styles.textButton}
+                onClick={() => {
+                  setUseRecoveryCode(!useRecoveryCode);
+                  setMfaCode('');
+                  setError('');
+                }}
+                disabled={loading}
+              >
+                {useRecoveryCode ? 'Use verification code' : 'Use a recovery code'}
+              </button>
+              <button type="button" className={styles.textButton} onClick={leaveMfa} disabled={loading}>
+                Back to sign in
+              </button>
+            </div>
           </div>
         ) : pendingUserId ? (
           <div className={styles.otpSection}>
@@ -508,6 +640,7 @@ export const Login: React.FC<LoginProps> = ({ setPage }) => {
               )}
 
               {isLoginTab ? (
+                <>
                 <div className={styles.forgotRow}>
                   <label className={styles.rememberMe}>
                     <input
@@ -517,10 +650,16 @@ export const Login: React.FC<LoginProps> = ({ setPage }) => {
                     />
                     <span>Remember me</span>
                   </label>
-                  <a href="#forgot" onClick={(e) => { e.preventDefault(); toast('Reset password link sent.'); }} className={styles.forgotLink}>
+                  <a href="#forgot" onClick={(e) => { e.preventDefault(); setRecoveryMode('reset'); }} className={styles.forgotLink}>
                     Forgot password?
                   </a>
                 </div>
+                <div className={styles.forgotRow} style={{ marginTop: '4px', justifyContent: 'flex-end' }}>
+                  <a href="#restore" onClick={(e) => { e.preventDefault(); setRecoveryMode('restore'); }} className={styles.forgotLink}>
+                    Restore a deleted account
+                  </a>
+                </div>
+                </>
               ) : (
                 <div className={styles.forgotRow} style={{ marginTop: '4px' }}>
                   <label 

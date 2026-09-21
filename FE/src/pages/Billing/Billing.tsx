@@ -1,5 +1,5 @@
 import React, { useEffect, useMemo, useState } from 'react';
-import { CreditCard, HardDrive, Check, Calendar, ArrowUpRight, HelpCircle, X, Building, Eye } from 'lucide-react';
+import { CreditCard, HardDrive, Check, Calendar, ArrowUpRight, HelpCircle, X, Building, FileText, AlertTriangle, Tag, Loader2 } from 'lucide-react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { ConfirmDialog } from '../../components/ConfirmDialog/ConfirmDialog';
 import { useToast } from '../../context/ToastContext';
@@ -12,15 +12,19 @@ import {
   type Invoice as ApiInvoice,
   type UserProfile,
 } from '../../api/client';
+import { billingApi, type CouponPreview } from '../../api/billing';
 import styles from './Billing.module.css';
 
-type InvoiceStatus = 'Paid' | 'Pending' | 'Failed';
+type InvoiceStatus = 'Paid' | 'Pending' | 'Failed' | 'Cancelled' | 'Refunded';
+
+const GRACE_DAYS = 3; // BR-90: view/edit stays open, exports are blocked
 
 interface Invoice {
   id: string;
   date: string;
   amount: string;
   status: InvoiceStatus;
+  receiptNumber: string | null;
 }
 
 function formatVnd(amount: number): string {
@@ -35,7 +39,19 @@ function normalizeInvoiceStatus(status: string): InvoiceStatus {
   const normalized = status.toLowerCase();
   if (normalized === 'paid') return 'Paid';
   if (normalized === 'failed') return 'Failed';
+  if (normalized === 'cancelled') return 'Cancelled';
+  if (normalized === 'refunded') return 'Refunded';
   return 'Pending';
+}
+
+function toInvoiceRow(invoice: ApiInvoice): Invoice {
+  return {
+    id: invoice.id,
+    date: new Date(invoice.created_at).toLocaleDateString(),
+    amount: formatVnd(invoice.amount_vnd),
+    status: normalizeInvoiceStatus(invoice.status),
+    receiptNumber: invoice.receipt_number ?? null,
+  };
 }
 
 function quotaPercent(used: number | undefined, limit: number | null | undefined): number {
@@ -58,6 +74,54 @@ export const Billing: React.FC = () => {
   const [usage, setUsage] = useState<Usage | null>(null);
   const [profile, setProfile] = useState<UserProfile | null>(null);
   const [loading, setLoading] = useState(true);
+  const [couponInput, setCouponInput] = useState('');
+  const [appliedCoupon, setAppliedCoupon] = useState<string | null>(null);
+  const [couponPreviews, setCouponPreviews] = useState<Record<string, CouponPreview>>({});
+  const [applyingCoupon, setApplyingCoupon] = useState(false);
+  const [downloadingReceipt, setDownloadingReceipt] = useState<string | null>(null);
+  // Landing here from PayOS/MoMo (/billing/success): poll until the webhook has settled the invoice (MSG29).
+  const returnedFromGateway = window.location.pathname === '/billing/success';
+  const cancelledAtGateway = window.location.pathname === '/billing/cancel';
+  const [paymentCheck, setPaymentCheck] = useState<'idle' | 'checking' | 'paid' | 'failed' | 'timeout'>(
+    returnedFromGateway ? 'checking' : 'idle',
+  );
+
+  useEffect(() => {
+    if (!returnedFromGateway) return;
+    let attempts = 0;
+    let cancelled = false;
+    const timer = window.setInterval(async () => {
+      attempts += 1;
+      try {
+        const latest = (await api.listInvoices())[0];
+        if (cancelled) return;
+        const status = latest?.status.toLowerCase();
+        if (status === 'paid') {
+          window.clearInterval(timer);
+          const [nextSubscription, nextInvoices] = await Promise.all([api.subscription(), api.listInvoices()]);
+          if (cancelled) return;
+          setSubscription(nextSubscription);
+          setInvoices(nextInvoices.map(toInvoiceRow));
+          setPaymentCheck('paid');
+        } else if (status === 'failed' || status === 'cancelled') {
+          window.clearInterval(timer);
+          setPaymentCheck('failed');
+        } else if (attempts >= 20) {
+          window.clearInterval(timer);
+          setPaymentCheck('timeout');
+        }
+      } catch {
+        if (attempts >= 20) {
+          window.clearInterval(timer);
+          setPaymentCheck('timeout');
+        }
+      }
+    }, 3000);
+    return () => {
+      cancelled = true;
+      window.clearInterval(timer);
+    };
+  }, [returnedFromGateway]);
 
   useEffect(() => {
     const subscriptionRequest = api.subscription().catch((caught) => {
@@ -70,12 +134,7 @@ export const Billing: React.FC = () => {
         setSubscription(nextSubscription);
         setUsage(nextUsage);
         setProfile(nextProfile);
-        setInvoices(nextInvoices.map((invoice: ApiInvoice) => ({
-          id: invoice.id,
-          date: new Date(invoice.created_at).toLocaleDateString(),
-          amount: formatVnd(invoice.amount_vnd),
-          status: normalizeInvoiceStatus(invoice.status),
-        })));
+        setInvoices(nextInvoices.map(toInvoiceRow));
       })
       .catch((caught) => toast(caught instanceof Error ? caught.message : 'Unable to load billing data.', 'error'))
       .finally(() => setLoading(false));
@@ -107,11 +166,57 @@ export const Billing: React.FC = () => {
 
   const handleChoosePlan = async (plan: Plan, gateway: 'payos' | 'momo') => {
     try {
-      const checkoutUrl = await api.createCheckout(plan.tier, plan.billing_cycle ?? 'monthly', gateway);
+      const checkoutUrl = await api.createCheckout(plan.tier, plan.billing_cycle ?? 'monthly', gateway, appliedCoupon);
       window.location.assign(checkoutUrl);
       setShowUpgradeModal(false);
     } catch (caught) {
       toast(caught instanceof Error ? caught.message : 'Unable to start checkout.', 'error');
+    }
+  };
+
+  const applyCoupon = async (event: React.FormEvent) => {
+    event.preventDefault();
+    const code = couponInput.trim();
+    if (!code) return;
+    setApplyingCoupon(true);
+    try {
+      const paidPlans = plans.filter((plan) => plan.tier !== 'free');
+      const settled = await Promise.allSettled(
+        paidPlans.map((plan) => billingApi.previewCoupon(plan.tier, plan.billing_cycle ?? 'monthly', code)),
+      );
+      const previews: Record<string, CouponPreview> = {};
+      settled.forEach((result, index) => {
+        if (result.status === 'fulfilled') previews[paidPlans[index].id] = result.value;
+      });
+      if (Object.keys(previews).length === 0) {
+        setAppliedCoupon(null);
+        setCouponPreviews({});
+        toast('This code is not valid for any plan.', 'error');
+        return;
+      }
+      setAppliedCoupon(code);
+      setCouponPreviews(previews);
+      toast('Coupon applied. Discounted prices are shown on the eligible plans.');
+    } finally {
+      setApplyingCoupon(false);
+    }
+  };
+
+  const clearCoupon = () => {
+    setAppliedCoupon(null);
+    setCouponPreviews({});
+    setCouponInput('');
+  };
+
+  const downloadReceipt = async (invoiceId: string) => {
+    setDownloadingReceipt(invoiceId);
+    try {
+      const receipt = await billingApi.getReceipt(invoiceId);
+      window.open(receipt.download_url, '_blank', 'noopener');
+    } catch (caught) {
+      toast(caught instanceof Error ? caught.message : 'Unable to download the receipt.', 'error');
+    } finally {
+      setDownloadingReceipt(null);
     }
   };
 
@@ -133,6 +238,43 @@ export const Billing: React.FC = () => {
           <p className={styles.subtitle}>Check your current quotas, subscription tiers, and view past invoices.</p>
         </div>
       </div>
+
+      {cancelledAtGateway && (
+        <div className={styles.paymentBanner}>
+          <AlertTriangle size={16} /> <span>The payment was cancelled. You have not been charged.</span>
+        </div>
+      )}
+      {paymentCheck === 'checking' && (
+        <div className={styles.paymentBanner}>
+          <Loader2 size={16} className={styles.spin} /> <span>Confirming your payment with the provider…</span>
+        </div>
+      )}
+      {paymentCheck === 'paid' && (
+        <div className={`${styles.paymentBanner} ${styles.paymentOk}`}>
+          <Check size={16} /> <span>Payment confirmed. Your plan is active and the receipt is ready below.</span>
+        </div>
+      )}
+      {paymentCheck === 'failed' && (
+        <div className={styles.paymentBanner}>
+          <AlertTriangle size={16} /> <span>The payment did not go through. You have not been charged.</span>
+        </div>
+      )}
+      {paymentCheck === 'timeout' && (
+        <div className={styles.paymentBanner}>
+          <AlertTriangle size={16} />
+          <span>We have not received the confirmation yet. It can take a few minutes; refresh this page shortly.</span>
+        </div>
+      )}
+      {subscription?.status === 'grace' && subscription.expires_at && (
+        <div className={styles.paymentBanner}>
+          <AlertTriangle size={16} />
+          <span>
+            Your plan has expired. Editing stays open until{' '}
+            {new Date(new Date(subscription.expires_at).getTime() + GRACE_DAYS * 86_400_000).toLocaleDateString()},
+            but exports are paused. Renew to keep your plan.
+          </span>
+        </div>
+      )}
 
       {/* Main Grid */}
       <div className={styles.mainGrid}>
@@ -218,7 +360,7 @@ export const Billing: React.FC = () => {
               )}
               {invoices.map((inv) => (
                 <tr key={inv.id}>
-                  <td className={styles.invId}>{inv.id}</td>
+                  <td className={styles.invId}>{inv.receiptNumber ?? inv.id.slice(0, 8)}</td>
                   <td>{inv.date}</td>
                   <td>{inv.amount}</td>
                   <td>
@@ -229,14 +371,12 @@ export const Billing: React.FC = () => {
                   <td>
                     <div className={styles.actionCell}>
                       <button
-                        className={styles.viewIconBtn}
-                        onClick={() => toast('Invoice preview is not exposed by the backend yet.', 'info')}
-                        title="View Invoice"
+                        className={styles.downloadBtn}
+                        disabled={!inv.receiptNumber || downloadingReceipt === inv.id}
+                        title={inv.receiptNumber ? 'Download receipt (PDF)' : 'A receipt is issued once the payment succeeds'}
+                        onClick={() => downloadReceipt(inv.id)}
                       >
-                        <Eye size={16} />
-                      </button>
-                      <button className={styles.downloadBtn} onClick={() => toast('Invoice PDF download is not exposed by the backend yet.', 'info')}>
-                        Download
+                        <FileText size={14} /> {downloadingReceipt === inv.id ? 'Opening…' : 'Receipt'}
                       </button>
                     </div>
                   </td>
@@ -365,6 +505,27 @@ export const Billing: React.FC = () => {
                 </button>
               </div>
 
+              {/* Promo code (BR-26) */}
+              <form onSubmit={applyCoupon} className={styles.couponForm}>
+                <Tag size={16} className={styles.metaIcon} />
+                <input
+                  className={styles.couponInput}
+                  placeholder="Promo code"
+                  value={couponInput}
+                  onChange={(event) => setCouponInput(event.target.value.toUpperCase())}
+                  maxLength={40}
+                  aria-label="Promo code"
+                />
+                <button type="submit" className="btn-outline" disabled={applyingCoupon || !couponInput.trim()}>
+                  {applyingCoupon ? 'Checking…' : 'Apply'}
+                </button>
+                {appliedCoupon && (
+                  <button type="button" className={styles.couponClear} onClick={clearCoupon}>
+                    Remove {appliedCoupon}
+                  </button>
+                )}
+              </form>
+
               {/* Pricing Cards Grid */}
               <div className={styles.pricingGrid}>
                 {pricingTiers.map((tier) => (
@@ -375,7 +536,14 @@ export const Billing: React.FC = () => {
                     {tier.popular && <span className={styles.popularBadge}>RECOMMENDED</span>}
                     <h3 className={styles.tierName}>{tier.name}</h3>
                     <div className={styles.priceContainer}>
-                      <span className={styles.tierPrice}>{tier.price}</span>
+                      {couponPreviews[tier.plan.id] ? (
+                        <>
+                          <span className={styles.tierPriceOld}>{tier.price}</span>
+                          <span className={styles.tierPrice}>{formatVnd(couponPreviews[tier.plan.id].amount_vnd)}</span>
+                        </>
+                      ) : (
+                        <span className={styles.tierPrice}>{tier.price}</span>
+                      )}
                       <span className={styles.tierPeriod}>{tier.price !== 'Custom' && `/ ${tier.period}`}</span>
                     </div>
                     <p className={styles.tierDesc}>{tier.description}</p>

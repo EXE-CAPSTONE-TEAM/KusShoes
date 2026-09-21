@@ -4,6 +4,8 @@ import * as Tabs from '@radix-ui/react-tabs';
 import { Select } from '../../../components/Select/Select';
 import { ConfirmDialog } from '../../../components/ConfirmDialog/ConfirmDialog';
 import { StatusBadge } from '../../../components/Admin/StatusBadge';
+import { AdminDialog } from '../../../components/Admin/AdminDialog';
+import { CouponsPanel, ManualTransactionsPanel, PeriodsPanel } from './FinancePanels';
 import { useToast } from '../../../context/ToastContext';
 import { useAdminAuth } from '../../../context/AdminAuthContext';
 import { adminBilling, AdminApiError, type SubscriptionListQuery, type InvoiceListQuery } from '../../../api/adminClient';
@@ -32,8 +34,10 @@ const SUB_STATUS_OPTIONS = [
 const INVOICE_STATUS_OPTIONS = [
   { value: 'all', label: 'Tất cả trạng thái' },
   { value: 'pending', label: 'Pending' },
+  { value: 'awaiting_approval', label: 'Chờ duyệt (thủ công)' },
   { value: 'paid', label: 'Paid' },
   { value: 'failed', label: 'Failed' },
+  { value: 'cancelled', label: 'Cancelled' },
   { value: 'refunded', label: 'Refunded' },
 ];
 
@@ -43,7 +47,7 @@ const formatDate = (iso: string | null) => (iso ? new Date(iso).toLocaleDateStri
 export const AdminBilling: React.FC = () => {
   const { toast } = useToast();
   const { isAdmin } = useAdminAuth();
-  const [tab, setTab] = useState<'subscriptions' | 'invoices'>('subscriptions');
+  const [tab, setTab] = useState<'subscriptions' | 'invoices' | 'manual' | 'periods' | 'coupons'>('subscriptions');
   const [mutating, setMutating] = useState(false);
 
   // Subscriptions
@@ -71,6 +75,8 @@ export const AdminBilling: React.FC = () => {
   const [invoiceUserId, setInvoiceUserId] = useState<string | undefined>(undefined);
   const [invoiceUserIdError, setInvoiceUserIdError] = useState<string | null>(null);
   const [refundTarget, setRefundTarget] = useState<AdminInvoice | null>(null);
+  const [refundReason, setRefundReason] = useState('');
+  const [refundOverride, setRefundOverride] = useState(false);
 
   const invoiceQuery: InvoiceListQuery = {
     status: invoiceStatus === 'all' ? undefined : invoiceStatus,
@@ -122,10 +128,13 @@ export const AdminBilling: React.FC = () => {
     try {
       await adminBilling.refund(refundTarget.id, {
         amount_vnd: refundTarget.amount_vnd,
-        reason: 'Admin-initiated refund',
+        reason: refundReason.trim() || 'Admin-initiated refund',
+        override: refundOverride || undefined,
       });
       toast('Đã tạo bút toán hoàn tiền');
       setRefundTarget(null);
+      setRefundReason('');
+      setRefundOverride(false);
       reloadInvoices();
     } catch (err) {
       if (err instanceof AdminApiError) toast(err.message, 'error');
@@ -146,13 +155,22 @@ export const AdminBilling: React.FC = () => {
         )}
       </div>
 
-      <Tabs.Root value={tab} onValueChange={(v) => setTab(v as 'subscriptions' | 'invoices')}>
+      <Tabs.Root value={tab} onValueChange={(v) => setTab(v as typeof tab)}>
         <Tabs.List style={{ display: 'flex', gap: 8, marginBottom: 20 }}>
           <Tabs.Trigger value="subscriptions" className="btn-outline" style={{ borderRadius: 'var(--border-radius-md)' }}>
             Subscriptions
           </Tabs.Trigger>
           <Tabs.Trigger value="invoices" className="btn-outline" style={{ borderRadius: 'var(--border-radius-md)' }}>
             Invoices
+          </Tabs.Trigger>
+          <Tabs.Trigger value="manual" className="btn-outline" style={{ borderRadius: 'var(--border-radius-md)' }}>
+            Giao dịch thủ công
+          </Tabs.Trigger>
+          <Tabs.Trigger value="periods" className="btn-outline" style={{ borderRadius: 'var(--border-radius-md)' }}>
+            Khóa sổ
+          </Tabs.Trigger>
+          <Tabs.Trigger value="coupons" className="btn-outline" style={{ borderRadius: 'var(--border-radius-md)' }}>
+            Mã giảm giá
           </Tabs.Trigger>
         </Tabs.List>
 
@@ -301,6 +319,9 @@ export const AdminBilling: React.FC = () => {
             </div>
           )}
         </Tabs.Content>
+        <Tabs.Content value="manual"><ManualTransactionsPanel /></Tabs.Content>
+        <Tabs.Content value="periods"><PeriodsPanel /></Tabs.Content>
+        <Tabs.Content value="coupons"><CouponsPanel /></Tabs.Content>
       </Tabs.Root>
 
       <ConfirmDialog
@@ -312,14 +333,24 @@ export const AdminBilling: React.FC = () => {
         onConfirm={handleForceDowngrade}
       />
 
-      <ConfirmDialog
+      <AdminDialog
         open={refundTarget !== null}
-        onOpenChange={(open) => !open && setRefundTarget(null)}
-        title={`Hoàn tiền hóa đơn ${refundTarget?.id ?? ''}?`}
-        description="Tạo một bút toán hoàn tiền cho toàn bộ số tiền hóa đơn. Hóa đơn gốc không bị thay đổi; trạng thái hiển thị chuyển thành 'refunded' ngay."
-        confirmLabel="Yêu cầu hoàn tiền"
-        onConfirm={handleRefund}
-      />
+        onOpenChange={(open) => { if (!open) { setRefundTarget(null); setRefundReason(''); setRefundOverride(false); } }}
+        title={`Hoàn tiền hóa đơn ${refundTarget?.id.slice(0, 8) ?? ''}?`}
+        description="Tạo bút toán hoàn toàn bộ số tiền; hóa đơn gốc không đổi. Hoàn toàn bộ gói hiện tại sẽ hạ tài khoản về Free. Chỉ tự động trong 7 ngày và khi chưa xuất file."
+        submitLabel="Yêu cầu hoàn tiền"
+        busy={mutating}
+        onSubmit={() => void handleRefund()}
+      >
+        <div className={`${shared.inputGroup} ${shared.formGridFull}`}>
+          <label>Lý do</label>
+          <input className={shared.input} value={refundReason} maxLength={500} placeholder="Khách yêu cầu trong 7 ngày" onChange={(event) => setRefundReason(event.target.value)} />
+        </div>
+        <label className={`${shared.checkRow} ${shared.formGridFull}`}>
+          <input type="checkbox" checked={refundOverride} onChange={(event) => setRefundOverride(event.target.checked)} />
+          Duyệt ngoại lệ (ngoài chính sách 7 ngày / đã xuất file)
+        </label>
+      </AdminDialog>
     </div>
   );
 };

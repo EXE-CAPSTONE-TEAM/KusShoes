@@ -1,7 +1,7 @@
 """016 sync plans with Landing pricing
 
-Revision ID: 016
-Revises: 015
+Revision ID: 016b
+Revises: 016
 Create Date: 2026-07-12
 """
 
@@ -11,8 +11,8 @@ import sqlalchemy as sa
 from alembic import op
 from sqlalchemy.dialects import postgresql
 
-revision = "016"
-down_revision = "015"
+revision = "016b"
+down_revision = "016"
 branch_labels = None
 depends_on = None
 

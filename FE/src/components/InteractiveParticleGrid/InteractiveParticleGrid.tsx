@@ -18,6 +18,8 @@ export const InteractiveParticleGrid: React.FC = () => {
     if (!canvas) return;
     const ctx = canvas.getContext('2d');
     if (!ctx) return;
+    // Touch screens have no hover, so the mouse trail would only burn battery in a render loop.
+    if (window.matchMedia('(hover: none)').matches) return;
 
     let animationFrameId: number;
     let width  = canvas.width  = window.innerWidth;

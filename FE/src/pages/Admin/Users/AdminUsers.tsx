@@ -10,6 +10,7 @@ import { adminUsers, AdminApiError, type UserListQuery } from '../../../api/admi
 import { useCursorList } from '../../../hooks/useCursorList';
 import { useDebouncedValue } from '../../../hooks/useDebouncedValue';
 import type { AdminUserDetail, AdminUserSummary, UserStatus, AdminRole } from '../../../types/admin';
+import { UserSupportActions } from './UserSupportActions';
 import shared from '../admin-shared.module.css';
 
 const STATUS_OPTIONS = [
@@ -203,6 +204,9 @@ export const AdminUsers: React.FC = () => {
                       <button className={shared.iconBtn} title="Xem chi tiết" onClick={() => openDetail(u.id)}>
                         <Eye size={14} />
                       </button>
+                      {u.role === 'user' && u.status === 'active' && (
+                        <UserSupportActions user={u} allowed={isAdmin} />
+                      )}
                       {u.role === 'user' && u.status === 'active' && (
                         <button
                           className={`${shared.iconBtn} ${shared.iconBtnDanger}`}

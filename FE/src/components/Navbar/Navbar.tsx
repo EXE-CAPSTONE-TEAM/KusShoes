@@ -1,5 +1,7 @@
 import React, { useState, useEffect, useRef } from 'react';
-import { Sun, Moon } from 'lucide-react';
+import { Sun, Moon, Menu, X } from 'lucide-react';
+import { AnimatePresence, motion } from 'framer-motion';
+import { createPortal } from 'react-dom';
 import { useTheme } from '../../context/ThemeContext';
 import styles from './Navbar.module.css';
 
@@ -11,12 +13,15 @@ interface NavbarProps {
 export const Navbar: React.FC<NavbarProps> = ({ navigate, currentPage }) => {
   const { theme, toggleTheme } = useTheme();
   const [hidden, setHidden] = useState(false);
+  const [menuOpen, setMenuOpen] = useState(false);
   const lastScrollY = useRef(0);
+  const menuOpenRef = useRef(false);
+  menuOpenRef.current = menuOpen;
 
   useEffect(() => {
     const handleScroll = () => {
       const currentY = window.scrollY;
-      if (currentY > lastScrollY.current && currentY > 80) {
+      if (currentY > lastScrollY.current && currentY > 80 && !menuOpenRef.current) {
         setHidden(true);
       } else {
         setHidden(false);
@@ -44,8 +49,7 @@ export const Navbar: React.FC<NavbarProps> = ({ navigate, currentPage }) => {
     // If we are already on landing, standard href anchor #targetId will handle the scroll automatically.
   };
 
-  const handleSubItemClick = (e: React.MouseEvent<HTMLAnchorElement>, path: string) => {
-    e.preventDefault();
+  const goToPath = (path: string) => {
     if (path.startsWith('#')) {
       const targetId = path.substring(1);
       if (currentPage !== 'landing') {
@@ -66,6 +70,33 @@ export const Navbar: React.FC<NavbarProps> = ({ navigate, currentPage }) => {
       navigate(path);
     }
   };
+
+  const handleSubItemClick = (e: React.MouseEvent<HTMLAnchorElement>, path: string) => {
+    e.preventDefault();
+    goToPath(path);
+  };
+
+  const closeMenu = () => setMenuOpen(false);
+  const goFromMenu = (path: string) => {
+    closeMenu();
+    goToPath(path);
+  };
+
+  // Mobile menu: lock page scroll, close on Escape and when the viewport grows past the phone layout
+  useEffect(() => {
+    if (!menuOpen) return;
+    const previousOverflow = document.body.style.overflow;
+    document.body.style.overflow = 'hidden';
+    const onKey = (event: KeyboardEvent) => event.key === 'Escape' && setMenuOpen(false);
+    const onResize = () => window.innerWidth > 768 && setMenuOpen(false);
+    window.addEventListener('keydown', onKey);
+    window.addEventListener('resize', onResize);
+    return () => {
+      document.body.style.overflow = previousOverflow;
+      window.removeEventListener('keydown', onKey);
+      window.removeEventListener('resize', onResize);
+    };
+  }, [menuOpen]);
 
   return (
     <header className={`${styles.navbar} ${hidden ? styles.navbarHidden : ''} glass-panel`}>
@@ -190,10 +221,56 @@ export const Navbar: React.FC<NavbarProps> = ({ navigate, currentPage }) => {
         <button className={styles.loginLink} onClick={() => navigate('/login')}>
           Sign In
         </button>
-        <button className="btn-neon-orange" onClick={() => navigate('/login')}>
+        <button className={`btn-neon-orange ${styles.registerBtn}`} onClick={() => navigate('/login')}>
           Register
         </button>
+        <button
+          type="button"
+          className={styles.menuBtn}
+          onClick={() => setMenuOpen((open) => !open)}
+          aria-label={menuOpen ? 'Close menu' : 'Open menu'}
+          aria-expanded={menuOpen}
+          aria-controls="mobile-menu"
+        >
+          {menuOpen ? <X size={22} /> : <Menu size={22} />}
+        </button>
       </div>
+
+      <AnimatePresence>
+        {menuOpen && (
+          <>
+            {/* Portalled: the navbar is transformed, which would otherwise trap a fixed backdrop inside it */}
+            {createPortal(
+              <motion.div
+                className={styles.menuBackdrop}
+                initial={{ opacity: 0 }}
+                animate={{ opacity: 1 }}
+                exit={{ opacity: 0 }}
+                onClick={closeMenu}
+              />,
+              document.body,
+            )}
+            <motion.nav
+              id="mobile-menu"
+              className={`${styles.mobileMenu} glass-panel`}
+              aria-label="Main menu"
+              initial={{ opacity: 0, y: -12 }}
+              animate={{ opacity: 1, y: 0 }}
+              exit={{ opacity: 0, y: -12 }}
+              transition={{ duration: 0.22 }}
+            >
+              <a href="/products" className={currentPage === 'products' ? styles.mobileActive : ''} onClick={(e) => { e.preventDefault(); goFromMenu('/products'); }}>Products</a>
+              <a href="#workflow" onClick={(e) => { e.preventDefault(); goFromMenu('#workflow'); }}>Workflow</a>
+              <a href="#features" onClick={(e) => { e.preventDefault(); goFromMenu('#features'); }}>Features</a>
+              <a href="/pricing" className={currentPage === 'pricing' ? styles.mobileActive : ''} onClick={(e) => { e.preventDefault(); goFromMenu('/pricing'); }}>Pricing</a>
+              <div className={styles.mobileActions}>
+                <button type="button" className="btn-outline" onClick={() => goFromMenu('/login')}>Sign In</button>
+                <button type="button" className="btn-neon-orange" onClick={() => goFromMenu('/login')}>Register</button>
+              </div>
+            </motion.nav>
+          </>
+        )}
+      </AnimatePresence>
     </header>
   );
 };

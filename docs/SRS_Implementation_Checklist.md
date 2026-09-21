@@ -6,12 +6,12 @@ Legend: `[x]` done · `[~]` partial · `[ ]` not done · `[-]` out of scope
 
 ## Verification status
 
-- Code compiles, lints (ruff) and type-checks (`tsc --noEmit`) on both sides.
-- Tests have **not** been run (Docker was not available).
-- Migrations `017`–`022` are written but **not applied** to the Neon database. `021`/`022` were only checked by compiling and by rendering the model DDL.
-- Everything added after the first push (receipts, coupons, manual transactions, period lock, version history, guardrail, templates, artisan links, feedback, analytics, reports, impersonation, account restore, retention) has **never run against a database**; only the pure metric functions and the PDF/CSV/XLSX renderers were executed.
+- Backend: ruff clean; the full pytest suite (210 tests) passes in Docker against a throwaway Postgres, and the whole migration chain (`001` → `023`) applies cleanly to an empty database.
+- Frontend: `tsc`, `oxlint` and the production build are clean; 35 vitest tests pass (13 more live-contract tests run only with `KUS_LIVE_API`, and were run once against a real local backend).
+- The Neon database has **not** been touched: migrations `017`–`023` are not applied there. Revision `016` exists twice in the history of some environments, so check `alembic_version` before upgrading (the plan-sync migration is now `016b`, and `023` re-creates `design_revisions` idempotently).
 - PayOS / MoMo clients follow the public specs; they have not been tried against a real sandbox.
-- TOTP is a from-scratch RFC 6238 implementation (stdlib only, no new dependency) — not tried against a real authenticator app.
+- TOTP is a from-scratch RFC 6238 implementation (stdlib only) — checked with a computed code in the live-contract test, not with a real authenticator app.
+- Browser pass: the Landing page was opened in headless Edge at iPhone width (390×844); the other screens were verified through component tests, not visually in a browser.
 
 ## §3.2.8 / UC-08 — Plans and subscription
 
@@ -99,8 +99,8 @@ Already present before this work and untouched: register, login, Google OAuth, O
 - [x] Registration form now sends `age_confirmed` (BR-02) — the existing "I agree to ToS" checkbox in `Login.tsx` was relabeled to also cover the age confirmation, since the backend now rejects registration without it
 - [x] New `tests/test_subscription_lifecycle.py` (layer cap, project lock, grace export block, grace → downgrade → lock flow, proration); `test_billing.py` rewritten for PayOS/MoMo
 - [x] New `tests/test_account_security_features.py` (lockout, new-device email, privacy defaults, username cooldown/reserved words, consent grant/revoke, masked login history, data export, TOTP setup/enable/login/recovery-code, 2FA disable, admin internal-flag toggle)
-- [~] No frontend UI for locked projects (no badge, edit buttons not disabled); locked projects only fail with a 403 from the API
-- [~] No frontend UI for 2FA setup/login or privacy settings — the backend endpoints exist and are tested, but nothing in the FE calls them yet. `client.ts`'s `login()` would need updating to handle the new `mfa_required` response shape before a 2FA UI could be built on top of it.
+- [x] Locked projects (BR-27) show a "Read-only" badge; rename and delete are disabled, restore/apply-template are disabled on the detail page
+- [x] 2FA setup / enable / disable / recovery codes, the two-step login (authenticator, email, recovery code), active sessions, sign-in history, privacy toggles, consents, data export, account deletion with password, forgot-password and deleted-account restore are all wired to the API (Settings → Security / Privacy and the Login page)
 
 ## Files added or changed (main ones)
 
@@ -114,3 +114,92 @@ Already present before this work and untouched: register, login, Google OAuth, O
 - Rewritten: `billing_service.py`, `maintenance_service.py`
 - Heavily extended: `auth_service.py` (login flow: lockout, 2FA gate, login history, new-device email), `user_service.py` (privacy, consents, username change, data export)
 - Removed: `polar_client.py`
+
+## Frontend for the backend flows (portal and admin)
+
+Portal (English, same glass-panel layout as the existing pages):
+- [x] Billing: promo code on the plan comparison, receipt download (KUS-xxxxx), grace-period banner, and the PayOS/MoMo return pages (`/billing/success`, `/billing/cancel`) that poll until the webhook settles the invoice (MSG29)
+- [x] Project detail: version history with restore, template gallery, artisan share links (create once / renew / revoke) and the PDF reference pack; the earlier placeholder collaborator-invite UI was removed because the backend has no such feature
+- [x] Feedback page (rating, 4P group, cooldown notice, the team's "what we changed" reply)
+- [x] Impersonation banner with a countdown and an "end session" button
+
+Admin (Vietnamese, same tables/dialogs as the existing admin pages):
+- [x] Analytics: KPI tiles with previous-period comparison, revenue series and by plan, movement, top customers, and report downloads (CSV / XLSX / PDF)
+- [x] Content: guardrail rules and template review
+- [x] Feedback triage with XLSX export
+- [x] Billing: manual transactions (proof upload, approve / reject), reporting-period lock, coupons, refund with a reason and BR-97 override
+- [x] Users: grant a complimentary plan, act as the customer (BR-80), send a password-reset code
+
+How it is verified: `tsc`, `oxlint`, the production build, component tests with the API mocked, and `src/api/liveContract.test.ts`, which runs the same API layer against a real backend (2FA lifecycle with a computed TOTP code, studio flows including the PDF, admin analytics, impersonation). The live suite is skipped unless `KUS_LIVE_API` is set.
+
+Not done in the frontend: an admin 2FA setup screen (the backend only exposes 2FA to customers, so impersonation cannot be used until an admin has 2FA enabled), scheduled reports, and a screenshot/browser pass — the screens were not opened in a real browser.
+
+## Landing, theme and layout polish (FE)
+
+- [x] SC-01 Landing is responsive for phones, using the iPhone (390×844) as the reference: hamburger menu with Products / Workflow / Features / Pricing and Sign In / Register, safe-area insets (`viewport-fit=cover`), 44px tap targets, full-width hero buttons, one-column cards and pricing; the mouse-trail particle effect is skipped on touch screens
+- [x] Dark / Light theme switches with a smooth View Transition (class fallback when unsupported)
+- [x] SC-09…SC-15 Settings re-laid out with horizontal tabs and a header banner; Projects has a proper empty state (first-run welcome, "no match" for filters, loading skeleton) and smaller project-card corners
+- [ ] SC-05 About and SC-33 legal pages (ToS / Privacy / Refund with version numbers, NFR-LEG-06) — not built
+- [ ] Landing content from SC-01 that is not there yet: team section and FAQ
+
+## Coverage by use case (SRS §2.2)
+
+| UC | Topic | Status |
+| :-- | :-- | :-- |
+| UC-01 | Register / login, Google OAuth | [x] existing; age confirmation, lockout and 2FA step added. Mobile guest mode is out of scope |
+| UC-02 | Dashboard | [x] existing page (plan, quota, recent projects); not re-audited against SC-06 |
+| UC-03 | Profile | [~] existing profile fields; username rules and cooldown added; avatar / favourite styles not re-audited |
+| UC-04 | Password and 2FA | [x] Authenticator and Email 2FA with recovery codes; [ ] SMS 2FA |
+| UC-05 | Privacy | [x] toggles and consents (BR-15, BR-89) |
+| UC-06 | Devices and login history | [x] sessions list / revoke, masked login history; location is not resolved |
+| UC-07 | Export / import / delete data | [x] export .zip, deletion with 30-day restore; [ ] import from backup (BR-20); [ ] clear cache |
+| UC-08 | Plans and upgrade | [x] see §3.2.8 |
+| UC-09 | Payment | [x] PayOS and MoMo; [ ] VNPay |
+| UC-10, UC-11 | Scan and export raw scan | [-] mobile pipeline out of scope |
+| UC-12 | Base models | [x] existing model picker on project creation |
+| UC-13 | My Designs | [x] status filters, rename, delete, restore; lock badge |
+| UC-14 | Kus Studio tools | [~] text, images, stickers exist; [ ] AI background removal, [ ] Draw Artwork |
+| UC-15 | Templates | [x] gallery and apply, admin review |
+| UC-16 | Preview and Bake | [x] bake with export lock; the 3D viewer needs a running backend |
+| UC-17 | Export and reference pack | [~] GLB/OBJ export and PDF pack; no 4-angle renders |
+| UC-18 | Team workspace | [-] Phase 2 |
+| UC-19 | Admin dashboard | [x] existing |
+| UC-20 | Manage users | [x] list, filters, plan grant, password-reset code, internal flag, impersonation; [ ] admin 2FA setup screen |
+| UC-21 | Revenue analytics | [x] |
+| UC-22 | Reports | [~] on-demand CSV / XLSX / PDF for revenue, users, ledger, funnel; [ ] scheduled email reports, design / plan / export / moderation reports |
+| UC-23 | Plans and guardrail config | [x] |
+| UC-24 | Moderation | [~] template review; [ ] copyright-complaint handling (BR-77) |
+| UC-25 | Feedback | [x] portal form and admin triage |
+| UC-26 | Artisan links | [x] creation and revoke in the portal; public viewer endpoints (SC-34 has no dedicated FE page yet) |
+| UC-27 | Buy scan Credit | [ ] |
+| UC-28 | Manual transactions and refunds | [x] |
+| UC-29 | Period lock | [x] |
+
+## Coverage by non-screen function (SRS §3.1.3)
+
+| SF | Status |
+| :-- | :-- |
+| SF-01 Scan worker, SF-02 Scan timeout | [-] mobile scan out of scope |
+| SF-03 AI background removal | [ ] |
+| SF-04 Guardrail | [x] |
+| SF-05 Payment webhook, SF-06 Payment timeout | [x] |
+| SF-07 Reference pack | [~] |
+| SF-08 Quota reset, SF-09 Expiry job, SF-17 Renewal reminders | [x] |
+| SF-10 Data retention | [~] |
+| SF-11 Data export | [x] |
+| SF-12 Session manager | [x] |
+| SF-13 Notification dispatcher | [~] emails only, no push |
+| SF-14 API cost tracker | [ ] |
+| SF-15 Audit logger | [x] admin actions and impersonation |
+| SF-16 Report generator | [~] |
+| SF-18 Receipt generator | [x] |
+| SF-19 Attribution tracker | [~] |
+| SF-20 Artisan link service | [x] |
+
+## Non-functional requirements
+
+- [x] NFR-SEC-01..05, 08, 10, 11: TLS is a deployment concern; password hashing, server-side RBAC, no card data, signed URLs ≤ 15 min, audit log, hashed artisan tokens, short access tokens
+- [ ] NFR-SEC-07 virus scan of uploads; [~] NFR-SEC-06 rate limiting (login, artisan links, exports; not scan/AI)
+- [x] NFR-USA-03 Vietnamese / English UI via the language switch; [~] NFR-USA-04 WCAG AA (focus states, labels and dialogs done, no formal audit)
+- [ ] NFR-MNT-04 coverage measurement (tests exist for subscription, quota and guardrail, but no coverage report)
+- [-] NFR-PER, NFR-REL: infrastructure targets, not measured here
