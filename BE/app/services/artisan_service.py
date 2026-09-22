@@ -15,13 +15,16 @@ from app.exceptions import (
     AuthRateLimited,
     ExportNotFound,
     ExportNotReady,
+    PublicSharingRestricted,
 )
 from app.infrastructure import rate_limiter, storage
 from app.repositories import (
     artisan_link_repo,
     export_record_repo,
+    moderation_repo,
     project_repo,
     subscription_repo,
+    user_repo,
 )
 from app.schemas.studio import (
     ArtisanDownloadResponse,
@@ -43,6 +46,7 @@ async def create_link(
     db: AsyncSession, user, project_id: uuid.UUID, export_id: uuid.UUID | None
 ) -> ArtisanLinkCreated:
     project = await require_owner(db, project_id, user)
+    await _require_public_sharing_allowed(db, user.id)
     subscription = await subscription_repo.get_by_user(db, user.id)
     # BR-101: paid plan only, and not while payment is overdue (grace).
     if (
@@ -99,6 +103,7 @@ async def renew_link(db: AsyncSession, user, link_id: uuid.UUID) -> ArtisanLinkR
     link = await artisan_link_repo.get_for_user(db, link_id, user.id)
     if not link or link.revoked_at is not None:
         raise ArtisanLinkNotFound()
+    await _require_public_sharing_allowed(db, user.id)
     link.expires_at = datetime.now(UTC) + timedelta(days=LINK_TTL_DAYS)
     link.download_count = 0
     await db.commit()
@@ -130,7 +135,28 @@ async def _resolve_active(db: AsyncSession, token: str):
         or link.download_count >= link.max_downloads
     ):
         raise ArtisanLinkInvalid()  # MSG48 — same answer for every failure mode
+    owner = await user_repo.get_by_id(db, link.user_id)
+    if (
+        # SRS_v2.2.txt:1171 "tài khoản bị khoá → MSG48" (BR-77 level 3 ban sets
+        # status='suspended'); :1966 also voids the link when the account is deleted.
+        owner is None
+        or owner.status == "suspended"
+        # BR-77 level 2 (SRS_v2.2.txt:2042): no public sharing while restricted. Same uniform
+        # MSG48 answer (:1970) so the public side learns nothing about the owner's state.
+        or await moderation_repo.active_restriction(db, owner.id, now=now) is not None
+    ):
+        raise ArtisanLinkInvalid()
     return link
+
+
+async def _require_public_sharing_allowed(db: AsyncSession, user_id: uuid.UUID) -> None:
+    """BR-77 level 2 (SRS_v2.2.txt:2042): an artisan link is public sharing, so none may be
+    created or renewed while the owner's 30-day restriction is active."""
+    restricted_until = await moderation_repo.active_restriction(
+        db, user_id, now=datetime.now(UTC)
+    )
+    if restricted_until is not None:
+        raise PublicSharingRestricted(restricted_until.isoformat())
 
 
 async def public_view(

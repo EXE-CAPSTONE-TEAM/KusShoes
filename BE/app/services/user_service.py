@@ -42,7 +42,7 @@ from app.schemas.user import (
     UsageResponse,
     UserDetailResponse,
 )
-from app.services import quota_service
+from app.services import data_import_service, quota_service
 from app.utils.password import hash_password, verify_password
 
 USERNAME_CHANGE_COOLDOWN_DAYS = 30
@@ -151,6 +151,7 @@ async def get_usage(db: AsyncSession, user) -> UsageResponse:
         exports_count=usage.exports_count,
         ai_credits_used=usage.ai_credits_used,
         ai_credits_limit=plan.max_ai_credits_per_cycle if plan else None,
+        max_scans_per_cycle=plan.max_scans_per_cycle if plan else None,
     )
 
 
@@ -266,32 +267,42 @@ async def export_account_data(
     consents = await consent_repo.list_for_user(db, user.id)
     history = await login_history_repo.list_for_user(db, user.id)
 
+    members = {
+        data_import_service.PROFILE_MEMBER: json.dumps(
+            _export_profile(user), indent=2, default=str
+        ),
+        data_import_service.PROJECTS_MEMBER: json.dumps(
+            [_export_project(p) for p in projects], indent=2, default=str
+        ),
+        data_import_service.CONSENTS_MEMBER: json.dumps(
+            [_to_consent_response(c).model_dump() for c in consents], indent=2, default=str
+        ),
+        data_import_service.LOGIN_HISTORY_MEMBER: json.dumps(
+            [
+                {
+                    "success": h.success,
+                    "ip_address": _mask_ip(h.ip_address),
+                    "user_agent": h.user_agent,
+                    "created_at": h.created_at.isoformat(),
+                }
+                for h in history
+            ],
+            indent=2,
+        ),
+    }
+    encoded = {name: content.encode("utf-8") for name, content in members.items()}
+    # BR-20 (SRS_v2.2.txt:1510): a keyed checksum manifest, written last, lets the import prove
+    # the archive was produced by KusShoes and was not modified.
+    manifest = data_import_service.build_manifest(
+        encoded,
+        account_code=user.account_code,
+        exported_at=datetime.now(UTC).isoformat(),
+    )
     buffer = io.BytesIO()
     with zipfile.ZipFile(buffer, "w", zipfile.ZIP_DEFLATED) as archive:
-        archive.writestr("profile.json", json.dumps(_export_profile(user), indent=2, default=str))
-        archive.writestr(
-            "projects.json",
-            json.dumps([_export_project(p) for p in projects], indent=2, default=str),
-        )
-        archive.writestr(
-            "consents.json",
-            json.dumps([_to_consent_response(c).model_dump() for c in consents], indent=2, default=str),
-        )
-        archive.writestr(
-            "login_history.json",
-            json.dumps(
-                [
-                    {
-                        "success": h.success,
-                        "ip_address": _mask_ip(h.ip_address),
-                        "user_agent": h.user_agent,
-                        "created_at": h.created_at.isoformat(),
-                    }
-                    for h in history
-                ],
-                indent=2,
-            ),
-        )
+        for name, data in encoded.items():
+            archive.writestr(name, data)
+        archive.writestr(data_import_service.MANIFEST_MEMBER, json.dumps(manifest, indent=2))
 
     file_path = f"data-exports/{user.id}/{uuid.uuid4()}.zip"
     storage.upload_bytes(file_path, buffer.getvalue(), "application/zip")

@@ -12,6 +12,8 @@ class ExportHistoryItem(BaseModel):
     format: Literal["glb", "obj", "zip"]
     file_size_bytes: int | None
     download_count: int
+    # BR-65 (SRS_v2.2.txt:1910): produced under the Free watermark policy.
+    is_watermarked: bool
     created_at: datetime
 
 

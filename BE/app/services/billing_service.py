@@ -25,6 +25,7 @@ from app.infrastructure.momo_client import MoMoError, MoMoSignatureError
 from app.infrastructure.payos_client import PayOSError, PayOSSignatureError
 from app.models.invoice import Invoice
 from app.models.plan import Plan
+from app.models.scan_credit import CREDIT_BILLING_CYCLE, CREDIT_INVOICE_TIER
 from app.models.subscription import Subscription
 from app.repositories import (
     export_record_repo,
@@ -36,7 +37,14 @@ from app.repositories import (
     user_repo,
 )
 from app.schemas.subscription import AdminInvoiceResponse, AdminSubscriptionResponse
-from app.services import coupon_service, period_service, receipt_service
+from app.services import (
+    coupon_service,
+    credit_service,
+    period_service,
+    quota_service,
+    receipt_service,
+    tax_service,
+)
 from app.services.audit import record_audit
 
 _CYCLE_TIMEDELTA = {
@@ -88,10 +96,53 @@ async def get_current_subscription(db: AsyncSession, user) -> Subscription:
     return subscription
 
 
+async def get_subscription_view(db: AsyncSession, user) -> dict:
+    """GET /subscription plus the BR-23 scan balance (plan scans left this cycle and
+    spendable Credits) - the same numbers the internal scan-quota endpoint reports."""
+    subscription = await get_current_subscription(db, user)
+    balance = await quota_service.scan_balance(db, user.id, subscription)
+    return {
+        "id": subscription.id,
+        "tier": subscription.tier,
+        "status": subscription.status,
+        "started_at": subscription.started_at,
+        "expires_at": subscription.expires_at,
+        "cancel_at_period_end": subscription.cancel_at_period_end,
+        "scans_remaining_plan": balance.plan_remaining,
+        "scans_remaining_credit": balance.credit_available,
+    }
+
+
+def to_invoice_view(invoice: Invoice) -> dict:
+    """InvoiceResponse fields plus the BR-28 VAT breakdown (frozen receipt value once paid)."""
+    return {
+        "id": invoice.id,
+        "order_code": invoice.order_code,
+        "plan_tier": invoice.plan_tier,
+        "billing_cycle": invoice.billing_cycle,
+        "listed_price_vnd": invoice.listed_price_vnd,
+        "discount_vnd": invoice.discount_vnd,
+        "amount_vnd": invoice.amount_vnd,
+        "payment_method": invoice.payment_method,
+        "status": invoice.status,
+        "receipt_number": invoice.receipt_number,
+        "paid_at": invoice.paid_at,
+        "created_at": invoice.created_at,
+        "vat": tax_service.breakdown_for_invoice(invoice),
+    }
+
+
 async def list_invoices(
     db: AsyncSession, user, *, limit: int, before: datetime | None
 ) -> list[Invoice]:
     return await invoice_repo.list_by_user(db, user.id, limit=limit, before=before)
+
+
+async def list_invoice_views(
+    db: AsyncSession, user, *, limit: int, before: datetime | None
+) -> list[dict]:
+    invoices = await list_invoices(db, user, limit=limit, before=before)
+    return [to_invoice_view(invoice) for invoice in invoices]
 
 
 # --- Checkout ---
@@ -163,11 +214,18 @@ async def create_checkout_session(
     await db.commit()
 
     description = f"KusShoes {tier} {billing_cycle}"[:25]
+    return await _open_gateway_payment(db, invoice, gateway=gateway, description=description)
+
+
+async def _open_gateway_payment(
+    db: AsyncSession, invoice: Invoice, *, gateway: str, description: str
+) -> str:
+    """Create the PayOS/MoMo payment for a committed PENDING invoice and return its URL."""
     try:
         if gateway == "payos":
             checkout_url, payment_link_id = await payos_client.create_payment_link(
-                order_code=order_code,
-                amount=amount_vnd,
+                order_code=invoice.order_code,
+                amount=invoice.amount_vnd,
                 description=description,
                 return_url=settings.PAYOS_RETURN_URL,
                 cancel_url=settings.PAYOS_CANCEL_URL,
@@ -175,8 +233,8 @@ async def create_checkout_session(
             invoice.gateway_transaction_id = payment_link_id
         else:
             checkout_url, _deeplink = await momo_client.create_payment(
-                order_id=str(order_code),
-                amount=amount_vnd,
+                order_id=str(invoice.order_code),
+                amount=invoice.amount_vnd,
                 order_info=description,
                 redirect_url=settings.MOMO_REDIRECT_URL,
                 ipn_url=settings.MOMO_IPN_URL,
@@ -190,6 +248,32 @@ async def create_checkout_session(
     return checkout_url
 
 
+async def create_credit_checkout(db: AsyncSession, user, *, quantity: int, gateway: str) -> str:
+    """UC-27 / BR-94 (SRS_v2.2.txt:1617): PENDING invoice for `quantity` Credits at
+    settings.CREDIT_PRICE_VND each. No coupon: BR-91 promotions exclude Credit
+    (SRS_v2.2.txt:1597). The cycle the purchase counts against is recorded on the invoice."""
+    if gateway not in ("payos", "momo"):
+        raise SubInvalidGateway()
+    cycle_start = await credit_service.assert_can_purchase(db, user, quantity)
+    listed_price_vnd = settings.CREDIT_PRICE_VND * quantity
+    invoice = await invoice_repo.create_pending(
+        db,
+        user_id=user.id,
+        plan_id=None,
+        plan_tier=CREDIT_INVOICE_TIER,
+        billing_cycle=CREDIT_BILLING_CYCLE,
+        order_code=_generate_order_code(),
+        listed_price_vnd=listed_price_vnd,
+        amount_vnd=listed_price_vnd,
+        payment_method=gateway,
+        is_upgrade=False,
+        gateway_metadata=credit_service.cycle_metadata(cycle_start),
+    )
+    await db.commit()
+    description = f"KusShoes Credit x{quantity}"[:25]
+    return await _open_gateway_payment(db, invoice, gateway=gateway, description=description)
+
+
 async def preview_coupon(
     db: AsyncSession, user, *, tier: str, billing_cycle: str, coupon_code: str
 ) -> dict:
@@ -197,10 +281,12 @@ async def preview_coupon(
     if not plan or tier == "free":
         raise SubPlanNotFound()
     _coupon, discount = await coupon_service.evaluate(db, user, coupon_code, plan, plan.price_vnd)
+    amount_vnd = plan.price_vnd - discount
     return {
         "listed_price_vnd": plan.price_vnd,
         "discount_vnd": discount,
-        "amount_vnd": plan.price_vnd - discount,
+        "amount_vnd": amount_vnd,
+        "vat": tax_service.vat_breakdown(amount_vnd),  # BR-28 on the final payable amount
     }
 
 
@@ -276,6 +362,7 @@ def to_admin_invoice(invoice: Invoice, user_email: str | None) -> AdminInvoiceRe
         status=invoice.status,
         paid_at=invoice.paid_at,
         created_at=invoice.created_at,
+        vat=tax_service.breakdown_for_invoice(invoice),
     )
 
 
@@ -336,6 +423,8 @@ async def _refund_policy_violation(db: AsyncSession, invoice: Invoice) -> str | 
     paid_at = _aware(invoice.paid_at)
     if datetime.now(UTC) - paid_at > timedelta(days=REFUND_WINDOW_DAYS):
         return "đã quá 7 ngày kể từ ngày thanh toán"
+    if credit_service.is_credit_invoice(invoice):
+        return await credit_service.refund_violation(db, invoice)
     if await export_record_repo.count_for_user_since(db, invoice.user_id, paid_at) > 0:
         return "đã xuất file sau khi thanh toán"
     return None
@@ -368,7 +457,12 @@ async def admin_refund_invoice(
         db, invoice_id=invoice.id, amount_vnd=amount_vnd, reason=reason, created_by=admin.id
     )
     await invoice_repo.mark_refunded(db, invoice)
-    if amount_vnd == invoice.amount_vnd:
+    revoked_credits = 0
+    if credit_service.is_credit_invoice(invoice):
+        # BR-94: only still-available Credits are revoked; used ones are never restored,
+        # and a Credit refund never touches the subscription.
+        revoked_credits = await credit_service.revoke_for_refund(db, invoice)
+    elif amount_vnd == invoice.amount_vnd:
         subscription = await subscription_repo.get_by_user(db, invoice.user_id)
         if subscription and subscription.last_invoice_id == invoice.id and not subscription.is_free:
             await _downgrade_to_free(db, subscription)
@@ -380,6 +474,7 @@ async def admin_refund_invoice(
             "reason": reason,
             "policy_override": bool(violation and override),
             "policy_violation": violation,
+            "revoked_credits": revoked_credits,
         },
     )
     await db.commit()
@@ -394,6 +489,10 @@ async def get_user_invoice(db: AsyncSession, user, invoice_id: uuid.UUID) -> Inv
     if not invoice or invoice.user_id != user.id:
         raise InvoiceNotFound()
     return invoice
+
+
+async def get_user_invoice_view(db: AsyncSession, user, invoice_id: uuid.UUID) -> dict:
+    return to_invoice_view(await get_user_invoice(db, user, invoice_id))
 
 
 async def get_receipt_url(db: AsyncSession, user, invoice_id: uuid.UUID) -> str:
@@ -537,6 +636,10 @@ async def activate_invoice(
         gateway_metadata_patch=gateway_metadata_patch,
     )
 
+    if credit_service.is_credit_invoice(invoice):
+        await _activate_credit_invoice(db, invoice)
+        return
+
     full_tier = f"{invoice.plan_tier}_{invoice.billing_cycle}"
     now = datetime.now(UTC)
 
@@ -569,6 +672,18 @@ async def activate_invoice(
     user = await user_repo.get_by_id(db, invoice.user_id)
     if user:
         await coupon_service.redeem(db, invoice)
+        await receipt_service.issue_receipt(db, invoice, user)
+        task_queue.enqueue_payment_confirmation_email(
+            user.email, invoice.plan_tier, invoice.amount_vnd, invoice.receipt_number
+        )
+
+
+async def _activate_credit_invoice(db: AsyncSession, invoice: Invoice) -> None:
+    """BR-94: a paid Credit invoice mints its Credits, issues the receipt and sends the
+    confirmation - it never touches the subscription, its cycle anchor or project locks."""
+    await credit_service.mint_for_invoice(db, invoice)
+    user = await user_repo.get_by_id(db, invoice.user_id)
+    if user:
         await receipt_service.issue_receipt(db, invoice, user)
         task_queue.enqueue_payment_confirmation_email(
             user.email, invoice.plan_tier, invoice.amount_vnd, invoice.receipt_number

@@ -58,6 +58,11 @@ TAGS = [
     {"name": "Admin Studio", "description": "Quy tắc nội dung (guardrail) và thư viện template."},
     {"name": "Admin Feedback", "description": "Xử lý phản hồi khách hàng và xuất Excel."},
     {"name": "Admin Ops", "description": "Vận hành: dự án, bake job, export, sức khỏe hệ thống, nhật ký thao tác."},
+    {"name": "Quota Internal", "description": "Endpoint nội bộ cho dịch vụ quét: trừ lượt quét theo thứ tự gói → Credit (BR-23); xác thực bằng token dịch vụ."},
+    {"name": "Moderation", "description": "Báo cáo vi phạm nội dung/bản quyền (công khai) và tình trạng xử lý vi phạm của tài khoản (BR-77)."},
+    {"name": "Admin Moderation", "description": "Xử lý báo cáo vi phạm bản quyền: cảnh cáo → hạn chế chia sẻ 30 ngày → khoá tài khoản (BR-77, UC-24)."},
+    {"name": "API Cost Internal", "description": "Ghi chi phí mỗi lần gọi API 3D/AI và kiểm tra trạng thái nhận Scan Job (SF-14); xác thực bằng token dịch vụ."},
+    {"name": "Admin API Cost", "description": "Chi phí API theo ngày, ngân sách tháng và ngưỡng cảnh báo 80% / tạm ngưng 100% (SF-14, BR-108)."},
     {"name": "Health", "description": "Kiểm tra sống/sẵn sàng của dịch vụ."},
     {"name": "Monitoring", "description": "Metrics dạng Prometheus."},
 ]
@@ -255,6 +260,34 @@ DOCS: dict[str, tuple[str, str]] = {
     "GET /health": ("Kiểm tra sống", "Luôn trả `ok` nếu tiến trình chạy. " + _P),
     "GET /health/ready": ("Kiểm tra sẵn sàng", "Kiểm tra kết nối DB, Redis và lưu trữ; `status` là `degraded` nếu một mục lỗi. " + _P),
     "GET /metrics": ("Metrics Prometheus", "Số request, độ trễ theo route. " + _P),
+    # ---- BR-94 / UC-27 Credit (Track A) ----
+    "GET /api/v1/subscription/credits": ("Số dư Credit quét", "Số Credit còn dùng được, đã dùng, đã hết hạn, số đã mua trong chu kỳ hiện tại, trần 3 Credit/chu kỳ và đơn giá 49.000đ (BR-94). " + _B),
+    "GET /api/v1/subscription/credits/ledger": ("Sổ Credit quét", "Lịch sử từng Credit: ngày mua, hóa đơn, hạn dùng 12 tháng, trạng thái (còn dùng / đã dùng / hết hạn). Credit đã dùng không hoàn (BR-94). " + _B),
+    "POST /api/v1/subscription/credits/checkout": ("Mua Credit quét", "Tạo hóa đơn PENDING cho 1–3 Credit và trả link thanh toán PayOS/MoMo. Chỉ mua được khi gói Basic/Pro đang ACTIVE; vượt 3 Credit trong chu kỳ trả `CREDIT_CYCLE_LIMIT` (MSG51) (BR-94, UC-27). " + _B),
+    "GET /api/v1/admin/billing/tax-config": ("Cấu hình thuế VAT", "Trạng thái bật/tắt dòng VAT và thuế suất. Khi bật, VAT được tách ra từ giá niêm yết, không cộng thêm (BR-28). " + _A),
+    "POST /api/v1/internal/scan-quota/consume": ("Trừ một lượt quét", "Trừ theo thứ tự: lượt của gói trước, Credit sau (BR-23). Hết cả hai trả `SCAN_QUOTA_EXHAUSTED` (MSG28). " + _S),
+    "GET /api/v1/internal/scan-quota/{user_id}": ("Số lượt quét còn lại", "Lượt quét còn lại của gói trong chu kỳ và số Credit còn hiệu lực. " + _S),
+    # ---- BR-65 watermark (Track B) ----
+    "GET /api/v1/projects/{project_id}/preview-image": ("Ảnh render của dự án", "Trả ảnh PNG render của dự án. Tài khoản Free luôn nhận ảnh có watermark và cạnh dài ≤1080px (BR-65, BR-67); gói trả phí nhận ảnh gốc. " + _B),
+    "GET /api/v1/projects/{project_id}/watermark-policy": ("Quy tắc watermark của dự án", "Cho biết bản render của dự án này có bắt buộc watermark hay không, kèm nội dung và kích thước tối đa, để trình chỉnh sửa áp dụng đúng (BR-65). " + _B),
+    # ---- BR-20 data import (Track B) ----
+    "POST /api/v1/users/me/data-import/upload-url": ("Xin link tải tệp sao lưu lên", "Trả presigned URL để tải tệp .zip sao lưu do KusShoes xuất lên, kèm `import_id` để xác nhận (BR-20). " + _B),
+    "POST /api/v1/users/me/data-import/{import_id}/confirm": ("Xác nhận nhập dữ liệu", "Kiểm tra checksum/chữ ký của tệp sao lưu, tạo BẢN SAO MỚI (không ghi đè) và tính vào hạn mức dự án (BR-20, BR-46). Tệp sai hoặc vượt hạn mức trả `DATA_IMPORT_INVALID` (MSG08). " + _B),
+    "GET /api/v1/users/me/data-imports": ("Lịch sử nhập dữ liệu", "Các lần nhập tệp sao lưu: thời điểm, trạng thái, số dự án đã tạo, lý do từ chối. " + _B),
+    # ---- BR-77 / UC-24 moderation (Track C) ----
+    "POST /api/v1/public/content-reports": ("Báo cáo vi phạm nội dung", "Chủ sở hữu quyền gửi khiếu nại bản quyền/nhãn hiệu về một thiết kế hoặc template, không cần đăng nhập. Giới hạn tần suất theo IP (BR-77, UC-24). " + _P),
+    "GET /api/v1/moderation/me": ("Tình trạng vi phạm của tôi", "Mức xử lý hiện tại (cảnh cáo / hạn chế chia sẻ công khai / khoá) và thời điểm hết hạn chế (BR-77). " + _B),
+    "GET /api/v1/admin/content-reports": ("Danh sách báo cáo vi phạm", "Hàng đợi khiếu nại bản quyền, lọc theo trạng thái, phân trang bằng con trỏ (UC-24). " + _A),
+    "GET /api/v1/admin/content-reports/{report_id}": ("Chi tiết báo cáo vi phạm", "Nội dung khiếu nại, đối tượng bị báo cáo và lịch sử xử lý của tài khoản đó (UC-24, BR-78). " + _A),
+    "POST /api/v1/admin/content-reports/{report_id}/uphold": ("Chấp nhận báo cáo vi phạm", "Áp mức xử lý kế tiếp theo BR-77: lần 1 cảnh cáo, lần 2 hạn chế chia sẻ công khai 30 ngày, lần 3 khoá tài khoản. Ghi AUDIT_LOG. " + _AW),
+    "POST /api/v1/admin/content-reports/{report_id}/dismiss": ("Từ chối báo cáo vi phạm", "Đóng khiếu nại, không áp mức xử lý nào và không tăng bậc vi phạm. Ghi AUDIT_LOG. " + _AW),
+    "GET /api/v1/admin/users/{user_id}/moderation-actions": ("Lịch sử xử lý vi phạm", "Các mức xử lý đã áp cho tài khoản theo BR-77, kèm lý do và người thực hiện. " + _A),
+    # ---- SF-14 / BR-108 API cost (Track C) ----
+    "POST /api/v1/internal/api-cost/calls": ("Ghi chi phí một lần gọi API", "Ghi chi phí mọi lần gọi API 3D/AI theo user và theo ngày, kể cả lần thất bại (SF-14). Vượt 80% ngân sách tháng sẽ cảnh báo Admin, vượt 100% sẽ tạm ngưng nhận Scan Job. " + _S),
+    "GET /api/v1/internal/api-cost/scan-intake": ("Kiểm tra có nhận Scan Job không", "Trả `accepted=false` kèm MSG43 khi ngân sách tháng đã dùng hết 100%, hoặc khi tài khoản nội bộ đã dùng hết trần 10 lượt quét của kỳ (SF-14, BR-79, BR-83). " + _S),
+    "GET /api/v1/admin/api-cost/daily": ("Chi phí API theo ngày", "Tổng chi phí, số lần gọi thành công/thất bại theo từng ngày (GMT+7) trong khoảng thời gian chọn (SF-14, BR-108). " + _A),
+    "GET /api/v1/admin/api-cost/budget": ("Ngân sách API tháng", "Ngân sách đã đặt, số đã chi, phần trăm và trạng thái (`unconfigured` / `ok` / `warning` / `suspended`) (SF-14). " + _A),
+    "PUT /api/v1/admin/api-cost/budget": ("Đặt ngân sách API tháng", "Đặt hoặc cập nhật ngân sách của một tháng; ngưỡng cảnh báo 80% và tạm ngưng 100% tính trên số này. Ghi AUDIT_LOG (SF-14). " + _AW),
 }
 
 

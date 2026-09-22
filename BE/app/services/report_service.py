@@ -2,7 +2,8 @@
 
 Each report is a (title, headers, rows) table; the renderers are shared.
 Implemented: revenue, users, transactions ("Sổ giao dịch EXE201", BR-106),
-channel-funnel (BR-107). Scheduled email delivery is not implemented."""
+channel-funnel (BR-107), api-cost (BR-108 "Báo cáo chi phí API theo ngày (SF-14) xuất CSV",
+SRS_v2.2.txt:2112). Scheduled email delivery is not implemented."""
 
 import asyncio
 import csv
@@ -14,8 +15,9 @@ from fpdf import FPDF
 from openpyxl import Workbook
 from sqlalchemy.ext.asyncio import AsyncSession
 
+from app.models.scan_credit import CREDIT_BILLING_CYCLE, CREDIT_INVOICE_TIER
 from app.repositories import analytics_repo
-from app.services import analytics_service
+from app.services import analytics_service, api_cost_service
 from app.services.period_service import GMT7
 from app.services.receipt_service import FONT_DIR
 from app.utils.http import XLSX_MEDIA_TYPE
@@ -29,8 +31,10 @@ _STATUS_LABELS = {
     "pending": "Chờ thanh toán",
 }
 _METHOD_LABELS = {"payos": "Chuyển khoản VietQR", "momo": "MoMo", "manual": "Thủ công"}
-_TIER_LABELS = {"basic": "Basic", "pro": "Pro"}
-_CYCLE_LABELS = {"monthly": "tháng", "yearly": "năm"}
+# XR-1: a BR-94 scan-Credit invoice (SRS_v2.2.txt:1617) is discriminated by Track A's constants.
+_TIER_LABELS = {"basic": "Basic", "pro": "Pro", CREDIT_INVOICE_TIER: "Credit"}
+_CYCLE_LABELS = {"monthly": "tháng", "yearly": "năm", CREDIT_BILLING_CYCLE: "lượt"}
+_CREDIT_ITEM_LABEL = "Credit quét"
 _CHANNEL_LABELS = {
     "direct": "Trực tiếp",
     "tiktok": "TikTok",
@@ -67,6 +71,8 @@ async def build_report(
         return await _channel_funnel(db, start, end)
     if report_type == "revenue":
         return await _revenue(db, start, end)
+    if report_type == "api-cost":
+        return await _api_cost(db, start, end)
     return await _users(db, start, end)
 
 
@@ -94,7 +100,9 @@ async def _transactions(db: AsyncSession, start: date, end: date) -> Table:
             else ""
         )
         item = (
-            f"Nâng cấp lên {_TIER_LABELS.get(invoice.plan_tier, invoice.plan_tier)}"
+            _CREDIT_ITEM_LABEL
+            if invoice.plan_tier == CREDIT_INVOICE_TIER
+            else f"Nâng cấp lên {_TIER_LABELS.get(invoice.plan_tier, invoice.plan_tier)}"
             if invoice.is_upgrade
             else f"{_TIER_LABELS.get(invoice.plan_tier, invoice.plan_tier)}"
             f" {_CYCLE_LABELS.get(invoice.billing_cycle, invoice.billing_cycle)}"
@@ -167,6 +175,33 @@ async def _revenue(db: AsyncSession, start: date, end: date) -> Table:
     table += [[f"Doanh thu tháng {point.month}", point.revenue_vnd] for point in data.revenue_series]
     table += [[f"Theo gói: {plan.plan_tier}", plan.revenue_vnd] for plan in data.revenue_by_plan]
     return f"Báo cáo doanh thu {start} – {end}", ["Chỉ số", "Giá trị (VND)"], table
+
+
+async def _api_cost(db: AsyncSession, start: date, end: date) -> Table:
+    """BR-108 (SRS_v2.2.txt:2112): one row per GMT+7 day, zero-filled, then a total row.
+    Failed calls are counted and costed too (SF-14, SRS_v2.2.txt:1767)."""
+    days = await api_cost_service.daily_rows(db, start, end)
+    table = [
+        [
+            row.day.strftime("%d/%m/%Y"),
+            row.calls,
+            row.success_calls,
+            row.failed_calls,
+            row.cost_vnd,
+        ]
+        for row in days
+    ]
+    table.append(
+        [
+            "Tổng",
+            sum(row.calls for row in days),
+            sum(row.success_calls for row in days),
+            sum(row.failed_calls for row in days),
+            sum(row.cost_vnd for row in days),
+        ]
+    )
+    headers = ["Ngày", "Số lần gọi", "Thành công", "Thất bại", "Chi phí (VND)"]
+    return "Chi phí API theo ngày", headers, table
 
 
 async def _users(db: AsyncSession, start: date, end: date) -> Table:

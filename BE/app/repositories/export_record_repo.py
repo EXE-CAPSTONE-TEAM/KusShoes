@@ -89,6 +89,7 @@ async def create_many(
     bake_job_id: uuid.UUID,
     user_id: uuid.UUID,
     exports: Sequence[ExportRecordCreate],
+    is_watermarked: bool = False,
 ) -> list[ExportRecord]:
     records = [
         ExportRecord(
@@ -98,6 +99,7 @@ async def create_many(
             format=item["format"],
             file_path=item["file_path"],
             file_size_bytes=item.get("file_size_bytes"),
+            is_watermarked=is_watermarked,
         )
         for item in exports
     ]

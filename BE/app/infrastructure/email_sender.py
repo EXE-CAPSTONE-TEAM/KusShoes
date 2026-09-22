@@ -112,3 +112,18 @@ def send_impersonation_notice_email(user_email: str, reason: str) -> None:
         f"(lý do: {reason}). Phiên đã kết thúc.\n\nNếu bạn không yêu cầu hỗ trợ, "
         "vui lòng đổi mật khẩu và liên hệ chúng tôi.",
     )
+
+
+def send_api_budget_alert_email(
+    user_email: str, period_month: str, spent_vnd: int, budget_vnd: int, warn_percent: int
+) -> None:
+    """SF-14 (SRS_v2.2.txt:1767): the month's 3D/AI API spend reached the warn threshold."""
+    _send(
+        user_email,
+        f"[KusShoes] Chi phí API tháng {period_month} đã đạt {warn_percent}% ngân sách",
+        "Xin chào Admin,\n\n"
+        f"Chi phí API 3D/AI của tháng bắt đầu {period_month} đã đạt {spent_vnd:,}đ "
+        f"trên ngân sách {budget_vnd:,}đ (ngưỡng cảnh báo {warn_percent}%).\n\n"
+        "Khi chạm ngưỡng tạm ngưng, hệ thống sẽ ngừng nhận Scan Job mới; lượt quét của khách "
+        "được giữ nguyên và thiết kế trên phôi vẫn hoạt động.",
+    )

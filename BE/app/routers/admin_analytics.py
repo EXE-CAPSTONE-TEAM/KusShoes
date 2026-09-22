@@ -25,7 +25,7 @@ async def get_analytics(
 
 @router.get("/reports/{report_type}")
 async def download_report(
-    report_type: Literal["revenue", "users", "transactions", "channel-funnel"],
+    report_type: Literal["revenue", "users", "transactions", "channel-funnel", "api-cost"],
     format: Literal["csv", "xlsx", "pdf"] = "csv",
     date_from: date | None = None,
     date_to: date | None = None,

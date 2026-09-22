@@ -97,6 +97,41 @@ class Settings(BaseSettings):
     # BR-101: public artisan viewer page the owner shares (QR / link)
     ARTISAN_VIEWER_BASE_URL: str = "http://localhost:5173/artisan"
 
+    # BR-94 / UC-27: single-scan Credit (SRS_v2.2.txt:1617, :2856, plan table :895)
+    CREDIT_PRICE_VND: int = 49000            # SRS_v2.2.txt:1617 "Credit 49.000đ"
+    CREDIT_MAX_PER_CYCLE: int = 3            # SRS_v2.2.txt:1617 "tối đa 3 Credit/chu kỳ"
+    CREDIT_VALIDITY_MONTHS: int = 12         # SRS_v2.2.txt:1617 "hạn dùng 12 tháng"
+
+    # BR-28: VAT is EXTRACTED from the listed price, never added (SRS_v2.2.txt:1643).
+    # Default OFF: the team has no invoicing legal entity yet (SRS_v2.2.txt:2782).
+    VAT_ENABLED: bool = False
+    VAT_RATE_PERCENT: int = 8                # SRS_v2.2.txt:2844 "ở đây 8%"
+
+    # BR-65 / BR-67: Free renders always carry a watermark (SRS_v2.2.txt:1910, :1922)
+    WATERMARK_TEXT: str = "KusShoes"         # brand mark, no SRS number
+    WATERMARK_FREE_MAX_EDGE_PX: int = 1080   # SRS_v2.2.txt:1922 "cạnh dài ≤1080px"
+    WATERMARK_OPACITY_PERCENT: int = 35      # rendering parameter, NOT an SRS business rule
+
+    # NFR-SEC-05: signed URLs for files live at most 15 minutes (SRS_v2.2.txt:1311)
+    SIGNED_URL_TTL_SECONDS: int = 900
+
+    # BR-20: import from a KusShoes backup (SRS_v2.2.txt:1510)
+    DATA_BACKUP_FORMAT_VERSION: str = "1"    # our own manifest version, no SRS number
+    DATA_IMPORT_MAX_BYTES: int = 52428800    # 50 MiB upload ceiling, no SRS number
+    DATA_IMPORT_RATE_LIMIT: int = 3          # abuse guard, mirrors BR-19's 1/24h budget
+    DATA_IMPORT_RATE_WINDOW_SECONDS: int = 86400
+
+    # BR-77 / UC-24: content-violation ladder (SRS_v2.2.txt:2042)
+    MODERATION_SHARE_RESTRICTION_DAYS: int = 30   # SRS_v2.2.txt:2042 "30 ngày"
+    MODERATION_REPORT_RATE_LIMIT: int = 5         # abuse guard, no SRS number
+    MODERATION_REPORT_RATE_WINDOW_SECONDS: int = 3600
+
+    # SF-14 / BR-79 / BR-108: API cost tracker (SRS_v2.2.txt:1767, :2112)
+    API_BUDGET_WARN_PERCENT: int = 80             # SRS_v2.2.txt:1767 "đạt 80% → cảnh báo Admin"
+    API_BUDGET_SUSPEND_PERCENT: int = 100         # SRS_v2.2.txt:1767 "đạt 100% → tạm ngưng"
+    INTERNAL_ACCOUNT_SCAN_CAP: int = 10           # SRS_v2.2.txt:1767 "trần riêng 10 lượt quét"
+    API_COST_ADMIN_ALERT_EMAIL: str = ""          # empty → fall back to settings.EMAIL_FROM
+
     @property
     def is_production(self) -> bool:
         return self.APP_ENV == "production"

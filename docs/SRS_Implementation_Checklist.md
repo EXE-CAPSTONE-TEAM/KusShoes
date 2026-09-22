@@ -6,9 +6,9 @@ Legend: `[x]` done · `[~]` partial · `[ ]` not done · `[-]` out of scope
 
 ## Verification status
 
-- Backend: ruff clean; the full pytest suite (210 tests) passes in Docker against a throwaway Postgres, and the whole migration chain (`001` → `023`) applies cleanly to an empty database.
+- Backend: ruff clean apart from one pre-existing `UP046` in `app/schemas/admin.py`; the full pytest suite (321 tests) plus `unit_tests` (35) pass in Docker against a throwaway Postgres, and the whole migration chain (`001` → `026`) applies cleanly to an empty database and downgrades back to `023` without leftovers.
 - Frontend: `tsc`, `oxlint` and the production build are clean; 35 vitest tests pass (13 more live-contract tests run only with `KUS_LIVE_API`, and were run once against a real local backend).
-- The Neon database has **not** been touched: migrations `017`–`023` are not applied there. Revision `016` exists twice in the history of some environments, so check `alembic_version` before upgrading (the plan-sync migration is now `016b`, and `023` re-creates `design_revisions` idempotently).
+- The Neon database has **not** been touched: migrations `017`–`026` are not applied there. Revision `016` exists twice in the history of some environments, so check `alembic_version` before upgrading (the plan-sync migration is now `016b`, and `023` re-creates `design_revisions` idempotently).
 - PayOS / MoMo clients follow the public specs; they have not been tried against a real sandbox.
 - TOTP is a from-scratch RFC 6238 implementation (stdlib only) — checked with a computed code in the live-contract test, not with a real authenticator app.
 - Browser pass: the Landing page was opened in headless Edge at iPhone width (390×844); the other screens were verified through component tests, not visually in a browser.
@@ -29,8 +29,8 @@ Legend: `[x]` done · `[~]` partial · `[ ]` not done · `[-]` out of scope
 - [~] Layer cap (BR-52/58): only the project-wide total (stickers + texts) is enforced
   - the studio has no zones, so the 5-per-zone rule cannot apply
   - there is no Draw Artwork tool, so BR-57 has nothing to gate
-- [ ] Credit ledger and Credit purchase (BR-94, UC-27)
-- [ ] Plan-first-then-Credit deduction order (BR-23 detail)
+- [x] Credit ledger and Credit purchase (BR-94, UC-27): `scan_credits` ledger; checkout for an ACTIVE Basic/Pro plan only (GRACE refused), at most `CREDIT_MAX_PER_CYCLE` per cycle including pending checkouts (MSG51), 12-month expiry, credits survive the cycle reset, used credits are non-refundable (a refund revokes only the available ones), idempotent webhook minting, a "Credit quét × n" receipt line, daily expiry task. Credit purchases count as revenue but never as MRR / churn
+- [x] Plan-first-then-Credit deduction order (BR-23 detail): intake gates on mobile bootstrap (MSG28 with the reset date; SF-14 budget suspension MSG43; GRACE refused per BR-90), charge on scan completion (`confirm_output` → `consume_scan`: plan scans first, then the oldest-expiring Credit), safe against replayed and concurrent completions; internal consume/status endpoints for the scan service. Note: there is no intake reservation (BR-35 is out of scope), so scans started in parallel before any of them completes are all delivered, but only charged while quota remains
 
 ## UC-09 — Payment (PayOS / MoMo, Polar removed)
 
@@ -44,7 +44,7 @@ Legend: `[x]` done · `[~]` partial · `[ ]` not done · `[-]` out of scope
 - [x] PENDING-over-30-minutes cancel job (SF-06, BR-30), every 5 minutes; a late webhook on a cancelled invoice still activates and is logged
 - [x] "Đang xác nhận" (MSG29): `GET /subscription/invoices/{id}` for the success page to poll; receipt returns 409 until issued
 - [x] Coupons (BR-26): percent / fixed / fixed-price, plan filter, validity window, use cap, 1 use per account, 1,000đ minimum charge, no stacking with proration; Early Bird (BR-91) is a first-payment-only fixed-price coupon
-- [ ] VAT toggle (BR-28)
+- [x] VAT toggle (BR-28): `VAT_ENABLED` (default off until there is a legal entity, SRS :2782); VAT is extracted from the listed price, never added; shown on the invoice, coupon preview and receipt only when on; frozen in the receipt snapshot; admin tax-config endpoint
 - [x] Manual transactions (BR-95, UC-28): maker/checker (self-approval blocked), proof-image upload, approve → activates plan + receipt, reject; audited
 - [x] Reporting-period lock (BR-98, UC-29): open/lock periods; manual transactions and refunds dated inside a locked period are rejected
 - [x] COMP grants (BR-103): flagged on the subscription, no invoice, excluded from revenue metrics
@@ -59,7 +59,7 @@ Legend: `[x]` done · `[~]` partial · `[ ]` not done · `[-]` out of scope
 - [~] Export locks editing (BR-45): saves are rejected (`PROJECT_EXPORTING`) while a bake queued < 5 min ago is still active; the two-device lock (BR-100) is not built
 - [~] Reference-pack PDF (SF-07, BR-71): disclaimer, colours, text/fonts, layer list, version and date, QR; **no** 4-angle renders or flattened zone images (there is no server-side renderer)
 - [x] Artisan links (UC-26, SF-20, BR-101): paid plan and not in grace, from an export, only the SHA-256 of the token is stored, 30 days / 20 downloads, revoke and renew, public no-auth endpoints with IP rate limit, signed URLs ≤ 15 min, every failure answers the same 410 (MSG48)
-- [ ] Free-tier watermark (BR-65)
+- [~] Free-tier watermark (BR-65): policy from the subscription tier, `GET /projects/{id}/preview-image` stamps the image and caps the long edge at 1080px for Free (BR-67), `export_records.is_watermarked`, a watermark block in the bake payload. **Gaps:** no renderer/worker reads the payload flag yet, client-side render downloads are not routed through the stamped endpoint, and meshes/video are not watermarked
 
 ## Account and security (UC-01 to UC-07)
 
@@ -71,7 +71,7 @@ Legend: `[x]` done · `[~]` partial · `[ ]` not done · `[-]` out of scope
 - [x] Privacy settings (BR-15): public profile / show designs / searchable / analytics / ads-personalization, all off by default
 - [x] Consent records (BR-89): ToS + privacy-policy + age-confirmation written at registration; opt-in/revocable marketing-content, academic-report and cookie consents via `/users/me/consents`
 - [x] Data export (SF-11, BR-19): zips profile + project metadata + consents + login history, 1/24h, 15-min signed URL — binary assets (GLB/textures) are **not** bundled (simplification)
-- [ ] Data import from backup (BR-20) — not built
+- [x] Data import from backup (BR-20): the BR-19 export now carries an HMAC-signed manifest; upload-url / confirm / history endpoints; checksum and signature verified; imported as new copies (" (nhập lại)"), never overwriting, and counted against the BR-46 project cap (MSG08 on rejection). Binary assets are not part of the backup. A backup is not bound to the exporting account
 - [x] Delete-account recovery and purge (BR-06): restore by emailed 6-digit code within 30 days (uniform answer, no enumeration, 5 attempts); after 30 days the row is anonymised (invoices kept for accounting) and files/projects removed; a stale scheduled task can never purge a restored account
 - [x] Username rules (BR-10): reserved-word blocklist, case-insensitive uniqueness (functional index), 30-day change cooldown
 - [x] Age check (BR-02): required `age_confirmed` flag on registration (schema-validated) + FE checkbox now sends it; a consent record is written
@@ -86,10 +86,10 @@ Already present before this work and untouched: register, login, Google OAuth, O
 - [x] Impersonation (BR-80): admin with 2FA only, reason required, 30-minute token with no refresh, blocked from payment / password / account deletion / 2FA settings, audited start and end, customer emailed afterwards; the response carries the banner text
 - [x] Admin-initiated password reset: the customer is emailed the usual recovery code, the admin never sees or sets a password; audited
 - [x] Analytics (§5.4, BR-83/103/104/105): MRR, ARR, ARPU, paying customers, recognised revenue (paid − refunds) with previous-period comparison, churn (EXE201 definition), NRR/GRR, Free→paid, repeat rate with the not-yet-due group split out, failed payments (30 d), revenue by plan, monthly series, revenue movement, top customers. Movement and NRR/GRR are cash-based approximations because there is no MRR history table
-- [~] Reports (SF-16, UC-22): revenue, users, `Sổ giao dịch EXE201` (BR-106 column order) and channel funnel by week (BR-107) as CSV / XLSX / PDF on demand; **not** built: scheduled reports with email delivery, design / plan / export-activity / moderation reports, API cost by day (BR-108)
+- [~] Reports (SF-16, UC-22): revenue, users, `Sổ giao dịch EXE201` (BR-106 column order) and channel funnel by week (BR-107) as CSV / XLSX / PDF on demand; **not** built: scheduled reports with email delivery, design / plan / export-activity / moderation reports. API cost by day (BR-108) is now built (see SF-14)
 - [x] Feedback module (UC-25, BR-109): rating 1–5, one form per 14 days, 4P group, admin triage NEW → REVIEWED → PLANNED → DONE / WONT_DO with a public "what changed" note, internal accounts excluded, XLSX export, summary
-- [ ] Content moderation (BR-77)
-- [ ] API cost tracker (SF-14)
+- [x] Content moderation (BR-77, UC-24): public copyright/trademark report intake (IP rate-limited), admin triage, 3-level ladder: warning → 30-day public-sharing restriction (new artisan links refused, existing links answer MSG48 410) → account suspension (its artisan links also stop working, SRS :1171); decisions are audited; `/moderation/me`
+- [~] API cost tracker (SF-14): per-call cost ledger including failed calls (GMT+7 business day), admin monthly budget with a one-time admin email at 80% and scan-intake suspension at 100% (MSG43, customer quota untouched, enforced on mobile bootstrap), internal-account cap of 10 scans, daily check task, BR-108 daily CSV report. **Gap:** nothing records calls yet (the scan/Kiri pipeline does not POST `/internal/api-cost/calls`), so spend stays at 0 and the thresholds and internal cap never trigger in practice
 - [~] Data retention (SF-10): trashed projects now kept 30 days then purged (BR-47, was 7), deleted accounts purged after 30 days, login history 90 days; other retention classes not covered
 - [-] Scan pipeline (SF-01/02, UC-10/11, BR-33–42) — mobile is out of scope
 
@@ -152,7 +152,7 @@ Not done in the frontend: an admin 2FA setup screen (the backend only exposes 2F
 | UC-04 | Password and 2FA | [x] Authenticator and Email 2FA with recovery codes; [ ] SMS 2FA |
 | UC-05 | Privacy | [x] toggles and consents (BR-15, BR-89) |
 | UC-06 | Devices and login history | [x] sessions list / revoke, masked login history; location is not resolved |
-| UC-07 | Export / import / delete data | [x] export .zip, deletion with 30-day restore; [ ] import from backup (BR-20); [ ] clear cache |
+| UC-07 | Export / import / delete data | [x] export .zip, deletion with 30-day restore, import from backup (BR-20); [ ] clear cache |
 | UC-08 | Plans and upgrade | [x] see §3.2.8 |
 | UC-09 | Payment | [x] PayOS and MoMo; [ ] VNPay |
 | UC-10, UC-11 | Scan and export raw scan | [-] mobile pipeline out of scope |
@@ -168,10 +168,10 @@ Not done in the frontend: an admin 2FA setup screen (the backend only exposes 2F
 | UC-21 | Revenue analytics | [x] |
 | UC-22 | Reports | [~] on-demand CSV / XLSX / PDF for revenue, users, ledger, funnel; [ ] scheduled email reports, design / plan / export / moderation reports |
 | UC-23 | Plans and guardrail config | [x] |
-| UC-24 | Moderation | [~] template review; [ ] copyright-complaint handling (BR-77) |
+| UC-24 | Moderation | [x] template review, copyright-complaint handling with the BR-77 ladder |
 | UC-25 | Feedback | [x] portal form and admin triage |
 | UC-26 | Artisan links | [x] creation and revoke in the portal; public viewer endpoints (SC-34 has no dedicated FE page yet) |
-| UC-27 | Buy scan Credit | [ ] |
+| UC-27 | Buy scan Credit | [x] purchase via PayOS/MoMo, ledger, cap, expiry, spent on scan completion |
 | UC-28 | Manual transactions and refunds | [x] |
 | UC-29 | Period lock | [x] |
 
@@ -189,7 +189,7 @@ Not done in the frontend: an admin 2FA setup screen (the backend only exposes 2F
 | SF-11 Data export | [x] |
 | SF-12 Session manager | [x] |
 | SF-13 Notification dispatcher | [~] emails only, no push |
-| SF-14 API cost tracker | [ ] |
+| SF-14 API cost tracker | [~] ledger, budget, 80%/100% states, internal cap, BR-108 CSV; no producer records calls yet |
 | SF-15 Audit logger | [x] admin actions and impersonation |
 | SF-16 Report generator | [~] |
 | SF-18 Receipt generator | [x] |

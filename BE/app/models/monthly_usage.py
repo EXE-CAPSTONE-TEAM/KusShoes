@@ -14,7 +14,7 @@ if TYPE_CHECKING:
 
 
 class MonthlyUsage(Base):
-    """Per-cycle export/AI-credit counters — keyed by the subscription's own
+    """Per-cycle export/AI-credit/scan counters — keyed by the subscription's own
     `current_period_start` (BR-23), not the calendar month despite the class
     name (kept to avoid a wider rename)."""
 
@@ -34,6 +34,10 @@ class MonthlyUsage(Base):
     projects_count: Mapped[int] = mapped_column(Integer, nullable=False, default=0)
     exports_count: Mapped[int] = mapped_column(Integer, nullable=False, default=0)
     ai_credits_used: Mapped[int] = mapped_column(Integer, nullable=False, default=0)
+    # BR-23 (SRS_v2.2.txt:1561): plan scans spent this cycle; plan scans go before Credits.
+    scans_used: Mapped[int] = mapped_column(
+        Integer, nullable=False, default=0, server_default="0"
+    )
 
     updated_at: Mapped[datetime] = mapped_column(default=utcnow, onupdate=utcnow, nullable=False)
 

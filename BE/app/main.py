@@ -23,15 +23,19 @@ from app.routers import (
     admin_billing,
     admin_dashboard,
     admin_feedback,
+    admin_moderation,
     admin_ops,
     admin_plans,
     admin_studio,
     admin_users,
+    api_cost,
     auth,
     editor,
     exports,
     feedback,
+    internal_quota,
     mobile,
+    moderation,
     project_assets,
     projects,
     public_artisan,
@@ -157,6 +161,22 @@ app.include_router(feedback.router, prefix="/api/v1", tags=["Feedback"])
 app.include_router(exports.router, prefix="/api/v1", tags=["Exports"])
 app.include_router(subscriptions.router, prefix="/api/v1", tags=["Subscription"])
 app.include_router(webhooks.router, prefix="/api/v1/webhooks", tags=["Webhooks"])
+
+# --- BR-94 / BR-23 (Track A) ---
+app.include_router(
+    internal_quota.router, prefix="/api/v1/internal/scan-quota", tags=["Quota Internal"]
+)
+# --- BR-77 / UC-24 (Track C) ---
+app.include_router(moderation.public_router, prefix="/api/v1/public", tags=["Moderation"])
+app.include_router(moderation.router, prefix="/api/v1/moderation", tags=["Moderation"])
+app.include_router(admin_moderation.router, prefix="/api/v1/admin", tags=["Admin Moderation"])
+# --- SF-14 / BR-108 (Track C) ---
+app.include_router(
+    api_cost.internal_router, prefix="/api/v1/internal/api-cost", tags=["API Cost Internal"]
+)
+app.include_router(
+    api_cost.admin_router, prefix="/api/v1/admin/api-cost", tags=["Admin API Cost"]
+)
 
 
 @app.get("/health", tags=["Health"])

@@ -1,4 +1,4 @@
-from app.services import notification_service
+from app.services import api_cost_service, notification_service
 from app.workers.celery_app import celery_app
 
 
@@ -131,6 +131,25 @@ def send_account_restore_email(self, user_email: str, otp_code: str) -> None:
 def send_impersonation_notice_email(self, user_email: str, reason: str) -> None:
     try:
         notification_service.send_impersonation_notice_email(user_email, reason)
+    except Exception as exc:
+        delay = 5 * (2**self.request.retries)
+        raise self.retry(exc=exc, countdown=delay)
+
+
+@celery_app.task(
+    name="app.workers.tasks.email_tasks.send_api_budget_alert_email",
+    bind=True,
+    max_retries=3,
+    default_retry_delay=5,
+)
+def send_api_budget_alert_email(
+    self, user_email: str, period_month: str, spent_vnd: int, budget_vnd: int, warn_percent: int
+) -> None:
+    """SF-14 (SRS_v2.2.txt:1767): "đạt 80% → cảnh báo Admin"."""
+    try:
+        api_cost_service.send_budget_alert_email(
+            user_email, period_month, spent_vnd, budget_vnd, warn_percent
+        )
     except Exception as exc:
         delay = 5 * (2**self.request.retries)
         raise self.retry(exc=exc, countdown=delay)

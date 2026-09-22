@@ -44,8 +44,8 @@ class Plan(Base):
     is_active: Mapped[bool] = mapped_column(Boolean, nullable=False, default=True)
 
     # §3.2.8 quota columns — dashboard/pricing read these as the single source
-    # of truth (BR-92). max_scans_per_cycle is display-only for now: no scan
-    # pipeline exists yet (mobile scanning is out of scope for this backend).
+    # of truth (BR-92). max_scans_per_cycle is enforced per cycle by
+    # quota_service (BR-23: plan scans first, then Credits); NULL counts as 0.
     max_ai_credits_per_cycle: Mapped[int | None] = mapped_column(Integer, nullable=True)
     max_scans_per_cycle: Mapped[int | None] = mapped_column(Integer, nullable=True)
     max_layers_per_zone: Mapped[int] = mapped_column(Integer, nullable=False, default=5)
