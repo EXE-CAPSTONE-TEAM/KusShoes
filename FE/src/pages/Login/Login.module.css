@@ -14,6 +14,7 @@
 
 .backBtn {
   position: absolute;
+  z-index: 10;
   top: 40px;
   left: 40px;
   background: transparent;
@@ -64,36 +65,10 @@
   margin-bottom: 28px;
 }
 
-.logoContainer {
-  width: 46px;
-  height: 46px;
-  background: linear-gradient(135deg, var(--color-orange) 0%, var(--color-crimson) 100%);
-  border-radius: var(--border-radius-md);
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  box-shadow: 0 0 15px rgba(255, 90, 54, 0.4);
-  margin-bottom: 12px;
-}
-
-.logoIcon {
-  color: var(--text-primary);
-  width: 24px;
-  height: 24px;
-  animation: rotateLogo 8s linear infinite;
-}
-
-@keyframes rotateLogo {
-  from { transform: rotate(0deg); }
-  to { transform: rotate(360deg); }
-}
-
-.brandTitle {
-  font-family: 'Space Grotesk', sans-serif;
-  font-weight: 800;
-  font-size: 1.4rem;
-  letter-spacing: 2px;
-  line-height: 1;
+.logoImage {
+  height: 52px;
+  width: auto;
+  object-fit: contain;
 }
 
 .brandSubtitle {
@@ -104,37 +79,44 @@
   margin-top: 6px;
 }
 
-/* Google Login Button */
+/* Google Login Button — follows Google Identity branding guidelines */
 .googleBtn {
   display: flex;
   align-items: center;
   justify-content: center;
-  gap: 12px;
+  gap: 10px;
   width: 100%;
-  padding: 12px;
-  border-radius: var(--border-radius-md);
-  background: var(--hover-bg-item);
-  border: 1px solid var(--glass-border);
-  color: var(--text-primary);
-  font-family: var(--font-sans);
-  font-weight: 600;
-  font-size: 0.95rem;
+  height: 40px;
+  padding: 0 12px;
+  border-radius: 4px;
+  background: #ffffff;
+  border: 1px solid #747775;
+  color: #1f1f1f;
+  font-family: 'Roboto', arial, sans-serif;
+  font-weight: 500;
+  font-size: 14px;
+  letter-spacing: 0.25px;
   cursor: pointer;
-  transition: all var(--transition-fast);
+  transition: background-color 0.218s, box-shadow 0.218s;
 }
 
-.googleBtn:hover {
-  background: var(--hover-bg-item);
-  border-color: var(--glass-border-hover);
+[data-theme="dark"] .googleBtn {
+  background: #131314;
+  border-color: #8e918f;
+  color: #e3e3e3;
+}
+
+.googleBtn:hover:not(:disabled) {
+  box-shadow: 0 1px 2px rgba(60, 64, 67, 0.3), 0 1px 3px 1px rgba(60, 64, 67, 0.15);
 }
 
 .googleBtn:disabled {
   cursor: not-allowed;
-  opacity: 0.55;
+  opacity: 0.6;
 }
 
 .googleIcon {
-  filter: drop-shadow(0 0 1px rgba(0,0,0,0.5));
+  flex-shrink: 0;
 }
 
 /* Success Screen */
@@ -533,13 +515,8 @@
   .brandHeader {
     margin-bottom: 20px;
   }
-  .logoContainer {
-    width: 38px;
-    height: 38px;
-    margin-bottom: 8px;
-  }
-  .brandTitle {
-    font-size: 1.25rem;
+  .logoImage {
+    height: 44px;
   }
   .tabs {
     margin-bottom: 16px;
@@ -556,10 +533,6 @@
   }
   .inputIcon {
     left: 14px;
-  }
-  .googleBtn {
-    padding: 10px;
-    font-size: 0.9rem;
   }
   .divider {
     margin: 16px 0;

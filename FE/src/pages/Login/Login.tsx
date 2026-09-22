@@ -1,8 +1,9 @@
 import React, { useState, useEffect } from 'react';
-import { Mail, Lock, ArrowLeft, Disc, CheckCircle2, UserPlus, LogIn, Eye, EyeOff, CheckSquare, Square, UserRound, KeyRound, AlertCircle, Info } from 'lucide-react';
+import { Mail, Lock, ArrowLeft, CheckCircle2, UserPlus, LogIn, Eye, EyeOff, CheckSquare, Square, UserRound, KeyRound, AlertCircle, Info } from 'lucide-react';
 import { motion } from 'framer-motion';
 import { api, ApiError } from '../../api/client';
 import { useToast } from '../../context/ToastContext';
+import { useTheme } from '../../context/ThemeContext';
 import {
   normalizeEmail,
   normalizeFullName,
@@ -13,6 +14,7 @@ import {
   type RegisterFieldErrors,
   type LoginFieldErrors,
 } from '../../utils/authValidation';
+import { LoginBackdrop } from './LoginBackdrop';
 import styles from './Login.module.css';
 
 interface LoginProps {
@@ -21,6 +23,7 @@ interface LoginProps {
 
 export const Login: React.FC<LoginProps> = ({ setPage }) => {
   const { toast } = useToast();
+  const { theme } = useTheme();
   const [isLoginTab, setIsLoginTab] = useState(true);
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
@@ -199,6 +202,8 @@ export const Login: React.FC<LoginProps> = ({ setPage }) => {
 
   return (
     <div className={styles.container}>
+      <LoginBackdrop />
+
       {/* Back to landing */}
       <button className={styles.backBtn} onClick={() => setPage('landing')}>
         <ArrowLeft size={16} />
@@ -214,10 +219,11 @@ export const Login: React.FC<LoginProps> = ({ setPage }) => {
       >
         {/* Brand */}
         <div className={styles.brandHeader}>
-          <div className={styles.logoContainer}>
-            <Disc className={styles.logoIcon} />
-          </div>
-          <h2 className={styles.brandTitle}>SNEAKER FLOW</h2>
+          <img
+            src={theme === 'dark' ? '/KusShoes_Logo_Dark_Mode_cropped.png' : '/KusShoes_Logo_cropped.png'}
+            alt="KusShoes"
+            className={styles.logoImage}
+          />
           <p className={styles.brandSubtitle}>DIGITIZE & DESIGN SYSTEM</p>
         </div>
 
@@ -303,25 +309,6 @@ export const Login: React.FC<LoginProps> = ({ setPage }) => {
           </div>
         ) : (
           <>
-            {/* Google Login Button */}
-            <button 
-              className={`${styles.googleBtn} glass-panel`} 
-              type="button"
-              disabled
-              title="Google authentication is not connected yet"
-            >
-              <svg className={styles.googleIcon} viewBox="0 0 24 24" width="18" height="18">
-                <path fill="#EA4335" d="M12.24 10.285V14.4h6.887c-.648 2.41-2.519 4.114-5.136 4.114A5.79 5.79 0 0 1 8.2 12.725a5.79 5.79 0 0 1 5.79-5.79c2.316 0 4.195 1.157 5.093 2.871l3.298-3.298C20.378 4.412 17.417 2.5 13.99 2.5 8.197 2.5 3.5 7.197 3.5 12.99s4.697 10.49 10.49 10.49c6.069 0 10.372-4.26 10.372-10.537 0-.74-.093-1.296-.231-1.658H12.24z"/>
-              </svg>
-              <span>Continue with Google (coming soon)</span>
-            </button>
-
-            <div className={styles.divider} style={{ margin: '16px 0 24px' }}>
-              <span />
-              <span style={{ fontSize: '0.65rem' }}>OR CONNECT WITH EMAIL</span>
-              <span />
-            </div>
-
             {/* Tabs */}
             <div className={styles.tabs}>
               <button 
@@ -360,7 +347,7 @@ export const Login: React.FC<LoginProps> = ({ setPage }) => {
                       <UserRound size={18} className={styles.inputIcon} />
                       <input
                         type="text"
-                        placeholder="Duy Nguyen"
+                        placeholder="Your full name"
                         value={name}
                         onChange={(e) => {
                           setName(e.target.value);
@@ -381,7 +368,7 @@ export const Login: React.FC<LoginProps> = ({ setPage }) => {
                       <UserRound size={18} className={styles.inputIcon} />
                       <input
                         type="text"
-                        placeholder="duy_nguyen"
+                        placeholder="your_username"
                         value={username}
                         onChange={(e) => {
                           setUsername(e.target.value);
@@ -407,7 +394,7 @@ export const Login: React.FC<LoginProps> = ({ setPage }) => {
                   <Mail size={18} className={styles.inputIcon} />
                   <input
                     type="email"
-                    placeholder="duy.nguyen@email.com"
+                    placeholder="you@example.com"
                     value={email}
                     onChange={(e) => {
                       setEmail(e.target.value);
@@ -562,12 +549,21 @@ export const Login: React.FC<LoginProps> = ({ setPage }) => {
               </button>
             </form>
 
-            <div className={styles.divider}>
-              <span />
-              <span>OR</span>
-              <span />
-            </div>
-
+            {/* Google Login Button */}
+            <button 
+              className={styles.googleBtn} style={{ marginTop: '16px' }}
+              type="button"
+              disabled
+              title="Google authentication is not connected yet"
+            >
+              <svg className={styles.googleIcon} viewBox="0 0 48 48" width="18" height="18" aria-hidden="true">
+                <path fill="#EA4335" d="M24 9.5c3.54 0 6.71 1.22 9.21 3.6l6.85-6.85C35.9 2.38 30.47 0 24 0 14.62 0 6.51 5.38 2.56 13.22l7.98 6.19C12.43 13.72 17.74 9.5 24 9.5z"/>
+                <path fill="#4285F4" d="M46.98 24.55c0-1.57-.15-3.09-.38-4.55H24v9.02h12.94c-.58 2.96-2.26 5.48-4.78 7.18l7.73 6c4.51-4.18 7.09-10.36 7.09-17.65z"/>
+                <path fill="#FBBC05" d="M10.53 28.59c-.48-1.45-.76-2.99-.76-4.59s.27-3.14.76-4.59l-7.98-6.19C.92 16.46 0 20.12 0 24c0 3.88.92 7.54 2.56 10.78l7.97-6.19z"/>
+                <path fill="#34A853" d="M24 48c6.48 0 11.93-2.13 15.89-5.81l-7.73-6c-2.15 1.45-4.92 2.3-8.16 2.3-6.26 0-11.57-4.22-13.47-9.91l-7.98 6.19C6.51 42.62 14.62 48 24 48z"/>
+              </svg>
+              <span>Sign in with Google</span>
+            </button>
           </>
         )}
       </motion.div>

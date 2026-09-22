@@ -31,6 +31,7 @@
 
 /* Filters Bar */
 .filtersBar {
+  --filter-control-height: 52px;
   display: flex;
   justify-content: space-between;
   gap: 20px;
@@ -42,9 +43,11 @@
   display: flex;
   align-items: center;
   gap: 12px;
-  padding: 10px 18px;
+  height: var(--filter-control-height);
+  padding: 0 18px;
   width: 320px;
   border-radius: var(--border-radius-md);
+  box-sizing: border-box;
 }
 
 .searchIcon {
@@ -69,8 +72,17 @@
   display: flex;
   align-items: center;
   gap: 10px;
-  padding: 10px 18px;
+  height: var(--filter-control-height);
+  padding: 4px 6px 4px 18px;
   border-radius: var(--border-radius-md);
+  box-sizing: border-box;
+}
+
+.sortSelectTrigger {
+  width: auto;
+  min-width: 176px;
+  height: 42px;
+  padding-block: 0;
 }
 
 .controlLabel {
@@ -83,15 +95,18 @@
 .tabsWrapper {
   display: flex;
   gap: 4px;
+  height: var(--filter-control-height);
   padding: 4px;
   border-radius: var(--border-radius-md);
+  box-sizing: border-box;
 }
 
 .tabBtn {
   background: transparent;
   border: none;
   color: var(--text-secondary);
-  padding: 8px 18px;
+  height: 100%;
+  padding: 0 18px;
   border-radius: var(--border-radius-sm);
   cursor: pointer;
   font-family: var(--font-sans);
@@ -113,17 +128,19 @@
 /* View toggle mode */
 .viewToggle {
   display: flex;
+  height: var(--filter-control-height);
   padding: 4px;
   border-radius: var(--border-radius-md);
   gap: 2px;
+  box-sizing: border-box;
 }
 
 .viewBtn {
   background: transparent;
   border: none;
   color: var(--text-muted);
-  width: 32px;
-  height: 32px;
+  width: 40px;
+  height: 100%;
   display: flex;
   align-items: center;
   justify-content: center;

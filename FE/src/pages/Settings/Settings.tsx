@@ -1,25 +1,26 @@
 import React, { useEffect, useState } from 'react';
 import {
-  User, Shield, Eye, Smartphone, Save, Key, AlertTriangle,
+  Smartphone, Save, Key, AlertTriangle,
   Instagram, Globe, Camera, Award, X, Upload, RefreshCw
 } from 'lucide-react';
 import { motion, AnimatePresence } from 'framer-motion';
-import * as Tabs from '@radix-ui/react-tabs';
 import styles from './Settings.module.css';
 import { useTheme } from '../../context/ThemeContext';
 import { useToast } from '../../context/ToastContext';
 import { ConfirmDialog } from '../../components/ConfirmDialog/ConfirmDialog';
 import { api } from '../../api/client';
+import type { SettingTab } from './settingsNavigation';
 
-type SettingTab = 'profile' | 'security' | 'privacy';
+interface SettingsProps {
+  activeTab: SettingTab;
+}
 
 interface PresetAvatar {
   name: string;
   url: string;
 }
 
-export const Settings: React.FC = () => {
-  const [activeTab, setActiveTab] = useState<SettingTab>('profile');
+export const Settings: React.FC<SettingsProps> = ({ activeTab }) => {
   const { theme, setTheme } = useTheme();
   const { toast } = useToast();
   const [confirmDeleteAccountOpen, setConfirmDeleteAccountOpen] = useState(false);
@@ -150,27 +151,7 @@ export const Settings: React.FC = () => {
       </div>
 
       {/* Settings Layout */}
-      <Tabs.Root
-        value={activeTab}
-        onValueChange={(v) => setActiveTab(v as SettingTab)}
-        className={styles.settingsLayout}
-        style={{ display: 'contents' }}
-      >
-        {/* Navigation Tabs */}
-        <Tabs.List className={`${styles.tabsColumn} glass-panel`}>
-          <Tabs.Trigger value="profile" className={`${styles.tabItem} ${activeTab === 'profile' ? styles.active : ''}`}>
-            <User size={18} />
-            <span>Profile Details</span>
-          </Tabs.Trigger>
-          <Tabs.Trigger value="security" className={`${styles.tabItem} ${activeTab === 'security' ? styles.active : ''}`}>
-            <Shield size={18} />
-            <span>Security & Auth</span>
-          </Tabs.Trigger>
-          <Tabs.Trigger value="privacy" className={`${styles.tabItem} ${activeTab === 'privacy' ? styles.active : ''}`}>
-            <Eye size={18} />
-            <span>Model Privacy</span>
-          </Tabs.Trigger>
-        </Tabs.List>
+      <div className={styles.settingsLayout}>
 
         {/* Persistent Designer Profile Card */}
         <div className={`${styles.designerCard} glass-panel`}>
@@ -267,7 +248,6 @@ export const Settings: React.FC = () => {
         <div className={`${styles.contentColumn} glass-panel`}>
           <AnimatePresence mode="wait">
             {activeTab === 'profile' && (
-              <Tabs.Content value="profile" forceMount asChild>
               <motion.div
                 key="profile"
                 initial={{ opacity: 0, x: 10 }}
@@ -451,11 +431,9 @@ export const Settings: React.FC = () => {
                     </button>
                   </form>
               </motion.div>
-              </Tabs.Content>
             )}
 
             {activeTab === 'security' && (
-              <Tabs.Content value="security" forceMount asChild>
               <motion.div
                 key="security"
                 initial={{ opacity: 0, x: 10 }}
@@ -529,11 +507,9 @@ export const Settings: React.FC = () => {
                   </button>
                 </form>
               </motion.div>
-              </Tabs.Content>
             )}
 
             {activeTab === 'privacy' && (
-              <Tabs.Content value="privacy" forceMount asChild>
               <motion.div
                 key="privacy"
                 initial={{ opacity: 0, x: 10 }}
@@ -607,11 +583,10 @@ export const Settings: React.FC = () => {
                   </div>
                 </div>
               </motion.div>
-              </Tabs.Content>
             )}
           </AnimatePresence>
         </div>
-      </Tabs.Root>
+      </div>
 
       <ConfirmDialog
         open={confirmDeleteAccountOpen}

@@ -1,12 +1,17 @@
 import React from 'react';
-import { LayoutDashboard, FolderKanban, Archive, CreditCard, Settings, LogOut, Plus, ChevronsUpDown, User } from 'lucide-react';
+import {
+  LayoutDashboard, FolderKanban, Archive, CreditCard, Settings, LogOut,
+  Plus, ChevronsUpDown, User, Shield, Eye, ChevronDown
+} from 'lucide-react';
 import * as Tooltip from '@radix-ui/react-tooltip';
 import * as Progress from '@radix-ui/react-progress';
 import * as Separator from '@radix-ui/react-separator';
 import * as Avatar from '@radix-ui/react-avatar';
 import * as DropdownMenu from '@radix-ui/react-dropdown-menu';
+import * as ScrollArea from '@radix-ui/react-scroll-area';
 import { useTheme } from '../../context/ThemeContext';
 import type { PortalProject } from '../../api/client';
+import type { SettingTab } from '../../pages/Settings/settingsNavigation';
 import styles from './Sidebar.module.css';
 
 interface SidebarProps {
@@ -14,22 +19,34 @@ interface SidebarProps {
   setActivePage: (page: string) => void;
   onLogout: () => void;
   projects: PortalProject[];
+  activeSettingTab: SettingTab;
 }
 
 export const Sidebar: React.FC<SidebarProps> = ({ 
   activePage, 
   setActivePage, 
   onLogout, 
-  projects 
+  projects,
+  activeSettingTab,
 }) => {
   const { theme } = useTheme();
+  const isSettingsActive = activePage.split('?')[0] === 'settings';
+  const [settingsExpanded, setSettingsExpanded] = React.useState(isSettingsActive);
   const menuItems = [
     { id: 'dashboard', label: 'Overview', icon: LayoutDashboard },
     { id: 'projects', label: 'Projects', icon: FolderKanban },
     { id: 'archives', label: 'Archives', icon: Archive },
     { id: 'billing', label: 'Billing', icon: CreditCard },
-    { id: 'settings', label: 'Settings', icon: Settings },
   ];
+  const settingItems: Array<{ id: SettingTab; label: string; icon: typeof User }> = [
+    { id: 'profile', label: 'Profile Details', icon: User },
+    { id: 'security', label: 'Security & Auth', icon: Shield },
+    { id: 'privacy', label: 'Model Privacy', icon: Eye },
+  ];
+
+  React.useEffect(() => {
+    setSettingsExpanded(isSettingsActive);
+  }, [isSettingsActive]);
 
   // Get top 3 projects by the server's updated timestamp.
   const recentProjects = React.useMemo(() => {
@@ -40,6 +57,16 @@ export const Sidebar: React.FC<SidebarProps> = ({
 
   const handleRecentClick = (id: string) => {
     setActivePage(`/project-details?id=${id}`);
+  };
+
+  const handleSettingsToggle = () => {
+    if (!isSettingsActive) {
+      setSettingsExpanded(true);
+      setActivePage(`settings?tab=${activeSettingTab}`);
+      return;
+    }
+
+    setSettingsExpanded((expanded) => !expanded);
   };
 
   return (
@@ -56,8 +83,10 @@ export const Sidebar: React.FC<SidebarProps> = ({
       </div>
 
       {/* Navigation Links */}
-      <nav className={styles.navMenu}>
-        <div className={styles.navGroup}>
+      <ScrollArea.Root className={styles.navScrollArea} type="hover" scrollHideDelay={500}>
+        <ScrollArea.Viewport className={styles.navScrollViewport}>
+          <nav className={styles.navMenu}>
+            <div className={styles.navGroup}>
           {menuItems.map((item) => {
             const Icon = item.icon;
             const isActive = activePage.split('?')[0] === item.id;
@@ -73,11 +102,51 @@ export const Sidebar: React.FC<SidebarProps> = ({
               </button>
             );
           })}
-        </div>
 
-        {/* Separator and Recent Projects Section */}
-        {recentProjects.length > 0 && (
-          <div className={styles.recentSection}>
+          <div className={styles.settingsNavGroup}>
+            <button
+              type="button"
+              className={`${styles.navItem} ${isSettingsActive ? styles.active : ''}`}
+              onClick={handleSettingsToggle}
+              aria-expanded={settingsExpanded}
+              aria-controls="settings-submenu"
+            >
+              <Settings className={styles.navIcon} />
+              <span className={styles.navLabel}>Settings</span>
+              <ChevronDown
+                className={`${styles.navChevron} ${settingsExpanded ? styles.expanded : ''}`}
+                aria-hidden="true"
+              />
+              {isSettingsActive && <div className={styles.activeIndicator} />}
+            </button>
+
+            {settingsExpanded && (
+              <div id="settings-submenu" className={styles.settingsSubmenu}>
+                {settingItems.map((item) => {
+                  const Icon = item.icon;
+                  const isActive = isSettingsActive && activeSettingTab === item.id;
+
+                  return (
+                    <button
+                      key={item.id}
+                      type="button"
+                      className={`${styles.settingsSubItem} ${isActive ? styles.activeSubItem : ''}`}
+                      onClick={() => setActivePage(`settings?tab=${item.id}`)}
+                      aria-current={isActive ? 'page' : undefined}
+                    >
+                      <Icon className={styles.settingsSubIcon} aria-hidden="true" />
+                      <span>{item.label}</span>
+                    </button>
+                  );
+                })}
+              </div>
+            )}
+          </div>
+            </div>
+
+            {/* Separator and Recent Projects Section */}
+            {recentProjects.length > 0 && (
+              <div className={styles.recentSection}>
             <Separator.Root className={styles.recentDivider} decorative />
             <div className={styles.recentHeaderRow}>
               <span className={styles.recentHeader}>Recent Projects</span>
@@ -121,9 +190,14 @@ export const Sidebar: React.FC<SidebarProps> = ({
                 View all
               </button>
             </div>
-          </div>
-        )}
-      </nav>
+              </div>
+            )}
+          </nav>
+        </ScrollArea.Viewport>
+        <ScrollArea.Scrollbar className={styles.navScrollbar} orientation="vertical">
+          <ScrollArea.Thumb className={styles.navScrollThumb} />
+        </ScrollArea.Scrollbar>
+      </ScrollArea.Root>
 
       {/* Storage Widget */}
       <div className={styles.storageWidget}>
@@ -163,10 +237,10 @@ export const Sidebar: React.FC<SidebarProps> = ({
           </DropdownMenu.Trigger>
           <DropdownMenu.Portal>
             <DropdownMenu.Content className={styles.dropdownContent} side="top" align="start" sideOffset={8}>
-              <DropdownMenu.Item className={styles.dropdownItem} onSelect={() => setActivePage('settings')}>
+              <DropdownMenu.Item className={styles.dropdownItem} onSelect={() => setActivePage('settings?tab=profile')}>
                 <User size={14} /> Profile
               </DropdownMenu.Item>
-              <DropdownMenu.Item className={styles.dropdownItem} onSelect={() => setActivePage('settings')}>
+              <DropdownMenu.Item className={styles.dropdownItem} onSelect={() => setActivePage(`settings?tab=${activeSettingTab}`)}>
                 <Settings size={14} /> Settings
               </DropdownMenu.Item>
               <DropdownMenu.Separator className={styles.dropdownSeparator} />
