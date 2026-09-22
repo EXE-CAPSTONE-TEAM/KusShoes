@@ -1,0 +1,32 @@
+.backdrop {
+  position: absolute;
+  inset: 0;
+  z-index: 0;
+  overflow: hidden;
+  pointer-events: none;
+}
+
+.streak {
+  position: absolute;
+  height: 3px;
+  border-radius: 999px;
+  background: linear-gradient(90deg, transparent, var(--color-orange) 45%, var(--color-crimson) 60%, transparent);
+  box-shadow: 0 0 12px 2px rgba(255, 90, 54, 0.55), 0 0 40px 8px rgba(255, 90, 54, 0.25);
+  transform: rotate(-24deg);
+  opacity: 0.85;
+  animation: glide 9s ease-in-out infinite alternate;
+}
+
+.s1 { width: 62%; top: 18%; left: -12%; }
+.s2 { width: 44%; top: 34%; left: 6%; height: 2px; opacity: 0.55; animation-duration: 11s; animation-delay: -3s; }
+.s3 { width: 58%; bottom: 26%; right: -10%; animation-duration: 10s; animation-delay: -5s; }
+.s4 { width: 36%; bottom: 12%; right: 8%; height: 2px; opacity: 0.5; animation-duration: 12s; animation-delay: -7s; }
+
+@keyframes glide {
+  from { translate: -3% 0; }
+  to { translate: 3% 0; }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .streak { animation: none; }
+}

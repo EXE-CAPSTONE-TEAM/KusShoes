@@ -1,67 +1,106 @@
 .sidebar {
-  width: 240px;
+  width: 252px;
   height: 100vh;
   background-color: var(--bg-secondary);
   border-right: 1px solid var(--glass-border);
   display: flex;
   flex-direction: column;
-  padding: 24px 16px;
+  justify-content: space-between;
   position: sticky;
   top: 0;
   z-index: 100;
   flex-shrink: 0;
+  overflow: hidden;
 }
 
-.logoSection {
+.scrollArea {
+  flex-grow: 1;
+  overflow-y: auto;
+  padding: 18px 14px 8px;
+}
+
+/* Header / brand */
+.header {
+  padding-bottom: 16px;
+  border-bottom: 1px solid var(--glass-border);
+  margin-bottom: 16px;
+}
+
+.brandRow {
   display: flex;
   flex-direction: column;
-  align-items: center;
-  gap: 8px;
-  margin-bottom: 28px;
+  align-items: flex-start;
+  gap: 6px;
 }
 
-.logoImage {
-  height: 32px;
+.brandLogoImage {
+  height: 30px;
   width: auto;
   object-fit: contain;
 }
 
-.adminTag {
+.brandTagline {
   font-family: var(--font-mono);
   font-size: 0.62rem;
   font-weight: 700;
-  letter-spacing: 1.5px;
+  letter-spacing: 1.2px;
   text-transform: uppercase;
-  color: var(--color-orange);
-  background: rgba(255, 90, 54, 0.1);
-  border: 1px solid rgba(255, 90, 54, 0.2);
-  padding: 3px 10px;
-  border-radius: var(--border-radius-full);
+  color: var(--text-muted);
 }
 
+/* Nav */
 .navMenu {
   display: flex;
   flex-direction: column;
-  gap: 6px;
-  flex-grow: 1;
+  gap: 18px;
+}
+
+.navGroup {
+  display: flex;
+  flex-direction: column;
+  gap: 3px;
+}
+
+.groupHeading {
+  padding: 0 10px;
+  margin-bottom: 4px;
+  font-size: 0.62rem;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.8px;
+  color: var(--text-muted);
 }
 
 .navItem {
   display: flex;
   align-items: center;
-  gap: 12px;
+  justify-content: space-between;
+  gap: 8px;
   background: transparent;
   border: 1px solid transparent;
   color: var(--text-secondary);
-  padding: 10px 14px;
+  padding: 9px 10px;
   border-radius: var(--border-radius-md);
   cursor: pointer;
   font-family: var(--font-sans);
   font-weight: 500;
-  font-size: 0.87rem;
+  font-size: 0.84rem;
   text-align: left;
   position: relative;
   transition: all var(--transition-fast);
+}
+
+.navItemLeft {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  min-width: 0;
+}
+
+.navItemLeft span {
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
 }
 
 .navItem:hover {
@@ -71,8 +110,9 @@
 
 .navItem.active {
   color: var(--text-primary);
-  background: var(--glass-bg);
-  border-color: var(--glass-border);
+  background: rgba(var(--color-orange-rgb), 0.1);
+  border-color: rgba(var(--color-orange-rgb), 0.2);
+  font-weight: 600;
 }
 
 .navItem.active .navIcon {
@@ -84,18 +124,178 @@
   left: 0;
   top: 25%;
   height: 50%;
-  width: 4px;
+  width: 3px;
   background: linear-gradient(to bottom, var(--color-orange), var(--color-crimson));
   border-radius: 0 4px 4px 0;
 }
 
+/* Badges on nav items */
+.liveTag {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  padding: 1px 7px;
+  border-radius: var(--border-radius-full);
+  background-color: rgba(var(--color-orange-rgb), 0.15);
+  color: var(--color-orange);
+  font-size: 0.62rem;
+  font-weight: 700;
+  flex-shrink: 0;
+}
+
+.liveDot {
+  width: 5px;
+  height: 5px;
+  border-radius: 50%;
+  background-color: var(--color-orange);
+  animation: navPulse 1.6s ease-in-out infinite;
+}
+
+@keyframes navPulse {
+  0%, 100% { transform: scale(1); opacity: 1; }
+  50% { transform: scale(1.7); opacity: 0.5; }
+}
+
+.countBadge {
+  padding: 1px 7px;
+  border-radius: var(--border-radius-full);
+  background-color: var(--bg-tertiary);
+  color: var(--text-muted);
+  font-size: 0.68rem;
+  font-weight: 600;
+  flex-shrink: 0;
+}
+
+.accentBadge {
+  padding: 1px 7px;
+  border-radius: var(--border-radius-full);
+  background-color: rgba(var(--color-orange-rgb), 0.15);
+  color: var(--color-orange);
+  font-size: 0.62rem;
+  font-weight: 700;
+  white-space: nowrap;
+  flex-shrink: 0;
+}
+
+.healthBadgeOk, .healthBadgeWarn {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  padding: 1px 7px;
+  border-radius: var(--border-radius-full);
+  font-size: 0.62rem;
+  font-weight: 700;
+  flex-shrink: 0;
+}
+
+.healthBadgeOk {
+  background-color: rgba(54, 211, 153, 0.12);
+  color: var(--status-scanned);
+}
+
+.healthBadgeWarn {
+  background-color: rgba(251, 189, 35, 0.12);
+  color: var(--status-designing);
+}
+
+.healthDot {
+  width: 5px;
+  height: 5px;
+  border-radius: 50%;
+  background-color: currentColor;
+  animation: navPulse 1.6s ease-in-out infinite;
+}
+
+/* Footer */
 .footerSection {
   border-top: 1px solid var(--glass-border);
-  padding-top: 16px;
+  padding: 12px;
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  flex-shrink: 0;
+  background-color: var(--bg-tertiary);
+}
+
+/* Bake pipeline mini widget */
+.pipelineWidget {
+  padding: 10px;
+  border-radius: var(--border-radius-md);
+  background-color: var(--bg-secondary);
+  border: 1px solid var(--glass-border);
+}
+
+.pipelineWidgetHeader {
   display: flex;
   align-items: center;
   justify-content: space-between;
-  gap: 8px;
+  font-size: 0.72rem;
+  margin-bottom: 6px;
+}
+
+.pipelineWidgetLabel {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  font-weight: 600;
+  color: var(--text-primary);
+}
+
+.pipelineWidgetIcon {
+  color: var(--color-orange);
+}
+
+.pipelineWidgetPct {
+  color: var(--color-orange);
+  font-weight: 700;
+}
+
+.pipelineBarTrack {
+  width: 100%;
+  height: 5px;
+  border-radius: var(--border-radius-full);
+  background-color: var(--bg-tertiary);
+  overflow: hidden;
+}
+
+.pipelineBarFill {
+  height: 100%;
+  border-radius: var(--border-radius-full);
+  background: linear-gradient(90deg, var(--color-orange), var(--color-crimson));
+  transition: width var(--transition-normal);
+}
+
+.pipelineWidgetFooter {
+  display: flex;
+  justify-content: space-between;
+  font-size: 0.66rem;
+  color: var(--text-muted);
+  margin-top: 5px;
+}
+
+/* Profile pill */
+.profilePill {
+  display: flex;
+  align-items: center;
+  gap: 9px;
+  padding: 8px;
+  border-radius: var(--border-radius-md);
+  background-color: var(--bg-secondary);
+  border: 1px solid var(--glass-border);
+}
+
+.profileAvatar {
+  width: 32px;
+  height: 32px;
+  border-radius: 50%;
+  background: linear-gradient(135deg, var(--color-orange), var(--color-crimson));
+  color: #ffffff;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 0.68rem;
+  font-weight: 700;
+  flex-shrink: 0;
 }
 
 .sessionInfo {
@@ -103,20 +303,21 @@
   flex-direction: column;
   gap: 4px;
   min-width: 0;
+  flex-grow: 1;
 }
 
 .sessionEmail {
-  font-size: 0.78rem;
+  font-size: 0.76rem;
   font-weight: 600;
   color: var(--text-primary);
   white-space: nowrap;
   overflow: hidden;
   text-overflow: ellipsis;
-  max-width: 150px;
+  max-width: 130px;
 }
 
 .roleBadge {
-  font-size: 0.62rem;
+  font-size: 0.6rem;
   font-weight: 700;
   text-transform: uppercase;
   letter-spacing: 0.6px;
@@ -141,9 +342,10 @@
   color: var(--text-muted);
   cursor: pointer;
   display: flex;
-  padding: 8px;
+  padding: 6px;
   border-radius: var(--border-radius-sm);
   transition: all var(--transition-fast);
+  flex-shrink: 0;
 }
 
 .logoutBtn:hover {

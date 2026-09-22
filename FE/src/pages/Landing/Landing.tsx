@@ -5,6 +5,7 @@ import { Navbar } from '../../components/Navbar/Navbar';
 import { Footer } from '../../components/Footer/Footer';
 import { AnimatedPrice } from '../../components/AnimatedPrice/AnimatedPrice';
 import { InteractiveParticleGrid } from '../../components/InteractiveParticleGrid/InteractiveParticleGrid';
+import { useTheme } from '../../context/ThemeContext';
 import dashboardShowcase from '../../assets/showcase/dashboard-screenshot.png';
 import projectsShowcase from '../../assets/showcase/projects-screenshot.png';
 import styles from './Landing.module.css';
@@ -161,6 +162,7 @@ interface LandingProps {
 }
 
 export const Landing: React.FC<LandingProps> = ({ navigate }) => {
+  const { theme } = useTheme();
   const [emailInput, setEmailInput] = useState('');
   const [submittedEmail, setSubmittedEmail] = useState(false);
   const [isAnnual, setIsAnnual] = useState(false);
@@ -181,19 +183,22 @@ export const Landing: React.FC<LandingProps> = ({ navigate }) => {
       num: '01',
       title: 'KusShoes Scanning',
       icon: Smartphone,
-      description: 'Use your smartphone to capture pictures of your favorite shoe. Powered by Kiri Engine API, the images are instantly converted into detailed 3D models.'
+      description: 'Use your smartphone to capture pictures of your favorite shoe. Powered by Kiri Engine API, the images are instantly converted into detailed 3D models.',
+      tags: ['Photogrammetry', 'Auto-Alignment', 'Kiri Engine API']
     },
     {
       num: '02',
       title: 'Cloud Compilation',
       icon: Cloud,
-      description: 'All 3D models are uploaded to our Cloud Vault. The cloud servers process mesh details and keep your files secure and accessible anywhere.'
+      description: 'All 3D models are uploaded to our Cloud Vault. The cloud servers process mesh details and keep your files secure and accessible anywhere.',
+      tags: ['Cloud Mesh Processing', 'AES-256 Storage', 'Auto Retopology']
     },
     {
       num: '03',
       title: 'KusStudio Customization',
       icon: Monitor,
-      description: 'Sync your cloud assets directly into KusStudio, our desktop client. Customize colors, textures, and export print-ready formats.'
+      description: 'Sync your cloud assets directly into KusStudio, our desktop client. Customize colors, textures, and export print-ready formats.',
+      tags: ['Real-time PBR', 'Multi-Format Export', '3D Print Ready']
     }
   ];
 
@@ -329,7 +334,11 @@ export const Landing: React.FC<LandingProps> = ({ navigate }) => {
             transition={{ duration: 0.6 }}
           >
             <div className={styles.productBadge}>MOBILE APP</div>
-            <h3 className={styles.productTitle}>KusShoes</h3>
+            <img
+              src={theme === 'dark' ? '/KusShoes_Logo_Dark_Mode_cropped.png' : '/KusShoes_Logo_cropped.png'}
+              alt="KusShoes"
+              className={styles.productLogoImage}
+            />
             <p className={styles.productDesc}>
               Our mobile scanning companion. Aim, shoot, and capture 360° photos of your footwear. Uploads images directly to the Kiri Engine API server for cloud 3D modeling.
             </p>
@@ -403,34 +412,77 @@ export const Landing: React.FC<LandingProps> = ({ navigate }) => {
       {/* Workflow (3-step) Section */}
       <section id="workflow" className={styles.workflowSection}>
         <div className={styles.sectionHeader}>
-          <h2 className={styles.sectionTitle}>The Creation Workflow</h2>
+          <div className={styles.pipelineBadge}>
+            <span className={styles.pulseDotWrap}>
+              <span className={styles.pulseRing} />
+              <span className={styles.pulseDot} />
+            </span>
+            <span className={styles.pipelineBadgeLabel}>Photogrammetry Pipeline 3.0</span>
+          </div>
+          <h2 className={styles.sectionTitle}>The Creation <span className="text-gradient-orange">Workflow</span></h2>
           <p className={styles.sectionSubtitle}>Simple, automated process to digitize and personalize your sneakers.</p>
         </div>
 
-        <div className={styles.stepsGrid}>
-          {steps.map((step, index) => {
-            const Icon = step.icon;
-            return (
-              <motion.div 
-                key={step.num}
-                className={`${styles.stepCard} glass-panel`}
-                initial={{ opacity: 0, y: 20 }}
-                whileInView={{ opacity: 1, y: 0 }}
-                viewport={{ once: true }}
-                transition={{ duration: 0.5, delay: 0.1 * index }}
-              >
-                <div className={styles.stepNumHeader}>
-                  <span className={styles.stepNum}>{step.num}</span>
-                  <div className={styles.stepIconWrapper}>
-                    <Icon size={20} className={styles.stepIcon} />
+        <div className={styles.stepsGridWrapper}>
+          <div className={styles.stepsConnector} aria-hidden="true" />
+          <div className={styles.stepsGrid}>
+            {steps.map((step, index) => {
+              const Icon = step.icon;
+              return (
+                <motion.div
+                  key={step.num}
+                  className={`${styles.stepCard} glass-panel`}
+                  initial={{ opacity: 0, y: 20 }}
+                  whileInView={{ opacity: 1, y: 0 }}
+                  viewport={{ once: true }}
+                  transition={{ duration: 0.5, delay: 0.1 * index }}
+                >
+                  <div className={styles.stepCardTop}>
+                    <div className={styles.stepNumHeader}>
+                      <span className={styles.stepNum}>{step.num}</span>
+                      <div className={styles.stepIconWrapper}>
+                        <Icon size={20} className={styles.stepIcon} />
+                      </div>
+                    </div>
+                    <h3 className={styles.stepTitle}>{step.title}</h3>
+                    <p className={styles.stepDesc}>{step.description}</p>
                   </div>
-                </div>
-                <h3 className={styles.stepTitle}>{step.title}</h3>
-                <p className={styles.stepDesc}>{step.description}</p>
-              </motion.div>
-            );
-          })}
+                  <div className={styles.stepTags}>
+                    {step.tags.map(tag => (
+                      <span key={tag} className={styles.stepTag}>
+                        <span className={styles.stepTagDot} />
+                        {tag}
+                      </span>
+                    ))}
+                  </div>
+                </motion.div>
+              );
+            })}
+          </div>
         </div>
+
+        <motion.div
+          className={`${styles.workflowCta} glass-panel`}
+          initial={{ opacity: 0, y: 20 }}
+          whileInView={{ opacity: 1, y: 0 }}
+          viewport={{ once: true }}
+          transition={{ duration: 0.5 }}
+        >
+          <div className={styles.workflowCtaGlow} aria-hidden="true" />
+          <div className={styles.workflowCtaText}>
+            <h3>Ready to digitize your sneakers?</h3>
+            <p>Get started with free 3D mobile capture in minutes.</p>
+          </div>
+          <div className={styles.workflowCtaActions}>
+            <button className="btn-neon-orange" onClick={() => navigate('/login')}>
+              <span>Start Free Scan</span>
+              <ArrowRight size={16} />
+            </button>
+            <a href="#features" className="btn-outline" style={{ textDecoration: 'none' }}>
+              Documentation
+            </a>
+          </div>
+        </motion.div>
       </section>
 
       {/* Features Section */}

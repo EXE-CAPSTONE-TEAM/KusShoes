@@ -1,27 +1,26 @@
 import React, { useEffect, useState } from 'react';
 import {
-  User, Shield, Eye, Smartphone, Save, Key, Palette,
+  Smartphone, Save, Key, AlertTriangle,
   Instagram, Globe, Camera, Award, X, Upload, RefreshCw
 } from 'lucide-react';
 import { motion, AnimatePresence } from 'framer-motion';
-import * as Tabs from '@radix-ui/react-tabs';
 import styles from './Settings.module.css';
 import { useTheme } from '../../context/ThemeContext';
 import { useToast } from '../../context/ToastContext';
-import { api, type Usage } from '../../api/client';
-import { TwoFactorPanel } from './TwoFactorPanel';
-import { SessionsPanel } from './SessionsPanel';
-import { PrivacyPanel } from './PrivacyPanel';
+import { ConfirmDialog } from '../../components/ConfirmDialog/ConfirmDialog';
+import { api } from '../../api/client';
+import type { SettingTab } from './settingsNavigation';
 
-type SettingTab = 'profile' | 'security' | 'privacy' | 'appearance';
+interface SettingsProps {
+  activeTab: SettingTab;
+}
 
 interface PresetAvatar {
   name: string;
   url: string;
 }
 
-export const Settings: React.FC = () => {
-  const [activeTab, setActiveTab] = useState<SettingTab>('profile');
+export const Settings: React.FC<SettingsProps> = ({ activeTab }) => {
   const { theme, setTheme } = useTheme();
   const { toast } = useToast();
 
@@ -152,82 +151,12 @@ export const Settings: React.FC = () => {
       </div>
 
       {/* Settings Layout */}
-      <Tabs.Root
-        value={activeTab}
-        onValueChange={(v) => setActiveTab(v as SettingTab)}
-        className={styles.settingsLayout}
-        style={{ display: 'contents' }}
-      >
-        {/* Profile banner: who you are and what you use, in one row */}
-        <div className={`${styles.profileBanner} glass-panel`}>
-          <div className={styles.bannerAvatar} onClick={() => setIsAvatarModalOpen(true)} title="Change photo">
-            <img src={profileData.avatar} alt="Avatar" className={styles.bannerAvatarImg} />
-            <div className={styles.bannerAvatarOverlay}><Camera size={16} /></div>
-          </div>
-          <div className={styles.bannerIdentity}>
-            <h3 className={styles.bannerName}>{profileData.name || 'Your profile'}</h3>
-            <p className={styles.bannerEmail}>{profileData.email}</p>
-          </div>
-          <div className={styles.bannerChips}>
-            {usage && (
-              <>
-                <span className={styles.bannerChip}>
-                  <Award size={12} className={styles.badgeIcon} />
-                  <span style={{ textTransform: 'capitalize' }}>{usage.tier.replace(/_/g, ' ')}</span>
-                </span>
-                <span className={styles.bannerChip}>
-                  {usage.projects_count} / {usage.max_projects ?? '∞'} projects
-                </span>
-                <span className={styles.bannerChip}>
-                  {usage.exports_count} / {usage.max_exports_per_month ?? '∞'} exports
-                </span>
-              </>
-            )}
-          </div>
-          <div className={styles.socialLinksRow}>
-            {profileData.instagram && (
-              <a href={`https://instagram.com/${profileData.instagram.replace('@', '')}`} target="_blank" rel="noreferrer" className={styles.socialIconBtn} title="Instagram Portfolio">
-                <Instagram size={16} />
-              </a>
-            )}
-            {profileData.behance && (
-              <a href={`https://behance.net/${profileData.behance}`} target="_blank" rel="noreferrer" className={styles.socialIconBtn} title="Behance Portfolio">
-                <Globe size={16} />
-              </a>
-            )}
-            {profileData.tiktok && (
-              <a href={`https://tiktok.com/${profileData.tiktok}`} target="_blank" rel="noreferrer" className={styles.socialIconBtn} title="TikTok Designs">
-                <Smartphone size={16} />
-              </a>
-            )}
-          </div>
-        </div>
-
-        {/* Navigation Tabs (horizontal) */}
-        <Tabs.List className={`${styles.tabsColumn} glass-panel`}>
-          <Tabs.Trigger value="profile" className={`${styles.tabItem} ${activeTab === 'profile' ? styles.active : ''}`}>
-            <User size={18} />
-            <span>Profile Details</span>
-          </Tabs.Trigger>
-          <Tabs.Trigger value="security" className={`${styles.tabItem} ${activeTab === 'security' ? styles.active : ''}`}>
-            <Shield size={18} />
-            <span>Security & Auth</span>
-          </Tabs.Trigger>
-          <Tabs.Trigger value="privacy" className={`${styles.tabItem} ${activeTab === 'privacy' ? styles.active : ''}`}>
-            <Eye size={18} />
-            <span>Privacy & Data</span>
-          </Tabs.Trigger>
-          <Tabs.Trigger value="appearance" className={`${styles.tabItem} ${activeTab === 'appearance' ? styles.active : ''}`}>
-            <Palette size={18} />
-            <span>Appearance</span>
-          </Tabs.Trigger>
-        </Tabs.List>
+      <div className={styles.settingsLayout}>
 
         {/* Tab Content Panel */}
         <div className={`${styles.contentColumn} glass-panel`}>
           <AnimatePresence mode="wait">
             {activeTab === 'profile' && (
-              <Tabs.Content value="profile" forceMount asChild>
               <motion.div
                 key="profile"
                 initial={{ opacity: 0, x: 10 }}
@@ -357,11 +286,9 @@ export const Settings: React.FC = () => {
                     </button>
                   </form>
               </motion.div>
-              </Tabs.Content>
             )}
 
             {activeTab === 'security' && (
-              <Tabs.Content value="security" forceMount asChild>
               <motion.div
                 key="security"
                 initial={{ opacity: 0, x: 10 }}
@@ -425,11 +352,9 @@ export const Settings: React.FC = () => {
                 <SessionsPanel />
                 </div>
               </motion.div>
-              </Tabs.Content>
             )}
 
             {activeTab === 'privacy' && (
-              <Tabs.Content value="privacy" forceMount asChild>
               <motion.div
                 key="privacy"
                 initial={{ opacity: 0, x: 10 }}
@@ -512,11 +437,10 @@ export const Settings: React.FC = () => {
                     </div>
 
               </motion.div>
-              </Tabs.Content>
             )}
           </AnimatePresence>
         </div>
-      </Tabs.Root>
+      </div>
 
       {/* Interactive Avatar Picker Selector Modal */}
       {isAvatarModalOpen && (

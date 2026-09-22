@@ -426,6 +426,7 @@ export const Projects: React.FC<ProjectsProps> = ({
             }}
             options={SORT_OPTIONS}
             ariaLabel="Sort projects"
+            triggerClassName={styles.sortSelectTrigger}
           />
         </div>
 

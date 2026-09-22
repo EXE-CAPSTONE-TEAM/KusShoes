@@ -13,6 +13,7 @@ import { ProjectDetails } from './pages/ProjectDetails/ProjectDetails';
 import { ProductsPage } from './pages/ProductsPage/ProductsPage';
 import { AdminApp } from './pages/Admin/AdminApp';
 import { api, ApiError, type PortalProject } from './api/client';
+import { getSettingTabFromSearch, type SettingTab } from './pages/Settings/settingsNavigation';
 
 // Helper to convert URL path to page key
 const getPageFromPath = (path: string): string => {
@@ -86,6 +87,9 @@ function App() {
   const [activePage, setActivePage] = useState<string>(() => {
     return getPageFromPath(window.location.pathname);
   });
+  const [activeSettingTab, setActiveSettingTab] = useState<SettingTab>(() => {
+    return getSettingTabFromSearch(window.location.search);
+  });
 
   const [activeDetailProject, setActiveDetailProject] = useState<PortalProject | null>(null);
   const [projects, setProjects] = useState<PortalProject[]>([]);
@@ -97,6 +101,11 @@ function App() {
     const isPath = pageOrPath.startsWith('/');
     const path = isPath ? pageOrPath : getPathFromPage(pageOrPath);
     const page = isPath ? getPageFromPath(pageOrPath) : pageOrPath.split('?')[0];
+
+    if (page === 'settings') {
+      const query = path.includes('?') ? `?${path.split('?')[1]}` : '';
+      setActiveSettingTab(getSettingTabFromSearch(query));
+    }
     
     const currentFull = window.location.pathname + window.location.search;
     if (currentFull !== path) {
@@ -142,6 +151,10 @@ function App() {
     const handlePopState = () => {
       const page = getPageFromPath(window.location.pathname);
       setActivePage(page);
+
+      if (page === 'settings') {
+        setActiveSettingTab(getSettingTabFromSearch(window.location.search));
+      }
       
       if (page === 'project-details') {
         const params = new URLSearchParams(window.location.search);
@@ -191,6 +204,7 @@ function App() {
           setActivePage={navigate} 
           onLogout={handleLogout} 
           projects={projects}
+          activeSettingTab={activeSettingTab}
         />
       )}
 
@@ -221,8 +235,7 @@ function App() {
           />
         )}
         {activePage === 'billing' && <Billing />}
-        {activePage === 'settings' && <Settings />}
-        {activePage === 'feedback' && <Feedback />}
+        {activePage === 'settings' && <Settings activeTab={activeSettingTab} />}
         {projectsError && isPortalView && (
           <div role="alert" style={{ margin: '24px', color: '#ef4444' }}>{projectsError}</div>
         )}
