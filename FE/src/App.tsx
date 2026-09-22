@@ -236,6 +236,7 @@ function App() {
         )}
         {activePage === 'billing' && <Billing />}
         {activePage === 'settings' && <Settings activeTab={activeSettingTab} />}
+        {activePage === 'feedback' && <Feedback />}
         {projectsError && isPortalView && (
           <div role="alert" style={{ margin: '24px', color: '#ef4444' }}>{projectsError}</div>
         )}

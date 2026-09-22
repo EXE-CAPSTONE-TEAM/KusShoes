@@ -1,8 +1,7 @@
 import React, { useState, useEffect } from 'react';
-import { Mail, Lock, ArrowLeft, CheckCircle2, UserPlus, LogIn, Eye, EyeOff, CheckSquare, Square, UserRound, KeyRound, AlertCircle, Info } from 'lucide-react';
+import { Mail, Lock, ArrowLeft, CheckCircle2, UserPlus, LogIn, Eye, EyeOff, CheckSquare, Square, UserRound, KeyRound, ShieldCheck, AlertCircle, Info } from 'lucide-react';
 import { motion } from 'framer-motion';
 import { api, ApiError } from '../../api/client';
-import { useToast } from '../../context/ToastContext';
 import { useTheme } from '../../context/ThemeContext';
 import {
   normalizeEmail,
@@ -15,6 +14,7 @@ import {
   type LoginFieldErrors,
 } from '../../utils/authValidation';
 import { LoginBackdrop } from './LoginBackdrop';
+import { AccountRecovery, type RecoveryMode } from './AccountRecovery';
 import styles from './Login.module.css';
 
 interface LoginProps {
@@ -22,7 +22,6 @@ interface LoginProps {
 }
 
 export const Login: React.FC<LoginProps> = ({ setPage }) => {
-  const { toast } = useToast();
   const { theme } = useTheme();
   const [isLoginTab, setIsLoginTab] = useState(true);
   const [email, setEmail] = useState('');

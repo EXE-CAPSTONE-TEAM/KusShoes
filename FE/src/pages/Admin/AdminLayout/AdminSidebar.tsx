@@ -59,6 +59,7 @@ export const AdminSidebar: React.FC<AdminSidebarProps> = ({ activePage, navigate
       heading: 'Tổng quan • Core',
       items: [
         { id: 'dashboard', label: 'Dashboard', icon: LayoutDashboard, badge: 'live' },
+        { id: 'analytics', label: 'Phân tích & Báo cáo', icon: BarChart3 },
       ],
     },
     {
@@ -67,6 +68,7 @@ export const AdminSidebar: React.FC<AdminSidebarProps> = ({ activePage, navigate
         { id: 'users', label: 'Người dùng', icon: Users, badge: 'users' },
         { id: 'plans', label: 'Gói cước & Đăng ký', icon: Package },
         { id: 'billing', label: 'Thanh toán & Doanh thu', icon: CreditCard },
+        { id: 'feedback', label: 'Phản hồi khách hàng', icon: MessageSquare },
       ],
     },
     {
@@ -75,6 +77,7 @@ export const AdminSidebar: React.FC<AdminSidebarProps> = ({ activePage, navigate
         { id: 'projects', label: 'Dự án 3D', icon: FolderKanban },
         { id: 'bake-jobs', label: 'Tiến trình Bake', icon: Flame, badge: 'bake' },
         { id: 'exports', label: 'Xuất file (GLB/OBJ)', icon: Download, badge: 'exports' },
+        { id: 'content', label: 'Nội dung & Studio', icon: Sparkles },
       ],
     },
     {

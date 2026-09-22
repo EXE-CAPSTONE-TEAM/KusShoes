@@ -1,18 +1,20 @@
 import React, { useEffect, useState } from 'react';
 import {
-  Smartphone, Save, Key, AlertTriangle,
-  Instagram, Globe, Camera, Award, X, Upload, RefreshCw
+  Smartphone, Save, Key,
+  Instagram, Globe, X, Upload, RefreshCw
 } from 'lucide-react';
 import { motion, AnimatePresence } from 'framer-motion';
 import styles from './Settings.module.css';
 import { useTheme } from '../../context/ThemeContext';
 import { useToast } from '../../context/ToastContext';
-import { ConfirmDialog } from '../../components/ConfirmDialog/ConfirmDialog';
 import { api } from '../../api/client';
-import type { SettingTab } from './settingsNavigation';
+import { DEFAULT_SETTING_TAB, type SettingTab } from './settingsNavigation';
+import { TwoFactorPanel } from './TwoFactorPanel';
+import { SessionsPanel } from './SessionsPanel';
+import { PrivacyPanel } from './PrivacyPanel';
 
 interface SettingsProps {
-  activeTab: SettingTab;
+  activeTab?: SettingTab;
 }
 
 interface PresetAvatar {
@@ -20,7 +22,7 @@ interface PresetAvatar {
   url: string;
 }
 
-export const Settings: React.FC<SettingsProps> = ({ activeTab }) => {
+export const Settings: React.FC<SettingsProps> = ({ activeTab = DEFAULT_SETTING_TAB }) => {
   const { theme, setTheme } = useTheme();
   const { toast } = useToast();
 
@@ -47,7 +49,6 @@ export const Settings: React.FC<SettingsProps> = ({ activeTab }) => {
     tiktok: ''
   });
   const [saving, setSaving] = useState(false);
-  const [usage, setUsage] = useState<Usage | null>(null);
 
   useEffect(() => {
     api.profile()
@@ -62,10 +63,6 @@ export const Settings: React.FC<SettingsProps> = ({ activeTab }) => {
       })
       .catch((caught) => toast(caught instanceof Error ? caught.message : 'Unable to load profile.', 'error'));
   }, [toast]);
-
-  useEffect(() => {
-    api.usage().then(setUsage).catch(() => setUsage(null)); // the banner degrades to name + email
-  }, []);
 
   // Avatar Modal State
   const [isAvatarModalOpen, setIsAvatarModalOpen] = useState(false);
@@ -368,11 +365,9 @@ export const Settings: React.FC<SettingsProps> = ({ activeTab }) => {
 
                 <PrivacyPanel />
               </motion.div>
-              </Tabs.Content>
             )}
 
             {activeTab === 'appearance' && (
-              <Tabs.Content value="appearance" forceMount asChild>
               <motion.div
                 key="appearance"
                 initial={{ opacity: 0, x: 10 }}

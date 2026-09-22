@@ -58,6 +58,7 @@ const AdminShell: React.FC = () => {
       <AdminSidebar activePage={page} navigate={navigate} />
       <main style={{ flexGrow: 1, backgroundColor: 'var(--bg-primary)', height: '100vh', overflowY: 'auto', display: 'flex', flexDirection: 'column' }}>
         {page === 'dashboard' && <AdminDashboard navigate={navigate} />}
+        {page === 'analytics' && <AdminAnalytics />}
         {page === 'users' && <AdminUsers />}
         {page === 'plans' && <AdminPlans />}
         {page === 'billing' && <AdminBilling />}

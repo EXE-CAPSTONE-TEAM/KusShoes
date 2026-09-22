@@ -1,7 +1,7 @@
 import React from 'react';
 import {
   LayoutDashboard, FolderKanban, Archive, CreditCard, Settings, LogOut,
-  Plus, ChevronsUpDown, User, Shield, Eye, ChevronDown
+  Plus, ChevronsUpDown, User, Shield, Eye, ChevronDown, Palette, MessageSquare
 } from 'lucide-react';
 import * as Tooltip from '@radix-ui/react-tooltip';
 import * as Progress from '@radix-ui/react-progress';
@@ -37,11 +37,13 @@ export const Sidebar: React.FC<SidebarProps> = ({
     { id: 'projects', label: 'Projects', icon: FolderKanban },
     { id: 'archives', label: 'Archives', icon: Archive },
     { id: 'billing', label: 'Billing', icon: CreditCard },
+    { id: 'feedback', label: 'Feedback', icon: MessageSquare },
   ];
   const settingItems: Array<{ id: SettingTab; label: string; icon: typeof User }> = [
     { id: 'profile', label: 'Profile Details', icon: User },
     { id: 'security', label: 'Security & Auth', icon: Shield },
     { id: 'privacy', label: 'Model Privacy', icon: Eye },
+    { id: 'appearance', label: 'Appearance', icon: Palette },
   ];
 
   React.useEffect(() => {

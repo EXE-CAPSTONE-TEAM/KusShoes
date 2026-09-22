@@ -1,4 +1,4 @@
-export const SETTINGS_TABS = ['profile', 'security', 'privacy'] as const;
+export const SETTINGS_TABS = ['profile', 'security', 'privacy', 'appearance'] as const;
 
 export type SettingTab = (typeof SETTINGS_TABS)[number];
 

@@ -2,6 +2,7 @@ import React from 'react';
 import { cleanup, fireEvent, render, screen, waitFor } from '@testing-library/react';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import { ToastProvider } from '../context/ToastContext';
+import { ThemeProvider } from '../context/ThemeContext';
 
 // The API layer is mocked: these tests cover what each screen does with the responses.
 vi.mock('../api/client', async () => {
@@ -74,7 +75,7 @@ import { ArtisanSharePanel } from './ProjectDetails/ArtisanSharePanel';
 import { VersionHistoryPanel } from './ProjectDetails/VersionHistoryPanel';
 import { AdminAnalytics } from './Admin/Analytics/AdminAnalytics';
 
-const wrap = (ui: React.ReactElement) => render(<ToastProvider>{ui}</ToastProvider>);
+const wrap = (ui: React.ReactElement) => render(<ThemeProvider><ToastProvider>{ui}</ToastProvider></ThemeProvider>);
 const m = <T extends (...args: never[]) => unknown>(fn: T) => fn as unknown as ReturnType<typeof vi.fn>;
 
 beforeEach(() => vi.clearAllMocks());
@@ -82,7 +83,7 @@ afterEach(cleanup);
 
 describe('Login with two-factor authentication', () => {
   const signIn = async () => {
-    fireEvent.change(screen.getByPlaceholderText('duy.nguyen@email.com'), { target: { value: 'a@b.co' } });
+    fireEvent.change(screen.getByPlaceholderText('you@example.com'), { target: { value: 'a@b.co' } });
     fireEvent.change(screen.getAllByPlaceholderText('••••••••')[0], { target: { value: 'Password1' } });
     // The page has a "Sign In" tab and a "Sign In" submit button: press the submit one.
     const submit = screen.getAllByRole('button', { name: /^sign in/i }).find((button) => button.getAttribute('type') === 'submit');
