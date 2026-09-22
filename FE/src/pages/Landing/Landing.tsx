@@ -5,6 +5,7 @@ import { Navbar } from '../../components/Navbar/Navbar';
 import { Footer } from '../../components/Footer/Footer';
 import { AnimatedPrice } from '../../components/AnimatedPrice/AnimatedPrice';
 import { InteractiveParticleGrid } from '../../components/InteractiveParticleGrid/InteractiveParticleGrid';
+import { useTheme } from '../../context/ThemeContext';
 import dashboardShowcase from '../../assets/showcase/dashboard-screenshot.png';
 import projectsShowcase from '../../assets/showcase/projects-screenshot.png';
 import styles from './Landing.module.css';
@@ -161,6 +162,7 @@ interface LandingProps {
 }
 
 export const Landing: React.FC<LandingProps> = ({ navigate }) => {
+  const { theme } = useTheme();
   const [emailInput, setEmailInput] = useState('');
   const [submittedEmail, setSubmittedEmail] = useState(false);
   const [isAnnual, setIsAnnual] = useState(false);
@@ -332,7 +334,11 @@ export const Landing: React.FC<LandingProps> = ({ navigate }) => {
             transition={{ duration: 0.6 }}
           >
             <div className={styles.productBadge}>MOBILE APP</div>
-            <h3 className={styles.productTitle}>KusShoes</h3>
+            <img
+              src={theme === 'dark' ? '/KusShoes_Logo_Dark_Mode_cropped.png' : '/KusShoes_Logo_cropped.png'}
+              alt="KusShoes"
+              className={styles.productLogoImage}
+            />
             <p className={styles.productDesc}>
               Our mobile scanning companion. Aim, shoot, and capture 360° photos of your footwear. Uploads images directly to the Kiri Engine API server for cloud 3D modeling.
             </p>

@@ -1,4 +1,4 @@
-import React from 'react';
+import React, { useEffect, useState } from 'react';
 import {
   LayoutDashboard, Users, Package, CreditCard, FolderKanban,
   Flame, Download, Activity, ScrollText, LogOut,
@@ -6,6 +6,7 @@ import {
 import * as Tooltip from '@radix-ui/react-tooltip';
 import { useAdminAuth } from '../../../context/AdminAuthContext';
 import { useTheme } from '../../../context/ThemeContext';
+import { adminDashboard, adminSystem } from '../../../api/adminClient';
 import styles from './AdminSidebar.module.css';
 
 interface AdminSidebarProps {
@@ -13,76 +14,198 @@ interface AdminSidebarProps {
   navigate: (page: string) => void;
 }
 
+interface NavItem {
+  id: string;
+  label: string;
+  icon: React.ComponentType<{ size?: number; className?: string }>;
+  badge?: 'live' | 'users' | 'bake' | 'exports' | 'health';
+}
+
+interface NavGroup {
+  heading: string;
+  items: NavItem[];
+}
+
 export const AdminSidebar: React.FC<AdminSidebarProps> = ({ activePage, navigate }) => {
   const { session, logout, isLoggingOut, isAdmin } = useAdminAuth();
   const { theme } = useTheme();
 
-  const menuItems = [
-    { id: 'dashboard', label: 'Dashboard', icon: LayoutDashboard },
-    { id: 'users', label: 'Users', icon: Users },
-    { id: 'plans', label: 'Plans', icon: Package },
-    { id: 'billing', label: 'Billing', icon: CreditCard },
-    { id: 'projects', label: 'Projects', icon: FolderKanban },
-    { id: 'bake-jobs', label: 'Bake Jobs', icon: Flame },
-    { id: 'exports', label: 'Exports', icon: Download },
-    { id: 'system', label: 'System Health', icon: Activity },
-    ...(isAdmin ? [{ id: 'audit-logs', label: 'Audit Logs', icon: ScrollText }] : []),
+  const [totalUsers, setTotalUsers] = useState<number | null>(null);
+  const [totalExports, setTotalExports] = useState<number | null>(null);
+  const [bakeActive, setBakeActive] = useState<number | null>(null);
+  const [bakeTotal, setBakeTotal] = useState<number | null>(null);
+  const [healthStatus, setHealthStatus] = useState<'ok' | 'degraded' | null>(null);
+
+  useEffect(() => {
+    let active = true;
+    adminDashboard.stats().then((s) => {
+      if (!active) return;
+      setTotalUsers(s.total_users);
+      setTotalExports(s.total_exports);
+    }).catch(() => {});
+    adminSystem.health().then((h) => {
+      if (!active) return;
+      setHealthStatus(h.status);
+      const statuses = h.bake_jobs_by_status;
+      const total = Object.values(statuses).reduce((a, b) => a + b, 0);
+      setBakeTotal(total);
+      setBakeActive((statuses.queued ?? 0) + (statuses.processing ?? 0));
+    }).catch(() => {});
+    return () => { active = false; };
+  }, []);
+
+  const navGroups: NavGroup[] = [
+    {
+      heading: 'Tổng quan • Core',
+      items: [
+        { id: 'dashboard', label: 'Dashboard', icon: LayoutDashboard, badge: 'live' },
+      ],
+    },
+    {
+      heading: 'Quản lý & Kinh doanh',
+      items: [
+        { id: 'users', label: 'Người dùng', icon: Users, badge: 'users' },
+        { id: 'plans', label: 'Gói cước & Đăng ký', icon: Package },
+        { id: 'billing', label: 'Thanh toán & Doanh thu', icon: CreditCard },
+      ],
+    },
+    {
+      heading: '3D Pipeline & Tác vụ',
+      items: [
+        { id: 'projects', label: 'Dự án 3D', icon: FolderKanban },
+        { id: 'bake-jobs', label: 'Tiến trình Bake', icon: Flame, badge: 'bake' },
+        { id: 'exports', label: 'Xuất file (GLB/OBJ)', icon: Download, badge: 'exports' },
+      ],
+    },
+    {
+      heading: 'Hạ tầng & An ninh',
+      items: [
+        { id: 'system', label: 'Sức khỏe hệ thống', icon: Activity, badge: 'health' },
+        ...(isAdmin ? [{ id: 'audit-logs', label: 'Nhật ký bảo mật', icon: ScrollText } as NavItem] : []),
+      ],
+    },
   ];
+
+  const renderBadge = (badge: NavItem['badge']) => {
+    if (badge === 'live') {
+      return (
+        <span className={styles.liveTag}>
+          <span className={styles.liveDot} />
+          Live
+        </span>
+      );
+    }
+    if (badge === 'users' && totalUsers !== null) {
+      return <span className={styles.countBadge}>{totalUsers}</span>;
+    }
+    if (badge === 'exports' && totalExports !== null) {
+      return <span className={styles.countBadge}>{totalExports} files</span>;
+    }
+    if (badge === 'bake' && bakeActive !== null && bakeActive > 0) {
+      return <span className={styles.accentBadge}>{bakeActive} đang chạy</span>;
+    }
+    if (badge === 'health' && healthStatus) {
+      return (
+        <span className={healthStatus === 'ok' ? styles.healthBadgeOk : styles.healthBadgeWarn}>
+          <span className={styles.healthDot} />
+          {healthStatus === 'ok' ? 'Ổn định' : 'Degraded'}
+        </span>
+      );
+    }
+    return null;
+  };
+
+  const initials = (session?.email || '??').slice(0, 2).toUpperCase();
+  const bakePct = bakeTotal ? Math.round(((bakeActive ?? 0) / bakeTotal) * 100) : 0;
 
   return (
     <Tooltip.Provider delayDuration={300}>
       <aside className={styles.sidebar}>
-        <div className={styles.logoSection}>
-          <img
-            src={theme === 'dark' ? '/KusShoes_Logo_Dark_Mode_cropped.png' : '/KusShoes_Logo_cropped.png'}
-            alt="KusShoes"
-            className={styles.logoImage}
-          />
-          <span className={styles.adminTag}>Admin Panel</span>
+        <div className={styles.scrollArea}>
+          <div className={styles.header}>
+            <div className={styles.brandRow}>
+              <img
+                src={theme === 'dark' ? '/KusShoes_Logo_Dark_Mode_cropped.png' : '/KusShoes_Logo_cropped.png'}
+                alt="KusShoes"
+                className={styles.brandLogoImage}
+              />
+              <span className={styles.brandTagline}>3D Sneaker Lab</span>
+            </div>
+          </div>
+
+          <nav className={styles.navMenu}>
+            {navGroups.map((group) => (
+              <div key={group.heading} className={styles.navGroup}>
+                <p className={styles.groupHeading}>{group.heading}</p>
+                {group.items.map((item) => {
+                  const Icon = item.icon;
+                  const active = activePage === item.id;
+                  return (
+                    <button
+                      key={item.id}
+                      className={`${styles.navItem} ${active ? styles.active : ''}`}
+                      onClick={() => navigate(item.id)}
+                    >
+                      <span className={styles.navItemLeft}>
+                        <Icon className={styles.navIcon} size={18} />
+                        <span>{item.label}</span>
+                      </span>
+                      {renderBadge(item.badge)}
+                      {active && <div className={styles.activeIndicator} />}
+                    </button>
+                  );
+                })}
+              </div>
+            ))}
+          </nav>
         </div>
 
-        <nav className={styles.navMenu}>
-          {menuItems.map((item) => {
-            const Icon = item.icon;
-            const active = activePage === item.id;
-            return (
-              <button
-                key={item.id}
-                className={`${styles.navItem} ${active ? styles.active : ''}`}
-                onClick={() => navigate(item.id)}
-              >
-                <Icon className={styles.navIcon} size={18} />
-                <span>{item.label}</span>
-                {active && <div className={styles.activeIndicator} />}
-              </button>
-            );
-          })}
-        </nav>
-
         <div className={styles.footerSection}>
-          <div className={styles.sessionInfo}>
-            <span className={styles.sessionEmail}>{session?.email || 'Active admin session'}</span>
-            <span className={`${styles.roleBadge} ${isAdmin ? styles.roleAdmin : styles.roleStaff}`}>
-              {isAdmin ? 'Admin' : 'Staff'}
-            </span>
+          {bakeTotal !== null && bakeTotal > 0 && (
+            <div className={styles.pipelineWidget}>
+              <div className={styles.pipelineWidgetHeader}>
+                <span className={styles.pipelineWidgetLabel}>
+                  <Flame size={14} className={styles.pipelineWidgetIcon} />
+                  Bake Pipeline
+                </span>
+                <span className={styles.pipelineWidgetPct}>{bakePct}%</span>
+              </div>
+              <div className={styles.pipelineBarTrack}>
+                <div className={styles.pipelineBarFill} style={{ width: `${bakePct}%` }} />
+              </div>
+              <div className={styles.pipelineWidgetFooter}>
+                <span>{bakeActive} đang xử lý</span>
+                <span>{bakeTotal} tổng cộng</span>
+              </div>
+            </div>
+          )}
+
+          <div className={styles.profilePill}>
+            <div className={styles.profileAvatar}>{initials}</div>
+            <div className={styles.sessionInfo}>
+              <span className={styles.sessionEmail}>{session?.email || 'Active admin session'}</span>
+              <span className={`${styles.roleBadge} ${isAdmin ? styles.roleAdmin : styles.roleStaff}`}>
+                {isAdmin ? 'Admin' : 'Staff'}
+              </span>
+            </div>
+            <Tooltip.Root>
+              <Tooltip.Trigger asChild>
+                <button
+                  className={styles.logoutBtn}
+                  onClick={() => { void logout(); }}
+                  disabled={isLoggingOut}
+                >
+                  <LogOut size={16} />
+                </button>
+              </Tooltip.Trigger>
+              <Tooltip.Portal>
+                <Tooltip.Content className={styles.tooltipContent} side="top" sideOffset={8}>
+                  Log out
+                  <Tooltip.Arrow className={styles.tooltipArrow} />
+                </Tooltip.Content>
+              </Tooltip.Portal>
+            </Tooltip.Root>
           </div>
-          <Tooltip.Root>
-            <Tooltip.Trigger asChild>
-              <button
-                className={styles.logoutBtn}
-                onClick={() => { void logout(); }}
-                disabled={isLoggingOut}
-              >
-                <LogOut size={16} />
-              </button>
-            </Tooltip.Trigger>
-            <Tooltip.Portal>
-              <Tooltip.Content className={styles.tooltipContent} side="top" sideOffset={8}>
-                Log out
-                <Tooltip.Arrow className={styles.tooltipArrow} />
-              </Tooltip.Content>
-            </Tooltip.Portal>
-          </Tooltip.Root>
         </div>
       </aside>
     </Tooltip.Provider>

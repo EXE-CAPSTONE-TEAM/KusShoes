@@ -1,13 +1,20 @@
 import React, { useState } from 'react';
-import { ShieldCheck, Mail, Lock, LogIn } from 'lucide-react';
+import { Mail, Lock, Eye, EyeOff, ArrowRight, LogIn } from 'lucide-react';
 import { useAdminAuth } from '../../../context/AdminAuthContext';
+import { useTheme } from '../../../context/ThemeContext';
+import { useToast } from '../../../context/ToastContext';
 import { AdminApiError } from '../../../api/adminClient';
+import backgroundImage from '../../../assets/admin/admin-login-bg.jpg';
 import styles from './AdminLogin.module.css';
 
 export const AdminLogin: React.FC = () => {
   const { login } = useAdminAuth();
-  const [email, setEmail] = useState('admin@kusshoes.vn');
+  const { theme } = useTheme();
+  const { toast } = useToast();
+
+  const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
+  const [showPassword, setShowPassword] = useState(false);
   const [error, setError] = useState('');
   const [loading, setLoading] = useState(false);
 
@@ -30,50 +37,88 @@ export const AdminLogin: React.FC = () => {
 
   return (
     <div className={styles.container}>
+      <div className={styles.bgImage} style={{ backgroundImage: `url(${backgroundImage})` }} aria-hidden="true" />
+      <div className={styles.bgOverlay} aria-hidden="true" />
+      <div className={styles.gridOverlay} aria-hidden="true" />
+      <div className={styles.glow} aria-hidden="true" />
+
       <div className={`${styles.card} glass-panel`}>
-        <div className={styles.iconWrap}>
-          <ShieldCheck size={28} />
+        <div className={styles.scanLine} aria-hidden="true" />
+
+        <div className={styles.brandRow}>
+          <img
+            src={theme === 'dark' ? '/KusShoes_Logo_Dark_Mode_cropped.png' : '/KusShoes_Logo_cropped.png'}
+            alt="KusShoes"
+            className={styles.brandLogo}
+          />
+          <span className={styles.brandTagline}>3D Sneaker Lab Portal</span>
         </div>
-        <h1 className={styles.title}>KusShoes Admin</h1>
-        <p className={styles.subtitle}>Đăng nhập bằng tài khoản Admin hoặc Staff để quản trị hệ thống.</p>
+
+        <div className={styles.titleBlock}>
+          <h1 className={styles.title}>KusShoes Admin Portal</h1>
+          <p className={styles.subtitle}>Hệ thống quản trị số hóa &amp; phân tích mô hình 3D Sneaker.</p>
+        </div>
 
         <form onSubmit={handleSubmit} className={styles.form}>
           <div className={styles.inputGroup}>
-            <label>Email</label>
+            <label htmlFor="admin-email">Địa chỉ email công việc</label>
             <div className={styles.inputWrap}>
               <Mail size={16} className={styles.inputIcon} />
               <input
+                id="admin-email"
                 type="email"
                 value={email}
                 onChange={(e) => setEmail(e.target.value)}
-                placeholder="admin@kusshoes.vn"
+                placeholder="name@kusshoes.vn"
+                autoComplete="username"
                 required
               />
+              <span className={styles.domainHint}>@kusshoes.vn</span>
             </div>
           </div>
+
           <div className={styles.inputGroup}>
-            <label>Mật khẩu</label>
+            <div className={styles.labelRow}>
+              <label htmlFor="admin-password">Mật khẩu bảo mật</label>
+              <button
+                type="button"
+                className={styles.forgotLink}
+                onClick={() => toast('Vui lòng liên hệ quản trị hệ thống để đặt lại mật khẩu.')}
+              >
+                Quên mật khẩu?
+              </button>
+            </div>
             <div className={styles.inputWrap}>
               <Lock size={16} className={styles.inputIcon} />
               <input
-                type="password"
+                id="admin-password"
+                type={showPassword ? 'text' : 'password'}
                 value={password}
                 onChange={(e) => setPassword(e.target.value)}
-                placeholder="••••••••"
+                placeholder="••••••••••••"
+                autoComplete="current-password"
                 required
               />
+              <button
+                type="button"
+                className={styles.eyeBtn}
+                onClick={() => setShowPassword((v) => !v)}
+                title="Ẩn / Hiện mật khẩu"
+              >
+                {showPassword ? <EyeOff size={16} /> : <Eye size={16} />}
+              </button>
             </div>
           </div>
 
           {error && <p className={styles.errorText}>{error}</p>}
 
-          <button type="submit" className="btn-neon-orange" disabled={loading} style={{ justifyContent: 'center' }}>
-            <LogIn size={18} />
-            {loading ? 'Đang đăng nhập...' : 'Đăng nhập'}
+          <button type="submit" className={`btn-neon-orange ${styles.submitBtn}`} disabled={loading}>
+            <span>{loading ? 'Đang đăng nhập...' : 'Đăng nhập hệ thống'}</span>
+            {loading ? <LogIn size={16} /> : <ArrowRight size={16} className={styles.submitArrow} />}
           </button>
         </form>
 
-        <p className={styles.hint}>Sử dụng tài khoản Admin hoặc Staff đã được cấp trên hệ thống.</p>
+        <p className={styles.hint}>Chỉ dành cho tài khoản Admin &amp; Staff đã được cấp quyền trên hệ thống.</p>
       </div>
     </div>
   );
