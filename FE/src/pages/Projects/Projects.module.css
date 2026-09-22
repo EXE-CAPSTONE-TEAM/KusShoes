@@ -179,7 +179,7 @@
 
 /* Card item */
 .card {
-  border-radius: var(--border-radius-md);
+  border-radius: var(--border-radius-sm);
   overflow: hidden;
   display: flex;
   flex-direction: column;
@@ -1451,4 +1451,27 @@
   border-color: var(--color-orange);
   color: var(--text-primary);
   box-shadow: var(--shadow-neon);
+}
+
+/* BR-27: a project left over after a plan downgrade is read-only until the user upgrades. */
+.lockedBadge {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  margin-left: 8px;
+  padding: 2px 8px;
+  border-radius: var(--border-radius-full);
+  font-size: 0.68rem;
+  font-weight: 600;
+  letter-spacing: 0.03em;
+  color: var(--status-designing);
+  border: 1px solid rgba(251, 189, 35, 0.35);
+  background: rgba(251, 189, 35, 0.08);
+  white-space: nowrap;
+}
+
+.dropdown button:disabled,
+.rowActions button:disabled {
+  opacity: 0.4;
+  cursor: not-allowed;
 }

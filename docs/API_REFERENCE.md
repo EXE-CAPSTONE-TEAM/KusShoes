@@ -157,6 +157,44 @@ Responses: `200` ForgotPasswordResponse, `401` ErrorResponse, `403` ErrorRespons
 
 Response fields: `message`: string
 
+### `POST /api/v1/auth/editor/launch` — Tạo vé mở KusStudio
+
+Tạo vé mở editor dùng một lần, sống ngắn, gắn với một dự án; trả URL/ticket để mở ứng dụng desktop. Bearer.
+
+Request body: `project_id`: uuid
+
+Responses: `200` EditorLaunchCreateResponse, `401` ErrorResponse, `403` ErrorResponse
+
+Response fields: `launch_ticket`: string; `desktop_url`: string; `expires_in`: integer
+
+### `POST /api/v1/auth/editor/launch/claim` — Desktop nhận vé mở editor
+
+Ứng dụng desktop trình vé để nhận thông tin phiên khởi tạo; vé chỉ dùng được một lần. Công khai.
+
+Request body: `launch_ticket`: string; `code_challenge`: string; `code_challenge_method?`: string
+
+Responses: `200` EditorLaunchClaimResponse
+
+Response fields: `authorization_code`: string; `expires_in`: integer
+
+### `POST /api/v1/auth/editor/launch/exchange` — Đổi vé lấy editor session
+
+Đổi vé đã nhận lấy editor session token (scope theo quyền của người dùng). Công khai.
+
+Request body: `authorization_code`: string; `code_verifier`: string
+
+Responses: `200` EditorLaunchExchangeResponse
+
+Response fields: `access_token`: string; `token_type?`: string; `expires_in`: integer; `user_id`: uuid; `project_id`: uuid; `scopes`: list[string]
+
+### `GET /api/v1/auth/editor/session` — Phiên editor hiện tại
+
+Trả thông tin và scope của editor session đang dùng. Editor session token (Bearer, cấp bởi `/auth/editor/launch/exchange`).
+
+Responses: `200` EditorSessionResponse, `401` ErrorResponse, `403` ErrorResponse
+
+Response fields: `user_id`: uuid; `project_id`: uuid; `scopes`: list[string]; `expires_at`: integer
+
 ### `POST /api/v1/auth/sso-token` — Tạo mã SSO mở editor
 
 Tạo mã dùng một lần (sống ngắn) gắn với một dự án để mở KusStudio mà không nhập lại mật khẩu. Bearer.
@@ -433,7 +471,7 @@ Parameters: `project_id` (path, required)
 
 Responses: `200` ProjectDetailResponse, `401` ErrorResponse, `403` ErrorResponse, `404` ErrorResponse
 
-Response fields: `id`: uuid; `name`: string; `description`: string | null; `status`: string; `is_locked`: boolean; `thumbnail_path`: string | null; `design_config?`: object | null; `editor_url`: string; `created_at`: date-time; `updated_at`: date-time; `canonical_model_asset_id`: uuid | null
+Response fields: `id`: uuid; `name`: string; `description`: string | null; `status`: string; `is_locked`: boolean; `thumbnail_path`: string | null; `design_config?`: object | null; `editor_url`: string; `created_at`: date-time; `updated_at`: date-time; `canonical_model_asset_id`: uuid | null; `revision`: integer
 
 ### `PATCH /api/v1/projects/{project_id}` — Cập nhật dự án
 
@@ -483,7 +521,7 @@ Kiểm tra giới hạn layer (BR-52), khóa khi đang xuất (`PROJECT_EXPORTIN
 
 Parameters: `project_id` (path, required), `x-service-token` (header, required)
 
-Request body: `design_config`: object; `thumbnail_path?`: string | null
+Request body: `design_config`: object; `thumbnail_path?`: string | null; `base_revision`: integer
 
 Responses: `200` MessageResponse, `404` ErrorResponse
 
@@ -563,7 +601,7 @@ Kiểm tra tệp tồn tại trong lưu trữ rồi ghi nhận vào dự án. Be
 
 Parameters: `project_id` (path, required)
 
-Request body: `asset_id`: uuid; `file_size_bytes`: integer
+Request body: `asset_id`: uuid; `file_size_bytes?`: integer | null
 
 Responses: `200` AssetResponse, `401` ErrorResponse, `403` ErrorResponse, `404` ErrorResponse
 
@@ -591,7 +629,15 @@ Response fields: `message`: string
 
 ## Editor
 
-API dành cho ứng dụng KusStudio (desktop).
+API của cầu nối KusStudio (desktop): dùng editor session token lấy từ vé mở editor.
+
+### `GET /api/v1/editor/me` — Người dùng của editor session
+
+Thông tin người dùng gắn với editor session. Editor session token (Bearer, cấp bởi `/auth/editor/launch/exchange`).
+
+Responses: `200` EditorUserResponse, `401` ErrorResponse, `403` ErrorResponse
+
+Response fields: `id`: uuid; `role`: string; `name`: string; `email`: string; `createdAt`: date-time; `updatedAt?`: date-time | null
 
 ### `GET /api/v1/editor/projects/{project_id}/context` — Ngữ cảnh mở editor
 
@@ -601,27 +647,149 @@ Parameters: `project_id` (path, required)
 
 Responses: `200` EditorContextResponse, `401` ErrorResponse, `403` ErrorResponse, `404` ErrorResponse
 
-Response fields: `user`: EditorUserResponse; `project`: EditorProjectResponse; `modelAsset`: EditorModelAssetResponse | null; `latestDesign`: EditorDesignResponse | null; `permissions`: EditorPermissionsResponse
+Response fields: `project`: EditorProjectResponse; `modelAsset?`: EditorModelAssetResponse | null; `latestDesign?`: EditorDesignResponse | null; `permissions`: EditorPermissionsResponse
 
-### `PUT /api/v1/editor/projects/{project_id}/design` — Lưu thiết kế từ editor
+### `POST /api/v1/editor/projects/{project_id}/designs` — Lưu thiết kế từ editor
 
-Giống lưu thiết kế: kiểm tra layer, khóa xuất, guardrail và tạo phiên bản. Bearer.
+Cần scope `editor:write`. Kiểm tra model gốc sẵn sàng, `base_revision` khớp bản hiện tại (xung đột trả lỗi revision), khóa xuất (`PROJECT_EXPORTING`) và guardrail nội dung; mỗi lần lưu tạo revision và một phiên bản lịch sử. Editor session token (Bearer, cấp bởi `/auth/editor/launch/exchange`).
 
 Parameters: `project_id` (path, required)
 
-Request body: `designConfig`: object; `name?`: string | null
+Request body: `designConfig`: EditorDesignConfig; `name?`: string | null; `baseRevision`: integer
 
 Responses: `200` EditorDesignResponse, `401` ErrorResponse, `403` ErrorResponse, `404` ErrorResponse
 
-Response fields: `id`: string; `userId`: uuid; `projectId`: uuid; `modelAssetId`: uuid; `name`: string; `status`: string; `designConfig`: object; `previewGlbUrl?`: string | null; `previewStatus?`: string; `previewErrorMessage?`: string | null; `createdAt`: date-time; `updatedAt`: date-time
+Response fields: `id`: uuid; `userId`: uuid; `projectId`: uuid; `modelAssetId`: uuid; `name`: string; `status`: string; `revision`: integer; `designConfig`: object; `previewGlbUrl?`: string | null; `previewStatus?`: string; `previewErrorMessage?`: string | null; `createdAt`: date-time; `updatedAt`: date-time
 
-### `GET /api/v1/editor/assets/{asset_id}/download` — Tải tệp model cho editor
+### `GET /api/v1/editor/designs/{design_id}` — Lấy thiết kế
 
-Stream tệp; chỉ chủ sở hữu dự án. Bearer.
+Thiết kế hiện tại của dự án kèm bake job và file xuất gần nhất. Editor session token (Bearer, cấp bởi `/auth/editor/launch/exchange`).
+
+Parameters: `design_id` (path, required)
+
+Responses: `200` EditorDesignResponse, `401` ErrorResponse, `403` ErrorResponse, `404` ErrorResponse
+
+Response fields: `id`: uuid; `userId`: uuid; `projectId`: uuid; `modelAssetId`: uuid; `name`: string; `status`: string; `revision`: integer; `designConfig`: object; `previewGlbUrl?`: string | null; `previewStatus?`: string; `previewErrorMessage?`: string | null; `createdAt`: date-time; `updatedAt`: date-time
+
+### `POST /api/v1/editor/designs/{design_id}/bake` — Bắt đầu bake từ editor
+
+Cần scope `editor:write` và thiết kế đã lưu; dùng cùng quy tắc hạn mức như bake của portal (202). Editor session token (Bearer, cấp bởi `/auth/editor/launch/exchange`).
+
+Parameters: `design_id` (path, required)
+
+Responses: `202` EditorJobResponse, `401` ErrorResponse, `403` ErrorResponse, `404` ErrorResponse
+
+Response fields: `id`: uuid; `type?`: string; `status`: string; `progress`: integer; `errorMessage?`: string | null; `designId`: uuid; `projectId`: uuid; `createdAt`: date-time; `updatedAt`: date-time
+
+### `GET /api/v1/editor/jobs/{job_id}` — Trạng thái bake job
+
+Trạng thái xử lý của một bake job do editor tạo. Editor session token (Bearer, cấp bởi `/auth/editor/launch/exchange`).
+
+Parameters: `job_id` (path, required)
+
+Responses: `200` EditorJobResponse, `401` ErrorResponse, `403` ErrorResponse, `404` ErrorResponse
+
+Response fields: `id`: uuid; `type?`: string; `status`: string; `progress`: integer; `errorMessage?`: string | null; `designId`: uuid; `projectId`: uuid; `createdAt`: date-time; `updatedAt`: date-time
+
+### `POST /api/v1/editor/designs/{design_id}/export` — Lấy gói export
+
+Trả các file đã xuất của thiết kế để editor tải về. Editor session token (Bearer, cấp bởi `/auth/editor/launch/exchange`).
+
+Parameters: `design_id` (path, required)
+
+Responses: `200` EditorExportPackageResponse, `401` ErrorResponse, `403` ErrorResponse, `404` ErrorResponse
+
+Response fields: `id`: uuid; `designId`: uuid; `status?`: string; `downloadUrl`: string; `zipUrl?`: string | null; `files`: list[string]; `createdAt`: date-time; `updatedAt?`: date-time | null
+
+### `POST /api/v1/editor/assets/upload-url` — Xin URL tải tệp (editor)
+
+Presigned URL để editor tải model/texture lên dự án. Editor session token (Bearer, cấp bởi `/auth/editor/launch/exchange`).
+
+Request body: `asset_type`: string; `filename`: string; `content_type`: string
+
+Responses: `200` AssetUploadURLResponse, `401` ErrorResponse, `403` ErrorResponse
+
+Response fields: `upload_url`: string; `asset_id`: uuid; `file_path`: string; `expires_in?`: integer
+
+### `POST /api/v1/editor/assets/confirm` — Xác nhận tệp đã tải (editor)
+
+Xác nhận tệp đã có trong kho lưu trữ và ghi nhận vào dự án. Editor session token (Bearer, cấp bởi `/auth/editor/launch/exchange`).
+
+Request body: `asset_id`: uuid; `file_size_bytes?`: integer | null
+
+Responses: `200` AssetResponse, `401` ErrorResponse, `403` ErrorResponse
+
+Response fields: `id`: uuid; `project_id`: uuid; `asset_type`: string; `original_filename`: string | null; `file_path`: string; `file_size_bytes`: integer | null; `mime_type`: string | null; `status`: string; `created_at`: date-time
+
+### `GET /api/v1/editor/assets/{asset_id}/content` — Tải nội dung tệp
+
+Stream nội dung một tệp của dự án; chỉ tệp thuộc phiên editor. Editor session token (Bearer, cấp bởi `/auth/editor/launch/exchange`).
 
 Parameters: `asset_id` (path, required)
 
 Responses: `200` object, `401` ErrorResponse, `403` ErrorResponse, `404` ErrorResponse
+
+### `GET /api/v1/editor/exports/{export_id}/content` — Tải nội dung file xuất
+
+Stream nội dung một file đã xuất; chỉ file thuộc phiên editor. Editor session token (Bearer, cấp bởi `/auth/editor/launch/exchange`).
+
+Parameters: `export_id` (path, required)
+
+Responses: `200` object, `401` ErrorResponse, `403` ErrorResponse, `404` ErrorResponse
+
+## Mobile
+
+Cầu nối ứng dụng di động (quét giày). Ngoài phạm vi web portal.
+
+### `POST /api/v1/mobile/scans/bootstrap` — Khởi tạo phiên quét
+
+Ứng dụng di động bắt đầu một phiên quét cho người dùng đã đăng nhập. Ngoài phạm vi web portal. Bearer.
+
+Request body: `client_request_id`: uuid; `project_name?`: string
+
+Responses: `201` MobileScanBootstrapResponse, `401` ErrorResponse, `403` ErrorResponse
+
+Response fields: `project_id`: uuid; `compute_api_url`: string; `compute_grant`: string; `expires_in`: integer; `web_project_url`: string
+
+## Mobile Internal
+
+Endpoint nội bộ cho dịch vụ tính toán quét; xác thực bằng token dịch vụ riêng.
+
+### `POST /api/v1/internal/mobile/compute-grants/claim` — Nhận quyền tính toán quét
+
+Dịch vụ tính toán nhận một compute grant. Token tính toán di động (dịch vụ nội bộ).
+
+Parameters: `x-service-token` (header, required)
+
+Request body: `compute_grant`: string
+
+Responses: `200` MobileComputeGrantClaimResponse
+
+Response fields: `user_id`: uuid; `project_id`: uuid; `project_name`: string; `completion_token`: string; `web_project_url`: string
+
+### `POST /api/v1/internal/mobile/scans/output-upload` — Xin URL tải kết quả quét
+
+Dịch vụ tính toán xin presigned URL để tải kết quả lên. Token tính toán di động (dịch vụ nội bộ).
+
+Parameters: `x-service-token` (header, required)
+
+Request body: `completion_token`: string
+
+Responses: `200` MobileOutputUploadResponse
+
+Response fields: `project_id`: uuid; `asset_id`: uuid; `file_path`: string; `upload_url`: string | null; `expires_in`: integer; `already_completed?`: boolean
+
+### `POST /api/v1/internal/mobile/scans/output-confirm` — Xác nhận kết quả quét
+
+Dịch vụ tính toán xác nhận kết quả đã tải lên. Token tính toán di động (dịch vụ nội bộ).
+
+Parameters: `x-service-token` (header, required)
+
+Request body: `completion_token`: string; `asset_id`: uuid; `file_size_bytes`: integer; `project_name?`: string | null
+
+Responses: `200` MobileOutputConfirmResponse
+
+Response fields: `project_id`: uuid; `model_asset_id`: uuid; `status`: string; `web_project_url`: string
 
 ## Studio
 

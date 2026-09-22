@@ -1,0 +1,40 @@
+/* Always visible while acting as another user: fixed above the app shell. */
+.banner {
+  position: fixed;
+  top: 0;
+  left: 0;
+  right: 0;
+  height: 44px;
+  z-index: 2000;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 12px;
+  padding: 0 16px;
+  background: var(--color-crimson);
+  color: #fff;
+  font-size: 0.85rem;
+  font-weight: 600;
+  box-shadow: 0 2px 12px rgba(0, 0, 0, 0.4);
+}
+
+.text {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.endBtn {
+  flex-shrink: 0;
+  background: rgba(255, 255, 255, 0.16);
+  border: 1px solid rgba(255, 255, 255, 0.5);
+  color: #fff;
+  border-radius: var(--border-radius-full);
+  padding: 4px 14px;
+  font-weight: 600;
+  cursor: pointer;
+}
+
+.endBtn:hover:not(:disabled) {
+  background: rgba(255, 255, 255, 0.3);
+}

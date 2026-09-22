@@ -40,3 +40,6 @@ venv/
 # --- Logs ---
 logs
 *.log
+
+# --- Generated code index ---
+.codegraph/

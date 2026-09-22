@@ -1,7 +1,7 @@
 import React, { useEffect, useState } from 'react';
 import {
   LayoutDashboard, Users, Package, CreditCard, FolderKanban,
-  Flame, Download, Activity, ScrollText, LogOut,
+  Flame, Download, Activity, ScrollText, LogOut, BarChart3, Sparkles, MessageSquare,
 } from 'lucide-react';
 import * as Tooltip from '@radix-ui/react-tooltip';
 import { useAdminAuth } from '../../../context/AdminAuthContext';

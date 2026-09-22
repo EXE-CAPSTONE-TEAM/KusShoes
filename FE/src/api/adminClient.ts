@@ -1,4 +1,17 @@
 import type {
+  AdminAnalytics,
+  AdminCoupon,
+  AdminFeedback,
+  AdminTemplate,
+  FeedbackStatus,
+  FeedbackSummary,
+  GrantPlanInput,
+  GuardrailRule,
+  ImpersonationResult,
+  ManualTransactionInput,
+  ReportFormat,
+  ReportType,
+  ReportingPeriod,
   AdminAuthResponse,
   DashboardStats,
   MonthlyPoint,
@@ -217,6 +230,9 @@ export interface SubscriptionListQuery {
 export interface InvoiceListQuery {
   status?: string;
   user_id?: string;
+  is_manual?: boolean;
+  payment_method?: 'payos' | 'momo' | 'manual';
+  exclude_internal?: boolean;
   limit?: number;
   cursor?: string;
 }
@@ -235,7 +251,7 @@ export const adminBilling = {
     request(`/api/v1/admin/billing/invoices${queryString(query)}`, { signal }),
   refund: (
     invoiceId: string,
-    body: { amount_vnd: number; reason: string },
+    body: { amount_vnd: number; reason: string; override?: boolean },
   ): Promise<{ status: string; refund_id: string }> =>
     request(`/api/v1/admin/billing/invoices/${encodeURIComponent(invoiceId)}/refund`, {
       method: 'POST',
@@ -310,4 +326,125 @@ export interface AuditLogListQuery {
 export const adminAuditLogs = {
   list: (query: AuditLogListQuery = {}, signal?: AbortSignal): Promise<CursorPage<AdminAuditLog>> =>
     request(`/api/v1/admin/audit-logs${queryString(query)}`, { signal }),
+};
+
+/** GET a file (CSV / XLSX / PDF) as the signed-in admin and hand it to the browser. */
+async function downloadAdminFile(path: string, fallbackName: string): Promise<void> {
+  const send = (token?: string) =>
+    fetch(`${API_BASE_URL}${path}`, {
+      credentials: 'include',
+      headers: token ? { Authorization: `Bearer ${token}` } : {},
+    });
+  let response = await send(getAdminSession()?.accessToken);
+  if (response.status === 401) {
+    const refreshed = await refreshAccessToken();
+    if (refreshed) response = await send(refreshed);
+    else expireAdminSession();
+  }
+  if (!response.ok) throw await parseApiError(response);
+  const disposition = response.headers.get('Content-Disposition') ?? '';
+  const filename = /filename="?([^";]+)"?/.exec(disposition)?.[1] ?? fallbackName;
+  const url = URL.createObjectURL(await response.blob());
+  const anchor = document.createElement('a');
+  anchor.href = url;
+  anchor.download = filename;
+  document.body.appendChild(anchor);
+  anchor.click();
+  anchor.remove();
+  window.setTimeout(() => URL.revokeObjectURL(url), 1000);
+}
+
+const jsonBody = (method: string, body?: unknown): RequestInit => ({
+  method,
+  body: body === undefined ? undefined : JSON.stringify(body),
+});
+
+export interface DateRangeQuery {
+  date_from?: string;
+  date_to?: string;
+}
+
+export const adminAnalytics = {
+  get: (query: DateRangeQuery = {}): Promise<AdminAnalytics> =>
+    request(`/api/v1/admin/analytics${queryString(query)}`),
+  downloadReport: (type: ReportType, format: ReportFormat, query: DateRangeQuery = {}): Promise<void> =>
+    downloadAdminFile(`/api/v1/admin/reports/${type}${queryString({ format, ...query })}`, `${type}.${format}`),
+};
+
+export const adminStudio = {
+  listRules: (): Promise<GuardrailRule[]> => request('/api/v1/admin/guardrail-rules'),
+  createRule: (kind: 'banned' | 'trademark', term: string): Promise<GuardrailRule> =>
+    request('/api/v1/admin/guardrail-rules', jsonBody('POST', { kind, term })),
+  setRuleActive: (id: string, isActive: boolean): Promise<GuardrailRule> =>
+    request(`/api/v1/admin/guardrail-rules/${id}`, jsonBody('PATCH', { is_active: isActive })),
+  removeRule: (id: string): Promise<{ message: string }> =>
+    request(`/api/v1/admin/guardrail-rules/${id}`, jsonBody('DELETE')),
+
+  listTemplates: (status?: string): Promise<AdminTemplate[]> =>
+    request(`/api/v1/admin/templates${queryString({ status })}`),
+  createTemplate: (body: {
+    name: string;
+    description?: string | null;
+    category?: string | null;
+    design_config: Record<string, unknown>;
+  }): Promise<AdminTemplate> => request('/api/v1/admin/templates', jsonBody('POST', body)),
+  reviewTemplate: (id: string, approve: boolean): Promise<AdminTemplate> =>
+    request(`/api/v1/admin/templates/${id}/${approve ? 'approve' : 'reject'}`, jsonBody('POST')),
+};
+
+export interface FeedbackListQuery {
+  status?: FeedbackStatus;
+  marketing_group?: string;
+  rating?: number;
+  include_internal?: boolean;
+}
+
+export const adminFeedback = {
+  list: (query: FeedbackListQuery = {}): Promise<AdminFeedback[]> =>
+    request(`/api/v1/admin/feedback${queryString(query)}`),
+  summary: (): Promise<FeedbackSummary> => request('/api/v1/admin/feedback/summary'),
+  update: (id: string, body: { status?: FeedbackStatus; changed_what?: string | null }): Promise<AdminFeedback> =>
+    request(`/api/v1/admin/feedback/${id}`, jsonBody('PATCH', body)),
+  exportXlsx: (): Promise<void> => downloadAdminFile('/api/v1/admin/feedback/export', 'feedback.xlsx'),
+};
+
+export const adminFinance = {
+  listPeriods: (): Promise<ReportingPeriod[]> => request('/api/v1/admin/billing/periods'),
+  createPeriod: (body: { name: string; start_date: string; end_date: string }): Promise<ReportingPeriod> =>
+    request('/api/v1/admin/billing/periods', jsonBody('POST', body)),
+  lockPeriod: (id: string): Promise<ReportingPeriod> =>
+    request(`/api/v1/admin/billing/periods/${id}/lock`, jsonBody('POST')),
+
+  listCoupons: (): Promise<AdminCoupon[]> => request('/api/v1/admin/billing/coupons'),
+  createCoupon: (body: {
+    code: string;
+    discount_type: AdminCoupon['discount_type'];
+    value: number;
+    plan_tiers?: string[] | null;
+    max_uses?: number | null;
+    valid_until?: string | null;
+  }): Promise<AdminCoupon> => request('/api/v1/admin/billing/coupons', jsonBody('POST', body)),
+  updateCoupon: (id: string, body: Partial<Pick<AdminCoupon, 'is_active' | 'max_uses' | 'valid_until'>>): Promise<AdminCoupon> =>
+    request(`/api/v1/admin/billing/coupons/${id}`, jsonBody('PATCH', body)),
+
+  proofUpload: (
+    filename: string,
+    contentType: 'image/jpeg' | 'image/png' | 'image/webp' | 'application/pdf',
+  ): Promise<{ upload_url: string; file_path: string; expires_in: number }> =>
+    request('/api/v1/admin/billing/manual-transactions/proof-upload', jsonBody('POST', { filename, content_type: contentType })),
+  createManual: (body: ManualTransactionInput): Promise<AdminInvoice> =>
+    request('/api/v1/admin/billing/manual-transactions', jsonBody('POST', body)),
+  approveManual: (invoiceId: string): Promise<AdminInvoice> =>
+    request(`/api/v1/admin/billing/invoices/${invoiceId}/approve`, jsonBody('POST')),
+  rejectManual: (invoiceId: string, reason: string): Promise<AdminInvoice> =>
+    request(`/api/v1/admin/billing/invoices/${invoiceId}/reject`, jsonBody('POST', { reason })),
+};
+
+export const adminUserActions = {
+  grantPlan: (userId: string, body: GrantPlanInput): Promise<{ status: string; tier: string; is_comp: boolean }> =>
+    request(`/api/v1/admin/users/${userId}/grant-plan`, jsonBody('POST', body)),
+  impersonate: (userId: string, reason: string): Promise<ImpersonationResult> =>
+    request(`/api/v1/admin/users/${userId}/impersonate`, jsonBody('POST', { reason })),
+  resetPassword: (userId: string): Promise<{ message: string }> =>
+    request(`/api/v1/admin/users/${userId}/reset-password`, jsonBody('POST')),
 };

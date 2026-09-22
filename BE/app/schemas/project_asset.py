@@ -22,7 +22,8 @@ class AssetUploadURLResponse(BaseModel):
 
 class AssetConfirmRequest(BaseModel):
     asset_id: uuid.UUID
-    file_size_bytes: int = Field(gt=0, le=2_000_000_000)
+    # Backward-compatible integrity hint only; storage metadata is authoritative.
+    file_size_bytes: int | None = Field(default=None, gt=0, le=2_000_000_000)
 
 
 class AssetResponse(BaseModel):

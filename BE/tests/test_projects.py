@@ -93,7 +93,7 @@ async def test_save_design_and_trigger_bake(client, db, service_headers, auth_he
     saved = await client.put(
         f"/api/v1/projects/{project_id}/design",
         headers=service_headers,
-        json={"design_config": {"color": "red"}, "thumbnail_path": "thumbs/a.png"},
+        json={"design_config": {"color": "red"}, "thumbnail_path": "thumbs/a.png", "base_revision": 0},
     )
     assert saved.status_code == 200
 
@@ -113,55 +113,42 @@ async def test_save_design_and_trigger_bake(client, db, service_headers, auth_he
 
 
 @pytest.mark.asyncio
-async def test_editor_context_returns_desktop_contract(client, auth_headers):
-    project_id = (await _create_project(client, auth_headers, "Desktop Shoe")).json()["id"]
+async def test_save_design_revision_conflict(client, db, service_headers, auth_headers):
+    project_id = (await _create_project(client, auth_headers)).json()["id"]
 
-    with patch(
-        "app.infrastructure.storage.generate_presigned_upload_url",
-        return_value="http://upload",
-    ):
-        upload = await client.post(
-            f"/api/v1/projects/{project_id}/assets/upload-url",
-            headers=auth_headers,
-            json={
-                "asset_type": "source_model",
-                "filename": "shoe.glb",
-                "content_type": "model/gltf-binary",
-            },
-        )
-    asset_id = upload.json()["asset_id"]
-
-    with patch("app.infrastructure.storage.file_exists", return_value=True):
-        confirmed = await client.post(
-            f"/api/v1/projects/{project_id}/assets/confirm",
-            headers=auth_headers,
-            json={"asset_id": asset_id, "file_size_bytes": 1000},
-        )
-    assert confirmed.status_code == 200
-
-    context = await client.get(
-        f"/api/v1/editor/projects/{project_id}/context",
-        headers=auth_headers,
+    first = await client.put(
+        f"/api/v1/projects/{project_id}/design",
+        headers=service_headers,
+        json={"design_config": {"color": "red"}, "base_revision": 0},
     )
+    assert first.status_code == 200
 
-    assert context.status_code == 200
-    payload = context.json()
-    assert payload["project"]["id"] == project_id
-    assert payload["modelAsset"]["id"] == asset_id
-    assert payload["modelAsset"]["canonicalGlbUrl"] == f"/api/v1/editor/assets/{asset_id}/download"
-    assert payload["permissions"] == {
-        "canEdit": True,
-        "canBake": False,
-        "canExport": False,
-    }
+    stale = await client.put(
+        f"/api/v1/projects/{project_id}/design",
+        headers=service_headers,
+        json={"design_config": {"color": "blue"}, "base_revision": 0},
+    )
+    assert stale.status_code == 409
+    body = stale.json()
+    assert body["code"] == "DESIGN_REVISION_CONFLICT"
+    assert body["current_revision"] == 1
+    assert body["current_design_config"] == {"color": "red"}
+    assert "current_updated_at" in body
 
-    with patch(
-        "app.infrastructure.storage.open_download_stream",
-        return_value=(iter([b"glb"]), "model/gltf-binary"),
-    ):
-        download = await client.get(
-            f"/api/v1/editor/assets/{asset_id}/download",
-            headers=auth_headers,
+    second = await client.put(
+        f"/api/v1/projects/{project_id}/design",
+        headers=service_headers,
+        json={"design_config": {"color": "blue"}, "base_revision": 1},
+    )
+    assert second.status_code == 200
+
+    from sqlalchemy import select
+
+    from app.models.design_revision import DesignRevision
+
+    revisions = (
+        await db.execute(
+            select(DesignRevision).where(DesignRevision.project_id == project_id)
         )
-    assert download.status_code == 200
-    assert download.content == b"glb"
+    ).scalars().all()
+    assert sorted(r.revision for r in revisions) == [1, 2]

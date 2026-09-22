@@ -106,12 +106,112 @@
 }
 
 /* Responsive elements */
+.menuBtn {
+  display: none;
+}
+
 @media (max-width: 768px) {
   .navbar {
-    width: calc(100% - 32px);
-    padding: 0 16px;
+    width: calc(100% - 24px);
+    top: calc(10px + env(safe-area-inset-top));
+    height: 60px;
+    padding: 0 12px 0 14px;
   }
-  .navLinks {
+  .logoImage {
+    height: 34px;
+  }
+  .navLinks,
+  .loginLink,
+  .registerBtn {
+    display: none;
+  }
+  .navActions {
+    gap: 8px;
+  }
+  /* 44px is Apple's minimum comfortable touch target */
+  .themeToggleBtn,
+  .menuBtn {
+    width: 44px;
+    height: 44px;
+  }
+  .menuBtn {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    background: transparent;
+    border: 1px solid var(--glass-border);
+    border-radius: var(--border-radius-sm);
+    color: var(--text-primary);
+    cursor: pointer;
+    -webkit-tap-highlight-color: transparent;
+  }
+  .navbarHidden {
+    transform: translateX(-50%) translateY(calc(-100% - 30px - env(safe-area-inset-top)));
+  }
+}
+
+/* Slide-down phone menu */
+.menuBackdrop {
+  position: fixed;
+  inset: 0;
+  z-index: 999;
+  background: rgba(0, 0, 0, 0.45);
+  -webkit-backdrop-filter: blur(2px);
+  backdrop-filter: blur(2px);
+}
+
+.mobileMenu {
+  position: absolute;
+  top: calc(100% + 8px);
+  left: 0;
+  right: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  padding: 10px;
+  border-radius: var(--border-radius-md);
+  max-height: calc(100dvh - 100px - env(safe-area-inset-top));
+  overflow-y: auto;
+}
+
+.mobileMenu > a {
+  display: flex;
+  align-items: center;
+  min-height: 48px;
+  padding: 0 14px;
+  border-radius: var(--border-radius-sm);
+  color: var(--text-primary);
+  text-decoration: none;
+  font-weight: 600;
+  font-size: 1.05rem;
+  -webkit-tap-highlight-color: transparent;
+}
+
+.mobileMenu > a:active {
+  background: var(--hover-bg-item);
+}
+
+.mobileActive {
+  color: var(--color-orange) !important;
+}
+
+.mobileActions {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 10px;
+  margin-top: 8px;
+  padding-top: 12px;
+  border-top: 1px solid var(--glass-border);
+}
+
+.mobileActions > button {
+  min-height: 48px;
+  justify-content: center;
+}
+
+@media (min-width: 769px) {
+  .menuBackdrop,
+  .mobileMenu {
     display: none;
   }
 }

@@ -4,12 +4,12 @@ from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.database import get_db
 from app.dependencies import get_current_admin, get_redis
-from app.schemas.auth import AdminLoginResponse, LoginRequest, LogoutRequest
 from app.routers.auth import (
     _clear_refresh_cookie,
     _refresh_token_from_request,
     _set_refresh_cookie,
 )
+from app.schemas.auth import AdminLoginResponse, LoginRequest, LogoutRequest
 from app.services import auth_service
 
 router = APIRouter()

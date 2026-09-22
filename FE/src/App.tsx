@@ -7,6 +7,8 @@ import { Dashboard } from './pages/Dashboard/Dashboard';
 import { Projects } from './pages/Projects/Projects';
 import { Billing } from './pages/Billing/Billing';
 import { Settings } from './pages/Settings/Settings';
+import { Feedback } from './pages/Feedback/Feedback';
+import { ImpersonationBanner } from './components/ImpersonationBanner/ImpersonationBanner';
 import { ProjectDetails } from './pages/ProjectDetails/ProjectDetails';
 import { ProductsPage } from './pages/ProductsPage/ProductsPage';
 import { AdminApp } from './pages/Admin/AdminApp';
@@ -36,9 +38,13 @@ const getPageFromPath = (path: string): string => {
     case '/archives':
       return 'archives';
     case '/billing':
+    case '/billing/success': // PayOS / MoMo return URLs
+    case '/billing/cancel':
       return 'billing';
     case '/settings':
       return 'settings';
+    case '/feedback':
+      return 'feedback';
     case '/':
     default:
       return 'landing';
@@ -67,6 +73,8 @@ const getPathFromPage = (page: string): string => {
       return '/billing' + query;
     case 'settings':
       return '/settings' + query;
+    case 'feedback':
+      return '/feedback' + query;
     case 'admin':
       return '/admin' + query;
     case 'landing':
@@ -175,7 +183,7 @@ function App() {
     return <AdminApp />;
   }
 
-  const isPortalView = ['dashboard', 'projects', 'archives', 'billing', 'settings', 'project-details'].includes(activePage);
+  const isPortalView = ['dashboard', 'projects', 'archives', 'billing', 'settings', 'feedback', 'project-details'].includes(activePage);
 
   const handleLogout = async () => {
     try {
@@ -187,6 +195,8 @@ function App() {
 
   return (
     <>
+      <ImpersonationBanner onEnded={() => navigate('/admin/users')} />
+
       {/* If it's a logged-in view, show the Sidebar navigation */}
       {isPortalView && (
         <Sidebar 
@@ -213,6 +223,7 @@ function App() {
             projects={projects} 
             setProjects={setProjects}
             onViewDetails={(id) => navigate(`/project-details?id=${id}`)}
+            loading={projectsLoading}
           />
         )}
         {activePage === 'archives' && (

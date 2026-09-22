@@ -3,13 +3,14 @@ import {
   Search, Plus, MoreVertical, Trash2, Edit3, Share2, 
   Globe, EyeOff, Link, Grid, List, Check, X, ArrowRight, 
   ArrowLeft, RefreshCw, Smartphone, Laptop, 
-  CheckCircle2, CheckSquare, Square, Camera, Cpu,
+  CheckCircle2, CheckSquare, Square, Camera, Cpu, Lock,
 } from 'lucide-react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { Select } from '../../components/Select/Select';
 import { ConfirmDialog } from '../../components/ConfirmDialog/ConfirmDialog';
 import { useToast } from '../../context/ToastContext';
 import { api, type PortalProject } from '../../api/client';
+import { ProjectsEmptyState } from './ProjectsEmptyState';
 import styles from './Projects.module.css';
 
 const SORT_OPTIONS = [
@@ -42,6 +43,8 @@ interface ProjectsProps {
   setProjects: React.Dispatch<React.SetStateAction<PortalProject[]>>;
   onViewDetails: (id: string) => void;
   initialFilter?: ProjectStatusFilter;
+  /** True while the project list is being fetched. */
+  loading?: boolean;
 }
 
 function formatRelativeDate(value: string): string {
@@ -65,7 +68,8 @@ export const Projects: React.FC<ProjectsProps> = ({
   projects,
   setProjects,
   onViewDetails,
-  initialFilter
+  initialFilter,
+  loading = false,
 }) => {
   const { toast } = useToast();
   // View states
@@ -504,7 +508,11 @@ export const Projects: React.FC<ProjectsProps> = ({
                       {/* Dropdown Menu */}
                       {activeMenuId === proj.id && (
                         <div className={`${styles.dropdown} glass-panel`} onClick={(e) => e.stopPropagation()}>
-                          <button onClick={() => { setEditingProject(proj); setRenameValue(proj.name); setActiveMenuId(null); }}>
+                          <button
+                            disabled={proj.isLocked}
+                            title={proj.isLocked ? 'Read-only project' : undefined}
+                            onClick={() => { setEditingProject(proj); setRenameValue(proj.name); setActiveMenuId(null); }}
+                          >
                             <Edit3 size={14} /> Rename
                           </button>
                           <button onClick={() => { setSharingProject(proj); setActiveMenuId(null); }}>
@@ -544,7 +552,12 @@ export const Projects: React.FC<ProjectsProps> = ({
                           
                           <div className={styles.dropdownDivider} />
                           
-                          <button className={styles.dropdownDeleteBtn} onClick={() => handleDelete(proj.id)}>
+                          <button
+                            className={styles.dropdownDeleteBtn}
+                            disabled={proj.isLocked}
+                            title={proj.isLocked ? 'Read-only project' : undefined}
+                            onClick={() => handleDelete(proj.id)}
+                          >
                             <Trash2 size={14} /> Delete
                           </button>
                         </div>
@@ -558,6 +571,11 @@ export const Projects: React.FC<ProjectsProps> = ({
                         <span className={`${styles.statusIndicator} ${styles[proj.status.toLowerCase()]}`}>
                           {proj.status}
                         </span>
+                        {proj.isLocked && (
+                          <span className={styles.lockedBadge} title="Read-only after a plan downgrade. Upgrade to edit it again.">
+                            <Lock size={11} /> Read-only
+                          </span>
+                        )}
                       </div>
                       <div className={styles.metaRowCompact}>
                         <span className={styles.baseModel}>{proj.baseModel}</span>
@@ -680,6 +698,11 @@ export const Projects: React.FC<ProjectsProps> = ({
                         <span className={`${styles.statusIndicator} ${styles[proj.status.toLowerCase()]}`}>
                           {proj.status}
                         </span>
+                        {proj.isLocked && (
+                          <span className={styles.lockedBadge} title="Read-only after a plan downgrade. Upgrade to edit it again.">
+                            <Lock size={11} /> Read-only
+                          </span>
+                        )}
                       </td>
                       <td>
                         <span className={`${styles.badge} ${styles.visibilityBadge} ${styles.listVisibility}`}>
@@ -694,7 +717,12 @@ export const Projects: React.FC<ProjectsProps> = ({
                           <button onClick={() => { setSharingProject(proj); }} title="Share link">
                             <Share2 size={14} />
                           </button>
-                          <button className={styles.rowDeleteBtn} onClick={() => handleDelete(proj.id)} title="Delete project">
+                          <button
+                            className={styles.rowDeleteBtn}
+                            disabled={proj.isLocked}
+                            onClick={() => handleDelete(proj.id)}
+                            title={proj.isLocked ? 'Read-only project' : 'Delete project'}
+                          >
                             <Trash2 size={14} />
                           </button>
                         </div>
@@ -735,9 +763,19 @@ export const Projects: React.FC<ProjectsProps> = ({
 
       {/* Empty State */}
       {filteredAndSortedProjects.length === 0 && (
-        <div className={`${styles.emptyState} glass-panel`}>
-          <p>No projects found matching the filters.</p>
-        </div>
+        <ProjectsEmptyState
+          loading={loading}
+          totalProjects={projects.length}
+          activeFilters={[
+            ...(searchTerm.trim() ? [`\u201c${searchTerm.trim()}\u201d`] : []),
+            ...(statusFilter !== 'All' ? [statusFilter] : []),
+          ]}
+          onCreate={() => setIsCreateWizardOpen(true)}
+          onClearFilters={() => {
+            setSearchTerm('');
+            setStatusFilter('All');
+          }}
+        />
       )}
 
 

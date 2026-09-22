@@ -16,8 +16,10 @@ async def create_upload(
     filename: str,
     file_path: str,
     content_type: str,
+    asset_id: uuid.UUID | None = None,
 ) -> ProjectAsset:
     asset = ProjectAsset(
+        id=asset_id or uuid.uuid4(),
         project_id=project_id,
         user_id=user_id,
         asset_type=asset_type,

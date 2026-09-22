@@ -19,6 +19,15 @@ const LEGACY_ACCESS_TOKEN_KEY = "kusshoes_access_token";
 const LEGACY_REFRESH_TOKEN_KEY = "kusshoes_refresh_token";
 let accessTokenInMemory: string | null = null;
 
+export type ImpersonationSession = { banner: string; expiresAt: string };
+let impersonationSession: ImpersonationSession | null = null;
+const IMPERSONATION_EVENT = "kusshoes:impersonation";
+
+function setImpersonation(next: ImpersonationSession | null): void {
+  impersonationSession = next;
+  window.dispatchEvent(new Event(IMPERSONATION_EVENT));
+}
+
 function getCsrfToken(): string | null {
   const match = document.cookie.match(/(?:^|;) ?kusshoes_csrf_token=([^;]*)(?:;|$)/);
   return match ? match[1] : null;
@@ -47,6 +56,10 @@ type AuthTokens = {
   access_token: string;
   token_type: string;
 };
+
+export type LoginOutcome =
+  | { mfaRequired: false }
+  | { mfaRequired: true; challengeToken: string; method: "totp" | "email" };
 
 export type RegisterInput = {
   email: string;
@@ -96,6 +109,7 @@ export type PortalProject = {
   baseModel: string;
   status: "Scanned" | "Designing" | "Completed";
   rawStatus: string;
+  isLocked: boolean;
   visibility: "Private" | "Link" | "Public";
   updatedAt: string;
   createdAt: string;
@@ -114,6 +128,7 @@ type ProjectResponse = {
   name: string;
   description: string | null;
   status: string;
+  is_locked?: boolean;
   thumbnail_path: string | null;
   design_config: Record<string, unknown> | null;
   editor_url: string;
@@ -125,6 +140,11 @@ export type ProjectPage = {
   items: PortalProject[];
   nextCursor: string | null;
   hasNext: boolean;
+};
+
+export type EditorLaunch = {
+  desktopUrl: string;
+  expiresIn: number;
 };
 
 export type Plan = {
@@ -162,6 +182,7 @@ export type Invoice = {
   amount_vnd: number;
   payment_method: 'payos' | 'momo' | 'manual';
   status: string;
+  receipt_number?: string | null;
   paid_at: string | null;
   created_at: string;
 };
@@ -172,12 +193,6 @@ export type ProjectExport = {
   file_size_bytes: number | null;
   download_count: number;
   created_at: string;
-};
-
-export type DesktopLaunch = {
-  ssoToken: string;
-  expiresIn: number;
-  apiBaseUrl: string;
 };
 
 const FALLBACK_PROJECT_IMAGE = new URL("../assets/sneaker-hero.png", import.meta.url).href;
@@ -244,6 +259,7 @@ function toPortalProject(project: ProjectResponse): PortalProject {
     baseModel: stringValue(config.base_model, "Custom sneaker model"),
     status: normalizeProjectStatus(project.status),
     rawStatus: project.status,
+    isLocked: Boolean(project.is_locked),
     visibility: normalizeProjectVisibility(config.visibility),
     updatedAt: project.updated_at,
     createdAt: project.created_at,
@@ -314,9 +330,14 @@ async function refreshAccessToken(): Promise<string | null> {
 function canRefreshRequest(path: string): boolean {
   return ![
     "/api/v1/auth/login",
+    "/api/v1/auth/2fa/verify",
     "/api/v1/auth/register",
     "/api/v1/auth/verify-otp",
     "/api/v1/auth/refresh",
+    "/api/v1/auth/forgot-password",
+    "/api/v1/auth/reset-password",
+    "/api/v1/auth/restore-account/request",
+    "/api/v1/auth/restore-account/confirm",
   ].includes(path);
 }
 
@@ -338,13 +359,18 @@ function notifyApiError(error: ApiError, path: string): void {
 function responseIsAuthNoise(path: string): boolean {
   return [
     "/api/v1/auth/login",
+    "/api/v1/auth/2fa/verify",
     "/api/v1/auth/register",
     "/api/v1/auth/verify-otp",
     "/api/v1/auth/resend-otp",
+    "/api/v1/auth/restore-account/request",
+    "/api/v1/auth/restore-account/confirm",
+    "/api/v1/auth/forgot-password",
+    "/api/v1/auth/reset-password",
   ].includes(path);
 }
 
-async function request<T>(path: string, options: RequestInit = {}): Promise<T> {
+export async function request<T>(path: string, options: RequestInit = {}): Promise<T> {
   const headers: Record<string, string> = {
     "Content-Type": "application/json",
   };
@@ -368,7 +394,7 @@ async function request<T>(path: string, options: RequestInit = {}): Promise<T> {
     },
   });
 
-  if (response.status === 401 && canRefreshRequest(path)) {
+  if (response.status === 401 && canRefreshRequest(path) && !impersonationSession) {
     const refreshedAccessToken = await refreshAccessToken();
     if (refreshedAccessToken) {
       headers.Authorization = `Bearer ${refreshedAccessToken}`;
@@ -390,6 +416,24 @@ async function request<T>(path: string, options: RequestInit = {}): Promise<T> {
   }
 
   return response.json() as Promise<T>;
+}
+
+/** GET a binary file (e.g. a PDF) with the current session, refreshing the token once on 401. */
+export async function requestBlob(path: string): Promise<{ blob: Blob; filename: string | null }> {
+  const send = (token: string | null) =>
+    fetch(`${API_BASE_URL}${path}`, {
+      credentials: "include",
+      headers: token ? { Authorization: `Bearer ${token}` } : {},
+    });
+  let response = await send(accessTokenInMemory);
+  if (response.status === 401) {
+    const refreshed = await refreshAccessToken();
+    if (refreshed) response = await send(refreshed);
+  }
+  if (!response.ok) await throwApiResponseError(response, path);
+  const disposition = response.headers.get("Content-Disposition") ?? "";
+  const match = /filename="?([^";]+)"?/.exec(disposition);
+  return { blob: await response.blob(), filename: match ? match[1] : null };
 }
 
 async function apiError(response: Response): Promise<ApiError> {
@@ -425,7 +469,7 @@ async function throwApiResponseError(response: Response, path: string): Promise<
   throw error;
 }
 
-function downloadBlob(blob: Blob, filename: string): void {
+export function downloadBlob(blob: Blob, filename: string): void {
   const url = URL.createObjectURL(blob);
   const anchor = document.createElement("a");
   anchor.href = url;
@@ -442,6 +486,33 @@ export const api = {
 
   hasToken(): boolean {
     return Boolean(accessTokenInMemory);
+  },
+
+  /** Admin acting as a customer (BR-80): 30-minute token, kept in memory, no refresh. */
+  startImpersonation(accessToken: string, session: ImpersonationSession): void {
+    accessTokenInMemory = accessToken;
+    setImpersonation(session);
+  },
+
+  impersonation(): ImpersonationSession | null {
+    return impersonationSession;
+  },
+
+  onImpersonationChange(listener: () => void): () => void {
+    window.addEventListener(IMPERSONATION_EVENT, listener);
+    return () => window.removeEventListener(IMPERSONATION_EVENT, listener);
+  },
+
+  /** Tell the server the session is over (it emails the customer), then drop the token. */
+  async endImpersonation(): Promise<void> {
+    try {
+      await request("/api/v1/users/me/impersonation/end", { method: "POST" });
+    } catch {
+      // The token may already have expired; the local session must end either way.
+    } finally {
+      accessTokenInMemory = null;
+      setImpersonation(null);
+    }
   },
 
   async logout(): Promise<void> {
@@ -469,10 +540,41 @@ export const api = {
     return { userId: payload.user_id, email: payload.email, message: payload.message };
   },
 
-  async login(email: string, password: string, remember = true): Promise<void> {
-    const tokens = await request<AuthTokens>("/api/v1/auth/login", {
+  async login(email: string, password: string, remember = true): Promise<LoginOutcome> {
+    const result = await request<{
+      access_token: string | null;
+      token_type: string;
+      mfa_required: boolean;
+      challenge_token: string | null;
+      method: string | null;
+    }>("/api/v1/auth/login", {
       method: "POST",
       body: JSON.stringify({ email, password }),
+    });
+    if (result.mfa_required && result.challenge_token) {
+      return {
+        mfaRequired: true,
+        challengeToken: result.challenge_token,
+        method: result.method === "email" ? "email" : "totp",
+      };
+    }
+    if (!result.access_token) throw new ApiError("Sign-in did not return a session.", 500);
+    saveTokens({ access_token: result.access_token, token_type: result.token_type }, remember);
+    return { mfaRequired: false };
+  },
+
+  /** Second step of a 2FA login: an authenticator/email code, or a one-time recovery code. */
+  async verifyTwoFactorLogin(
+    challengeToken: string,
+    credential: { code: string } | { recoveryCode: string },
+    remember = true,
+  ): Promise<void> {
+    const tokens = await request<AuthTokens>("/api/v1/auth/2fa/verify", {
+      method: "POST",
+      body: JSON.stringify({
+        challenge_token: challengeToken,
+        ...("code" in credential ? { code: credential.code } : { recovery_code: credential.recoveryCode }),
+      }),
     });
     saveTokens(tokens, remember);
   },
@@ -513,15 +615,18 @@ export const api = {
     return toPortalProject(project);
   },
 
-  async createDesktopLaunch(projectId: string): Promise<DesktopLaunch> {
-    const payload = await request<{ sso_token: string; expires_in: number }>("/api/v1/auth/sso-token", {
+  async createEditorLaunch(projectId: string): Promise<EditorLaunch> {
+    const launch = await request<{
+      launch_ticket: string;
+      desktop_url: string;
+      expires_in: number;
+    }>("/api/v1/auth/editor/launch", {
       method: "POST",
       body: JSON.stringify({ project_id: projectId }),
     });
     return {
-      ssoToken: payload.sso_token,
-      expiresIn: payload.expires_in,
-      apiBaseUrl: API_BASE_URL,
+      desktopUrl: launch.desktop_url,
+      expiresIn: launch.expires_in,
     };
   },
 
@@ -629,10 +734,20 @@ export const api = {
     return request<Invoice[]>("/api/v1/subscription/invoices?limit=100");
   },
 
-  async createCheckout(tier: string, billingCycle: string, gateway: "payos" | "momo"): Promise<string> {
+  async createCheckout(
+    tier: string,
+    billingCycle: string,
+    gateway: "payos" | "momo",
+    couponCode?: string | null,
+  ): Promise<string> {
     const result = await request<{ checkout_url: string }>("/api/v1/subscription/checkout", {
       method: "POST",
-      body: JSON.stringify({ tier, billing_cycle: billingCycle, gateway }),
+      body: JSON.stringify({
+        tier,
+        billing_cycle: billingCycle,
+        gateway,
+        coupon_code: couponCode?.trim() || null,
+      }),
     });
     return result.checkout_url;
   },

@@ -43,12 +43,20 @@ async def _admin(db):
     return {"Authorization": f"Bearer {create_access_token(str(admin.id), role='admin')}"}
 
 
+# Every accepted save moves the project's design revision forward by one (optimistic concurrency),
+# so the helper sends the revision the previous successful save produced.
+_revisions: dict[str, int] = {}
+
+
 async def _save(client, service_headers, project_id, config):
-    return await client.put(
+    response = await client.put(
         f"/api/v1/projects/{project_id}/design",
         headers=service_headers,
-        json={"design_config": config},
+        json={"design_config": config, "base_revision": _revisions.get(project_id, 0)},
     )
+    if response.status_code == 200:
+        _revisions[project_id] = _revisions.get(project_id, 0) + 1
+    return response
 
 
 async def _seed_export(db, project_id, user_id):
