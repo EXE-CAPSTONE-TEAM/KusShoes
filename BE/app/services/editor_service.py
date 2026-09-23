@@ -24,6 +24,10 @@ from app.schemas.editor import (
     EditorDesignResponse,
     EditorDesignSaveRequest,
     EditorExportPackageResponse,
+    EditorJobClaimRequest,
+    EditorJobClaimResponse,
+    EditorJobCompleteRequest,
+    EditorJobFailRequest,
     EditorJobResponse,
     EditorModelAssetResponse,
     EditorPermissionsResponse,
@@ -31,7 +35,7 @@ from app.schemas.editor import (
     EditorUserResponse,
 )
 from app.schemas.project import TriggerBakeRequest
-from app.services import guardrail_service, project_service, version_service
+from app.services import guardrail_service, job_service, project_service, version_service
 
 
 async def get_editor_user(db: AsyncSession, session: EditorSessionResponse):
@@ -397,9 +401,9 @@ def _design_response(project, asset, latest_job, exports: list) -> EditorDesignR
     )
     preview_status = "ready" if preview_export else "none"
     preview_error = None
-    if matching_job and latest_job.status == "processing":
+    if matching_job and latest_job.status == "claimed":
         preview_status = "processing"
-    elif matching_job and latest_job.status == "queued":
+    elif matching_job and latest_job.status == "awaiting_client":
         preview_status = "pending"
     elif matching_job and latest_job.status in {"failed", "cancelled"}:
         preview_status = "failed"
@@ -423,22 +427,56 @@ def _design_response(project, asset, latest_job, exports: list) -> EditorDesignR
     )
 
 
+# Coarse progress for UI polling; the desktop reports fine-grained progress locally.
+_JOB_PROGRESS = {"awaiting_client": 0, "claimed": 50}
+
+
 def _job_response(job) -> EditorJobResponse:
-    status = (
-        job.status if job.status in {"queued", "processing", "completed", "failed"} else "failed"
-    )
-    progress = {"queued": 0, "processing": 50}.get(status, 100)
     updated_at: datetime = job.completed_at or job.started_at or job.queued_at
     return EditorJobResponse(
         id=job.id,
-        status=status,
-        progress=progress,
+        type=job.kind,
+        status=job.status,
+        progress=_JOB_PROGRESS.get(job.status, 100),
         errorMessage=job.error_message,
         designId=job.project_id,
         projectId=job.project_id,
+        leaseExpiresAt=job.claim_expires_at if job.status == "claimed" else None,
         createdAt=job.queued_at,
         updatedAt=updated_at,
     )
+
+
+async def claim_job(
+    db: AsyncSession,
+    session: EditorSessionResponse,
+    job_id: uuid.UUID,
+    body: EditorJobClaimRequest,
+) -> EditorJobClaimResponse:
+    _require_scope(session, "editor:write")
+    project = await require_editor_project(db, session)
+    result = await job_service.claim(db, job_id, project=project, device_label=body.device_label)
+    return EditorJobClaimResponse(
+        job=_job_response(result.job),
+        claimId=result.job.claim_id,
+        claimToken=result.claim_token,
+        leaseExpiresAt=result.job.claim_expires_at,
+        payload=result.payload,
+    )
+
+
+async def complete_job(
+    db: AsyncSession, job_id: uuid.UUID, claim_token: str, body: EditorJobCompleteRequest
+) -> EditorJobResponse:
+    """Authenticated by the claim token alone — editor sessions expire before long bakes do."""
+    return _job_response(await job_service.complete(db, job_id, claim_token, body))
+
+
+async def fail_job(
+    db: AsyncSession, job_id: uuid.UUID, claim_token: str, body: EditorJobFailRequest
+) -> EditorJobResponse:
+    job = await job_service.fail(db, job_id, claim_token, code=body.code, message=body.message)
+    return _job_response(job)
 
 
 def _permissions(session: EditorSessionResponse) -> EditorPermissionsResponse:

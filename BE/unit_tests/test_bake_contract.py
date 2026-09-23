@@ -7,7 +7,7 @@ from app.services import bake_service
 
 
 def test_normalise_formats_filters_unsupported_and_deduplicates():
-    assert bake_service._normalise_formats(["GLB", "fbx", "glb", "obj"]) == [
+    assert bake_service.normalise_formats(["GLB", "fbx", "glb", "obj"]) == [
         "glb",
         "obj",
     ]
@@ -15,7 +15,7 @@ def test_normalise_formats_filters_unsupported_and_deduplicates():
 
 def test_normalise_formats_rejects_plan_without_supported_output():
     with pytest.raises(ValueError, match="không hỗ trợ"):
-        bake_service._normalise_formats(["fbx"])
+        bake_service.normalise_formats(["fbx"])
 
 
 def test_extract_referenced_asset_ids_deduplicates_camel_and_snake_case():
@@ -23,7 +23,7 @@ def test_extract_referenced_asset_ids_deduplicates_camel_and_snake_case():
     second = uuid.uuid4()
     text_render = uuid.uuid4()
 
-    assert bake_service._extract_referenced_asset_ids(
+    assert bake_service.extract_referenced_asset_ids(
         {
             "stickers": [
                 {"assetId": str(first)},
@@ -38,62 +38,8 @@ def test_extract_referenced_asset_ids_deduplicates_camel_and_snake_case():
     ) == [first, second, text_render]
 
 
-@pytest.mark.parametrize(
-    "exports",
-    [
-        [{"format": "glb", "file_path": "attacker/path.glb", "file_size_bytes": 10}],
-        [{"format": "glb", "file_path": "trusted.glb", "file_size_bytes": True}],
-        [
-            {"format": "glb", "file_path": "trusted.glb", "file_size_bytes": 10},
-            {"format": "glb", "file_path": "trusted.glb", "file_size_bytes": 10},
-        ],
-    ],
-)
-def test_validate_exports_rejects_ungranted_or_duplicate_results(exports):
-    expected = {
-        "glb": {
-            "format": "glb",
-            "file_path": "trusted.glb",
-            "content_type": "model/gltf-binary",
-        }
-    }
-
-    with pytest.raises(ValueError):
-        bake_service._validate_exports(exports, expected)
-
-
-def test_validate_exports_returns_only_trusted_fields():
-    expected = {
-        "glb": {
-            "format": "glb",
-            "file_path": "trusted.glb",
-            "content_type": "model/gltf-binary",
-        }
-    }
-
-    result = bake_service._validate_exports(
-        [
-            {
-                "format": "glb",
-                "file_path": "trusted.glb",
-                "file_size_bytes": 1234,
-                "untrusted": "discard me",
-            }
-        ],
-        expected,
-    )
-
-    assert result == [
-        {
-            "format": "glb",
-            "file_path": "trusted.glb",
-            "file_size_bytes": 1234,
-        }
-    ]
-
-
 @pytest.mark.asyncio
-async def test_build_worker_payload_issues_project_bound_capabilities(monkeypatch):
+async def test_build_bake_payload_issues_claim_scoped_capabilities(monkeypatch):
     project_id = uuid.uuid4()
     user_id = uuid.uuid4()
     job_id = uuid.uuid4()
@@ -107,6 +53,7 @@ async def test_build_worker_payload_issues_project_bound_capabilities(monkeypatc
     )
     job = SimpleNamespace(
         id=job_id,
+        source_asset_id=source_id,
         design_config_snapshot={"stickers": [{"assetId": str(decal_id)}]},
     )
     source = SimpleNamespace(
@@ -147,30 +94,47 @@ async def test_build_worker_payload_issues_project_bound_capabilities(monkeypatc
         ),
     )
 
-    payload, expected = await bake_service._build_worker_payload(
+    claim_id = uuid.uuid4()
+    payload, issued = await bake_service.build_bake_payload(
         object(),
         project=project,
         job=job,
         formats=["glb", "obj"],
+        claim_id=claim_id,
+        watermark={"required": True, "text": "KusShoes", "max_edge_px": 1080, "opacity_percent": 35},
     )
 
     assert payload["source_model"]["asset_id"] == str(source_id)
     assert payload["asset_downloads"][0]["asset_id"] == str(decal_id)
     assert payload["formats"] == ["glb", "obj"]
-    assert expected["glb"]["file_path"] == (f"exports/{project_id}/{job_id}/final_shoe.glb")
-    assert expected["obj"]["file_path"] == (f"exports/{project_id}/{job_id}/final_shoe.obj.zip")
+    # ADR-009: uploads land on per-claim staging keys, never on the final export keys.
+    staging = f"staging/{project_id}/{job_id}/{claim_id}"
+    assert [item["file_path"] for item in issued] == [
+        f"{staging}/final_shoe.glb",
+        f"{staging}/final_shoe.obj.zip",
+    ]
+    assert [item["file_path"] for item in payload["outputs"]] == [
+        item["file_path"] for item in issued
+    ]
     assert payload["outputs"][1]["content_type"] == "application/zip"
+    # Every capability expires with the claim lease.
+    lease = bake_service.settings.CLAIM_LEASE_SECONDS
+    assert all(f"ttl={lease}" in item["upload_url"] for item in payload["outputs"])
+    assert f"ttl={lease}" in payload["source_model"]["download_url"]
+    assert payload["watermark"] == {"required": True, "text": "KusShoes", "opacity_percent": 35}
 
 
 @pytest.mark.asyncio
-async def test_build_worker_payload_rejects_cross_project_source(monkeypatch):
+async def test_build_bake_payload_rejects_cross_project_source(monkeypatch):
     source_id = uuid.uuid4()
     project = SimpleNamespace(
         id=uuid.uuid4(),
         user_id=uuid.uuid4(),
         canonical_model_asset_id=source_id,
     )
-    job = SimpleNamespace(id=uuid.uuid4(), design_config_snapshot={"stickers": []})
+    job = SimpleNamespace(
+        id=uuid.uuid4(), source_asset_id=source_id, design_config_snapshot={"stickers": []}
+    )
     source = SimpleNamespace(
         id=source_id,
         project_id=uuid.uuid4(),
@@ -188,9 +152,11 @@ async def test_build_worker_payload_rejects_cross_project_source(monkeypatch):
     monkeypatch.setattr(bake_service.project_asset_repo, "get_by_id", get_asset)
 
     with pytest.raises(ValueError, match="canonical"):
-        await bake_service._build_worker_payload(
+        await bake_service.build_bake_payload(
             object(),
             project=project,
             job=job,
             formats=["glb"],
+            claim_id=uuid.uuid4(),
+            watermark={"required": False, "text": "KusShoes", "opacity_percent": 35},
         )

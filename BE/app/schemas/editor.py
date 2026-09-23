@@ -120,16 +120,53 @@ class EditorContextResponse(EditorSchema):
     permissions: EditorPermissionsResponse
 
 
+JobType = Literal["bake", "prepare"]
+JobStatus = Literal["awaiting_client", "claimed", "completed", "failed", "cancelled"]
+
+
 class EditorJobResponse(EditorSchema):
     id: uuid.UUID
-    type: Literal["bake"] = "bake"
-    status: Literal["queued", "processing", "completed", "failed"]
+    type: JobType = "bake"
+    status: JobStatus
     progress: int = Field(ge=0, le=100)
     error_message: str | None = Field(default=None, alias="errorMessage")
     design_id: uuid.UUID = Field(alias="designId")
     project_id: uuid.UUID = Field(alias="projectId")
+    lease_expires_at: datetime | None = Field(default=None, alias="leaseExpiresAt")
     created_at: datetime = Field(alias="createdAt")
     updated_at: datetime = Field(alias="updatedAt")
+
+
+class EditorJobClaimRequest(EditorSchema):
+    # Informational only (stored in bake_jobs.worker_id, String(100)).
+    device_label: str | None = Field(default=None, alias="deviceLabel", max_length=100)
+
+
+class EditorJobClaimResponse(EditorSchema):
+    job: EditorJobResponse
+    claim_id: uuid.UUID = Field(alias="claimId")
+    claim_token: str = Field(alias="claimToken")
+    lease_expires_at: datetime = Field(alias="leaseExpiresAt")
+    # Sidecar request body for /bake or /prepare (snake_case — the sidecar's own contract).
+    payload: dict[str, Any]
+
+
+class EditorJobOutput(EditorSchema):
+    format: str = Field(min_length=1, max_length=20)
+    file_path: str = Field(alias="filePath", min_length=1, max_length=512)
+    file_size_bytes: int = Field(alias="fileSizeBytes", gt=0)
+
+
+class EditorJobCompleteRequest(EditorSchema):
+    outputs: list[EditorJobOutput] = Field(min_length=1, max_length=10)
+    watermark_applied: bool = Field(default=False, alias="watermarkApplied")
+    cleanup_report: dict[str, Any] | None = Field(default=None, alias="cleanupReport")
+
+
+class EditorJobFailRequest(EditorSchema):
+    code: str = Field(min_length=1, max_length=64)
+    # UI display bound for bake_jobs.error_message (spec provenance table).
+    message: str = Field(min_length=1, max_length=500)
 
 
 class EditorExportPackageResponse(EditorSchema):

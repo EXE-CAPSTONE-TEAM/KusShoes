@@ -1,6 +1,6 @@
 import uuid
 
-from fastapi import APIRouter, Depends
+from fastapi import APIRouter, Depends, Header
 from fastapi.responses import StreamingResponse
 from sqlalchemy.ext.asyncio import AsyncSession
 
@@ -13,6 +13,10 @@ from app.schemas.editor import (
     EditorDesignResponse,
     EditorDesignSaveRequest,
     EditorExportPackageResponse,
+    EditorJobClaimRequest,
+    EditorJobClaimResponse,
+    EditorJobCompleteRequest,
+    EditorJobFailRequest,
     EditorJobResponse,
     EditorUserResponse,
 )
@@ -96,6 +100,38 @@ async def get_job(
     session: EditorSessionResponse = Depends(get_editor_session),
 ):
     return await editor_service.get_job(db, session, job_id)
+
+
+@router.post("/jobs/{job_id}/claim", response_model=EditorJobClaimResponse)
+async def claim_job(
+    job_id: uuid.UUID,
+    body: EditorJobClaimRequest | None = None,
+    db: AsyncSession = Depends(get_db),
+    session: EditorSessionResponse = Depends(get_editor_session),
+):
+    return await editor_service.claim_job(db, session, job_id, body or EditorJobClaimRequest())
+
+
+# complete/fail are authenticated by the claim token only (spec §A.4): editor access tokens
+# expire after EDITOR_ACCESS_TOKEN_EXPIRE_MINUTES and a desktop bake may run longer.
+@router.post("/jobs/{job_id}/complete", response_model=EditorJobResponse)
+async def complete_job(
+    job_id: uuid.UUID,
+    body: EditorJobCompleteRequest,
+    claim_token: str = Header(alias="X-Claim-Token", min_length=1, max_length=256),
+    db: AsyncSession = Depends(get_db),
+):
+    return await editor_service.complete_job(db, job_id, claim_token, body)
+
+
+@router.post("/jobs/{job_id}/fail", response_model=EditorJobResponse)
+async def fail_job(
+    job_id: uuid.UUID,
+    body: EditorJobFailRequest,
+    claim_token: str = Header(alias="X-Claim-Token", min_length=1, max_length=256),
+    db: AsyncSession = Depends(get_db),
+):
+    return await editor_service.fail_job(db, job_id, claim_token, body)
 
 
 @router.post(

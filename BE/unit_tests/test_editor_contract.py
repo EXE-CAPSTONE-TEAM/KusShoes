@@ -135,23 +135,40 @@ def test_non_glb_canonical_asset_is_not_marked_ready() -> None:
     assert "error" in response.quality_report
 
 
-def test_cancelled_job_maps_to_frontend_failed_terminal_state() -> None:
+def _job(status: str, **extra) -> SimpleNamespace:
     now = datetime.now(UTC)
-    project_id = uuid.uuid4()
-    job = SimpleNamespace(
-        id=uuid.uuid4(),
-        project_id=project_id,
-        status="cancelled",
-        error_message=None,
-        queued_at=now,
-        started_at=None,
-        completed_at=now,
-    )
+    fields = {
+        "id": uuid.uuid4(),
+        "project_id": uuid.uuid4(),
+        "kind": "bake",
+        "status": status,
+        "error_message": None,
+        "queued_at": now,
+        "started_at": None,
+        "completed_at": None,
+        "claim_expires_at": None,
+    }
+    fields.update(extra)
+    return SimpleNamespace(**fields)
 
-    response = _job_response(job)
 
-    assert response.status == "failed"
+def test_cancelled_job_is_reported_as_its_own_terminal_state() -> None:
+    now = datetime.now(UTC)
+    response = _job_response(_job("cancelled", completed_at=now))
+
+    assert response.status == "cancelled"
     assert response.progress == 100
+
+
+def test_job_response_exposes_lease_only_while_claimed() -> None:
+    lease = datetime.now(UTC)
+    claimed = _job_response(_job("claimed", kind="prepare", claim_expires_at=lease))
+    waiting = _job_response(_job("awaiting_client", claim_expires_at=lease))
+
+    assert claimed.type == "prepare"
+    assert claimed.lease_expires_at == lease
+    assert waiting.lease_expires_at is None
+    assert waiting.progress < claimed.progress < 100
 
 
 def test_design_revision_conflict_carries_current_state() -> None:

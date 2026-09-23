@@ -179,6 +179,29 @@ def delete_file(file_path: str) -> None:
     _get_client().delete_object(Bucket=settings.STORAGE_BUCKET, Key=file_path)
 
 
+def delete_files(file_paths: list[str]) -> None:
+    """Best-effort bulk delete; a missing key is not an error (S3 DeleteObject is idempotent)."""
+    client = _get_client()
+    for file_path in file_paths:
+        client.delete_object(Bucket=settings.STORAGE_BUCKET, Key=file_path)
+
+
+def copy_object(source_path: str, destination_path: str) -> None:
+    """Server-side copy inside the bucket — finalizes a verified client upload onto a key that
+    no presigned capability covers (ADR-009). Single-request CopyObject handles ≤5 GiB, above
+    the 2 GiB export ceiling."""
+    try:
+        _get_client().copy_object(
+            Bucket=settings.STORAGE_BUCKET,
+            Key=destination_path,
+            CopySource={"Bucket": settings.STORAGE_BUCKET, "Key": source_path},
+        )
+    except ClientError as exc:
+        if _is_not_found(exc):
+            raise ObjectNotFoundError(source_path) from exc
+        raise
+
+
 def upload_bytes(file_path: str, data: bytes, content_type: str) -> None:
     """Server-side write — for generated files (e.g. SF-11 data export zips),
     as opposed to the presigned client-upload flow above."""

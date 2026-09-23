@@ -424,15 +424,14 @@ async def test_requeue_failed_bake_job(client, db, authenticated_user):
     admin_headers = await _admin_headers(db)
     job = await _make_bake_job(db, authenticated_user.id, "failed")
 
-    with patch("app.infrastructure.task_queue.enqueue_bake") as mock_enqueue:
-        response = await client.post(
-            f"/api/v1/admin/bake-jobs/{job.id}/requeue", headers=admin_headers
-        )
+    response = await client.post(
+        f"/api/v1/admin/bake-jobs/{job.id}/requeue", headers=admin_headers
+    )
     assert response.status_code == 200
-    mock_enqueue.assert_called_once_with(str(job.id), "low")
 
     await db.refresh(job)
-    assert job.status == "queued"
+    # Requeue hands the job back to KusStudio Desktop (spec §B.4).
+    assert job.status == "awaiting_client"
     assert job.error_message is None
 
 
@@ -448,9 +447,9 @@ async def test_requeue_completed_job_rejected(client, db, authenticated_user):
 
 
 @pytest.mark.asyncio
-async def test_cancel_queued_job_and_worker_ignores_it(client, db, authenticated_user):
+async def test_cancel_awaiting_job_then_desktop_cannot_claim(client, db, authenticated_user):
     admin_headers = await _admin_headers(db)
-    job = await _make_bake_job(db, authenticated_user.id, "queued")
+    job = await _make_bake_job(db, authenticated_user.id, "awaiting_client")
 
     response = await client.post(
         f"/api/v1/admin/bake-jobs/{job.id}/cancel", headers=admin_headers
@@ -459,17 +458,19 @@ async def test_cancel_queued_job_and_worker_ignores_it(client, db, authenticated
     await db.refresh(job)
     assert job.status == "cancelled"
 
-    from app.services import bake_service
+    from app.exceptions import JobNotClaimable
+    from app.repositories import project_repo
+    from app.services import job_service
 
-    result = await bake_service.process_bake(db, job.id, worker_id=None)
-    assert result["status"] == "ignored"
-    assert result["reason"] == "status_cancelled"
+    project = await project_repo.get_by_id(db, job.project_id)
+    with pytest.raises(JobNotClaimable):
+        await job_service.claim(db, job.id, project=project, device_label=None)
 
 
 @pytest.mark.asyncio
-async def test_cancel_processing_job_rejected(client, db, authenticated_user):
+async def test_cancel_completed_job_rejected(client, db, authenticated_user):
     admin_headers = await _admin_headers(db)
-    job = await _make_bake_job(db, authenticated_user.id, "processing")
+    job = await _make_bake_job(db, authenticated_user.id, "completed")
 
     response = await client.post(
         f"/api/v1/admin/bake-jobs/{job.id}/cancel", headers=admin_headers

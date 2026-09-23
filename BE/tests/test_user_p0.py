@@ -52,14 +52,13 @@ async def test_user_can_cancel_and_retry_bake_job(client, db, auth_headers):
     bake_job_repo.mark_failed(failed, "worker failed")
     await db.commit()
 
-    with patch("app.infrastructure.task_queue.enqueue_bake") as enqueue:
-        retried = await client.post(
-            f"/api/v1/projects/{project_id}/bake/{failed.id}/retry",
-            headers=auth_headers,
-        )
+    retried = await client.post(
+        f"/api/v1/projects/{project_id}/bake/{failed.id}/retry",
+        headers=auth_headers,
+    )
     assert retried.status_code == 202
-    assert retried.json()["status"] == "queued"
-    enqueue.assert_called_once_with(str(failed.id), "normal")
+    # Retry hands the job back to KusStudio Desktop (spec §B.4) — nothing is enqueued server-side.
+    assert retried.json()["status"] == "awaiting_client"
 
     invalid_retry = await client.post(
         f"/api/v1/projects/{project_id}/bake/{failed.id}/retry",

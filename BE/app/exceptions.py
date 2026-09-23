@@ -842,3 +842,38 @@ def register_exception_handlers(app: FastAPI) -> None:
             status_code=500,
             content={"code": "INTERNAL_ERROR", "message": "Lỗi hệ thống, vui lòng thử lại sau"},
         )
+
+
+# --- Client-executed 3D jobs (spec §A, prd §3) ---
+
+
+class JobAlreadyClaimed(AppException):
+    def __init__(self):
+        super().__init__(409, "JOB_ALREADY_CLAIMED", "Job đang được xử lý trên một máy khác.")
+
+
+class JobNotClaimable(AppException):
+    def __init__(self):
+        super().__init__(409, "JOB_NOT_CLAIMABLE", "Job này đã kết thúc. Vui lòng chạy lại.")
+
+
+class JobClaimSuperseded(AppException):
+    def __init__(self):
+        super().__init__(409, "JOB_CLAIM_SUPERSEDED", "Job đã được chạy lại trên máy khác.")
+
+
+class JobClaimMismatch(AppException):
+    def __init__(self):
+        super().__init__(403, "JOB_CLAIM_MISMATCH", "Phiên xử lý không hợp lệ.")
+
+
+class JobOutputInvalid(AppException):
+    def __init__(self, reason: str):
+        super().__init__(
+            422, "JOB_OUTPUT_INVALID", f"Kết quả tải lên không hợp lệ: {reason}"
+        )
+
+
+class EditorModelChanged(AppException):
+    def __init__(self):
+        super().__init__(409, "EDITOR_MODEL_CHANGED", "Model đã thay đổi. Vui lòng chạy lại.")

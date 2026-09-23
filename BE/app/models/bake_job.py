@@ -24,9 +24,24 @@ class BakeJob(Base):
     project_id: Mapped[uuid.UUID] = mapped_column(
         UUID(as_uuid=True), ForeignKey("projects.id"), nullable=False
     )
-    design_config_snapshot: Mapped[JsonObject] = mapped_column(JSONB, nullable=False)
-    status: Mapped[str] = mapped_column(String(20), nullable=False, default="queued")
-    # queued | processing | completed | failed | cancelled
+    # bake | prepare — both run on KusStudio Desktop (spec §A, ADR-001/005)
+    kind: Mapped[str] = mapped_column(String(20), nullable=False, default="bake")
+    # NULL only for prepare jobs (CHECK ck_bake_jobs_design_snapshot)
+    design_config_snapshot: Mapped[JsonObject | None] = mapped_column(JSONB, nullable=True)
+    status: Mapped[str] = mapped_column(String(20), nullable=False, default="awaiting_client")
+    # awaiting_client | claimed | completed | failed | cancelled
+    source_asset_id: Mapped[uuid.UUID | None] = mapped_column(
+        UUID(as_uuid=True), ForeignKey("project_assets.id", ondelete="SET NULL"), nullable=True
+    )
+    claim_id: Mapped[uuid.UUID | None] = mapped_column(UUID(as_uuid=True), nullable=True)
+    # SHA-256 hex of the claim token; the token itself is never stored.
+    claim_token_hash: Mapped[str | None] = mapped_column(String(64), nullable=True)
+    claim_expires_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True), nullable=True)
+    # Staging keys issued with the current claim: [{format, file_path, content_type}]
+    issued_outputs: Mapped[list | None] = mapped_column(JSONB, nullable=True)
+    crop_box: Mapped[JsonObject | None] = mapped_column(JSONB, nullable=True)
+    # Stored complete() response — replayed verbatim on an idempotent retry.
+    result: Mapped[JsonObject | None] = mapped_column(JSONB, nullable=True)
     priority: Mapped[str] = mapped_column(String(20), nullable=False, default="low")
     # low | normal | high
 

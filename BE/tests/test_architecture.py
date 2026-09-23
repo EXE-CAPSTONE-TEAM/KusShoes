@@ -81,3 +81,16 @@ def test_services_do_not_execute_sqlalchemy_sessions_directly() -> None:
                 relative = path.relative_to(APP_ROOT.parent)
                 violations.append(f"{relative}:{node.lineno} calls db.{node.func.attr}()")
     assert not violations, "SQL belongs in repositories:\n" + "\n".join(violations)
+
+
+def test_no_server_side_bake_path_remains() -> None:
+    """3D work runs on KusStudio Desktop (spec §B.7, AC-11): nothing may dispatch a bake to a
+    server-side worker again."""
+    forbidden = ("bake_shoe", "enqueue_bake", "editor_worker", "EDITOR_WORKER_", "process_bake")
+    violations: list[str] = []
+    for path in APP_ROOT.rglob("*.py"):
+        source = path.read_text(encoding="utf-8")
+        for name in forbidden:
+            if name in source:
+                violations.append(f"{path.relative_to(APP_ROOT.parent)} mentions {name}")
+    assert not violations, "Server-side bake path resurfaced:\n" + "\n".join(violations)

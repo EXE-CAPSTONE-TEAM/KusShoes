@@ -44,10 +44,11 @@ class Settings(BaseSettings):
     PASSWORD_RESET_RATE_LIMIT: int = 3
     PASSWORD_RESET_RATE_WINDOW_SECONDS: int = 3600
 
-    # Editor/3D worker integration
-    EDITOR_WORKER_URL: str = ""
-    EDITOR_WORKER_SERVICE_TOKEN: str = ""
-    EDITOR_WORKER_TIMEOUT_SECONDS: int = 300
+    # Client-executed 3D jobs (bake/prepare run on KusStudio Desktop — spec §A, ADR-001).
+    # A claim's lease and the TTL of the presigned capabilities it grants. 3600 s is the
+    # upper clamp the former worker payload already used for capability TTL; a lease must
+    # never outlive the capabilities it hands out.
+    CLAIM_LEASE_SECONDS: int = 3600
     MOBILE_COMPUTE_URL: str = ""
     MOBILE_COMPUTE_SERVICE_TOKEN: str = ""
     MOBILE_GRANT_TTL_SECONDS: int = 60

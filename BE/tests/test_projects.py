@@ -1,6 +1,10 @@
+import uuid
 from unittest.mock import patch
 
 import pytest
+
+from app.repositories import bake_job_repo
+from tests.job_helpers import attach_ready_model
 
 
 async def _create_project(client, headers, name="My Shoe"):
@@ -97,19 +101,33 @@ async def test_save_design_and_trigger_bake(client, db, service_headers, auth_he
     )
     assert saved.status_code == 200
 
-    with patch("app.infrastructure.task_queue.enqueue_bake"):
-        first = await client.post(
-            f"/api/v1/projects/{project_id}/bake",
-            headers=service_headers,
-            json={"design_config": {"color": "red"}},
-        )
-        second = await client.post(
-            f"/api/v1/projects/{project_id}/bake",
-            headers=service_headers,
-            json={"design_config": {"color": "red"}},
-        )
+    no_model = await client.post(
+        f"/api/v1/projects/{project_id}/bake",
+        headers=service_headers,
+        json={"design_config": {"color": "red"}},
+    )
+    # spec §B.4: the service-token route cannot bake a project without a ready model either.
+    assert no_model.status_code == 409
+    assert no_model.json()["code"] == "EDITOR_MODEL_NOT_READY"
+
+    await attach_ready_model(db, project_id, authenticated_user.id)
+    first = await client.post(
+        f"/api/v1/projects/{project_id}/bake",
+        headers=service_headers,
+        json={"design_config": {"color": "red"}},
+    )
+    second = await client.post(
+        f"/api/v1/projects/{project_id}/bake",
+        headers=service_headers,
+        json={"design_config": {"color": "red"}},
+    )
     assert first.status_code == 202
-    assert second.status_code == 409
+    assert first.json()["status"] == "awaiting_client"
+    # spec §A.1: an unclaimed job is superseded by a newer request.
+    assert second.status_code == 202
+    superseded = await bake_job_repo.get_by_id(db, uuid.UUID(first.json()["job_id"]))
+    await db.refresh(superseded)
+    assert superseded.status == "cancelled"
 
 
 @pytest.mark.asyncio
