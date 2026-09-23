@@ -184,12 +184,14 @@ async def set_status(db: AsyncSession, project: Project, status: str) -> None:
 async def reset_status_for_projects(
     db: AsyncSession, project_ids: Iterable[uuid.UUID], status: str = "in_progress"
 ) -> None:
+    """Release projects left in `baking` by a swept job; any other status is newer state
+    written after the claim (e.g. a completed re-bake) and must not be overwritten."""
     ids = list(project_ids)
     if not ids:
         return
     await db.execute(
         update(Project)
-        .where(Project.id.in_(ids), Project.status != status)
+        .where(Project.id.in_(ids), Project.status == "baking")
         .values(status=status)
     )
     await db.flush()

@@ -353,3 +353,26 @@ async def test_celery_task_cleans_both_stale_uploads_and_expired_claims(
     await db.refresh(project)
     assert project.status == "in_progress"
     assert await db.get(ProjectAsset, stale_asset.id) is None
+
+
+@pytest.mark.asyncio
+async def test_sweep_does_not_overwrite_a_project_that_moved_on(db, authenticated_user, monkeypatch):
+    """Only projects still `baking` are released; newer project state is left alone."""
+    FakeStorage().install(monkeypatch)
+    lease = timedelta(seconds=settings.CLAIM_LEASE_SECONDS)
+    project = await _create_project(db, authenticated_user.id, name="MovedOn", status="completed")
+    job = await _create_job(
+        db,
+        project.id,
+        status="claimed",
+        claim_expires_at=datetime.now(UTC) - lease - timedelta(seconds=60),
+        issued_outputs=[],
+    )
+    await db.commit()
+
+    await maintenance_service.sweep_expired_claims(db)
+
+    await db.refresh(job)
+    await db.refresh(project)
+    assert job.status == "failed"
+    assert project.status == "completed"
