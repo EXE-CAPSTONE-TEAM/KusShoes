@@ -38,7 +38,8 @@ class EditorModelAssetResponse(EditorSchema):
     id: uuid.UUID
     scan_session_id: uuid.UUID = Field(alias="scanSessionId")
     project_id: uuid.UUID = Field(alias="projectId")
-    status: Literal["uploaded", "processing", "ready", "failed"]
+    # raw = scan output awaiting desktop crop/cleanup (spec §B.2)
+    status: Literal["uploaded", "processing", "ready", "raw", "failed"]
     source_type: Literal["scan", "uploaded_glb", "uploaded_obj", "template"] = Field(
         alias="sourceType"
     )
@@ -167,6 +168,15 @@ class EditorJobFailRequest(EditorSchema):
     code: str = Field(min_length=1, max_length=64)
     # UI display bound for bake_jobs.error_message (spec provenance table).
     message: str = Field(min_length=1, max_length=500)
+
+
+class EditorContentUrlResponse(EditorSchema):
+    """Presigned R2 URL for a file; the client downloads it directly (spec §B, ADR-004)."""
+
+    url: str
+    expires_in: int = Field(alias="expiresIn")
+    filename: str
+    content_type: str = Field(alias="contentType")
 
 
 class EditorExportPackageResponse(EditorSchema):

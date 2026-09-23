@@ -1,7 +1,6 @@
 import uuid
 
 from fastapi import APIRouter, Depends, Header
-from fastapi.responses import StreamingResponse
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.database import get_db
@@ -9,6 +8,7 @@ from app.dependencies import get_editor_session
 from app.exceptions import AppException
 from app.schemas.auth import EditorSessionResponse
 from app.schemas.editor import (
+    EditorContentUrlResponse,
     EditorContextResponse,
     EditorDesignResponse,
     EditorDesignSaveRequest,
@@ -181,29 +181,19 @@ async def confirm_asset_upload(
     return await asset_service.confirm_upload(db, user, session.project_id, body)
 
 
-@router.get("/assets/{asset_id}/content")
+@router.get("/assets/{asset_id}/content", response_model=EditorContentUrlResponse)
 async def get_asset_content(
     asset_id: uuid.UUID,
     db: AsyncSession = Depends(get_db),
     session: EditorSessionResponse = Depends(get_editor_session),
 ):
-    download = await editor_service.open_asset_content(db, session, asset_id)
-    return StreamingResponse(
-        download.chunks,
-        media_type=download.media_type,
-        headers=download.headers,
-    )
+    return await editor_service.get_asset_content_url(db, session, asset_id)
 
 
-@router.get("/exports/{export_id}/content")
+@router.get("/exports/{export_id}/content", response_model=EditorContentUrlResponse)
 async def get_export_content(
     export_id: uuid.UUID,
     db: AsyncSession = Depends(get_db),
     session: EditorSessionResponse = Depends(get_editor_session),
 ):
-    download = await editor_service.open_export_content(db, session, export_id)
-    return StreamingResponse(
-        download.chunks,
-        media_type=download.media_type,
-        headers=download.headers,
-    )
+    return await editor_service.get_export_content_url(db, session, export_id)

@@ -59,13 +59,14 @@ def generate_presigned_upload_url(file_path: str, content_type: str, ttl: int = 
     )
 
 
-def generate_presigned_download_url(file_path: str, ttl: int = 3600) -> str:
+def generate_presigned_download_url(
+    file_path: str, ttl: int = 3600, *, content_disposition: str | None = None
+) -> str:
+    params: dict[str, str] = {"Bucket": settings.STORAGE_BUCKET, "Key": file_path}
+    if content_disposition:
+        params["ResponseContentDisposition"] = content_disposition
     client = _get_client()
-    return client.generate_presigned_url(
-        "get_object",
-        Params={"Bucket": settings.STORAGE_BUCKET, "Key": file_path},
-        ExpiresIn=ttl,
-    )
+    return client.generate_presigned_url("get_object", Params=params, ExpiresIn=ttl)
 
 
 def open_download_stream(file_path: str):
