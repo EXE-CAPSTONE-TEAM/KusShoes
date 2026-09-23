@@ -1,6 +1,8 @@
 import asyncio
 import uuid
 
+from sqlalchemy.ext.asyncio import AsyncSession
+
 from app.database import AsyncSessionLocal
 from app.services import maintenance_service
 from app.workers.celery_app import celery_app
@@ -97,10 +99,15 @@ async def _purge_old_login_history() -> dict:
         return await maintenance_service.purge_old_login_history(db)
 
 
-async def _cleanup_stale_uploads() -> dict:
-    async with AsyncSessionLocal() as db:
-        paths = await maintenance_service.remove_stale_upload_records(db)
-    return maintenance_service.delete_paths(paths)
+async def _cleanup_stale_uploads(db: AsyncSession | None = None) -> dict:
+    if db is not None:
+        upload_paths = await maintenance_service.remove_stale_upload_records(db)
+        staging_paths = await maintenance_service.sweep_expired_claims(db)
+        return maintenance_service.delete_paths(upload_paths + staging_paths)
+    async with AsyncSessionLocal() as session:
+        upload_paths = await maintenance_service.remove_stale_upload_records(session)
+        staging_paths = await maintenance_service.sweep_expired_claims(session)
+    return maintenance_service.delete_paths(upload_paths + staging_paths)
 
 
 async def _purge_expired_trash() -> dict:

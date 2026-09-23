@@ -1,4 +1,5 @@
 import uuid
+from collections.abc import Iterable
 from datetime import UTC, datetime
 
 from sqlalchemy import and_, func, or_, select, update
@@ -177,6 +178,20 @@ async def save_design(
 
 async def set_status(db: AsyncSession, project: Project, status: str) -> None:
     project.status = status
+    await db.flush()
+
+
+async def reset_status_for_projects(
+    db: AsyncSession, project_ids: Iterable[uuid.UUID], status: str = "in_progress"
+) -> None:
+    ids = list(project_ids)
+    if not ids:
+        return
+    await db.execute(
+        update(Project)
+        .where(Project.id.in_(ids), Project.status != status)
+        .values(status=status)
+    )
     await db.flush()
 
 

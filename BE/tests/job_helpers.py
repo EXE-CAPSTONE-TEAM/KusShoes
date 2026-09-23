@@ -56,6 +56,7 @@ class FakeStorage:
         monkeypatch.setattr(storage, "read_object_prefix", self.read_object_prefix)
         monkeypatch.setattr(storage, "copy_object", self.copy_object)
         monkeypatch.setattr(storage, "delete_files", self.delete_files)
+        monkeypatch.setattr(storage, "delete_file", self.delete_file)
         monkeypatch.setattr(
             storage, "generate_presigned_upload_url", lambda path, *_a, **_k: f"https://r2/put/{path}"
         )
@@ -79,6 +80,10 @@ class FakeStorage:
             raise storage.ObjectNotFoundError(source)
         self.objects[destination] = self.objects[source]
         self.copies.append((source, destination))
+
+    def delete_file(self, file_path: str) -> None:
+        self.objects.pop(file_path, None)
+        self.deleted.append(file_path)
 
     def delete_files(self, file_paths: list[str]) -> None:
         for path in file_paths:

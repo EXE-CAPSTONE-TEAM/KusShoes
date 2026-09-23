@@ -1,5 +1,6 @@
 import uuid
 from datetime import UTC, datetime, timedelta
+from typing import Any
 
 from sqlalchemy import and_, delete, or_, select, update
 from sqlalchemy.ext.asyncio import AsyncSession
@@ -215,3 +216,31 @@ async def get_recent_active_for_project(
         .limit(1)
     )
     return result.scalar_one_or_none()
+
+
+async def sweep_expired_claims(
+    db: AsyncSession, *, before: datetime
+) -> list[tuple[uuid.UUID, uuid.UUID, Any]]:
+    """Transition abandoned claimed jobs to failed (spec §A.9).
+
+    Uses a single conditional UPDATE ... RETURNING to ensure atomic transition:
+    only rows whose lease expired before `before` are updated. Returns
+    [(job_id, project_id, issued_outputs), ...] for the caller to delete staging
+    keys and reset project statuses.
+    """
+    now = datetime.now(UTC)
+    result = await db.execute(
+        update(BakeJob)
+        .where(
+            BakeJob.status == "claimed",
+            BakeJob.claim_expires_at < before,
+        )
+        .values(
+            status="failed",
+            completed_at=now,
+            error_message="claim lease expired",
+        )
+        .returning(BakeJob.id, BakeJob.project_id, BakeJob.issued_outputs)
+        .execution_options(synchronize_session=False)
+    )
+    return list(result.all())
