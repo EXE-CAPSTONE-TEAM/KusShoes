@@ -1,6 +1,8 @@
 from fastapi import FastAPI, Request
 from fastapi.responses import JSONResponse
 
+from app.config import settings
+
 
 class AppException(Exception):
     def __init__(
@@ -16,6 +18,22 @@ class AppException(Exception):
         self.message = message
         self.extra = extra or {}
         self.headers = headers or {}
+
+
+def _vnd(amount: int) -> str:
+    """Format VND the way the SRS copy writes it: 49000 -> "49.000đ"."""
+    return f"{amount:,}".replace(",", ".") + "đ"
+
+
+def _reset_day(resets_at: str | None) -> str:
+    """MSG28's {ngày reset}: the business date (GMT+7, CR-01) the scan quota renews."""
+    if not resets_at:
+        return "ngày reset"
+    from datetime import datetime
+
+    from app.services.period_service import GMT7  # lazy: period_service imports this module
+
+    return datetime.fromisoformat(resets_at).astimezone(GMT7).strftime("%d/%m/%Y")
 
 
 # --- Auth ---
@@ -374,6 +392,17 @@ class SubGracePeriodExportBlocked(AppException):
         )
 
 
+class SubGracePeriodScanBlocked(AppException):
+    # BR-90 (SRS_v2.2.txt:1582): GRACE keeps view/edit/save but "không quét". The SRS has no
+    # MSG code for this refusal, so the copy mirrors SubGracePeriodExportBlocked.
+    def __init__(self):
+        super().__init__(
+            403,
+            "SUB_GRACE_SCAN_BLOCKED",
+            "Gói đã hết hạn, đang trong thời gian ân hạn — không thể quét. Vui lòng gia hạn.",
+        )
+
+
 # --- Subscription ---
 class QuotaExportExceeded(AppException):
     def __init__(self):
@@ -688,6 +717,113 @@ class MobileScanPublishConflict(AppException):
             409,
             "MOBILE_SCAN_PUBLISH_CONFLICT",
             "Một tiến trình publish khác đang xử lý project này",
+        )
+
+
+# --- BR-94 / BR-23: scan Credit (Track A) ---
+class CreditRequiresPaidPlan(AppException):
+    def __init__(self):
+        super().__init__(
+            403,
+            "CREDIT_REQUIRES_PAID_PLAN",
+            "Chỉ mua được Credit khi đang có gói Basic/Pro còn hiệu lực",
+        )
+
+
+class CreditCycleLimitExceeded(AppException):
+    def __init__(self, purchased: int, limit: int):
+        super().__init__(
+            409,
+            "CREDIT_CYCLE_LIMIT",
+            f"Mỗi chu kỳ mua tối đa {limit} Credit quét.",  # MSG51 (SRS_v2.2.txt:2494)
+            {"purchased": purchased, "limit": limit},
+        )
+
+
+class ScanQuotaExhausted(AppException):
+    def __init__(self, resets_at: str | None = None):
+        super().__init__(
+            409,
+            "SCAN_QUOTA_EXHAUSTED",
+            "Bạn đã dùng hết lượt quét của chu kỳ. "
+            f"Mua Credit ({_vnd(settings.CREDIT_PRICE_VND)}/lượt) "
+            f"hoặc chờ đến {_reset_day(resets_at)}.",  # MSG28 (SRS_v2.2.txt:2356)
+            {"resets_at": resets_at},
+        )
+
+
+# --- BR-20: data import (Track B) ---
+class DataImportInvalid(AppException):
+    def __init__(self, reason: str, extra: dict | None = None):
+        super().__init__(
+            400,
+            "DATA_IMPORT_INVALID",
+            "Tệp sao lưu không hợp lệ hoặc vượt hạn mức dự án của gói hiện tại.",  # MSG08 (:2236)
+            {"reason": reason, **(extra or {})},
+        )
+
+
+class DataImportNotFound(AppException):
+    def __init__(self):
+        super().__init__(404, "DATA_IMPORT_NOT_FOUND", "Không tìm thấy phiên nhập dữ liệu")
+
+
+# --- BR-65: watermark (Track B) ---
+class RenderImageUnavailable(AppException):
+    def __init__(self):
+        super().__init__(
+            409, "RENDER_IMAGE_UNAVAILABLE", "Dự án chưa có ảnh render để tải về"
+        )
+
+
+# --- BR-77 / UC-24: moderation (Track C) ---
+class ContentReportNotFound(AppException):
+    def __init__(self):
+        super().__init__(404, "CONTENT_REPORT_NOT_FOUND", "Không tìm thấy báo cáo vi phạm")
+
+
+class ContentReportAlreadyResolved(AppException):
+    def __init__(self):
+        super().__init__(409, "CONTENT_REPORT_RESOLVED", "Báo cáo này đã được xử lý")
+
+
+class ContentReportTargetInvalid(AppException):
+    def __init__(self):
+        super().__init__(
+            400,
+            "CONTENT_REPORT_TARGET_INVALID",
+            "Phải chỉ đúng một đối tượng bị báo cáo (dự án hoặc template) và đối tượng phải tồn tại",
+        )
+
+
+class ModerationTargetProtected(AppException):
+    def __init__(self):
+        super().__init__(
+            403,
+            "MODERATION_TARGET_PROTECTED",
+            "Không áp dụng xử lý vi phạm cho tài khoản quản trị",
+        )
+
+
+class PublicSharingRestricted(AppException):
+    def __init__(self, restricted_until: str):
+        super().__init__(
+            403,
+            "PUBLIC_SHARING_RESTRICTED",
+            "Tài khoản đang bị hạn chế chia sẻ công khai do vi phạm nội dung",
+            {"restricted_until": restricted_until},
+        )
+
+
+# --- SF-14 / BR-79: API cost (Track C) ---
+class ScanIntakeSuspended(AppException):
+    def __init__(self, reason: str):
+        super().__init__(
+            503,
+            "SCAN_INTAKE_SUSPENDED",
+            "Hệ thống tạm ngưng nhận yêu cầu quét mới. "
+            "Lượt quét của bạn được giữ nguyên; bạn vẫn có thể thiết kế trên phôi chuẩn.",  # MSG43
+            {"reason": reason},
         )
 
 

@@ -10,9 +10,12 @@ from fpdf import FPDF
 from loguru import logger
 from sqlalchemy.ext.asyncio import AsyncSession
 
+from app.config import settings
 from app.exceptions import ReceiptUnavailable
 from app.infrastructure import storage
+from app.models.scan_credit import CREDIT_INVOICE_TIER
 from app.repositories import consent_repo, invoice_repo
+from app.services import tax_service
 from app.services.period_service import GMT7
 from app.utils.text import ascii_slug, format_vnd, mask_email, short_name
 
@@ -26,6 +29,18 @@ _METHOD_LABELS = {
 }
 _TIER_LABELS = {"basic": "Basic", "pro": "Pro"}
 _CYCLE_LABELS = {"monthly": "Tháng", "yearly": "Năm"}
+_PAID_AT_FORMAT = "%d/%m/%Y %H:%M"
+
+
+def _item_label(invoice) -> str:
+    """BR-31 (SRS_v2.2.txt:1666) "loại hàng hoá (gói/Credit + chu kỳ)". A Credit has no plan
+    cycle (plan table SRS_v2.2.txt:898), so its line is the Credit count only."""
+    if invoice.plan_tier == CREDIT_INVOICE_TIER:
+        return f"Credit quét × {invoice.listed_price_vnd // settings.CREDIT_PRICE_VND}"
+    return (
+        f"Gói {_TIER_LABELS.get(invoice.plan_tier, invoice.plan_tier)}"
+        f" — {_CYCLE_LABELS.get(invoice.billing_cycle, invoice.billing_cycle)}"
+    )
 
 
 async def _next_receipt_number(db: AsyncSession) -> str:
@@ -41,13 +56,10 @@ async def _build_snapshot(db: AsyncSession, invoice, user, receipt_number: str) 
     return {
         "receipt_number": receipt_number,
         "order_code": invoice.order_code,
-        "paid_at": paid_at.strftime("%d/%m/%Y %H:%M (GMT+7)"),
+        "paid_at": paid_at.strftime(f"{_PAID_AT_FORMAT} (GMT+7)"),
         "customer": display_name,
         "email": mask_email(user.email),
-        "item": (
-            f"Gói {_TIER_LABELS.get(invoice.plan_tier, invoice.plan_tier)}"
-            f" — {_CYCLE_LABELS.get(invoice.billing_cycle, invoice.billing_cycle)}"
-        ),
+        "item": _item_label(invoice),
         "listed_price": invoice.listed_price_vnd,
         "discount": invoice.discount_vnd,
         "amount": invoice.amount_vnd,
@@ -56,11 +68,51 @@ async def _build_snapshot(db: AsyncSession, invoice, user, receipt_number: str) 
         "reference": invoice.payment_reference or "—",
         "file_slug": ascii_slug(display_name),
         "date_code": paid_at.strftime("%d%m%y"),
+        # BR-28 (SRS_v2.2.txt:1643): VAT frozen at issue time, extracted from the amount.
+        **tax_service.snapshot_fields(invoice.amount_vnd),
     }
+
+
+def _issued_at(snapshot: dict) -> datetime | None:
+    """The receipt's own payment time, used as the PDF creation date so re-rendering an
+    issued receipt always yields the same bytes (BR-31 immutability)."""
+    try:
+        return datetime.strptime(
+            snapshot["paid_at"][: len("dd/mm/YYYY HH:MM")], _PAID_AT_FORMAT
+        ).replace(tzinfo=GMT7)
+    except (KeyError, TypeError, ValueError):
+        return None
+
+
+def receipt_rows(snapshot: dict) -> list[tuple[str, str]]:
+    rows = [
+        ("Mã đơn", str(snapshot["order_code"])),
+        ("Ngày giờ thanh toán", snapshot["paid_at"]),
+        ("Khách hàng", snapshot["customer"]),
+        ("Email", snapshot["email"]),
+        ("Loại hàng hoá", snapshot["item"]),
+        ("Giá niêm yết", format_vnd(snapshot["listed_price"])),
+        ("Giảm giá", format_vnd(snapshot["discount"])),
+        ("Số thực trả", format_vnd(snapshot["amount"])),
+    ]
+    if snapshot.get("vat_enabled"):
+        # BR-28: shown only when the toggle was on at issue time; a part of the amount paid.
+        rows.append(
+            (f"Trong đó VAT ({snapshot['vat_rate_percent']}%)", format_vnd(snapshot["vat_vnd"]))
+        )
+    rows += [
+        ("Tình trạng", snapshot["status"]),
+        ("Hình thức thanh toán", snapshot["method"]),
+        ("Mã tham chiếu cổng", snapshot["reference"]),
+    ]
+    return rows
 
 
 def render_pdf(snapshot: dict) -> bytes:
     pdf = FPDF(format=(148, 210))
+    issued_at = _issued_at(snapshot)
+    if issued_at is not None:
+        pdf.set_creation_date(issued_at)
     pdf.add_page()
     pdf.add_font("Roboto", "", str(FONT_DIR / "Roboto-Regular.ttf"))
     pdf.add_font("Roboto", "B", str(FONT_DIR / "Roboto-Bold.ttf"))
@@ -73,20 +125,7 @@ def render_pdf(snapshot: dict) -> bytes:
     pdf.cell(0, 6, f"Số: {snapshot['receipt_number']}", new_x="LMARGIN", new_y="NEXT")
     pdf.ln(3)
 
-    rows = [
-        ("Mã đơn", str(snapshot["order_code"])),
-        ("Ngày giờ thanh toán", snapshot["paid_at"]),
-        ("Khách hàng", snapshot["customer"]),
-        ("Email", snapshot["email"]),
-        ("Loại hàng hoá", snapshot["item"]),
-        ("Giá niêm yết", format_vnd(snapshot["listed_price"])),
-        ("Giảm giá", format_vnd(snapshot["discount"])),
-        ("Số thực trả", format_vnd(snapshot["amount"])),
-        ("Tình trạng", snapshot["status"]),
-        ("Hình thức thanh toán", snapshot["method"]),
-        ("Mã tham chiếu cổng", snapshot["reference"]),
-    ]
-    for label, value in rows:
+    for label, value in receipt_rows(snapshot):
         pdf.set_font("Roboto", "", 10)
         pdf.cell(50, 7, label)
         pdf.set_font("Roboto", "B" if label == "Số thực trả" else "", 10)

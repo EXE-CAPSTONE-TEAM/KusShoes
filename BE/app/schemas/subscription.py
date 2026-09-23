@@ -4,6 +4,8 @@ from typing import Literal
 
 from pydantic import BaseModel, Field
 
+from app.schemas.credit import VatBreakdown
+
 
 class PlanResponse(BaseModel):
     id: uuid.UUID
@@ -21,13 +23,19 @@ class PlanResponse(BaseModel):
     allow_draw_artwork: bool
 
 
-class SubscriptionResponse(BaseModel):
+class SubscriptionBase(BaseModel):
     id: uuid.UUID
     tier: str
     status: str
     started_at: datetime
     expires_at: datetime | None
     cancel_at_period_end: bool
+
+
+class SubscriptionResponse(SubscriptionBase):
+    # BR-23 (SRS_v2.2.txt:1561): plan scans left this cycle, then spendable Credits.
+    scans_remaining_plan: int
+    scans_remaining_credit: int
 
 
 class CheckoutRequest(BaseModel):
@@ -58,9 +66,10 @@ class InvoiceResponse(BaseModel):
     receipt_number: str | None = None
     paid_at: datetime | None
     created_at: datetime
+    vat: VatBreakdown  # BR-28 (SRS_v2.2.txt:1643)
 
 
-class AdminSubscriptionResponse(SubscriptionResponse):
+class AdminSubscriptionResponse(SubscriptionBase):
     user_id: uuid.UUID
     user_email: str | None
 
@@ -99,6 +108,7 @@ class CouponPreviewResponse(BaseModel):
     listed_price_vnd: int
     discount_vnd: int
     amount_vnd: int
+    vat: VatBreakdown  # BR-28 on the final payable amount
 
 
 class InvoiceListQuery(BaseModel):

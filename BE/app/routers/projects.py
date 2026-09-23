@@ -1,10 +1,11 @@
 import uuid
 
-from fastapi import APIRouter, Depends, Query
+from fastapi import APIRouter, Depends, Query, Response
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.database import get_db
 from app.dependencies import get_current_user, verify_service_token
+from app.schemas.data_transfer import WatermarkPolicyResponse
 from app.schemas.project import (
     BakeJobResponse,
     BakeJobStatusResponse,
@@ -19,7 +20,7 @@ from app.schemas.project import (
     UpdateProjectRequest,
 )
 from app.schemas.user import MessageResponse
-from app.services import project_service
+from app.services import project_service, watermark_service
 
 router = APIRouter()
 
@@ -160,3 +161,29 @@ async def list_exports(
     user=Depends(get_current_user),
 ):
     return await project_service.list_exports(db, user, project_id)
+
+
+# --- BR-65 / BR-67 Free-tier watermark (SRS_v2.2.txt:1910, :1922) ---
+
+
+@router.get(
+    "/{project_id}/preview-image",
+    response_class=Response,
+    responses={200: {"content": {"image/png": {}}}},
+)
+async def get_preview_image(
+    project_id: uuid.UUID,
+    db: AsyncSession = Depends(get_db),
+    user=Depends(get_current_user),
+):
+    body, media_type = await watermark_service.render_preview(db, user, project_id)
+    return Response(content=body, media_type=media_type)
+
+
+@router.get("/{project_id}/watermark-policy", response_model=WatermarkPolicyResponse)
+async def get_watermark_policy(
+    project_id: uuid.UUID,
+    db: AsyncSession = Depends(get_db),
+    user=Depends(get_current_user),
+):
+    return await watermark_service.get_project_policy(db, user, project_id)

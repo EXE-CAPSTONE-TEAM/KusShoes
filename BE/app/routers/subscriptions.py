@@ -1,11 +1,16 @@
 import uuid
 from datetime import datetime
 
-from fastapi import APIRouter, Depends
+from fastapi import APIRouter, Depends, Query
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.database import get_db
 from app.dependencies import forbid_impersonation, get_current_user
+from app.schemas.credit import (
+    CreditBalanceResponse,
+    CreditCheckoutRequest,
+    CreditLedgerResponse,
+)
 from app.schemas.subscription import (
     CancelSubscriptionRequest,
     CheckoutRequest,
@@ -17,7 +22,7 @@ from app.schemas.subscription import (
     ReceiptResponse,
     SubscriptionResponse,
 )
-from app.services import billing_service
+from app.services import billing_service, credit_service
 
 router = APIRouter()
 
@@ -32,7 +37,7 @@ async def get_subscription(
     db: AsyncSession = Depends(get_db),
     user=Depends(get_current_user),
 ):
-    return await billing_service.get_current_subscription(db, user)
+    return await billing_service.get_subscription_view(db, user)
 
 
 @router.get("/subscription/invoices", response_model=list[InvoiceResponse])
@@ -42,7 +47,7 @@ async def list_invoices(
     db: AsyncSession = Depends(get_db),
     user=Depends(get_current_user),
 ):
-    return await billing_service.list_invoices(db, user, limit=limit, before=before)
+    return await billing_service.list_invoice_views(db, user, limit=limit, before=before)
 
 
 @router.post("/subscription/checkout", response_model=CheckoutResponse, dependencies=[Depends(forbid_impersonation)])
@@ -79,7 +84,7 @@ async def get_invoice(
     user=Depends(get_current_user),
 ):
     """MSG29: the checkout-success page polls this until status leaves 'pending'."""
-    return await billing_service.get_user_invoice(db, user, invoice_id)
+    return await billing_service.get_user_invoice_view(db, user, invoice_id)
 
 
 @router.get("/subscription/invoices/{invoice_id}/receipt", response_model=ReceiptResponse)
@@ -102,3 +107,43 @@ async def preview_coupon(
     return await billing_service.preview_coupon(
         db, user, tier=body.tier, billing_cycle=body.billing_cycle, coupon_code=body.coupon_code
     )
+
+
+# --- BR-94 / UC-27 scan Credits (SRS_v2.2.txt:1617) ---
+
+
+@router.get("/subscription/credits", response_model=CreditBalanceResponse)
+async def get_credit_balance(
+    db: AsyncSession = Depends(get_db),
+    user=Depends(get_current_user),
+):
+    """BR-94 (SRS_v2.2.txt:1617): spendable, used and expired Credits plus the cycle cap."""
+    return await credit_service.get_balance(db, user)
+
+
+@router.get("/subscription/credits/ledger", response_model=CreditLedgerResponse)
+async def get_credit_ledger(
+    limit: int = Query(default=20, ge=1, le=100),
+    cursor: str | None = None,
+    db: AsyncSession = Depends(get_db),
+    user=Depends(get_current_user),
+):
+    """BR-94: every Credit with purchase date, 12-month expiry and status, newest first."""
+    return await credit_service.get_ledger(db, user, limit=limit, cursor=cursor)
+
+
+@router.post(
+    "/subscription/credits/checkout",
+    response_model=CheckoutResponse,
+    dependencies=[Depends(forbid_impersonation)],
+)
+async def create_credit_checkout(
+    body: CreditCheckoutRequest,
+    db: AsyncSession = Depends(get_db),
+    user=Depends(get_current_user),
+):
+    """UC-27 / BR-94: PENDING invoice for Credits; ACTIVE Basic/Pro only, cap per cycle."""
+    checkout_url = await billing_service.create_credit_checkout(
+        db, user, quantity=body.quantity, gateway=body.gateway
+    )
+    return CheckoutResponse(checkout_url=checkout_url)

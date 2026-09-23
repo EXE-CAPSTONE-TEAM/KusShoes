@@ -10,6 +10,8 @@ celery_app = Celery(
         "app.workers.tasks.bake_tasks",
         "app.workers.tasks.email_tasks",
         "app.workers.tasks.maintenance_tasks",
+        "app.workers.tasks.credit_tasks",
+        "app.workers.tasks.api_cost_tasks",
     ],
 )
 
@@ -22,6 +24,8 @@ celery_app.conf.update(
     task_routes={
         "app.workers.tasks.bake_tasks.bake_shoe": {"queue": "normal"},
         "app.workers.tasks.maintenance_tasks.*": {"queue": "low"},
+        "app.workers.tasks.credit_tasks.*": {"queue": "low"},
+        "app.workers.tasks.api_cost_tasks.*": {"queue": "low"},
     },
     task_queues={
         "high": {"exchange": "high", "routing_key": "high"},
@@ -60,6 +64,14 @@ celery_app.conf.update(
         "purge-old-login-history-daily": {
             "task": "app.workers.tasks.maintenance_tasks.purge_old_login_history",
             "schedule": 86400.0,  # 24h
+        },
+        "expire-scan-credits-daily": {
+            "task": "app.workers.tasks.credit_tasks.expire_scan_credits",
+            "schedule": 86400.0,  # BR-94: 12-month validity (SRS_v2.2.txt:1617)
+        },
+        "check-api-budget-daily": {
+            "task": "app.workers.tasks.api_cost_tasks.check_api_budget",
+            "schedule": 86400.0,  # SF-14: 80% warn / 100% suspend (SRS_v2.2.txt:1767)
         },
     },
 )

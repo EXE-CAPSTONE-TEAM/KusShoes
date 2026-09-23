@@ -109,3 +109,14 @@ def enqueue_impersonation_notice_email(email: str, reason: str) -> None:
         args=[email, reason],
         queue="normal",
     )
+
+
+def enqueue_api_budget_alert_email(
+    email: str, period_month: str, spent_vnd: int, budget_vnd: int, warn_percent: int
+) -> None:
+    """SF-14 (SRS_v2.2.txt:1767): the month's API spend reached the warn threshold."""
+    celery_app.send_task(
+        "app.workers.tasks.email_tasks.send_api_budget_alert_email",
+        args=[email, period_month, spent_vnd, budget_vnd, warn_percent],
+        queue="normal",
+    )

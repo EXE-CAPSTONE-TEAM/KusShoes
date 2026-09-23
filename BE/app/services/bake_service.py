@@ -14,7 +14,7 @@ from app.repositories import (
     project_repo,
     subscription_repo,
 )
-from app.services import quota_service
+from app.services import quota_service, watermark_service
 
 SUPPORTED_EXPORTS: dict[str, tuple[str, str]] = {
     "glb": ("final_shoe.glb", "model/gltf-binary"),
@@ -52,12 +52,16 @@ async def process_bake(
         subscription = await subscription_repo.get_by_user(db, project.user_id)
         plan_formats = subscription.plan.allowed_export_formats if subscription else ["glb"]
         formats = _normalise_formats(plan_formats)
+        # BR-65 (SRS_v2.2.txt:1910): the renderer stamps Free output at source.
+        watermark = watermark_service.policy_for(subscription)
         payload, expected_outputs = await _build_worker_payload(
             db,
             project=project,
             job=job,
             formats=formats,
         )
+        # BR-65: a top-level block, added here so _build_worker_payload keeps its contract.
+        payload["watermark"] = dict(watermark)
         response = await editor_worker.request_bake(payload)
         exports = _validate_exports(response.get("exports"), expected_outputs)
     except (httpx.HTTPError, TimeoutError):
@@ -85,6 +89,7 @@ async def process_bake(
         bake_job_id=job.id,
         user_id=project.user_id,
         exports=exports,
+        is_watermarked=watermark["required"],
     )
     await quota_service.increment_exports(db, project.user_id, subscription, len(exports))
     bake_job_repo.mark_completed(job)

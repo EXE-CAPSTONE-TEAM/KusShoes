@@ -1,4 +1,6 @@
-from fastapi import APIRouter, Depends
+import uuid
+
+from fastapi import APIRouter, Depends, Query
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.database import get_db
@@ -7,6 +9,11 @@ from app.dependencies import (
     get_current_user,
     get_impersonator_id,
     get_redis,
+)
+from app.schemas.data_transfer import (
+    DataImportHistoryItem,
+    DataImportResultResponse,
+    DataImportUploadResponse,
 )
 from app.schemas.user import (
     AvatarUploadRequest,
@@ -32,7 +39,7 @@ from app.schemas.user import (
     UserDetailResponse,
     VerifyRecoveryEmailRequest,
 )
-from app.services import admin_service, twofa_service, user_service
+from app.services import admin_service, data_import_service, twofa_service, user_service
 
 router = APIRouter()
 
@@ -147,6 +154,36 @@ async def export_account_data(
     user=Depends(get_current_user),
 ):
     return await user_service.export_account_data(db, redis, user)
+
+
+# --- BR-20 Data import from a KusShoes backup (SRS_v2.2.txt:1510) ---
+
+
+@router.post("/me/data-import/upload-url", response_model=DataImportUploadResponse)
+async def create_data_import_upload_url(
+    db: AsyncSession = Depends(get_db),
+    redis=Depends(get_redis),
+    user=Depends(get_current_user),
+):
+    return await data_import_service.create_upload_url(db, redis, user)
+
+
+@router.post("/me/data-import/{import_id}/confirm", response_model=DataImportResultResponse)
+async def confirm_data_import(
+    import_id: uuid.UUID,
+    db: AsyncSession = Depends(get_db),
+    user=Depends(get_current_user),
+):
+    return await data_import_service.confirm_import(db, user, import_id)
+
+
+@router.get("/me/data-imports", response_model=list[DataImportHistoryItem])
+async def list_data_imports(
+    limit: int = Query(default=20, ge=1, le=50),
+    db: AsyncSession = Depends(get_db),
+    user=Depends(get_current_user),
+):
+    return await data_import_service.list_history(db, user, limit=limit)
 
 
 # --- BR-12/13 Two-factor authentication ---

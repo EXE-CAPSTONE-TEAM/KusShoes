@@ -1,9 +1,13 @@
 # Import tất cả models để Alembic autogenerate nhận diện được
+from app.models.api_budget_period import ApiBudgetPeriod
+from app.models.api_cost_entry import ApiCostEntry
 from app.models.artisan_link import ArtisanLink
 from app.models.audit_log import AuditLog
 from app.models.bake_job import BakeJob
 from app.models.consent_record import ConsentRecord
+from app.models.content_report import ContentReport
 from app.models.coupon import Coupon, CouponRedemption
+from app.models.data_import import DataImport
 from app.models.design_revision import DesignRevision
 from app.models.design_template import DesignTemplate
 from app.models.design_version import DesignVersion
@@ -12,6 +16,7 @@ from app.models.feedback import Feedback
 from app.models.guardrail_rule import GuardrailRule
 from app.models.invoice import Invoice
 from app.models.login_history import LoginHistory
+from app.models.moderation_action import ModerationAction
 from app.models.monthly_usage import MonthlyUsage
 from app.models.plan import Plan
 from app.models.project import Project
@@ -20,6 +25,7 @@ from app.models.recovery_code import RecoveryCode
 from app.models.refresh_token import RefreshToken
 from app.models.refund import Refund
 from app.models.reporting_period import ReportingPeriod
+from app.models.scan_credit import ScanCredit
 from app.models.subscription import Subscription
 from app.models.user import User
 
@@ -48,4 +54,10 @@ __all__ = [
     "DesignTemplate",
     "ArtisanLink",
     "Feedback",
+    "ScanCredit",
+    "DataImport",
+    "ContentReport",
+    "ModerationAction",
+    "ApiCostEntry",
+    "ApiBudgetPeriod",
 ]

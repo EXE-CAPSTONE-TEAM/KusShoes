@@ -2,7 +2,14 @@
 
 The metric maths are plain functions over lightweight row tuples so each
 definition can be unit-tested without a database. Internal accounts are
-dropped by the repository; COMP has no invoice so it never reaches revenue."""
+dropped by the repository; COMP has no invoice so it never reaches revenue.
+
+Credit purchases (BR-94) are cash but not a subscription: MRR is "giá thực trả quy về
+tháng của các gói ACTIVE/GRACE …; không gồm Credit và COMP" (SRS_v2.2.txt:2551), and churn
+counts plans that came due (SRS_v2.2.txt:2549). So every recurring metric (MRR, ARR, ARPU,
+churn, NRR/GRR, repeat rate, Free->paid, movement, new paying customers) is computed from
+`recurring_payments(...)`, while the cash metrics (recognised revenue, revenue by plan,
+monthly series, top customers) keep every payment, Credit included."""
 
 import calendar
 from collections import defaultdict
@@ -11,6 +18,7 @@ from datetime import UTC, date, datetime, timedelta
 
 from sqlalchemy.ext.asyncio import AsyncSession
 
+from app.models.scan_credit import CREDIT_INVOICE_TIER
 from app.repositories import analytics_repo
 from app.schemas.analytics import (
     AnalyticsResponse,
@@ -75,6 +83,15 @@ def build_payments(paid_rows: list[tuple], refund_rows: list[tuple]) -> list[Pay
         if net > 0 and paid_at is not None:
             payments.append(Payment(invoice_id, user_id, paid_at, net, cycle, tier, is_upgrade))
     return payments
+
+
+def is_credit_payment(payment: Payment) -> bool:
+    return payment.plan_tier == CREDIT_INVOICE_TIER
+
+
+def recurring_payments(payments: list[Payment]) -> list[Payment]:
+    """Plan payments only: a Credit purchase is neither a plan cycle nor MRR."""
+    return [payment for payment in payments if not is_credit_payment(payment)]
 
 
 def by_user(payments: list[Payment]) -> dict:
@@ -230,8 +247,12 @@ async def get_analytics(
     paid_rows = await analytics_repo.paid_invoice_rows(db)
     refund_rows = await analytics_repo.refund_rows(db)
     payments = build_payments(paid_rows, refund_rows)
-    user_payments = by_user(payments)
-    monthly = monthly_revenue_by_user(payments)
+    plan_payments = recurring_payments(payments)
+    # Recurring metrics: plan invoices only (SRS_v2.2.txt:2551).
+    user_payments = by_user(plan_payments)
+    monthly = monthly_revenue_by_user(plan_payments)
+    # Cash metrics: every payment, Credit included.
+    cash_by_user = by_user(payments)
     subscriptions = await analytics_repo.subscription_rows(db)
     users = await analytics_repo.user_rows(db)
 
@@ -271,7 +292,7 @@ async def get_analytics(
     totals = sorted(
         (
             (sum(p.amount for p in history), len(history), user_id)
-            for user_id, history in user_payments.items()
+            for user_id, history in cash_by_user.items()
         ),
         reverse=True,
     )[:10]

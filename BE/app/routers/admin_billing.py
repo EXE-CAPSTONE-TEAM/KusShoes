@@ -14,6 +14,7 @@ from app.schemas.admin import (
     SubscriptionStatus,
     SubscriptionTier,
 )
+from app.schemas.credit import TaxConfigResponse
 from app.schemas.finance import (
     CouponCreate,
     CouponResponse,
@@ -26,7 +27,13 @@ from app.schemas.finance import (
     ReportingPeriodResponse,
 )
 from app.schemas.subscription import AdminInvoiceResponse, AdminSubscriptionResponse, RefundRequest
-from app.services import billing_service, coupon_service, finance_service, period_service
+from app.services import (
+    billing_service,
+    coupon_service,
+    finance_service,
+    period_service,
+    tax_service,
+)
 from app.utils.pagination import decode_cursor, encode_cursor
 
 router = APIRouter()
@@ -225,3 +232,9 @@ async def update_coupon(
     return await coupon_service.update_coupon(
         db, admin, coupon_id, body.model_dump(exclude_unset=True)
     )
+
+
+@router.get("/billing/tax-config", response_model=TaxConfigResponse)
+async def get_tax_config(admin=Depends(get_current_admin)):
+    """BR-28 (SRS_v2.2.txt:1643): live VAT toggle and rate."""
+    return tax_service.tax_config()

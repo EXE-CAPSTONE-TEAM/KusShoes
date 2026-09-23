@@ -8,6 +8,7 @@ Rules:
 - Each test function gets a fresh DB session; tables are truncated between test modules
   via the `clean_db` autouse fixture.
 """
+import os
 from unittest.mock import patch
 
 import pytest
@@ -20,11 +21,35 @@ from app.database import get_db
 from app.main import app
 
 # ── Test DB ──────────────────────────────────────────────────────────────────
-# Uses kusshoes_test — must exist (alembic upgrade head against it)
-TEST_DATABASE_URL = "postgresql+asyncpg://kusshoes:kusshoes@db:5432/kusshoes_test"
+# Defaults to kusshoes_test — must exist (alembic upgrade head against it).
+# Override with TEST_DATABASE_URL so parallel workstreams can each own a database
+# and never truncate each other's rows mid-run. Set DATABASE_URL to the same value
+# so code paths that open their own session (workers, maintenance) stay isolated too.
+TEST_DATABASE_URL = os.getenv(
+    "TEST_DATABASE_URL",
+    "postgresql+asyncpg://kusshoes:kusshoes@db:5432/kusshoes_test",
+)
 
 _test_engine = create_async_engine(TEST_DATABASE_URL, echo=False, poolclass=NullPool)
 _TestSession = async_sessionmaker(_test_engine, expire_on_commit=False, autocommit=False)
+
+_TRUNCATED_TABLES = (
+    "refresh_tokens",
+    "monthly_usage",
+    "subscriptions",
+    "users",
+    "invoices",
+    "refunds",
+    "coupons",
+    "reporting_periods",
+    "feedbacks",
+    "scan_credits",
+    "data_imports",
+    "content_reports",
+    "moderation_actions",
+    "api_cost_entries",
+    "api_budget_periods",
+)
 
 
 @pytest_asyncio.fixture(scope="function")
@@ -36,14 +61,21 @@ async def db():
 
 @pytest_asyncio.fixture(autouse=True)
 async def clean_db(db):
-    """Truncate auth-related tables before each test."""
+    """Truncate auth-related tables before each test.
+
+    Only tables that exist are truncated: parallel workstreams migrate their own
+    test database to different heads, and a TRUNCATE naming a missing table fails
+    the whole statement.
+    """
     from sqlalchemy import text
-    await db.execute(
-        text(
-            "TRUNCATE TABLE refresh_tokens, monthly_usage, subscriptions, users, "
-            "invoices, refunds, coupons, reporting_periods, feedbacks RESTART IDENTITY CASCADE"
+    present = {
+        row[0]
+        for row in await db.execute(
+            text("SELECT tablename FROM pg_tables WHERE schemaname = 'public'")
         )
-    )
+    }
+    tables = [name for name in _TRUNCATED_TABLES if name in present]
+    await db.execute(text(f"TRUNCATE TABLE {', '.join(tables)} RESTART IDENTITY CASCADE"))
     await db.commit()
     yield
 
@@ -62,6 +94,8 @@ async def redis():
         "account-restore:*",
         "login-fail:*",
         "login-lock:*",
+        "data-import:*",
+        "content-report:*",
     )
     keys = []
     for pattern in patterns:

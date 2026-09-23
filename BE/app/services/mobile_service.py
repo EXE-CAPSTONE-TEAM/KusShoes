@@ -5,6 +5,7 @@ import uuid
 from typing import Any
 
 import redis.asyncio as aioredis
+from loguru import logger
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.config import settings
@@ -13,9 +14,10 @@ from app.exceptions import (
     MobileScanCompletionInvalid,
     MobileScanGrantInvalid,
     MobileScanPublishConflict,
+    ScanQuotaExhausted,
 )
 from app.infrastructure import storage
-from app.repositories import project_asset_repo, project_repo, user_repo
+from app.repositories import project_asset_repo, project_repo, subscription_repo, user_repo
 from app.schemas.mobile import (
     MobileComputeGrantClaimResponse,
     MobileOutputConfirmRequest,
@@ -26,7 +28,7 @@ from app.schemas.mobile import (
 )
 from app.schemas.project import CreateProjectRequest
 from app.schemas.project_asset import AssetConfirmRequest
-from app.services import asset_service, project_service
+from app.services import api_cost_service, asset_service, project_service, quota_service
 
 GRANT_PREFIX = "mobile-compute-grant"
 CLAIMED_GRANT_PREFIX = "mobile-claimed-grant"
@@ -80,6 +82,12 @@ async def bootstrap_scan(
     cached = await redis.get(idempotency_key)
     if cached:
         return MobileScanBootstrapResponse.model_validate_json(cached)
+
+    # Intake gates, after the replay check so a retried request that already got a grant
+    # still receives it. Neither gate deducts anything: the scan is charged in confirm_output
+    # (_charge_scan) when the compute service confirms the finished output (BR-23).
+    await api_cost_service.assert_scan_intake_available(db, user)  # SF-14, MSG43
+    await quota_service.assert_scan_available(db, user)  # BR-23 / BR-94, MSG28
 
     lock_key = f"{LOCK_PREFIX}:bootstrap:{user.id}:{body.client_request_id}"
     if not await redis.set(lock_key, "1", ex=15, nx=True):
@@ -310,30 +318,18 @@ async def confirm_output(
         raise MobileScanCompletionInvalid()
 
     if record.get("status") != "completed":
-        await asset_service.confirm_upload(
-            db,
-            user,
-            project.id,
-            AssetConfirmRequest(
-                asset_id=body.asset_id,
-                file_size_bytes=body.file_size_bytes,
-            ),
+        # One completion at a time per scan, or two concurrent confirms could both charge it.
+        lock_key = (
+            f"{LOCK_PREFIX}:confirm:{hashlib.sha256(body.completion_token.encode()).hexdigest()}"
         )
-        if body.project_name:
-            await project_repo.update_fields(
-                db,
-                project,
-                {"name": body.project_name},
-            )
-        await project_repo.set_status(db, project, "in_progress")
-        await db.commit()
-
-        record["status"] = "completed"
-        await redis.set(
-            completion_key,
-            json.dumps(record, separators=(",", ":")),
-            ex=max(3600, settings.MOBILE_COMPLETION_TTL_SECONDS),
-        )
+        if not await redis.set(lock_key, "1", ex=15, nx=True):
+            raise MobileScanPublishConflict()
+        try:
+            record = _decode_record(await redis.get(completion_key), MobileScanCompletionInvalid())
+            if record.get("status") != "completed":
+                await _complete_scan(db, redis, user, project, body, completion_key, record)
+        finally:
+            await redis.delete(lock_key)
 
     return MobileOutputConfirmResponse(
         project_id=project.id,
@@ -341,6 +337,64 @@ async def confirm_output(
         status="ready",
         web_project_url=str(record["web_project_url"]),
     )
+
+
+async def _complete_scan(
+    db: AsyncSession,
+    redis: aioredis.Redis,
+    user,
+    project,
+    body: MobileOutputConfirmRequest,
+    completion_key: str,
+    record: dict[str, Any],
+) -> None:
+    """First completion of a scan: attach the model, charge the scan, mark it completed."""
+    await asset_service.confirm_upload(
+        db,
+        user,
+        project.id,
+        AssetConfirmRequest(
+            asset_id=body.asset_id,
+            file_size_bytes=body.file_size_bytes,
+        ),
+    )
+    if body.project_name:
+        await project_repo.update_fields(
+            db,
+            project,
+            {"name": body.project_name},
+        )
+    await project_repo.set_status(db, project, "in_progress")
+    await _charge_scan(db, user, body.asset_id)
+    await db.commit()
+
+    record["status"] = "completed"
+    await redis.set(
+        completion_key,
+        json.dumps(record, separators=(",", ":")),
+        ex=max(3600, settings.MOBILE_COMPLETION_TTL_SECONDS),
+    )
+
+
+async def _charge_scan(db: AsyncSession, user, asset_id: uuid.UUID) -> None:
+    """BR-23: charge the finished scan, plan scans first then Credit. Runs inside the same
+    transaction as the completion, and only on the first completion of this scan.
+
+    The scan's asset id is the consumption reference, so a replayed completion cannot spend a
+    second Credit. There is no reservation at intake yet (BR-35 belongs to the scan pipeline),
+    so two scans accepted at the same moment can both pass the gate. If the quota is gone by
+    the time the second one finishes, the output has already been produced: it is delivered
+    uncharged and logged instead of being discarded.
+    """
+    subscription = await subscription_repo.get_by_user(db, user.id)
+    try:
+        await quota_service.consume_scan(db, user, subscription, reference=str(asset_id))
+    except ScanQuotaExhausted:
+        logger.warning(
+            "Scan {} for user {} finished after the quota ran out; delivered uncharged",
+            asset_id,
+            user.id,
+        )
 
 
 async def _load_context(

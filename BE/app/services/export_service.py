@@ -45,6 +45,7 @@ async def list_history(
                 format=record.format,
                 file_size_bytes=record.file_size_bytes,
                 download_count=record.download_count,
+                is_watermarked=record.is_watermarked,
                 created_at=record.created_at,
             )
             for record, project_name in page

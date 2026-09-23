@@ -94,6 +94,10 @@ class UsageResponse(BaseModel):
     exports_count: int
     ai_credits_used: int
     ai_credits_limit: int | None = None
+    # §3.2.8 scan allowance (free 0 / basic 1 / pro 3). There is no per-cycle
+    # "scans used" counter yet, so clients can show the allowance but not a
+    # used/total ratio.
+    max_scans_per_cycle: int | None = None
 
 
 class MessageResponse(BaseModel):
