@@ -365,3 +365,24 @@ async def test_output_upload_before_confirm_is_idempotent(client, db, authentica
     assert up1.json()["asset_id"] == up2.json()["asset_id"]
     assert up1.json()["already_completed"] is False
     assert up2.json()["already_completed"] is False
+
+
+@pytest.mark.asyncio
+async def test_output_confirm_replay_fails_once_the_asset_is_gone(client, db, authenticated_user):
+    """A replay must report the asset's real state, not assume `raw` for a deleted asset."""
+    from app.repositories import project_asset_repo, project_repo
+
+    await _subscribe(db, authenticated_user)
+    project_id, completion_token, asset_id = await _start_scan(client, authenticated_user)
+    first = await _confirm_scan(client, completion_token, asset_id)
+    assert first.status_code == 200, first.text
+
+    project = await project_repo.get_by_id(db, uuid.UUID(str(project_id)))
+    await project_repo.set_canonical_asset(db, project, None)
+    asset = await project_asset_repo.get_by_id(db, uuid.UUID(str(asset_id)))
+    await project_asset_repo.delete(db, asset)
+    await db.commit()
+
+    replay = await _confirm_scan(client, completion_token, asset_id)
+    assert replay.status_code == 401
+    assert replay.json()["code"] == "MOBILE_SCAN_COMPLETION_INVALID"

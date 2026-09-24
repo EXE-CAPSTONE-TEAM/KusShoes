@@ -331,13 +331,16 @@ async def confirm_output(
         finally:
             await redis.delete(lock_key)
 
+    # Scan output lands as `raw` (spec §B.5); report the asset's real state rather than
+    # assuming it, so a replay after the project/asset was removed fails loudly.
     asset = await project_asset_repo.get_by_id(db, body.asset_id)
-    output_status = asset.status if asset else "raw"
+    if asset is None or asset.project_id != project.id:
+        raise MobileScanCompletionInvalid()
 
     return MobileOutputConfirmResponse(
         project_id=project.id,
         model_asset_id=body.asset_id,
-        status=output_status,
+        status=asset.status,
         web_project_url=str(record["web_project_url"]),
     )
 
