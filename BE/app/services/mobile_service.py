@@ -239,7 +239,7 @@ async def create_output_upload(
                 or asset.asset_type != "source_model"
                 or asset.file_path != file_path
                 or asset.mime_type != "model/gltf-binary"
-                or asset.status not in {"uploading", "ready"}
+                or asset.status not in {"uploading", "ready", "raw"}
             ):
                 raise MobileScanCompletionInvalid()
         else:
@@ -255,7 +255,7 @@ async def create_output_upload(
             )
             await db.commit()
 
-        if asset.status == "ready":
+        if asset.status in {"ready", "raw"}:
             record.update(status="completed", asset_id=str(asset.id))
             await redis.set(
                 completion_key,
@@ -331,10 +331,13 @@ async def confirm_output(
         finally:
             await redis.delete(lock_key)
 
+    asset = await project_asset_repo.get_by_id(db, body.asset_id)
+    output_status = asset.status if asset else "raw"
+
     return MobileOutputConfirmResponse(
         project_id=project.id,
         model_asset_id=body.asset_id,
-        status="ready",
+        status=output_status,
         web_project_url=str(record["web_project_url"]),
     )
 
@@ -357,6 +360,7 @@ async def _complete_scan(
             asset_id=body.asset_id,
             file_size_bytes=body.file_size_bytes,
         ),
+        target_status="raw",
     )
     if body.project_name:
         await project_repo.update_fields(

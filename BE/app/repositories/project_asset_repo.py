@@ -74,6 +74,17 @@ async def mark_ready(
     await db.flush()
 
 
+async def mark_raw(
+    db: AsyncSession,
+    asset: ProjectAsset,
+    *,
+    file_size_bytes: int,
+) -> None:
+    asset.status = "raw"
+    asset.file_size_bytes = file_size_bytes
+    await db.flush()
+
+
 async def delete(db: AsyncSession, asset: ProjectAsset) -> None:
     await db.delete(asset)
     await db.flush()

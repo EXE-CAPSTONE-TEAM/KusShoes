@@ -216,7 +216,7 @@ async def test_finished_scan_spends_the_plan_scan_and_closes_intake(client, db, 
         token, asset_id = await _start_scan(client, authenticated_user)
         done = await _finish_scan(client, token, asset_id)
         assert done.status_code == 200, done.text
-        assert done.json()["status"] == "ready"
+        assert done.json()["status"] == "raw"
     assert await _scans_used(db, authenticated_user) == plan.max_scans_per_cycle
 
     refused = await _bootstrap(client, authenticated_user)
@@ -265,7 +265,7 @@ async def test_scans_accepted_together_are_both_delivered_and_charged_at_most_on
     assert (await _finish_scan(client, *first)).status_code == 200
     late = await _finish_scan(client, *second)
     assert late.status_code == 200, late.text
-    assert late.json()["status"] == "ready"
+    assert late.json()["status"] == "raw"
     assert await _scans_used(db, authenticated_user) == 1
 
 
@@ -298,7 +298,7 @@ async def test_scan_accepted_before_grace_is_still_delivered_and_charged(
     await _enter_grace(db, authenticated_user)
     done = await _finish_scan(client, token, asset_id)
     assert done.status_code == 200, done.text
-    assert done.json()["status"] == "ready"
+    assert done.json()["status"] == "raw"
     assert await _scans_used(db, authenticated_user) == 1
 
 
