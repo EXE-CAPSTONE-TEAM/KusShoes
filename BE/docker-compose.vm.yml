@@ -7,7 +7,28 @@ services:
     healthcheck:
       start_period: 180s
   nginx:
+    depends_on:
+      - api
+      - kiri-relay
     volumes:
       - ./deploy/nginx-vm:/etc/nginx/conf.d:ro
     # Reload every 6h so nginx picks up certificates renewed by the certbot container.
     command: /bin/sh -c 'while :; do sleep 6h & wait $${!}; nginx -s reload; done & exec nginx -g "daemon off;"'
+
+  # KIRI relay (ar-ai-exe backend, APP_ROLE=relay — spec §D). Code lives in ../relay (git archive of
+  # ar-ai-exe/backend); no Blender/OpenMVS/ffmpeg in the image. Served at relay.<ip>.sslip.io.
+  kiri-relay:
+    build:
+      context: ../relay
+      dockerfile: Dockerfile.relay
+    container_name: kusshoes_kiri_relay
+    env_file: ../relay/.env.relay
+    expose:
+      - "8010"
+    healthcheck:
+      test: ["CMD", "python", "-c", "import urllib.request; urllib.request.urlopen('http://127.0.0.1:8010/health', timeout=5)"]
+      interval: 30s
+      timeout: 5s
+      retries: 3
+      start_period: 60s
+    restart: unless-stopped
