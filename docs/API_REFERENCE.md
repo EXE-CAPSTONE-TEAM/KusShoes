@@ -1311,13 +1311,13 @@ Responses: `200` list[CouponResponse], `401` ErrorResponse, `403` ErrorResponse
 
 ### `POST /api/v1/admin/billing/coupons` — Tạo mã giảm giá
 
-Loại `percent`, `fixed` hoặc `fixed_price`; giới hạn gói, thời hạn, số lượt, chỉ áp cho lần thanh toán đầu (Early Bird, BR-91). Admin ghi (Bearer, staff bị 403).
+Loại `percent`, `fixed` hoặc `fixed_price`; giới hạn gói, thời hạn, số lượt; mỗi tài khoản dùng một lần. Admin ghi (Bearer, staff bị 403).
 
-Request body: `code`: string; `discount_type`: string; `value`: integer; `plan_tiers?`: list[string] | null; `first_payment_only?`: boolean; `max_uses?`: integer | null; `valid_from?`: date-time | null; `valid_until?`: date-time | null
+Request body: `code`: string; `discount_type`: string; `value`: integer; `plan_tiers?`: list[string] | null; `max_uses?`: integer | null; `valid_from?`: date-time | null; `valid_until?`: date-time | null
 
 Responses: `201` CouponResponse, `401` ErrorResponse, `403` ErrorResponse
 
-Response fields: `id`: uuid; `code`: string; `discount_type`: string; `value`: integer; `plan_tiers`: list[string] | null; `first_payment_only`: boolean; `max_uses`: integer | null; `used_count`: integer; `valid_from`: date-time | null; `valid_until`: date-time | null; `is_active`: boolean
+Response fields: `id`: uuid; `code`: string; `discount_type`: string; `value`: integer; `plan_tiers`: list[string] | null; `max_uses`: integer | null; `used_count`: integer; `valid_from`: date-time | null; `valid_until`: date-time | null; `is_active`: boolean
 
 ### `PATCH /api/v1/admin/billing/coupons/{coupon_id}` — Cập nhật mã giảm giá
 
@@ -1325,11 +1325,11 @@ Sửa hạn dùng, giới hạn, bật/tắt mã. Admin ghi (Bearer, staff bị 
 
 Parameters: `coupon_id` (path, required)
 
-Request body: `value?`: integer | null; `plan_tiers?`: list[string] | null; `first_payment_only?`: boolean | null; `max_uses?`: integer | null; `valid_from?`: date-time | null; `valid_until?`: date-time | null; `is_active?`: boolean | null
+Request body: `value?`: integer | null; `plan_tiers?`: list[string] | null; `max_uses?`: integer | null; `valid_from?`: date-time | null; `valid_until?`: date-time | null; `is_active?`: boolean | null
 
 Responses: `200` CouponResponse, `401` ErrorResponse, `403` ErrorResponse, `404` ErrorResponse
 
-Response fields: `id`: uuid; `code`: string; `discount_type`: string; `value`: integer; `plan_tiers`: list[string] | null; `first_payment_only`: boolean; `max_uses`: integer | null; `used_count`: integer; `valid_from`: date-time | null; `valid_until`: date-time | null; `is_active`: boolean
+Response fields: `id`: uuid; `code`: string; `discount_type`: string; `value`: integer; `plan_tiers`: list[string] | null; `max_uses`: integer | null; `used_count`: integer; `valid_from`: date-time | null; `valid_until`: date-time | null; `is_active`: boolean
 
 ## Admin Dashboard
 

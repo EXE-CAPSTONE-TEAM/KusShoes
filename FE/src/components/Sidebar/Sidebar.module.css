@@ -9,6 +9,46 @@
   position: sticky;
   top: 0;
   z-index: 100;
+  flex-shrink: 0;
+  transition: width var(--transition-normal), padding var(--transition-normal);
+}
+
+.sidebar.collapsed {
+  width: 76px;
+  padding: 24px 10px;
+}
+
+.sidebar.collapsed .navItem {
+  justify-content: center;
+  padding: 10px;
+}
+
+.sidebar.collapsed .footerSection {
+  justify-content: center;
+}
+
+.collapseToggle {
+  position: absolute;
+  top: 26px;
+  right: -12px;
+  width: 24px;
+  height: 24px;
+  border-radius: var(--border-radius-full);
+  border: 1px solid var(--glass-border);
+  background-color: var(--bg-secondary);
+  color: var(--text-muted);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  cursor: pointer;
+  box-shadow: var(--shadow-sm);
+  z-index: 101;
+  transition: all var(--transition-fast);
+}
+
+.collapseToggle:hover {
+  color: var(--color-orange);
+  border-color: var(--color-orange);
 }
 
 .logoSection {

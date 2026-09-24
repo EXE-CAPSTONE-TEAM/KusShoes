@@ -1,7 +1,7 @@
 # KusShoes BE — Developer Commands
 # Dùng: make <target>
 
-.PHONY: help up down build restart logs ps \
+.PHONY: help up up-local-db down build restart logs ps \
         migrate makemigration downgrade \
         test lint shell \
         db-shell redis-shell create-admin
@@ -13,7 +13,8 @@ help:
 	@echo ""
 	@echo "  Setup"
 	@echo "    make build        Build Docker images"
-	@echo "    make up           Start all services"
+	@echo "    make up           Start services with Neon database"
+	@echo "    make up-local-db  Start services with local PostgreSQL fallback"
 	@echo "    make down         Stop all services"
 	@echo "    make restart      Restart API (sau khi đổi deps)"
 	@echo ""
@@ -47,8 +48,14 @@ up:
 	@echo "   MinIO Console: http://localhost:9001  (minioadmin/minioadmin)"
 	@echo ""
 
+up-local-db:
+	docker compose -f docker-compose.yml -f docker-compose.local-db.yml --profile local-db up -d
+	@echo ""
+	@echo "Services started with local PostgreSQL fallback"
+	@echo ""
+
 down:
-	docker compose down
+	docker compose --profile local-db down
 
 restart:
 	docker compose restart api worker beat
@@ -77,7 +84,7 @@ create-admin:
 
 # ── Development ─────────────────────────────────
 test-db-setup:
-	docker compose exec db psql -U kusshoes -c "CREATE DATABASE kusshoes_test" 2>/dev/null || true
+	docker compose --profile local-db exec db psql -U kusshoes -c "CREATE DATABASE kusshoes_test" 2>/dev/null || true
 	docker compose exec api bash -c "DATABASE_URL=postgresql+asyncpg://kusshoes:kusshoes@db:5432/kusshoes_test alembic upgrade head"
 
 test:
@@ -91,7 +98,7 @@ shell:
 
 # ── Database tools ───────────────────────────────
 db-shell:
-	docker compose exec db psql -U kusshoes -d kusshoes
+	docker compose --profile local-db exec db psql -U kusshoes -d kusshoes
 
 redis-shell:
 	docker compose exec redis redis-cli

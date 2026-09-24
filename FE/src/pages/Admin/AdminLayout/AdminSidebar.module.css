@@ -11,6 +11,52 @@
   z-index: 100;
   flex-shrink: 0;
   overflow: hidden;
+  transition: width var(--transition-normal);
+}
+
+.sidebar.collapsed {
+  width: 76px;
+}
+
+.sidebar.collapsed .scrollArea {
+  padding: 18px 8px 8px;
+}
+
+.sidebar.collapsed .navItem {
+  justify-content: center;
+}
+
+.sidebar.collapsed .navItemLeft {
+  justify-content: center;
+}
+
+.sidebar.collapsed .profilePill,
+.sidebar.collapsed .footerSection {
+  justify-content: center;
+}
+
+.collapseToggle {
+  position: absolute;
+  top: 16px;
+  right: 12px;
+  width: 24px;
+  height: 24px;
+  border-radius: var(--border-radius-full);
+  border: 1px solid var(--glass-border);
+  background-color: var(--bg-secondary);
+  color: var(--text-muted);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  cursor: pointer;
+  box-shadow: var(--shadow-sm);
+  z-index: 101;
+  transition: all var(--transition-fast);
+}
+
+.collapseToggle:hover {
+  color: var(--color-orange);
+  border-color: var(--color-orange);
 }
 
 .scrollArea {

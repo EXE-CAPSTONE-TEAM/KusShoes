@@ -2,6 +2,7 @@ import React, { useEffect, useState } from 'react';
 import {
   LayoutDashboard, Users, Package, CreditCard, FolderKanban,
   Flame, Download, Activity, ScrollText, LogOut, BarChart3, Sparkles, MessageSquare,
+  PanelLeftClose, PanelLeftOpen,
 } from 'lucide-react';
 import * as Tooltip from '@radix-ui/react-tooltip';
 import { useAdminAuth } from '../../../context/AdminAuthContext';
@@ -29,6 +30,25 @@ interface NavGroup {
 export const AdminSidebar: React.FC<AdminSidebarProps> = ({ activePage, navigate }) => {
   const { session, logout, isLoggingOut, isAdmin } = useAdminAuth();
   const { theme } = useTheme();
+
+  const [collapsed, setCollapsed] = useState<boolean>(() => {
+    try {
+      return localStorage.getItem('kusshoes.adminSidebar.collapsed') === '1';
+    } catch {
+      return false;
+    }
+  });
+  const toggleCollapsed = () => {
+    setCollapsed((prev) => {
+      const next = !prev;
+      try {
+        localStorage.setItem('kusshoes.adminSidebar.collapsed', next ? '1' : '0');
+      } catch {
+        // ignore storage errors (private browsing, etc.)
+      }
+      return next;
+    });
+  };
 
   const [totalUsers, setTotalUsers] = useState<number | null>(null);
   const [totalExports, setTotalExports] = useState<number | null>(null);
@@ -121,50 +141,77 @@ export const AdminSidebar: React.FC<AdminSidebarProps> = ({ activePage, navigate
   const initials = (session?.email || '??').slice(0, 2).toUpperCase();
   const bakePct = bakeTotal ? Math.round(((bakeActive ?? 0) / bakeTotal) * 100) : 0;
 
+  const renderNavButton = (item: NavItem) => {
+    const Icon = item.icon;
+    const active = activePage === item.id;
+    const button = (
+      <button
+        className={`${styles.navItem} ${active ? styles.active : ''}`}
+        onClick={() => navigate(item.id)}
+      >
+        <span className={styles.navItemLeft}>
+          <Icon className={styles.navIcon} size={18} />
+          {!collapsed && <span>{item.label}</span>}
+        </span>
+        {!collapsed && renderBadge(item.badge)}
+        {active && <div className={styles.activeIndicator} />}
+      </button>
+    );
+    if (!collapsed) {
+      return <React.Fragment key={item.id}>{button}</React.Fragment>;
+    }
+    return (
+      <Tooltip.Root key={item.id}>
+        <Tooltip.Trigger asChild>{button}</Tooltip.Trigger>
+        <Tooltip.Portal>
+          <Tooltip.Content className={styles.tooltipContent} side="right" sideOffset={8}>
+            {item.label}
+            <Tooltip.Arrow className={styles.tooltipArrow} />
+          </Tooltip.Content>
+        </Tooltip.Portal>
+      </Tooltip.Root>
+    );
+  };
+
   return (
     <Tooltip.Provider delayDuration={300}>
-      <aside className={styles.sidebar}>
+      <aside className={`${styles.sidebar} ${collapsed ? styles.collapsed : ''}`}>
+        <button
+          type="button"
+          className={styles.collapseToggle}
+          onClick={toggleCollapsed}
+          aria-label={collapsed ? 'Expand sidebar' : 'Collapse sidebar'}
+          title={collapsed ? 'Expand sidebar' : 'Collapse sidebar'}
+        >
+          {collapsed ? <PanelLeftOpen size={14} /> : <PanelLeftClose size={14} />}
+        </button>
+
         <div className={styles.scrollArea}>
           <div className={styles.header}>
-            <div className={styles.brandRow}>
-              <img
-                src={theme === 'dark' ? '/KusShoes_Logo_Dark_Mode_cropped.png' : '/KusShoes_Logo_cropped.png'}
-                alt="KusShoes"
-                className={styles.brandLogoImage}
-              />
-              <span className={styles.brandTagline}>3D Sneaker Lab</span>
-            </div>
+            {!collapsed && (
+              <div className={styles.brandRow}>
+                <img
+                  src={theme === 'dark' ? '/KusShoes_Logo_Dark_Mode_cropped.png' : '/KusShoes_Logo_cropped.png'}
+                  alt="KusShoes"
+                  className={styles.brandLogoImage}
+                />
+                <span className={styles.brandTagline}>3D Sneaker Lab</span>
+              </div>
+            )}
           </div>
 
           <nav className={styles.navMenu}>
             {navGroups.map((group) => (
               <div key={group.heading} className={styles.navGroup}>
-                <p className={styles.groupHeading}>{group.heading}</p>
-                {group.items.map((item) => {
-                  const Icon = item.icon;
-                  const active = activePage === item.id;
-                  return (
-                    <button
-                      key={item.id}
-                      className={`${styles.navItem} ${active ? styles.active : ''}`}
-                      onClick={() => navigate(item.id)}
-                    >
-                      <span className={styles.navItemLeft}>
-                        <Icon className={styles.navIcon} size={18} />
-                        <span>{item.label}</span>
-                      </span>
-                      {renderBadge(item.badge)}
-                      {active && <div className={styles.activeIndicator} />}
-                    </button>
-                  );
-                })}
+                {!collapsed && <p className={styles.groupHeading}>{group.heading}</p>}
+                {group.items.map(renderNavButton)}
               </div>
             ))}
           </nav>
         </div>
 
         <div className={styles.footerSection}>
-          {bakeTotal !== null && bakeTotal > 0 && (
+          {!collapsed && bakeTotal !== null && bakeTotal > 0 && (
             <div className={styles.pipelineWidget}>
               <div className={styles.pipelineWidgetHeader}>
                 <span className={styles.pipelineWidgetLabel}>
@@ -185,12 +232,14 @@ export const AdminSidebar: React.FC<AdminSidebarProps> = ({ activePage, navigate
 
           <div className={styles.profilePill}>
             <div className={styles.profileAvatar}>{initials}</div>
-            <div className={styles.sessionInfo}>
-              <span className={styles.sessionEmail}>{session?.email || 'Active admin session'}</span>
-              <span className={`${styles.roleBadge} ${isAdmin ? styles.roleAdmin : styles.roleStaff}`}>
-                {isAdmin ? 'Admin' : 'Staff'}
-              </span>
-            </div>
+            {!collapsed && (
+              <div className={styles.sessionInfo}>
+                <span className={styles.sessionEmail}>{session?.email || 'Active admin session'}</span>
+                <span className={`${styles.roleBadge} ${isAdmin ? styles.roleAdmin : styles.roleStaff}`}>
+                  {isAdmin ? 'Admin' : 'Staff'}
+                </span>
+              </div>
+            )}
             <Tooltip.Root>
               <Tooltip.Trigger asChild>
                 <button

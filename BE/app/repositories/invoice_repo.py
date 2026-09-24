@@ -154,20 +154,6 @@ async def list_all(
     return [(invoice, user_email) for invoice, user_email in result.all()]
 
 
-async def has_paid_invoice(db: AsyncSession, user_id: uuid.UUID) -> bool:
-    """BR-26/91: has this account ever completed a paid (amount > 0) transaction?"""
-    result = await db.execute(
-        select(Invoice.id)
-        .where(
-            Invoice.user_id == user_id,
-            Invoice.status.in_(("paid", "refunded")),
-            Invoice.amount_vnd > 0,
-        )
-        .limit(1)
-    )
-    return result.scalar_one_or_none() is not None
-
-
 async def mark_cancelled(db: AsyncSession, invoice: Invoice) -> Invoice:
     invoice.status = "cancelled"
     await db.flush()

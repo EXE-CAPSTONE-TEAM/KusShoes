@@ -57,6 +57,45 @@ export type ConsentRecord = {
   revoked_at: string | null;
 };
 
+// ---- Data import from backup (BR-20) ---------------------------------------------------
+
+export type DataImportStatus = "pending" | "completed" | "rejected";
+
+export type DataImportUpload = {
+  import_id: string;
+  upload_url: string;
+  storage_path: string;
+  expires_in: number;
+  max_bytes: number;
+};
+
+export type DataImportResult = {
+  import_id: string;
+  status: DataImportStatus;
+  projects_imported: number;
+  skipped_binary_assets: boolean;
+  message: string;
+};
+
+export type DataImportHistoryItem = {
+  id: string;
+  status: DataImportStatus;
+  projects_imported: number;
+  rejected_reason: string | null;
+  file_size_bytes: number | null;
+  created_at: string;
+  completed_at: string | null;
+};
+
+// ---- Content moderation status (BR-77) -------------------------------------------------
+
+export type MyModerationStatus = {
+  level: number;
+  is_restricted: boolean;
+  restricted_until: string | null;
+  is_banned: boolean;
+};
+
 const json = (body: unknown): RequestInit => ({ method: "POST", body: JSON.stringify(body) });
 
 export const accountApi = {
@@ -107,4 +146,14 @@ export const accountApi = {
     request<{ message: string }>("/api/v1/auth/restore-account/request", json({ email })),
   confirmAccountRestore: (email: string, otpCode: string) =>
     request<{ message: string }>("/api/v1/auth/restore-account/confirm", json({ email, otp_code: otpCode })),
+
+  // Data import from a KusShoes backup (BR-20)
+  requestDataImportUpload: () =>
+    request<DataImportUpload>("/api/v1/users/me/data-import/upload-url", { method: "POST" }),
+  confirmDataImport: (importId: string) =>
+    request<DataImportResult>(`/api/v1/users/me/data-import/${importId}/confirm`, { method: "POST" }),
+  listDataImports: () => request<DataImportHistoryItem[]>("/api/v1/users/me/data-imports"),
+
+  // Content moderation status (BR-77)
+  myModerationStatus: () => request<MyModerationStatus>("/api/v1/moderation/me"),
 };

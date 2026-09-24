@@ -117,7 +117,7 @@ DOCS: dict[str, tuple[str, str]] = {
     "POST /api/v1/admin/billing/periods": ("Tạo kỳ báo cáo", "Tạo kỳ theo khoảng ngày (GMT+7), trạng thái mở. " + _AW),
     "POST /api/v1/admin/billing/periods/{period_id}/lock": ("Khóa kỳ báo cáo", "Sau khi khóa, giao dịch thủ công và hoàn tiền trong kỳ bị từ chối. " + _AW),
     "GET /api/v1/admin/billing/coupons": ("Danh sách mã giảm giá", "Toàn bộ mã kèm số lần đã dùng. " + _A),
-    "POST /api/v1/admin/billing/coupons": ("Tạo mã giảm giá", "Loại `percent`, `fixed` hoặc `fixed_price`; giới hạn gói, thời hạn, số lượt, chỉ áp cho lần thanh toán đầu (Early Bird, BR-91). " + _AW),
+    "POST /api/v1/admin/billing/coupons": ("Tạo mã giảm giá", "Loại `percent`, `fixed` hoặc `fixed_price`; giới hạn gói, thời hạn, số lượt; mỗi tài khoản dùng một lần. " + _AW),
     "PATCH /api/v1/admin/billing/coupons/{coupon_id}": ("Cập nhật mã giảm giá", "Sửa hạn dùng, giới hạn, bật/tắt mã. " + _AW),
     # ---- Admin Dashboard ----
     "GET /api/v1/admin/dashboard/stats": ("Số liệu tổng quan", "Người dùng, MRR, lượt xuất, dự án… cho trang chủ quản trị. " + _A),

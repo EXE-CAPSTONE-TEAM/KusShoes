@@ -557,3 +557,11 @@
     margin-top: 0;
   }
 }
+
+.spin {
+  animation: loginSpin 1s linear infinite;
+}
+
+@keyframes loginSpin {
+  to { transform: rotate(360deg); }
+}

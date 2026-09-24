@@ -1,7 +1,7 @@
 import React, { useCallback, useEffect, useState } from 'react';
 import { Check, Lock, Plus, X } from 'lucide-react';
-import { adminBilling, adminFinance, AdminApiError, type InvoiceListQuery } from '../../../api/adminClient';
-import type { AdminCoupon, AdminInvoice, ReportingPeriod } from '../../../types/admin';
+import { adminApiCost, adminBilling, adminFinance, AdminApiError, type InvoiceListQuery } from '../../../api/adminClient';
+import type { AdminApiBudget, AdminApiCostDailyRow, AdminCoupon, AdminInvoice, AdminTaxConfig, ReportingPeriod } from '../../../types/admin';
 import { AdminDialog } from '../../../components/Admin/AdminDialog';
 import { ConfirmDialog } from '../../../components/ConfirmDialog/ConfirmDialog';
 import { Select } from '../../../components/Select/Select';
@@ -503,6 +503,142 @@ export const CouponsPanel: React.FC = () => {
           </div>
         </div>
       </AdminDialog>
+    </>
+  );
+};
+
+// ---------------------------------------------------------------------------------------
+// VAT (BR-28): read-only — the rate/on-off switch lives in server config, not the DB.
+// ---------------------------------------------------------------------------------------
+
+export const TaxConfigPanel: React.FC = () => {
+  const { toast } = useToast();
+  const [config, setConfig] = useState<AdminTaxConfig | null>(null);
+
+  useEffect(() => {
+    adminFinance.taxConfig()
+      .then(setConfig)
+      .catch((caught) => toast(errorText(caught, 'Không thể tải cấu hình thuế.'), 'error'));
+  }, [toast]);
+
+  return (
+    <div className={`${shared.tableWrap} glass-panel`} style={{ padding: 20 }}>
+      <p className={shared.pageSubtitle} style={{ marginBottom: 16 }}>
+        VAT được tách ra từ giá niêm yết (không cộng thêm) khi bật. Cấu hình theo biến môi trường của máy chủ — không
+        chỉnh được tại đây.
+      </p>
+      {config ? (
+        <div className={shared.checkRow} style={{ gap: 24 }}>
+          <StatusBadge status={config.enabled ? 'Đang bật' : 'Đang tắt'} tone={config.enabled ? 'ok' : undefined} />
+          <span>Thuế suất: <strong>{config.rate_percent}%</strong></span>
+        </div>
+      ) : (
+        <div className={shared.emptyState}>Đang tải...</div>
+      )}
+    </div>
+  );
+};
+
+// ---------------------------------------------------------------------------------------
+// API cost tracker (SF-14 / BR-108): daily spend and a monthly budget with 80%/100% states.
+// ---------------------------------------------------------------------------------------
+
+const thisMonth = () => new Date().toISOString().slice(0, 7);
+const BUDGET_STATE_LABEL: Record<string, string> = {
+  unconfigured: 'Chưa đặt ngân sách',
+  ok: 'Bình thường',
+  warning: 'Đã vượt 80%',
+  suspended: 'Đã tạm ngưng nhận Scan Job',
+};
+const BUDGET_STATE_TONE: Record<string, 'ok' | 'warn' | 'danger' | undefined> = {
+  unconfigured: undefined,
+  ok: 'ok',
+  warning: 'warn',
+  suspended: 'danger',
+};
+
+export const ApiCostPanel: React.FC = () => {
+  const { toast } = useToast();
+  const { isAdmin } = useAdminAuth();
+  const [daily, setDaily] = useState<AdminApiCostDailyRow[] | null>(null);
+  const [budget, setBudget] = useState<AdminApiBudget | null>(null);
+  const [month, setMonth] = useState(thisMonth());
+  const [budgetInput, setBudgetInput] = useState('');
+  const [busy, setBusy] = useState(false);
+
+  const loadBudget = useCallback(async (forMonth: string) => {
+    try {
+      const result = await adminApiCost.budget(`${forMonth}-01`);
+      setBudget(result);
+      setBudgetInput(result.budget_vnd !== null ? String(result.budget_vnd) : '');
+    } catch (caught) {
+      toast(errorText(caught, 'Không thể tải ngân sách API.'), 'error');
+    }
+  }, [toast]);
+
+  useEffect(() => {
+    adminApiCost.daily().then(setDaily).catch((caught) => toast(errorText(caught, 'Không thể tải chi phí API.'), 'error'));
+  }, [toast]);
+
+  useEffect(() => { void loadBudget(month); }, [month, loadBudget]);
+
+  const saveBudget = async () => {
+    setBusy(true);
+    try {
+      const result = await adminApiCost.setBudget(`${month}-01`, Number(budgetInput));
+      setBudget(result);
+      toast('Đã cập nhật ngân sách API tháng.');
+    } catch (caught) {
+      toast(errorText(caught, 'Không thể cập nhật ngân sách.'), 'error');
+    } finally {
+      setBusy(false);
+    }
+  };
+
+  return (
+    <>
+      <div className={`${shared.tableWrap} glass-panel`} style={{ padding: 20, marginBottom: 16 }}>
+        <div className={shared.toolbar} style={{ marginBottom: 12 }}>
+          <span className={shared.pageSubtitle}>Ngân sách API 3D/AI theo tháng. Cảnh báo ở 80%, tạm ngưng nhận Scan Job ở 100%.</span>
+          <input className={shared.input} type="month" value={month} onChange={(event) => setMonth(event.target.value)} style={{ maxWidth: 160 }} />
+        </div>
+        {budget && (
+          <div className={shared.checkRow} style={{ gap: 24, alignItems: 'center', flexWrap: 'wrap' }}>
+            <StatusBadge status={BUDGET_STATE_LABEL[budget.state] ?? budget.state} tone={BUDGET_STATE_TONE[budget.state]} />
+            <span>Đã chi: <strong>{formatVnd(budget.spent_vnd)}</strong>{budget.percent !== null && ` (${budget.percent.toFixed(0)}%)`}</span>
+            <input
+              className={shared.input}
+              inputMode="numeric"
+              placeholder="Ngân sách (VNĐ)"
+              value={budgetInput}
+              onChange={(event) => setBudgetInput(event.target.value.replace(/\D/g, ''))}
+              style={{ maxWidth: 160 }}
+            />
+            <button className="btn-neon-orange" disabled={!isAdmin || busy || !budgetInput} onClick={() => void saveBudget()}>
+              Lưu ngân sách
+            </button>
+          </div>
+        )}
+      </div>
+
+      <div className={`${shared.tableWrap} glass-panel`}>
+        <table className={shared.table}>
+          <thead><tr><th>Ngày</th><th>Số lần gọi</th><th>Thành công</th><th>Thất bại</th><th>Chi phí</th></tr></thead>
+          <tbody>
+            {(daily ?? []).map((row) => (
+              <tr key={row.day}>
+                <td>{formatDate(row.day)}</td>
+                <td className={shared.mutedCell}>{row.calls}</td>
+                <td className={shared.mutedCell}>{row.success_calls}</td>
+                <td className={shared.mutedCell}>{row.failed_calls}</td>
+                <td>{formatVnd(row.cost_vnd)}</td>
+              </tr>
+            ))}
+            {daily !== null && daily.length === 0 && <tr><td colSpan={5}><div className={shared.emptyState}>Chưa có dữ liệu chi phí.</div></td></tr>}
+            {daily === null && <tr><td colSpan={5}><div className={shared.emptyState}>Đang tải...</div></td></tr>}
+          </tbody>
+        </table>
+      </div>
     </>
   );
 };

@@ -1,6 +1,6 @@
-import React, { useState } from 'react';
-import { Smartphone, Monitor, Cloud, Sparkles, Send, Layout, CheckCircle2, Check, ArrowRight } from 'lucide-react';
-import { motion, AnimatePresence } from 'framer-motion';
+import React, { useState, useRef, useEffect } from 'react';
+import { Smartphone, Monitor, Cloud, Send, CheckCircle2, Check, ArrowRight, Plus, Minus, Star, StarHalf, Layers, ScanLine, UsersRound, TrendingUp, BadgeCheck, ArrowUpRight, Flame } from 'lucide-react';
+import { motion, AnimatePresence, useInView } from 'framer-motion';
 import { Navbar } from '../../components/Navbar/Navbar';
 import { Footer } from '../../components/Footer/Footer';
 import { AnimatedPrice } from '../../components/AnimatedPrice/AnimatedPrice';
@@ -77,6 +77,42 @@ const WebsiteShowcase: React.FC = () => {
       </motion.div>
     </section>
   );
+};
+
+interface StatCounterProps {
+  target: number;
+  decimals?: number;
+  suffix?: string;
+}
+
+const StatCounter: React.FC<StatCounterProps> = ({ target, decimals = 0, suffix = '' }) => {
+  const ref = useRef<HTMLSpanElement>(null);
+  const isInView = useInView(ref, { once: true, margin: '-80px' });
+  const [value, setValue] = useState(0);
+
+  useEffect(() => {
+    if (!isInView) return;
+    let start: number | null = null;
+    const durationMs = 1400;
+    let frame: number;
+
+    const step = (timestamp: number) => {
+      if (start === null) start = timestamp;
+      const progress = Math.min((timestamp - start) / durationMs, 1);
+      const eased = 1 - Math.pow(1 - progress, 3);
+      setValue(target * eased);
+      if (progress < 1) frame = requestAnimationFrame(step);
+    };
+
+    frame = requestAnimationFrame(step);
+    return () => cancelAnimationFrame(frame);
+  }, [isInView, target]);
+
+  const formatted = decimals > 0
+    ? value.toFixed(decimals)
+    : Math.round(value).toLocaleString('en-US');
+
+  return <span ref={ref}>{formatted}{suffix}</span>;
 };
 
 const TypewriterHeadline: React.FC = () => {
@@ -202,22 +238,13 @@ export const Landing: React.FC<LandingProps> = ({ navigate }) => {
     }
   ];
 
-  const features = [
-    {
-      title: 'Kiri Engine Photogrammetry',
-      icon: Sparkles,
-      desc: 'Top-tier 3D scan reconstruction API turns photos into professional-grade polygonal shoe assets with precise dimensions.'
-    },
-    {
-      title: 'Secure Cloud Vault Sync',
-      icon: Cloud,
-      desc: 'Keep all your customized sneaker assets in one secure cloud workspace. Seamless synchronization between mobile scanner and desktop creator.'
-    },
-    {
-      title: 'Smooth 3D Designer Engine',
-      icon: Layout,
-      desc: 'Hardware-accelerated environment inside KusStudio. Perform real-time colorway mapping and material editing without latency.'
-    }
+  const communityTicker: Array<{ icon?: typeof Flame; label: string }> = [
+    { icon: Flame, label: 'KUSSHOES COMMUNITY' },
+    { label: 'DROP AFTER DROP' },
+    { label: '12.4K+ CUSTOM BUILDS' },
+    { label: 'STREET CRED VERIFIED' },
+    { label: '3D KICKS REVOLUTION' },
+    { label: 'LIDAR ACCURATE' },
   ];
 
   const plans = [
@@ -251,6 +278,50 @@ export const Landing: React.FC<LandingProps> = ({ navigate }) => {
     if (val === 0) return '0 VNĐ';
     return val.toLocaleString('vi-VN') + ' VNĐ';
   };
+
+  const faqs = [
+    {
+      q: 'What is KusShoes and how does it work?',
+      a: 'Scan a real sneaker with your phone camera, let AI turn it into a 3D model, then customize it in KusStudio (web/desktop) and export a 3D file plus a reference pack to bring to an artisan for physical production. KusShoes doesn’t run manufacturing or take custom orders itself.',
+    },
+    {
+      q: 'Do I need a powerful computer to use KusShoes?',
+      a: 'The web app runs directly in your browser (Chrome, Safari, Edge) and offloads most processing to the cloud, so you don’t need a powerful machine to start designing. If you want KusStudio Desktop for full high-fidelity 3D rendering, paint mapping, and offline sync, your computer will need a reasonably capable graphics card to run it smoothly.',
+    },
+    {
+      q: 'How does the AI background removal feature work?',
+      a: 'Upload any image — a logo, a pattern, artwork — and our AI automatically detects and removes the background in seconds. Drop the transparent result straight onto the 3D shoe surface right away.',
+    },
+    {
+      q: 'I don’t have a sneaker to scan — can I still design one?',
+      a: 'Yes. Start right away with a preset shoe from our library — Free includes 3 base models, Basic/Pro unlock the entire library.',
+    },
+    {
+      q: 'What do I need to scan a sneaker?',
+      a: 'Use the KusShoes mobile app, record a video at 720p or higher, place the shoe inside the guide frame and rotate it a full 360°, up to 30 photos or a 60-second video (200MB total). Scanning is a Basic/Pro plan benefit — Free designs on preset models only.',
+    },
+    {
+      q: 'What’s the difference between the plans?',
+      a: 'Free is 0đ (3 preset shoes, no scanning, PNG export with watermark) · Basic is 259,000đ/month (1 scan per cycle, GLB export at 2K texture, 100 exports) · Pro is 649,000đ/month (more scans, GLB+OBJ export at 4K texture, no watermark). You can also buy extra scan credits for 49,000đ each while on Basic/Pro.',
+    },
+    {
+      q: 'Do plans auto-renew or auto-charge?',
+      a: 'No. We only remind you before your plan expires and give you a 3-day grace period where you can still view and edit designs (scanning and exporting are paused), after which your account moves to Free — your saved designs are never lost.',
+    },
+    {
+      q: 'What do I get once my design is finished?',
+      a: 'A 3D file (GLB, plus OBJ on Pro), high-quality render images, and a reference PDF pack with color codes, sizing, and sticker/text placement — ready to hand to an artisan for physical production.',
+    },
+    {
+      q: 'What payment methods are supported, and are they safe?',
+      a: 'We support VietQR (PayOS), MoMo, and VNPay. Card details are entered directly on the payment gateway’s page — KusShoes never stores your card or wallet info, and you’ll get a PDF receipt after every successful payment.',
+    },
+    {
+      q: 'Is my data and account secure?',
+      a: 'Passwords are encrypted, two-factor authentication (2FA) is supported, and you can view and revoke individual login devices anytime. You can also download all your data or permanently delete your account whenever you want.',
+    },
+  ];
+  const [openFaqIndex, setOpenFaqIndex] = useState<number | null>(0);
 
   return (
     <div className={styles.container}>
@@ -468,7 +539,6 @@ export const Landing: React.FC<LandingProps> = ({ navigate }) => {
           viewport={{ once: true }}
           transition={{ duration: 0.5 }}
         >
-          <div className={styles.workflowCtaGlow} aria-hidden="true" />
           <div className={styles.workflowCtaText}>
             <h3>Ready to digitize your sneakers?</h3>
             <p>Get started with free 3D mobile capture in minutes.</p>
@@ -485,33 +555,252 @@ export const Landing: React.FC<LandingProps> = ({ navigate }) => {
         </motion.div>
       </section>
 
-      {/* Features Section */}
-      <section id="features" className={styles.featuresSection}>
-        <div className={styles.sectionHeader}>
-          <h2 className={styles.sectionTitle}>Engine Features</h2>
-          <p className={styles.sectionSubtitle}>Advanced backend integrations that make sneaker modeling fast and stable.</p>
-        </div>
+      {/* Social Proof Section */}
+      <section id="social-proof" className={styles.socialProofSection}>
+        <div className={styles.proofMesh} aria-hidden="true" />
 
-        <div className={styles.featuresGrid}>
-          {features.map((feat, index) => {
-            const Icon = feat.icon;
-            return (
-              <motion.div 
-                key={feat.title}
-                className={`${styles.featCard} glass-panel`}
-                initial={{ opacity: 0, y: 20 }}
-                whileInView={{ opacity: 1, y: 0 }}
-                viewport={{ once: true }}
-                transition={{ duration: 0.5, delay: 0.15 * index }}
-              >
-                <div className={styles.featIconBox}>
-                  <Icon size={24} className={styles.featIcon} />
+        <div className={styles.proofInner}>
+          <header className={styles.proofHeader}>
+            <div className={styles.proofBadgeRow}>
+              <span className={styles.pulseDotWrap}>
+                <span className={styles.pulseRing} />
+                <span className={styles.pulseDot} />
+              </span>
+              <span className={styles.proofBadgeText}>Streetwear Verified Data</span>
+              <span className={styles.proofBadgeLive}>LIVE CLOUD</span>
+            </div>
+
+            <h2 className={styles.proofHeadline}>
+              Loved by a{' '}
+              <span className={styles.proofHeadlineAccent}>
+                Growing
+                <svg className={styles.proofUnderline} viewBox="0 0 200 12" fill="none" preserveAspectRatio="none">
+                  <path d="M2 9C58 2 142 2 198 9" stroke="currentColor" strokeWidth="4" strokeLinecap="round" />
+                </svg>
+              </span>{' '}
+              Community
+            </h2>
+            <p className={styles.proofSubtitle}>
+              Real numbers from sneakerheads, streetwear creators, and 3D customizers already cooking heat on{' '}
+              <span className={styles.proofSubtitleBrand}>KusShoes</span>.
+            </p>
+          </header>
+
+          <div className={styles.bentoGrid}>
+            {/* Card 1 — Designs Created */}
+            <motion.div
+              className={`${styles.bentoCard} ${styles.bentoCardWide} ${styles.bentoCardHero}`}
+              initial={{ opacity: 0, y: 20 }}
+              whileInView={{ opacity: 1, y: 0 }}
+              viewport={{ once: true }}
+              transition={{ duration: 0.5 }}
+            >
+              <span className={styles.cardWatermark} aria-hidden="true">DROP</span>
+              <div className={styles.cardHalftone} aria-hidden="true" />
+
+              <div className={styles.cardTopRow}>
+                <div className={styles.cardIconLabelGroup}>
+                  <div className={styles.cardIconBox}>
+                    <Layers size={22} />
+                  </div>
+                  <div>
+                    <span className={styles.cardMetaLabel}>Total Output</span>
+                    <div>
+                      <span className={styles.cardGrowthBadge}>+24% THIS WEEK</span>
+                    </div>
+                  </div>
                 </div>
-                <h3 className={styles.featTitle}>{feat.title}</h3>
-                <p className={styles.featDesc}>{feat.desc}</p>
-              </motion.div>
-            );
-          })}
+                <div className={styles.cardSticker}>#HEAT-DROPS</div>
+              </div>
+
+              <div className={styles.cardStatBlock}>
+                <div className={styles.cardStatRow}>
+                  <span className={styles.cardStatValueLg}>
+                    <StatCounter target={12400} suffix="+" />
+                  </span>
+                  <span className={styles.cardStatBolt}>⚡</span>
+                </div>
+                <h3 className={styles.cardStatTitle}>Designs Created &amp; 3D Rendered</h3>
+                <p className={styles.cardStatDesc}>
+                  From retro high-tops to hyper-futuristic chunky outsoles — all crafted in real time inside KusStudio by creators worldwide.
+                </p>
+              </div>
+
+              <div className={styles.cardFooterRow}>
+                <div className={styles.trendingGroup}>
+                  <span className={styles.trendingLabel}>Trending:</span>
+                  <span className={styles.trendingPill}>Cyber Dunk '04</span>
+                  <span className={`${styles.trendingPill} ${styles.trendingPillHideMobile}`}>Rust Orange AJ1</span>
+                </div>
+                <div className={styles.velocityBadge}>
+                  <TrendingUp size={16} />
+                  <span>High Velocity Render</span>
+                </div>
+              </div>
+            </motion.div>
+
+            {/* Card 2 — Sneakers Scanned */}
+            <motion.div
+              className={`${styles.bentoCard} ${styles.bentoCardNarrow}`}
+              initial={{ opacity: 0, y: 20 }}
+              whileInView={{ opacity: 1, y: 0 }}
+              viewport={{ once: true }}
+              transition={{ duration: 0.5, delay: 0.1 }}
+            >
+              <div className={styles.cardTopRow}>
+                <div className={styles.cardIconBox}>
+                  <ScanLine size={22} />
+                </div>
+                <span className={styles.techSpecTag}>LiDAR / Mobile 3D</span>
+              </div>
+
+              <div className={styles.cardStatBlock}>
+                <span className={styles.cardStatValueMd}>
+                  <StatCounter target={3150} suffix="+" />
+                </span>
+                <h3 className={styles.cardStatTitle}>Sneakers Scanned</h3>
+                <p className={styles.cardStatDesc}>
+                  Physical grails digitized with mm-level accuracy straight from mobile cameras.
+                </p>
+              </div>
+
+              <div className={styles.techSpecRow}>
+                <span className={styles.techSpecCheck}>
+                  <Check size={15} />
+                  Mesh Quality 4K RAW
+                </span>
+                <span className={styles.techSpecLatency}>0.02s LATENCY</span>
+              </div>
+            </motion.div>
+
+            {/* Card 3 — Active Creators */}
+            <motion.div
+              className={`${styles.bentoCard} ${styles.bentoCardNarrow}`}
+              initial={{ opacity: 0, y: 20 }}
+              whileInView={{ opacity: 1, y: 0 }}
+              viewport={{ once: true }}
+              transition={{ duration: 0.5, delay: 0.15 }}
+            >
+              <div className={styles.cardTopRow}>
+                <div className={styles.cardIconBox}>
+                  <UsersRound size={22} />
+                </div>
+                <div className={styles.liveIndicator}>
+                  <span className={styles.liveIndicatorDot} />
+                  <span>142 Live Cooking</span>
+                </div>
+              </div>
+
+              <div className={styles.cardStatBlock}>
+                <span className={styles.cardStatValueMd}>
+                  <StatCounter target={980} suffix="+" />
+                </span>
+                <h3 className={styles.cardStatTitle}>Active Creators</h3>
+                <p className={styles.cardStatDesc}>
+                  Indie customizers, sneakerheads and streetwear designers sharing presets daily.
+                </p>
+              </div>
+
+              <div className={styles.avatarRow}>
+                <div className={styles.avatarStack}>
+                  <span className={`${styles.avatarCircle} ${styles.avatarSlate}`}>VN</span>
+                  <span className={`${styles.avatarCircle} ${styles.avatarOrange}`}>DR</span>
+                  <span className={`${styles.avatarCircle} ${styles.avatarAmber}`}>SL</span>
+                  <span className={`${styles.avatarCircle} ${styles.avatarGhost}`}>+98</span>
+                </div>
+                <span className={styles.avatarHandle}>@driplab3d &amp; crew</span>
+              </div>
+            </motion.div>
+
+            {/* Card 4 — Rating & Testimonial */}
+            <motion.div
+              className={`${styles.bentoCard} ${styles.bentoCardWide}`}
+              initial={{ opacity: 0, y: 20 }}
+              whileInView={{ opacity: 1, y: 0 }}
+              viewport={{ once: true }}
+              transition={{ duration: 0.5, delay: 0.2 }}
+            >
+              <div className={styles.cardTopRow}>
+                <div className={styles.cardIconLabelGroup}>
+                  <div className={styles.cardIconBox}>
+                    <Star size={20} fill="currentColor" />
+                  </div>
+                  <div>
+                    <span className={styles.cardMetaLabel}>Sneakerhead Satisfaction</span>
+                    <div className={styles.ratingStars}>
+                      {[0, 1, 2, 3].map((i) => (
+                        <Star key={i} size={14} fill="currentColor" />
+                      ))}
+                      <StarHalf size={14} fill="currentColor" />
+                      <span className={styles.ratingStarsValue}>4.84</span>
+                    </div>
+                  </div>
+                </div>
+                <div className={styles.verifiedStamp}>
+                  <BadgeCheck size={16} />
+                  <span>2,400+ VERIFIED REVIEWS</span>
+                </div>
+              </div>
+
+              <div className={styles.quoteBox}>
+                <p className={styles.quoteText}>
+                  "KusShoes turns any wild design concept into an interactive 3D model in seconds. Easiest sneaker customizer for Dunk &amp; Jordan samples out there."
+                </p>
+                <div className={styles.quoteAuthorRow}>
+                  <div className={styles.quoteAuthorIdentity}>
+                    <span className={styles.quoteAvatar}>MT</span>
+                    <div className={styles.quoteAuthorNames}>
+                      <span className={styles.quoteAuthorName}>Minh Trần</span>
+                      <span className={styles.quoteAuthor}>@minh.kicks</span>
+                    </div>
+                  </div>
+                  <span className={styles.quoteAuthorMeta}>Custom Sneaker Studio · Verified</span>
+                </div>
+              </div>
+
+              <div className={styles.ratingCallout}>
+                <div className={styles.ratingBig}>
+                  <span className={styles.ratingBigValue}>4.8 / 5.0</span>
+                  <span className={styles.ratingBigLabel}>Average Rating</span>
+                </div>
+                <a href="#showcase" className={styles.readReviewsLink}>
+                  <span>Read Reviews</span>
+                  <ArrowUpRight size={16} />
+                </a>
+              </div>
+            </motion.div>
+          </div>
+
+          {/* Scrolling ticker */}
+          <div className={styles.tickerStrip}>
+            <div className={styles.tickerTrack}>
+              {[0, 1].map((groupIndex) => (
+                <div key={groupIndex} className={styles.tickerGroup} aria-hidden={groupIndex === 1}>
+                  {communityTicker.map((item, i) => (
+                    <React.Fragment key={i}>
+                      <span className={styles.tickerItem}>
+                        {item.icon && <item.icon size={14} fill="currentColor" />}
+                        {item.label}
+                      </span>
+                      <span className={styles.tickerDot}>•</span>
+                    </React.Fragment>
+                  ))}
+                </div>
+              ))}
+            </div>
+          </div>
+
+          {/* Footnote CTA */}
+          <div className={styles.proofFootnote}>
+            <div className={styles.proofFootnoteLeft}>
+              <span className={styles.proofFootnoteDot} />
+              <span>Open creator cloud sync · Free tier available for solo sneakerheads</span>
+            </div>
+            <a href="#showcase" className={styles.proofFootnoteLink}>
+              <span>Explore The App</span>
+              <ArrowRight size={14} />
+            </a>
+          </div>
         </div>
       </section>
 
@@ -584,6 +873,55 @@ export const Landing: React.FC<LandingProps> = ({ navigate }) => {
             <span>View Full Feature Comparison</span>
             <ArrowRight size={16} />
           </button>
+        </div>
+      </section>
+
+      {/* FAQ Section */}
+      <section id="faq" className={styles.faqSection}>
+        <div className={styles.sectionHeader}>
+          <h2 className={styles.sectionTitle}>Frequently Asked Questions</h2>
+          <p className={styles.sectionSubtitle}>Everything you need to know before you start scanning.</p>
+        </div>
+
+        <div className={styles.faqList}>
+          {faqs.map((faq, index) => {
+            const isOpen = openFaqIndex === index;
+            return (
+              <motion.div
+                key={faq.q}
+                className={`${styles.faqItem} glass-panel`}
+                initial={{ opacity: 0, y: 16 }}
+                whileInView={{ opacity: 1, y: 0 }}
+                viewport={{ once: true, margin: '-50px' }}
+                transition={{ duration: 0.4, delay: index * 0.05 }}
+              >
+                <button
+                  type="button"
+                  className={styles.faqQuestion}
+                  onClick={() => setOpenFaqIndex(isOpen ? null : index)}
+                  aria-expanded={isOpen}
+                >
+                  <span className={styles.faqQuestionText}>{faq.q}</span>
+                  <span className={styles.faqIconBox}>
+                    {isOpen ? <Minus size={16} /> : <Plus size={16} />}
+                  </span>
+                </button>
+                <AnimatePresence>
+                  {isOpen && (
+                    <motion.div
+                      initial={{ height: 0, opacity: 0 }}
+                      animate={{ height: 'auto', opacity: 1 }}
+                      exit={{ height: 0, opacity: 0 }}
+                      transition={{ duration: 0.25, ease: 'easeInOut' }}
+                      style={{ overflow: 'hidden' }}
+                    >
+                      <p className={styles.faqAnswer}>{faq.a}</p>
+                    </motion.div>
+                  )}
+                </AnimatePresence>
+              </motion.div>
+            );
+          })}
         </div>
       </section>
 

@@ -1,9 +1,10 @@
-import React, { useCallback, useEffect, useState } from 'react';
-import { AlertTriangle, Download } from 'lucide-react';
+import React, { useCallback, useEffect, useRef, useState } from 'react';
+import { AlertTriangle, Download, Upload } from 'lucide-react';
 import {
   accountApi,
   type ConsentRecord,
   type ConsentType,
+  type DataImportHistoryItem,
   type PrivacySettings,
 } from '../../api/account';
 import { api } from '../../api/client';
@@ -52,6 +53,9 @@ export const PrivacyPanel: React.FC = () => {
   const [busy, setBusy] = useState(false);
   const [confirmDeleteOpen, setConfirmDeleteOpen] = useState(false);
   const [deletePassword, setDeletePassword] = useState('');
+  const [importHistory, setImportHistory] = useState<DataImportHistoryItem[] | null>(null);
+  const [importing, setImporting] = useState(false);
+  const fileInputRef = useRef<HTMLInputElement>(null);
 
   const load = useCallback(async () => {
     try {
@@ -63,9 +67,18 @@ export const PrivacyPanel: React.FC = () => {
     }
   }, [toast]);
 
+  const loadImportHistory = useCallback(async () => {
+    try {
+      setImportHistory(await accountApi.listDataImports());
+    } catch (caught) {
+      toast(caught instanceof Error ? caught.message : 'Unable to load import history.', 'error');
+    }
+  }, [toast]);
+
   useEffect(() => {
     void load();
-  }, [load]);
+    void loadImportHistory();
+  }, [load, loadImportHistory]);
 
   const togglePrivacy = async (key: keyof PrivacySettings, next: boolean) => {
     if (!privacy) return;
@@ -104,6 +117,31 @@ export const PrivacyPanel: React.FC = () => {
       toast(caught instanceof Error ? caught.message : 'Unable to prepare your export.', 'error');
     } finally {
       setBusy(false);
+    }
+  };
+
+  const importBackup = async (file: File) => {
+    setImporting(true);
+    try {
+      const upload = await accountApi.requestDataImportUpload();
+      const putResponse = await fetch(upload.upload_url, {
+        method: 'PUT',
+        headers: { 'Content-Type': 'application/zip' },
+        body: file,
+      });
+      if (!putResponse.ok) throw new Error('Unable to upload the backup file.');
+      const result = await accountApi.confirmDataImport(upload.import_id);
+      if (result.status === 'completed') {
+        toast(`Imported ${result.projects_imported} project(s) as new copies.`, 'info');
+      } else {
+        toast(result.message || 'The backup could not be imported.', 'error');
+      }
+      await loadImportHistory();
+    } catch (caught) {
+      toast(caught instanceof Error ? caught.message : 'Unable to restore from backup.', 'error');
+    } finally {
+      setImporting(false);
+      if (fileInputRef.current) fileInputRef.current.value = '';
     }
   };
 
@@ -178,6 +216,58 @@ export const PrivacyPanel: React.FC = () => {
             <Download size={16} /> Export my data
           </button>
         </div>
+      </div>
+
+      <div className={`${panel.panel} glass-panel`}>
+        <div>
+          <h4 className={panel.panelTitle}>Restore from backup</h4>
+          <p className={panel.panelDesc}>
+            Upload a .zip export previously downloaded from KusShoes. Projects are restored as new copies and never
+            overwrite existing ones; binary assets (GLB/textures) are not part of the backup.
+          </p>
+        </div>
+        <div className={panel.actions}>
+          <input
+            ref={fileInputRef}
+            type="file"
+            accept=".zip,application/zip"
+            style={{ display: 'none' }}
+            onChange={(event) => {
+              const file = event.target.files?.[0];
+              if (file) void importBackup(file);
+            }}
+          />
+          <button
+            type="button"
+            className="btn-outline"
+            onClick={() => fileInputRef.current?.click()}
+            disabled={importing}
+          >
+            <Upload size={16} /> {importing ? 'Restoring…' : 'Restore from backup'}
+          </button>
+        </div>
+        {importHistory !== null && importHistory.length > 0 && (
+          <table className={panel.table}>
+            <thead>
+              <tr>
+                <th>Date</th>
+                <th>Status</th>
+                <th>Projects</th>
+                <th>Note</th>
+              </tr>
+            </thead>
+            <tbody>
+              {importHistory.map((item) => (
+                <tr key={item.id}>
+                  <td>{new Date(item.created_at).toLocaleString()}</td>
+                  <td>{item.status}</td>
+                  <td>{item.projects_imported}</td>
+                  <td>{item.rejected_reason ?? '—'}</td>
+                </tr>
+              ))}
+            </tbody>
+          </table>
+        )}
       </div>
 
       <div className={styles.dangerZone}>

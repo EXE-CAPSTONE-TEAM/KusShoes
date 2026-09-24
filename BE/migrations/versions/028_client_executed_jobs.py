@@ -9,16 +9,16 @@
 - project_assets: `raw` status for scan output that still needs desktop preparation, and
   `derived_from_asset_id` linking a prepared model to its raw scan.
 
-Revision ID: 027
-Revises: 026
+Revision ID: 028
+Revises: 027
 Create Date: 2026-09-24
 """
 import sqlalchemy as sa
 from alembic import op
 from sqlalchemy.dialects import postgresql
 
-revision = "027"
-down_revision = "026"
+revision = "028"
+down_revision = "027"
 branch_labels = None
 depends_on = None
 

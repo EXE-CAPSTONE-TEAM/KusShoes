@@ -158,32 +158,6 @@ async def test_coupon_discounts_checkout_and_is_single_use_per_account(
 
 
 @pytest.mark.asyncio
-async def test_first_payment_only_coupon_rejected_after_a_paid_invoice(
-    client, db, auth_headers, authenticated_user
-):
-    _admin_user, admin_headers = await _admin(db, "fin-admin@example.com", "finadmin")
-    await client.post(
-        "/api/v1/admin/billing/coupons",
-        headers=admin_headers,
-        json={
-            "code": "EARLYBIRD",
-            "discount_type": "fixed_price",
-            "value": 129000,
-            "plan_tiers": ["basic"],
-            "first_payment_only": True,
-        },
-    )
-    await _pay(client, db, auth_headers, authenticated_user)  # a normal paid order first
-
-    response = await client.post(
-        "/api/v1/subscription/coupon/preview",
-        headers=auth_headers,
-        json={"tier": "basic", "billing_cycle": "monthly", "coupon_code": "EARLYBIRD"},
-    )
-    assert response.status_code == 422
-
-
-@pytest.mark.asyncio
 async def test_manual_transaction_needs_second_admin_and_proof(
     client, db, authenticated_user
 ):
@@ -380,4 +354,4 @@ async def test_admin_grants_comp_plan_without_revenue(client, db, authenticated_
     subscription = await subscription_repo.get_by_user(db, authenticated_user.id)
     assert subscription.is_comp is True
     assert subscription.tier == "pro_monthly"
-    assert await invoice_repo.has_paid_invoice(db, authenticated_user.id) is False
+    assert await invoice_repo.list_by_user(db, authenticated_user.id, limit=1) == []  # COMP has no invoice
