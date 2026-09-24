@@ -7,6 +7,7 @@ services:
   db:
     image: postgres:16-alpine
     container_name: kusshoes_db
+    profiles: ["local-db"]
     environment:
       POSTGRES_DB: kusshoes
       POSTGRES_USER: kusshoes
@@ -35,7 +36,7 @@ services:
     restart: unless-stopped
 
   minio:
-    image: minio/minio
+    image: quay.io/minio/minio
     container_name: kusshoes_minio
     command: server /data --console-address ":9001"
     environment:
@@ -55,7 +56,7 @@ services:
 
   # Tự động tạo bucket khi MinIO khởi động lần đầu, chạy 1 lần rồi thoát
   minio-init:
-    image: minio/mc
+    image: quay.io/minio/mc
     container_name: kusshoes_minio_init
     depends_on:
       minio:
@@ -79,14 +80,12 @@ services:
     ports:
       - "8000:8000"   # API:     http://localhost:8000
                       # Swagger: http://localhost:8000/docs
-    env_file: .env
+    env_file: ${APP_ENV_FILE:-.env}
     # Bake worker (ar-ai-exe/backend) chạy ở compose khác trên host:8010 →
     # host.docker.internal cho phép container gọi ngược ra host trên Linux.
     extra_hosts:
       - "host.docker.internal:host-gateway"
     depends_on:
-      db:
-        condition: service_healthy
       redis:
         condition: service_healthy
       minio-init:
@@ -103,30 +102,32 @@ services:
   worker:
     build: .
     container_name: kusshoes_worker
-    env_file: .env
+    env_file: ${APP_ENV_FILE:-.env}
     extra_hosts:
       - "host.docker.internal:host-gateway"
     depends_on:
-      db:
-        condition: service_healthy
       redis:
         condition: service_healthy
     volumes:
       - ./app:/app/app
       - ./scripts:/app/scripts
+      - ./migrations:/app/migrations
+      - ./alembic.ini:/app/alembic.ini
     command: celery -A app.workers.celery_app worker --loglevel=info -Q high,normal,low,bake
     restart: unless-stopped
 
   beat:
     build: .
     container_name: kusshoes_beat
-    env_file: .env
+    env_file: ${APP_ENV_FILE:-.env}
     depends_on:
       redis:
         condition: service_healthy
     volumes:
       - ./app:/app/app
       - ./scripts:/app/scripts
+      - ./migrations:/app/migrations
+      - ./alembic.ini:/app/alembic.ini
     command: celery -A app.workers.celery_app beat --loglevel=info
     restart: unless-stopped
 

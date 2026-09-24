@@ -1,0 +1,21 @@
+services:
+  api:
+    environment:
+      DATABASE_URL: postgresql+asyncpg://kusshoes:kusshoes@db:5432/kusshoes
+    depends_on:
+      db:
+        condition: service_healthy
+
+  worker:
+    environment:
+      DATABASE_URL: postgresql+asyncpg://kusshoes:kusshoes@db:5432/kusshoes
+    depends_on:
+      db:
+        condition: service_healthy
+
+  beat:
+    environment:
+      DATABASE_URL: postgresql+asyncpg://kusshoes:kusshoes@db:5432/kusshoes
+    depends_on:
+      db:
+        condition: service_healthy
