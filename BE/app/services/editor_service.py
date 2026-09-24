@@ -7,7 +7,13 @@ from typing import Any
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.config import settings
-from app.exceptions import AppException, AssetNotFound, ProjectNotFound
+from app.exceptions import (
+    AppException,
+    AssetNotFound,
+    EditorDesignResetRequired,
+    EditorNoRawModel,
+    ProjectNotFound,
+)
 from app.infrastructure import storage
 from app.repositories import (
     bake_job_repo,
@@ -30,6 +36,7 @@ from app.schemas.editor import (
     EditorJobResponse,
     EditorModelAssetResponse,
     EditorPermissionsResponse,
+    EditorPrepareRequest,
     EditorProjectResponse,
     EditorUserResponse,
 )
@@ -80,6 +87,16 @@ async def get_context(
 ) -> EditorContextResponse:
     project = await require_editor_project(db, session, project_id)
     asset = await _canonical_asset(db, project)
+    raw_asset = await project_asset_repo.get_latest_raw_source_model(db, project.id)
+    raw_model_asset_id = raw_asset.id if raw_asset else None
+    if asset and asset.status == "ready":
+        model_status = "ready"
+    elif asset and asset.status == "raw":
+        model_status = "raw"
+    elif raw_asset:
+        model_status = "raw"
+    else:
+        model_status = None
     latest_job = await bake_job_repo.get_latest_for_project(db, project.id)
     exports = await export_record_repo.list_for_project(db, project.id)
     return EditorContextResponse(
@@ -91,6 +108,8 @@ async def get_context(
             else None
         ),
         permissions=_permissions(session),
+        modelStatus=model_status,
+        rawModelAssetId=raw_model_asset_id,
     )
 
 
@@ -168,6 +187,36 @@ async def trigger_bake(
     job = await bake_job_repo.get_by_id(db, result.job_id)
     if not job:
         raise AppException(500, "EDITOR_JOB_NOT_CREATED", "Bake job could not be created.")
+    return _job_response(job)
+
+
+async def trigger_prepare(
+    db: AsyncSession,
+    session: EditorSessionResponse,
+    project_id: uuid.UUID,
+    body: EditorPrepareRequest,
+) -> EditorJobResponse:
+    _require_scope(session, "editor:write")
+    project = await require_editor_project(db, session, project_id, for_update=True)
+    raw_asset = await project_asset_repo.get_latest_raw_source_model(db, project.id)
+    if not raw_asset:
+        raise EditorNoRawModel()
+
+    if project.design_config and not body.confirm_reset_design:
+        raise EditorDesignResetRequired()
+
+    stale = await job_service.supersede_active(db, project.id)
+    job = await bake_job_repo.create(
+        db,
+        project_id=project.id,
+        design_config=None,
+        priority="normal",
+        kind="prepare",
+        source_asset_id=raw_asset.id,
+        crop_box=body.crop_box,
+    )
+    await db.commit()
+    await job_service.delete_staging(stale)
     return _job_response(job)
 
 

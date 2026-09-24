@@ -210,6 +210,7 @@ DOCS: dict[str, tuple[str, str]] = {
     "GET /api/v1/editor/projects/{project_id}/context": ("Ngữ cảnh mở editor", "Người dùng, dự án, model gốc, thiết kế gần nhất và quyền. Dùng cho KusStudio desktop. " + _B),
     "GET /api/v1/editor/me": ("Người dùng của editor session", "Thông tin người dùng gắn với editor session. " + _E),
     "POST /api/v1/editor/projects/{project_id}/designs": ("Lưu thiết kế từ editor", "Cần scope `editor:write`. Kiểm tra model gốc sẵn sàng, `base_revision` khớp bản hiện tại (xung đột trả lỗi revision), khóa xuất (`PROJECT_EXPORTING`) và guardrail nội dung; mỗi lần lưu tạo revision và một phiên bản lịch sử. " + _E),
+    "POST /api/v1/editor/projects/{project_id}/prepare": ("Tạo job chuẩn bị model (crop/cleanup)", "Tạo prepare job từ model thô (raw) gần nhất. Cần xác nhận đặt lại thiết kế (confirmResetDesign) nếu project đã có thiết kế. " + _E),
     "GET /api/v1/editor/designs/{design_id}": ("Lấy thiết kế", "Thiết kế hiện tại của dự án kèm bake job và file xuất gần nhất. " + _E),
     "POST /api/v1/editor/designs/{design_id}/bake": ("Bắt đầu bake từ editor", "Cần scope `editor:write` và thiết kế đã lưu; dùng cùng quy tắc hạn mức như bake của portal (202). " + _E),
     "GET /api/v1/editor/jobs/{job_id}": ("Trạng thái job", "Trạng thái job bake/prepare (`awaiting_client`, `claimed`, `completed`, `failed`, `cancelled`) và hạn lease. " + _E),

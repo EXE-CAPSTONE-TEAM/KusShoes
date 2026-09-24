@@ -877,3 +877,17 @@ class JobOutputInvalid(AppException):
 class EditorModelChanged(AppException):
     def __init__(self):
         super().__init__(409, "EDITOR_MODEL_CHANGED", "Model đã thay đổi. Vui lòng chạy lại.")
+
+
+class EditorNoRawModel(AppException):
+    def __init__(self):
+        super().__init__(409, "EDITOR_NO_RAW_MODEL", "Không tìm thấy model thô (raw) để chuẩn bị.")
+
+
+class EditorDesignResetRequired(AppException):
+    def __init__(self):
+        super().__init__(
+            409,
+            "EDITOR_DESIGN_RESET_REQUIRED",
+            "Project đã có thiết kế. Cần xác nhận đặt lại thiết kế (confirmResetDesign) để crop lại.",
+        )

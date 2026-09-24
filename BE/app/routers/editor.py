@@ -18,6 +18,7 @@ from app.schemas.editor import (
     EditorJobCompleteRequest,
     EditorJobFailRequest,
     EditorJobResponse,
+    EditorPrepareRequest,
     EditorUserResponse,
 )
 from app.schemas.project_asset import (
@@ -82,6 +83,18 @@ async def get_design(
     session: EditorSessionResponse = Depends(get_editor_session),
 ):
     return await editor_service.get_design(db, session, design_id)
+
+
+@router.post("/projects/{project_id}/prepare", response_model=EditorJobResponse)
+async def prepare_project(
+    project_id: uuid.UUID,
+    body: EditorPrepareRequest | None = None,
+    db: AsyncSession = Depends(get_db),
+    session: EditorSessionResponse = Depends(get_editor_session),
+):
+    return await editor_service.trigger_prepare(
+        db, session, project_id, body or EditorPrepareRequest()
+    )
 
 
 @router.post("/designs/{design_id}/bake", response_model=EditorJobResponse, status_code=202)

@@ -41,6 +41,13 @@ def final_export_key(project_id: uuid.UUID, job_id: uuid.UUID, filename: str) ->
     return f"exports/{project_id}/{job_id}/{filename}"
 
 
+def final_prepare_key(
+    project_id: uuid.UUID, job_id: uuid.UUID, filename: str = "prepared.glb"
+) -> str:
+    """Where a verified prepared model lives; no presigned capability ever covers it (spec §A.6)."""
+    return f"models/{project_id}/{job_id}/{filename}"
+
+
 async def build_bake_payload(
     db: AsyncSession,
     *,
@@ -139,6 +146,75 @@ async def build_bake_payload(
                 "text": str(watermark["text"]),
                 "opacity_percent": int(watermark["opacity_percent"]),
             },
+        },
+        issued_outputs,
+    )
+
+
+async def build_prepare_payload(
+    db: AsyncSession,
+    *,
+    project,
+    job,
+    claim_id: uuid.UUID,
+) -> tuple[dict[str, Any], list[dict[str, Any]]]:
+    """Capability payload for the desktop sidecar's ``/prepare`` plus the staging output issued.
+
+    Every URL expires with the claim lease (CLAIM_LEASE_SECONDS).
+    """
+    source_id = getattr(job, "source_asset_id", None)
+    if not source_id:
+        raise ValueError("Job chưa có raw model asset")
+    source = await project_asset_repo.get_by_id(db, source_id)
+    if (
+        not source
+        or source.project_id != project.id
+        or source.user_id != project.user_id
+        or source.asset_type != "source_model"
+        or source.status != "raw"
+        or source.mime_type != "model/gltf-binary"
+        or type(source.file_size_bytes) is not int
+        or not 0 < source.file_size_bytes <= MAX_SOURCE_BYTES
+        or not source.file_path
+    ):
+        raise ValueError("Raw model GLB không hợp lệ hoặc chưa sẵn sàng")
+
+    ttl = settings.CLAIM_LEASE_SECONDS
+    filename = "prepared.glb"
+    content_type = "model/gltf-binary"
+    staging_path = staging_key(project.id, job.id, claim_id, filename)
+    issued_outputs = [
+        {
+            "format": "glb",
+            "file_path": staging_path,
+            "content_type": content_type,
+        }
+    ]
+    output_capabilities = [
+        {
+            "format": "glb",
+            "file_path": staging_path,
+            "upload_url": storage.generate_presigned_upload_url(
+                staging_path,
+                content_type,
+                ttl,
+            ),
+            "content_type": content_type,
+        }
+    ]
+
+    return (
+        {
+            "job_id": str(job.id),
+            "project_id": str(project.id),
+            "crop_box": job.crop_box or {},
+            "source_model": {
+                "asset_id": str(source.id),
+                "download_url": storage.generate_presigned_download_url(source.file_path, ttl),
+                "file_size_bytes": source.file_size_bytes,
+                "mime_type": source.mime_type,
+            },
+            "outputs": output_capabilities,
         },
         issued_outputs,
     )

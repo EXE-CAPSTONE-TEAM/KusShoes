@@ -119,6 +119,13 @@ class EditorContextResponse(EditorSchema):
     model_asset: EditorModelAssetResponse | None = Field(default=None, alias="modelAsset")
     latest_design: EditorDesignResponse | None = Field(default=None, alias="latestDesign")
     permissions: EditorPermissionsResponse
+    model_status: Literal["raw", "ready"] | None = Field(default=None, alias="modelStatus")
+    raw_model_asset_id: uuid.UUID | None = Field(default=None, alias="rawModelAssetId")
+
+
+class EditorPrepareRequest(EditorSchema):
+    crop_box: dict[str, Any] = Field(default_factory=dict, alias="cropBox")
+    confirm_reset_design: bool = Field(default=False, alias="confirmResetDesign")
 
 
 JobType = Literal["bake", "prepare"]

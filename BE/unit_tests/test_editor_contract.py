@@ -8,7 +8,12 @@ from pydantic import ValidationError
 from app.exceptions import AppException, DesignRevisionConflict
 from app.infrastructure.storage import ObjectDownload, iter_object_chunks
 from app.schemas.auth import EditorSessionResponse
-from app.schemas.editor import MAX_EDITOR_CONFIG_BYTES, EditorDesignConfig
+from app.schemas.editor import (
+    MAX_EDITOR_CONFIG_BYTES,
+    EditorContextResponse,
+    EditorDesignConfig,
+    EditorPrepareRequest,
+)
 from app.services.editor_service import (
     _design_response,
     _job_response,
@@ -272,3 +277,37 @@ def _editor_session() -> EditorSessionResponse:
         scopes=["editor:read", "editor:write"],
         expires_at=int(datetime.now(UTC).timestamp()) + 900,
     )
+
+
+def test_editor_context_response_exposes_model_status_and_raw_asset_id() -> None:
+    now = datetime.now(UTC)
+    raw_id = uuid.uuid4()
+    context = EditorContextResponse(
+        project={
+            "id": uuid.uuid4(),
+            "name": "Project",
+            "status": "ready",
+            "sourceType": "scan",
+            "createdAt": now,
+            "updatedAt": now,
+        },
+        permissions={"canEdit": True, "canBake": True, "canExport": True},
+        modelStatus="raw",
+        rawModelAssetId=raw_id,
+    )
+    dumped = context.model_dump(by_alias=True)
+    assert dumped["modelStatus"] == "raw"
+    assert dumped["rawModelAssetId"] == raw_id
+
+
+def test_editor_prepare_request_parsing() -> None:
+    req = EditorPrepareRequest.model_validate(
+        {"cropBox": {"center": {"x": 0, "y": 0, "z": 0}}, "confirmResetDesign": True}
+    )
+    assert req.crop_box == {"center": {"x": 0, "y": 0, "z": 0}}
+    assert req.confirm_reset_design is True
+
+    # Defaults
+    empty = EditorPrepareRequest.model_validate({})
+    assert empty.crop_box == {}
+    assert empty.confirm_reset_design is False

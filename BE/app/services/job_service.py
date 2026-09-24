@@ -32,14 +32,16 @@ from app.exceptions import (
 )
 from app.infrastructure import storage
 from app.models.bake_job import BakeJob
+from app.models.project_asset import ProjectAsset
 from app.repositories import (
     bake_job_repo,
     export_record_repo,
+    project_asset_repo,
     project_repo,
     subscription_repo,
 )
 from app.schemas.editor import EditorJobCompleteRequest
-from app.services import bake_service, quota_service, watermark_service
+from app.services import bake_service, quota_service, version_service, watermark_service
 
 # provenance: 256-bit secret (spec §Parameter & Data Provenance, "Claim / sidecar tokens").
 CLAIM_TOKEN_BYTES = 32
@@ -128,7 +130,21 @@ async def _bake_payload(
     )
 
 
-PAYLOAD_BUILDERS: dict[str, PayloadBuilder] = {"bake": _bake_payload}
+async def _prepare_payload(
+    db: AsyncSession, project, job: BakeJob, claim_id: uuid.UUID
+) -> tuple[dict[str, Any], list[dict[str, Any]]]:
+    return await bake_service.build_prepare_payload(
+        db,
+        project=project,
+        job=job,
+        claim_id=claim_id,
+    )
+
+
+PAYLOAD_BUILDERS: dict[str, PayloadBuilder] = {
+    "bake": _bake_payload,
+    "prepare": _prepare_payload,
+}
 
 
 async def claim(
@@ -290,9 +306,89 @@ async def _complete_bake(
     job.result = {"exports": finals}
 
 
+async def _complete_prepare(
+    db: AsyncSession, job: BakeJob, body: EditorJobCompleteRequest
+) -> None:
+    project = await project_repo.get_by_id(db, job.project_id, for_update=True)
+    if project is None:
+        raise BakeJobNotFound()
+    if not job.source_asset_id:
+        await _fail_and_raise(db, job, EditorModelChanged())
+    raw_asset = await project_asset_repo.get_by_id(db, job.source_asset_id)
+    if (
+        not raw_asset
+        or raw_asset.project_id != project.id
+        or raw_asset.user_id != project.user_id
+    ):
+        await _fail_and_raise(db, job, EditorModelChanged())
+
+    verified = await _verify_outputs(job, body)
+    staging_item = verified[0]
+    final_path = bake_service.final_prepare_key(project.id, job.id)
+    await asyncio.to_thread(storage.copy_object, str(staging_item["file_path"]), final_path)
+
+    new_asset = ProjectAsset(
+        project_id=project.id,
+        user_id=project.user_id,
+        asset_type="source_model",
+        original_filename=raw_asset.original_filename or "prepared.glb",
+        file_path=final_path,
+        file_size_bytes=staging_item["file_size_bytes"],
+        mime_type="model/gltf-binary",
+        status="ready",
+        derived_from_asset_id=raw_asset.id,
+        metadata_=body.cleanup_report or {},
+    )
+    db.add(new_asset)
+    await db.flush()
+
+    await project_repo.set_canonical_asset(db, project, new_asset.id)
+
+    # Design handling [OD-1]: re-crop when a design exists resets the design
+    # (new revision with empty stickers/texts, modelAssetId = new asset).
+    if project.design_config:
+        new_design = dict(project.design_config)
+        new_design["modelAssetId"] = str(new_asset.id)
+        if "model_asset_id" in new_design:
+            new_design["model_asset_id"] = str(new_asset.id)
+        new_design["stickers"] = []
+        new_design["texts"] = []
+        await project_repo.save_design(
+            db,
+            project,
+            design_config=new_design,
+            thumbnail_path=project.thumbnail_path,
+            base_revision=project.current_design_revision,
+            author_user_id=project.user_id,
+            client="desktop",
+        )
+        await version_service.snapshot(
+            db,
+            project,
+            design_config=new_design,
+            thumbnail_path=project.thumbnail_path,
+        )
+
+    finals = [
+        {
+            "format": "glb",
+            "file_path": final_path,
+            "file_size_bytes": staging_item["file_size_bytes"],
+        }
+    ]
+    job.result = {
+        "outputs": finals,
+        "model_asset_id": str(new_asset.id),
+        "cleanup_report": body.cleanup_report,
+    }
+
+
 COMPLETERS: dict[
     str, Callable[[AsyncSession, BakeJob, EditorJobCompleteRequest], Awaitable[None]]
-] = {"bake": _complete_bake}
+] = {
+    "bake": _complete_bake,
+    "prepare": _complete_prepare,
+}
 
 
 async def complete(
