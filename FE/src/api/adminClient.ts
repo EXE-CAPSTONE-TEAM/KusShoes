@@ -12,8 +12,15 @@ import type {
   ReportFormat,
   ReportType,
   ReportingPeriod,
+  AdminApiBudget,
+  AdminApiCostDailyRow,
   AdminAuthResponse,
+  AdminContentReport,
+  AdminContentReportDetail,
+  AdminTaxConfig,
   DashboardStats,
+  ModerationAction,
+  ReportStatus,
   MonthlyPoint,
   RecentUser,
   AdminUserSummary,
@@ -438,6 +445,45 @@ export const adminFinance = {
     request(`/api/v1/admin/billing/invoices/${invoiceId}/approve`, jsonBody('POST')),
   rejectManual: (invoiceId: string, reason: string): Promise<AdminInvoice> =>
     request(`/api/v1/admin/billing/invoices/${invoiceId}/reject`, jsonBody('POST', { reason })),
+
+  /** BR-28: read-only, sourced from server config — there is no endpoint to change it. */
+  taxConfig: (): Promise<AdminTaxConfig> => request('/api/v1/admin/billing/tax-config'),
+};
+
+export interface ApiCostDailyQuery {
+  date_from?: string;
+  date_to?: string;
+}
+
+export const adminApiCost = {
+  daily: (query: ApiCostDailyQuery = {}): Promise<AdminApiCostDailyRow[]> =>
+    request(`/api/v1/admin/api-cost/daily${queryString(query)}`),
+  budget: (month?: string): Promise<AdminApiBudget> =>
+    request(`/api/v1/admin/api-cost/budget${queryString({ month })}`),
+  setBudget: (month: string, budgetVnd: number): Promise<AdminApiBudget> =>
+    request('/api/v1/admin/api-cost/budget', {
+      method: 'PUT',
+      body: JSON.stringify({ month, budget_vnd: budgetVnd }),
+    }),
+};
+
+export interface ContentReportListQuery {
+  status?: ReportStatus;
+  limit?: number;
+  cursor?: string;
+}
+
+export const adminModeration = {
+  listReports: (query: ContentReportListQuery = {}, signal?: AbortSignal): Promise<CursorPage<AdminContentReport>> =>
+    request(`/api/v1/admin/content-reports${queryString(query)}`, { signal }),
+  getReport: (reportId: string): Promise<AdminContentReportDetail> =>
+    request(`/api/v1/admin/content-reports/${encodeURIComponent(reportId)}`),
+  uphold: (reportId: string, resolutionNote: string): Promise<ModerationAction> =>
+    request(`/api/v1/admin/content-reports/${encodeURIComponent(reportId)}/uphold`, jsonBody('POST', { resolution_note: resolutionNote })),
+  dismiss: (reportId: string, resolutionNote: string): Promise<AdminContentReportDetail> =>
+    request(`/api/v1/admin/content-reports/${encodeURIComponent(reportId)}/dismiss`, jsonBody('POST', { resolution_note: resolutionNote })),
+  userActions: (userId: string): Promise<ModerationAction[]> =>
+    request(`/api/v1/admin/users/${encodeURIComponent(userId)}/moderation-actions`),
 };
 
 export const adminUserActions = {

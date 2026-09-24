@@ -119,6 +119,7 @@ export interface AdminInvoice {
   approved_by?: string | null;
   paid_at: string | null;
   created_at: string;
+  vat: { enabled: boolean; rate_percent: number; vat_vnd: number; net_vnd: number };
 }
 
 export type ProjectStatus = 'draft' | 'in_progress' | 'baking' | 'completed';
@@ -327,4 +328,69 @@ export interface ImpersonationResult {
   expires_at: string;
   target_user_id: string;
   banner: string;
+}
+
+// ---- VAT (BR-28) ----
+export interface AdminTaxConfig {
+  enabled: boolean;
+  rate_percent: number;
+}
+
+// ---- Content moderation (BR-77 / UC-24) ----
+export type ReportReason = 'copyright' | 'trademark' | 'inappropriate' | 'other';
+export type ReportStatus = 'new' | 'reviewing' | 'upheld' | 'dismissed';
+export type ModerationActionKind = 'warning' | 'share_restriction' | 'ban';
+
+export interface ModerationAction {
+  level: number;
+  action: ModerationActionKind;
+  restricted_until: string | null;
+  report_status: ReportStatus | null;
+  id: string;
+  report_id: string | null;
+  reason: string;
+  created_by: string | null;
+  created_at: string;
+}
+
+export interface AdminContentReport {
+  id: string;
+  project_id: string | null;
+  template_id: string | null;
+  reported_user_id: string;
+  reason: ReportReason;
+  status: ReportStatus;
+  created_at: string;
+}
+
+export interface AdminContentReportDetail extends AdminContentReport {
+  details: string;
+  reporter_email: string | null;
+  reporter_name: string | null;
+  evidence_url: string | null;
+  resolution_note: string | null;
+  reviewed_by: string | null;
+  reviewed_at: string | null;
+  user_actions: ModerationAction[];
+}
+
+// ---- API cost tracking (SF-14 / BR-108) ----
+export interface AdminApiCostDailyRow {
+  day: string;
+  calls: number;
+  success_calls: number;
+  failed_calls: number;
+  cost_vnd: number;
+}
+
+export type ApiBudgetState = 'unconfigured' | 'ok' | 'warning' | 'suspended';
+
+export interface AdminApiBudget {
+  period_month: string;
+  budget_vnd: number | null;
+  spent_vnd: number;
+  percent: number | null;
+  state: ApiBudgetState;
+  warned_at: string | null;
+  suspended_at: string | null;
 }

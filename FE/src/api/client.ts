@@ -13,6 +13,14 @@ import type {
 } from "../types";
 import { toast as notifyToast } from "../context/ToastContext";
 
+if (import.meta.env.PROD && !import.meta.env.VITE_API_BASE_URL) {
+  // Falling through to the dev fallback below would silently point at a nonexistent
+  // same-origin:8000 backend and every request would fail with an opaque network error.
+  console.error(
+    "VITE_API_BASE_URL is not set. Set it in the deployment's environment variables " +
+      "(e.g. Vercel project settings) to the backend's public URL, then redeploy.",
+  );
+}
 const API_BASE_URL = import.meta.env.VITE_API_BASE_URL ?? `http://${window.location.hostname}:8000`;
 const STORAGE_PUBLIC_URL = import.meta.env.VITE_STORAGE_PUBLIC_URL ?? `http://${window.location.hostname}:9000/kusshoes`;
 const LEGACY_ACCESS_TOKEN_KEY = "kusshoes_access_token";
@@ -185,6 +193,14 @@ export type Invoice = {
   receipt_number?: string | null;
   paid_at: string | null;
   created_at: string;
+  vat: { enabled: boolean; rate_percent: number; vat_vnd: number; net_vnd: number };
+};
+
+export type WatermarkPolicy = {
+  required: boolean;
+  text: string;
+  max_edge_px: number;
+  opacity_percent: number;
 };
 
 export type ProjectExport = {
@@ -757,6 +773,11 @@ export const api = {
       method: "POST",
       body: JSON.stringify({ immediate }),
     });
+  },
+
+  /** BR-65/67: whether renders of this project carry a watermark (Free tier). */
+  async getWatermarkPolicy(projectId: string): Promise<WatermarkPolicy> {
+    return request<WatermarkPolicy>(`/api/v1/projects/${projectId}/watermark-policy`);
   },
 
   async listProjectExports(projectId: string): Promise<ProjectExport[]> {

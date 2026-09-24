@@ -12,6 +12,7 @@ import { DEFAULT_SETTING_TAB, type SettingTab } from './settingsNavigation';
 import { TwoFactorPanel } from './TwoFactorPanel';
 import { SessionsPanel } from './SessionsPanel';
 import { PrivacyPanel } from './PrivacyPanel';
+import { ModerationStatusPanel } from './ModerationStatusPanel';
 
 interface SettingsProps {
   activeTab?: SettingTab;
@@ -347,6 +348,7 @@ export const Settings: React.FC<SettingsProps> = ({ activeTab = DEFAULT_SETTING_
                 </form>
 
                 <SessionsPanel />
+                <ModerationStatusPanel />
                 </div>
               </motion.div>
             )}

@@ -1,5 +1,5 @@
 import React, { useEffect, useMemo, useState } from 'react';
-import { CreditCard, HardDrive, Check, Calendar, ArrowUpRight, HelpCircle, X, Building, FileText, AlertTriangle, Tag, Loader2 } from 'lucide-react';
+import { CreditCard, HardDrive, Check, Calendar, ArrowUpRight, HelpCircle, X, Building, FileText, AlertTriangle, Tag, Loader2, Gem, Plus } from 'lucide-react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { ConfirmDialog } from '../../components/ConfirmDialog/ConfirmDialog';
 import { useToast } from '../../context/ToastContext';
@@ -12,7 +12,7 @@ import {
   type Invoice as ApiInvoice,
   type UserProfile,
 } from '../../api/client';
-import { billingApi, type CouponPreview } from '../../api/billing';
+import { billingApi, type CouponPreview, type CreditBalance, type CreditLedgerItem } from '../../api/billing';
 import styles from './Billing.module.css';
 
 type InvoiceStatus = 'Paid' | 'Pending' | 'Failed' | 'Cancelled' | 'Refunded';
@@ -23,6 +23,7 @@ interface Invoice {
   id: string;
   date: string;
   amount: string;
+  vatNote: string | null;
   status: InvoiceStatus;
   receiptNumber: string | null;
 }
@@ -49,6 +50,7 @@ function toInvoiceRow(invoice: ApiInvoice): Invoice {
     id: invoice.id,
     date: new Date(invoice.created_at).toLocaleDateString(),
     amount: formatVnd(invoice.amount_vnd),
+    vatNote: invoice.vat.enabled ? `incl. ${invoice.vat.rate_percent}% VAT` : null,
     status: normalizeInvoiceStatus(invoice.status),
     receiptNumber: invoice.receipt_number ?? null,
   };
@@ -79,6 +81,11 @@ export const Billing: React.FC = () => {
   const [couponPreviews, setCouponPreviews] = useState<Record<string, CouponPreview>>({});
   const [applyingCoupon, setApplyingCoupon] = useState(false);
   const [downloadingReceipt, setDownloadingReceipt] = useState<string | null>(null);
+  const [creditBalance, setCreditBalance] = useState<CreditBalance | null>(null);
+  const [creditLedger, setCreditLedger] = useState<CreditLedgerItem[]>([]);
+  const [showBuyCreditModal, setShowBuyCreditModal] = useState(false);
+  const [buyQuantity, setBuyQuantity] = useState(1);
+  const [buyingCredit, setBuyingCredit] = useState(false);
   // Landing here from PayOS/MoMo (/billing/success): poll until the webhook has settled the invoice (MSG29).
   const returnedFromGateway = window.location.pathname === '/billing/success';
   const cancelledAtGateway = window.location.pathname === '/billing/cancel';
@@ -98,10 +105,17 @@ export const Billing: React.FC = () => {
         const status = latest?.status.toLowerCase();
         if (status === 'paid') {
           window.clearInterval(timer);
-          const [nextSubscription, nextInvoices] = await Promise.all([api.subscription(), api.listInvoices()]);
+          const [nextSubscription, nextInvoices, nextCredit, nextLedger] = await Promise.all([
+            api.subscription().catch(() => null),
+            api.listInvoices(),
+            billingApi.getCreditBalance().catch(() => null),
+            billingApi.getCreditLedger().catch(() => null),
+          ]);
           if (cancelled) return;
-          setSubscription(nextSubscription);
+          if (nextSubscription) setSubscription(nextSubscription);
           setInvoices(nextInvoices.map(toInvoiceRow));
+          if (nextCredit) setCreditBalance(nextCredit);
+          if (nextLedger) setCreditLedger(nextLedger.items);
           setPaymentCheck('paid');
         } else if (status === 'failed' || status === 'cancelled') {
           window.clearInterval(timer);
@@ -128,13 +142,17 @@ export const Billing: React.FC = () => {
       if (caught instanceof ApiError && caught.status === 404) return null;
       throw caught;
     });
-    Promise.all([api.listPlans(), subscriptionRequest, api.listInvoices(), api.usage(), api.profile()])
-      .then(([nextPlans, nextSubscription, nextInvoices, nextUsage, nextProfile]) => {
+    const creditRequest = billingApi.getCreditBalance().catch(() => null); // 402/403 when not on Basic/Pro
+    const creditLedgerRequest = billingApi.getCreditLedger().catch(() => null);
+    Promise.all([api.listPlans(), subscriptionRequest, api.listInvoices(), api.usage(), api.profile(), creditRequest, creditLedgerRequest])
+      .then(([nextPlans, nextSubscription, nextInvoices, nextUsage, nextProfile, nextCredit, nextLedger]) => {
         setPlans(nextPlans);
         setSubscription(nextSubscription);
         setUsage(nextUsage);
         setProfile(nextProfile);
         setInvoices(nextInvoices.map(toInvoiceRow));
+        setCreditBalance(nextCredit);
+        if (nextLedger) setCreditLedger(nextLedger.items);
       })
       .catch((caught) => toast(caught instanceof Error ? caught.message : 'Unable to load billing data.', 'error'))
       .finally(() => setLoading(false));
@@ -171,6 +189,19 @@ export const Billing: React.FC = () => {
       setShowUpgradeModal(false);
     } catch (caught) {
       toast(caught instanceof Error ? caught.message : 'Unable to start checkout.', 'error');
+    }
+  };
+
+  const handleBuyCredit = async (gateway: 'payos' | 'momo') => {
+    setBuyingCredit(true);
+    try {
+      const checkoutUrl = await billingApi.createCreditCheckout(buyQuantity, gateway);
+      window.location.assign(checkoutUrl);
+      setShowBuyCreditModal(false);
+    } catch (caught) {
+      toast(caught instanceof Error ? caught.message : 'Unable to start Credit checkout.', 'error');
+    } finally {
+      setBuyingCredit(false);
     }
   };
 
@@ -362,7 +393,7 @@ export const Billing: React.FC = () => {
                 <tr key={inv.id}>
                   <td className={styles.invId}>{inv.receiptNumber ?? inv.id.slice(0, 8)}</td>
                   <td>{inv.date}</td>
-                  <td>{inv.amount}</td>
+                  <td>{inv.amount}{inv.vatNote && <div className={styles.planPeriod}>{inv.vatNote}</div>}</td>
                   <td>
                     <span className={`${styles.statusBadge} ${styles[inv.status.toLowerCase()]}`}>
                       {inv.status}
@@ -485,7 +516,130 @@ export const Billing: React.FC = () => {
             </div>
           </div>
         </motion.div>
+
+        {/* Scan Credits (BR-94 / UC-27) */}
+        <motion.div
+          className={`${styles.quotaCard} glass-panel`}
+          initial={{ opacity: 0, y: 15 }}
+          animate={{ opacity: 1, y: 0 }}
+          transition={{ delay: 0.2 }}
+        >
+          <div className={styles.quotaHeader}>
+            <h3 className={styles.quotaTitle}>Scan Credits</h3>
+            <Gem size={18} className={styles.quotaIcon} />
+          </div>
+
+          {creditBalance ? (
+            <>
+              <div className={styles.quotaInfoList}>
+                <div className={styles.quotaInfoItem}>
+                  <span>Available</span>
+                  <span>{creditBalance.available}</span>
+                </div>
+                <div className={styles.quotaInfoItem}>
+                  <span>Used</span>
+                  <span>{creditBalance.used}</span>
+                </div>
+                <div className={styles.quotaInfoItem}>
+                  <span>Expired</span>
+                  <span>{creditBalance.expired}</span>
+                </div>
+                <div className={styles.quotaInfoItem}>
+                  <span>Bought this cycle</span>
+                  <span>{creditBalance.purchased_this_cycle} / {creditBalance.max_per_cycle}</span>
+                </div>
+                {creditBalance.next_expires_at && (
+                  <div className={styles.quotaInfoItem}>
+                    <span>Next expiry</span>
+                    <span>{new Date(creditBalance.next_expires_at).toLocaleDateString()}</span>
+                  </div>
+                )}
+              </div>
+              <p className={styles.planDesc}>
+                {formatVnd(creditBalance.price_vnd)} per extra scan, on top of your plan&apos;s quota.
+              </p>
+              <button
+                className="btn-outline"
+                onClick={() => setShowBuyCreditModal(true)}
+                disabled={!creditBalance.can_purchase}
+                title={creditBalance.can_purchase ? undefined : 'Available on an active Basic/Pro plan, up to the per-cycle cap'}
+              >
+                <Plus size={16} /> Buy Credit
+              </button>
+
+              {creditLedger.length > 0 && (
+                <table className={styles.table} style={{ marginTop: 12 }}>
+                  <thead>
+                    <tr><th>Purchased</th><th>Expires</th><th>Status</th></tr>
+                  </thead>
+                  <tbody>
+                    {creditLedger.slice(0, 5).map((item) => (
+                      <tr key={item.id}>
+                        <td>{new Date(item.purchased_at).toLocaleDateString()}</td>
+                        <td>{new Date(item.expires_at).toLocaleDateString()}</td>
+                        <td>
+                          <span className={`${styles.statusBadge} ${styles[item.status.toLowerCase()] ?? ''}`}>
+                            {item.status}
+                          </span>
+                        </td>
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
+              )}
+            </>
+          ) : (
+            <p className={styles.planDesc}>Loading…</p>
+          )}
+        </motion.div>
       </div>
+
+      {/* Buy Credit Modal */}
+      <AnimatePresence>
+        {showBuyCreditModal && creditBalance && (
+          <div className={styles.modalBackdrop}>
+            <motion.div
+              className={`${styles.upgradeModal} glass-panel`}
+              initial={{ opacity: 0, y: 30, scale: 0.95 }}
+              animate={{ opacity: 1, y: 0, scale: 1 }}
+              exit={{ opacity: 0, y: 30, scale: 0.95 }}
+            >
+              <div className={styles.modalCloseHeader}>
+                <h2 className={styles.compareTitle}>Buy Scan Credit</h2>
+                <button className={styles.closeBtn} onClick={() => setShowBuyCreditModal(false)}>
+                  <X size={20} />
+                </button>
+              </div>
+              <p className={styles.planDesc}>
+                {formatVnd(creditBalance.price_vnd)} each, up to {creditBalance.max_per_cycle - creditBalance.purchased_this_cycle}{' '}
+                more this cycle. Credits expire 12 months after purchase and are non-refundable once used.
+              </p>
+              <div className={styles.couponForm}>
+                <label htmlFor="credit-qty">Quantity</label>
+                <input
+                  id="credit-qty"
+                  type="number"
+                  min={1}
+                  max={creditBalance.max_per_cycle - creditBalance.purchased_this_cycle}
+                  value={buyQuantity}
+                  onChange={(event) => setBuyQuantity(Math.max(1, Number(event.target.value) || 1))}
+                  className={styles.couponInput}
+                  style={{ maxWidth: 100 }}
+                />
+                <span>= {formatVnd(buyQuantity * creditBalance.price_vnd)}</span>
+              </div>
+              <div style={{ display: 'flex', gap: 8, marginTop: 16 }}>
+                <button className="btn-neon-orange" disabled={buyingCredit} onClick={() => handleBuyCredit('payos')}>
+                  Pay via PayOS
+                </button>
+                <button className="btn-outline" disabled={buyingCredit} onClick={() => handleBuyCredit('momo')}>
+                  Pay via MoMo
+                </button>
+              </div>
+            </motion.div>
+          </div>
+        )}
+      </AnimatePresence>
 
       {/* Upgrade / Compare Pricing Modal */}
       <AnimatePresence>
@@ -546,6 +700,11 @@ export const Billing: React.FC = () => {
                       )}
                       <span className={styles.tierPeriod}>{tier.price !== 'Custom' && `/ ${tier.period}`}</span>
                     </div>
+                    {couponPreviews[tier.plan.id]?.vat.enabled && (
+                      <p className={styles.tierDesc}>
+                        Includes {couponPreviews[tier.plan.id].vat.rate_percent}% VAT ({formatVnd(couponPreviews[tier.plan.id].vat.vat_vnd)})
+                      </p>
+                    )}
                     <p className={styles.tierDesc}>{tier.description}</p>
                     
                     <div className={styles.divider} />

@@ -5,7 +5,7 @@ import { Select } from '../../../components/Select/Select';
 import { ConfirmDialog } from '../../../components/ConfirmDialog/ConfirmDialog';
 import { StatusBadge } from '../../../components/Admin/StatusBadge';
 import { AdminDialog } from '../../../components/Admin/AdminDialog';
-import { CouponsPanel, ManualTransactionsPanel, PeriodsPanel } from './FinancePanels';
+import { ApiCostPanel, CouponsPanel, ManualTransactionsPanel, PeriodsPanel, TaxConfigPanel } from './FinancePanels';
 import { useToast } from '../../../context/ToastContext';
 import { useAdminAuth } from '../../../context/AdminAuthContext';
 import { adminBilling, AdminApiError, type SubscriptionListQuery, type InvoiceListQuery } from '../../../api/adminClient';
@@ -47,7 +47,7 @@ const formatDate = (iso: string | null) => (iso ? new Date(iso).toLocaleDateStri
 export const AdminBilling: React.FC = () => {
   const { toast } = useToast();
   const { isAdmin } = useAdminAuth();
-  const [tab, setTab] = useState<'subscriptions' | 'invoices' | 'manual' | 'periods' | 'coupons'>('subscriptions');
+  const [tab, setTab] = useState<'subscriptions' | 'invoices' | 'manual' | 'periods' | 'coupons' | 'tax' | 'api-cost'>('subscriptions');
   const [mutating, setMutating] = useState(false);
 
   // Subscriptions
@@ -171,6 +171,12 @@ export const AdminBilling: React.FC = () => {
           </Tabs.Trigger>
           <Tabs.Trigger value="coupons" className="btn-outline" style={{ borderRadius: 'var(--border-radius-md)' }}>
             Mã giảm giá
+          </Tabs.Trigger>
+          <Tabs.Trigger value="tax" className="btn-outline" style={{ borderRadius: 'var(--border-radius-md)' }}>
+            VAT
+          </Tabs.Trigger>
+          <Tabs.Trigger value="api-cost" className="btn-outline" style={{ borderRadius: 'var(--border-radius-md)' }}>
+            Chi phí API
           </Tabs.Trigger>
         </Tabs.List>
 
@@ -322,6 +328,8 @@ export const AdminBilling: React.FC = () => {
         <Tabs.Content value="manual"><ManualTransactionsPanel /></Tabs.Content>
         <Tabs.Content value="periods"><PeriodsPanel /></Tabs.Content>
         <Tabs.Content value="coupons"><CouponsPanel /></Tabs.Content>
+        <Tabs.Content value="tax"><TaxConfigPanel /></Tabs.Content>
+        <Tabs.Content value="api-cost"><ApiCostPanel /></Tabs.Content>
       </Tabs.Root>
 
       <ConfirmDialog
