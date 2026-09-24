@@ -1,6 +1,7 @@
 import { useState, useEffect } from 'react';
 import { Landing } from './pages/Landing/Landing';
 import { Login } from './pages/Login/Login';
+import { GoogleCallback } from './pages/Login/GoogleCallback';
 import { PricingPage } from './pages/PricingPage/PricingPage';
 import { Sidebar } from './components/Sidebar/Sidebar';
 import { Dashboard } from './pages/Dashboard/Dashboard';
@@ -23,6 +24,8 @@ const getPageFromPath = (path: string): string => {
     return 'admin';
   }
   switch (cleanPath) {
+    case '/auth/google/callback':
+      return 'google-callback';
     case '/project-details':
       return 'project-details';
     case '/products':
@@ -214,6 +217,7 @@ function App() {
         {activePage === 'landing' && <Landing navigate={navigate} />}
         {activePage === 'products-info' && <ProductsPage navigate={navigate} />}
         {activePage === 'login' && <Login setPage={navigate} />}
+        {activePage === 'google-callback' && <GoogleCallback setPage={navigate} />}
         {activePage === 'pricing' && <PricingPage navigate={navigate} />}
         
         {/* Portal pages */}

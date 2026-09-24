@@ -556,6 +556,16 @@ export const api = {
     return { userId: payload.user_id, email: payload.email, message: payload.message };
   },
 
+  /** Full-page navigation: BE redirects through Google and back to /auth/google/callback. */
+  startGoogleLogin(): void {
+    window.location.href = `${API_BASE_URL}/api/v1/auth/google`;
+  },
+
+  /** Called by the /auth/google/callback page with the token BE put in the URL fragment. */
+  completeGoogleLogin(accessToken: string, tokenType: string): void {
+    saveTokens({ access_token: accessToken, token_type: tokenType }, true);
+  },
+
   async login(email: string, password: string, remember = true): Promise<LoginOutcome> {
     const result = await request<{
       access_token: string | null;
