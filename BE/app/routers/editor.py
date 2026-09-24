@@ -85,16 +85,16 @@ async def get_design(
     return await editor_service.get_design(db, session, design_id)
 
 
-@router.post("/projects/{project_id}/prepare", response_model=EditorJobResponse)
+@router.post(
+    "/projects/{project_id}/prepare", response_model=EditorJobResponse, status_code=202
+)
 async def prepare_project(
     project_id: uuid.UUID,
-    body: EditorPrepareRequest | None = None,
+    body: EditorPrepareRequest,
     db: AsyncSession = Depends(get_db),
     session: EditorSessionResponse = Depends(get_editor_session),
 ):
-    return await editor_service.trigger_prepare(
-        db, session, project_id, body or EditorPrepareRequest()
-    )
+    return await editor_service.trigger_prepare(db, session, project_id, body)
 
 
 @router.post("/designs/{design_id}/bake", response_model=EditorJobResponse, status_code=202)

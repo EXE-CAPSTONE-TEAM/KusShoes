@@ -123,8 +123,38 @@ class EditorContextResponse(EditorSchema):
     raw_model_asset_id: uuid.UUID | None = Field(default=None, alias="rawModelAssetId")
 
 
+# Crop box contract of the desktop sidecar's /prepare (ar-ai-exe app/schemas/scan.py CropBox).
+# provenance: bounds mirror that schema exactly so a job the API accepts is never rejected by the
+# sidecar after it has been claimed — normalized model space (centre ±0.5, size (0.01, 1]).
+class EditorCropVector(EditorSchema):
+    x: float = Field(ge=-0.5, le=0.5)
+    y: float = Field(ge=-0.5, le=0.5)
+    z: float = Field(ge=-0.5, le=0.5)
+
+
+class EditorCropSize(EditorSchema):
+    x: float = Field(gt=0.01, le=1.0)
+    y: float = Field(gt=0.01, le=1.0)
+    z: float = Field(gt=0.01, le=1.0)
+
+
+class EditorCropRotation(EditorSchema):
+    x: float = Field(default=0.0, ge=-180.0, le=180.0)
+    y: float = Field(default=0.0, ge=-180.0, le=180.0)
+    z: float = Field(default=0.0, ge=-180.0, le=180.0)
+
+
+class EditorCropBox(EditorSchema):
+    model_config = ConfigDict(populate_by_name=True, from_attributes=True, extra="forbid")
+
+    center: EditorCropVector
+    size: EditorCropSize
+    rotation: EditorCropRotation = Field(default_factory=EditorCropRotation)
+    coordinate_space: Literal["normalized"] = Field(default="normalized", alias="coordinateSpace")
+
+
 class EditorPrepareRequest(EditorSchema):
-    crop_box: dict[str, Any] = Field(default_factory=dict, alias="cropBox")
+    crop_box: EditorCropBox = Field(alias="cropBox")
     confirm_reset_design: bool = Field(default=False, alias="confirmResetDesign")
 
 

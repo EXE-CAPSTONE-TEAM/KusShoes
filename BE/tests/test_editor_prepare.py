@@ -4,10 +4,17 @@ import uuid
 import pytest
 
 from app.models.project_asset import ProjectAsset
-from app.repositories import project_asset_repo, project_repo
+from app.repositories import bake_job_repo, project_asset_repo, project_repo
 from app.services.auth_service import EDITOR_SCOPES
 from app.utils.jwt import create_editor_access_token
 from tests.job_helpers import GLB_BYTES, FakeStorage, attach_ready_model
+
+# Valid box in the sidecar's normalized crop contract (whole model).
+CROP = {
+    "center": {"x": 0.0, "y": 0.0, "z": 0.0},
+    "size": {"x": 1.0, "y": 1.0, "z": 1.0},
+    "coordinateSpace": "normalized",
+}
 
 
 def _editor_headers(user_id: uuid.UUID, project_id: uuid.UUID | str) -> dict[str, str]:
@@ -35,7 +42,7 @@ async def test_prepare_requires_raw_model(client, db, auth_headers, authenticate
     res = await client.post(
         f"/api/v1/editor/projects/{project_id}/prepare",
         headers=headers,
-        json={"cropBox": {}},
+        json={"cropBox": CROP},
     )
     assert res.status_code == 409
     assert res.json()["code"] == "EDITOR_NO_RAW_MODEL"
@@ -45,7 +52,7 @@ async def test_prepare_requires_raw_model(client, db, auth_headers, authenticate
     res2 = await client.post(
         f"/api/v1/editor/projects/{project_id}/prepare",
         headers=headers,
-        json={"cropBox": {}},
+        json={"cropBox": CROP},
     )
     assert res2.status_code == 409
     assert res2.json()["code"] == "EDITOR_NO_RAW_MODEL"
@@ -71,7 +78,7 @@ async def test_prepare_lifecycle_creates_ready_asset_and_sets_canonical(
         headers=editor,
         json={"cropBox": crop_box},
     )
-    assert prepare_res.status_code == 200, prepare_res.text
+    assert prepare_res.status_code == 202, prepare_res.text
     job_info = prepare_res.json()
     assert job_info["type"] == "prepare"
     assert job_info["status"] == "awaiting_client"
@@ -87,7 +94,7 @@ async def test_prepare_lifecycle_creates_ready_asset_and_sets_canonical(
     # Verify snake_case keys for sidecar contract (Ticket-08 note in verification.md)
     assert payload["job_id"] == job_id
     assert payload["project_id"] == project_id
-    assert payload["crop_box"] == crop_box
+    assert payload["crop_box"] == {**crop_box, "rotation": {"x": 0.0, "y": 0.0, "z": 0.0}}
     assert payload["source_model"]["asset_id"] == str(raw_asset.id)
     assert payload["source_model"]["mime_type"] == "model/gltf-binary"
     assert len(payload["outputs"]) == 1
@@ -174,7 +181,7 @@ async def test_re_crop_with_design_requires_confirmation_and_resets_design(
     )
 
     # 1. Initial prepare to get a ready model
-    res1 = await client.post(f"/api/v1/editor/projects/{project_id}/prepare", headers=editor, json={})
+    res1 = await client.post(f"/api/v1/editor/projects/{project_id}/prepare", headers=editor, json={"cropBox": CROP})
     job1_id = res1.json()["id"]
     claimed1 = (await client.post(f"/api/v1/editor/jobs/{job1_id}/claim", headers=editor, json={})).json()
     stg1 = claimed1["payload"]["outputs"][0]["file_path"]
@@ -223,7 +230,7 @@ async def test_re_crop_with_design_requires_confirmation_and_resets_design(
     blocked = await client.post(
         f"/api/v1/editor/projects/{project_id}/prepare",
         headers=editor,
-        json={"cropBox": {}, "confirmResetDesign": False},
+        json={"cropBox": CROP, "confirmResetDesign": False},
     )
     assert blocked.status_code == 409
     assert blocked.json()["code"] == "EDITOR_DESIGN_RESET_REQUIRED"
@@ -232,9 +239,9 @@ async def test_re_crop_with_design_requires_confirmation_and_resets_design(
     re_crop = await client.post(
         f"/api/v1/editor/projects/{project_id}/prepare",
         headers=editor,
-        json={"cropBox": {}, "confirmResetDesign": True},
+        json={"cropBox": CROP, "confirmResetDesign": True},
     )
-    assert re_crop.status_code == 200, re_crop.text
+    assert re_crop.status_code == 202, re_crop.text
     job2_id = re_crop.json()["id"]
 
     # 5. Claim and complete the re-crop
@@ -281,7 +288,7 @@ async def test_editor_context_exposes_model_status_and_raw_asset_id(
     assert context["modelAsset"]["status"] == "raw"
 
     # Prepare and complete
-    prepare_res = await client.post(f"/api/v1/editor/projects/{project_id}/prepare", headers=editor, json={})
+    prepare_res = await client.post(f"/api/v1/editor/projects/{project_id}/prepare", headers=editor, json={"cropBox": CROP})
     job_id = prepare_res.json()["id"]
     claimed = (await client.post(f"/api/v1/editor/jobs/{job_id}/claim", headers=editor, json={})).json()
     stg = claimed["payload"]["outputs"][0]["file_path"]
@@ -312,11 +319,11 @@ async def test_prepare_supersession_and_concurrency_lock(
     )
 
     # Create job 1
-    j1 = (await client.post(f"/api/v1/editor/projects/{project_id}/prepare", headers=editor, json={})).json()
+    j1 = (await client.post(f"/api/v1/editor/projects/{project_id}/prepare", headers=editor, json={"cropBox": CROP})).json()
     assert j1["status"] == "awaiting_client"
 
     # Create job 2 while job 1 is awaiting_client -> job 1 is cancelled, job 2 created
-    j2 = (await client.post(f"/api/v1/editor/projects/{project_id}/prepare", headers=editor, json={})).json()
+    j2 = (await client.post(f"/api/v1/editor/projects/{project_id}/prepare", headers=editor, json={"cropBox": CROP})).json()
     assert j2["status"] == "awaiting_client"
     assert j2["id"] != j1["id"]
 
@@ -329,7 +336,7 @@ async def test_prepare_supersession_and_concurrency_lock(
     assert claimed2["job"]["status"] == "claimed"
 
     # Attempt new prepare while job 2 is claimed -> 409 PROJ_BAKE_IN_PROGRESS
-    blocked = await client.post(f"/api/v1/editor/projects/{project_id}/prepare", headers=editor, json={})
+    blocked = await client.post(f"/api/v1/editor/projects/{project_id}/prepare", headers=editor, json={"cropBox": CROP})
     assert blocked.status_code == 409
     assert blocked.json()["code"] == "PROJ_BAKE_IN_PROGRESS"
 
@@ -344,7 +351,7 @@ async def test_prepare_complete_fails_when_raw_model_deleted(
         client, db, auth_headers, authenticated_user
     )
 
-    prepare_res = await client.post(f"/api/v1/editor/projects/{project_id}/prepare", headers=editor, json={})
+    prepare_res = await client.post(f"/api/v1/editor/projects/{project_id}/prepare", headers=editor, json={"cropBox": CROP})
     job_id = prepare_res.json()["id"]
     claimed = (await client.post(f"/api/v1/editor/jobs/{job_id}/claim", headers=editor, json={})).json()
     stg = claimed["payload"]["outputs"][0]["file_path"]
@@ -368,3 +375,55 @@ async def test_prepare_complete_fails_when_raw_model_deleted(
     # Job is now failed
     job_res = (await client.get(f"/api/v1/editor/jobs/{job_id}", headers=editor)).json()
     assert job_res["status"] == "failed"
+
+
+@pytest.mark.asyncio
+@pytest.mark.parametrize(
+    "crop_box",
+    [
+        {},  # centre and size are required
+        {**CROP, "size": {"x": 0.0, "y": 1.0, "z": 1.0}},  # degenerate box
+        {**CROP, "center": {"x": 0.9, "y": 0.0, "z": 0.0}},  # outside normalized space
+        {**CROP, "coordinateSpace": "world"},
+        {**CROP, "extra": "field"},
+    ],
+)
+async def test_prepare_rejects_crop_boxes_the_sidecar_would_reject(
+    crop_box, client, db, auth_headers, authenticated_user, monkeypatch
+):
+    """Validated at the API so a claimed job never dies on the desktop for bad input."""
+    FakeStorage().install(monkeypatch)
+    project_id, _raw, editor = await _create_project_with_raw_model(
+        client, db, auth_headers, authenticated_user
+    )
+    response = await client.post(
+        f"/api/v1/editor/projects/{project_id}/prepare",
+        headers=editor,
+        json={"cropBox": crop_box},
+    )
+    assert response.status_code == 422
+    assert await bake_job_repo.get_active_for_project(db, uuid.UUID(project_id)) is None
+
+
+@pytest.mark.asyncio
+async def test_design_without_decal_layers_needs_no_reset_confirmation(
+    client, db, auth_headers, authenticated_user, monkeypatch, service_headers
+):
+    """OD-1 only guards designs that would lose sticker/text layers."""
+    FakeStorage().install(monkeypatch)
+    project_id, _raw, editor = await _create_project_with_raw_model(
+        client, db, auth_headers, authenticated_user
+    )
+    saved = await client.put(
+        f"/api/v1/projects/{project_id}/design",
+        headers=service_headers,
+        json={"design_config": {"baseColor": "#FFFFFF"}, "base_revision": 0},
+    )
+    assert saved.status_code == 200, saved.text
+
+    response = await client.post(
+        f"/api/v1/editor/projects/{project_id}/prepare",
+        headers=editor,
+        json={"cropBox": CROP},
+    )
+    assert response.status_code == 202, response.text

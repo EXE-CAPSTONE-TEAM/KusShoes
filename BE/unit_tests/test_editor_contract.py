@@ -302,12 +302,24 @@ def test_editor_context_response_exposes_model_status_and_raw_asset_id() -> None
 
 def test_editor_prepare_request_parsing() -> None:
     req = EditorPrepareRequest.model_validate(
-        {"cropBox": {"center": {"x": 0, "y": 0, "z": 0}}, "confirmResetDesign": True}
+        {
+            "cropBox": {
+                "center": {"x": 0, "y": 0.1, "z": 0},
+                "size": {"x": 0.5, "y": 1, "z": 0.8},
+            },
+            "confirmResetDesign": True,
+        }
     )
-    assert req.crop_box == {"center": {"x": 0, "y": 0, "z": 0}}
+    stored = req.crop_box.model_dump(mode="json", by_alias=True)
+    # Stored in the sidecar's shape: camelCase coordinate space, default rotation filled in.
+    assert stored["coordinateSpace"] == "normalized"
+    assert stored["rotation"] == {"x": 0.0, "y": 0.0, "z": 0.0}
+    assert stored["size"]["x"] == 0.5
     assert req.confirm_reset_design is True
 
-    # Defaults
-    empty = EditorPrepareRequest.model_validate({})
-    assert empty.crop_box == {}
-    assert empty.confirm_reset_design is False
+    with pytest.raises(ValidationError):
+        EditorPrepareRequest.model_validate({})  # a crop box is required
+    with pytest.raises(ValidationError):
+        EditorPrepareRequest.model_validate(
+            {"cropBox": {"center": {"x": 0, "y": 0, "z": 0}}}  # size missing
+        )

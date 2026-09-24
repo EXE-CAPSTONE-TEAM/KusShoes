@@ -202,7 +202,8 @@ async def trigger_prepare(
     if not raw_asset:
         raise EditorNoRawModel()
 
-    if project.design_config and not body.confirm_reset_design:
+    # OD-1: only a design with decal layers loses work when the mesh is re-cropped/rescaled.
+    if project_service.count_design_layers(project.design_config) and not body.confirm_reset_design:
         raise EditorDesignResetRequired()
 
     stale = await job_service.supersede_active(db, project.id)
@@ -213,7 +214,7 @@ async def trigger_prepare(
         priority="normal",
         kind="prepare",
         source_asset_id=raw_asset.id,
-        crop_box=body.crop_box,
+        crop_box=body.crop_box.model_dump(mode="json", by_alias=True),
     )
     await db.commit()
     await job_service.delete_staging(stale)
