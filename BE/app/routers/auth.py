@@ -1,4 +1,5 @@
 import uuid
+from urllib.parse import urlencode
 
 import redis.asyncio as aioredis
 from fastapi import APIRouter, Body, Depends, Request, Response, status
@@ -13,7 +14,7 @@ from app.dependencies import (
     get_redis,
     verify_service_token,
 )
-from app.exceptions import AuthRefreshInvalid
+from app.exceptions import AppException, AuthRefreshInvalid
 from app.schemas.auth import (
     AccessTokenResponse,
     AccountRestoreConfirmRequest,
@@ -26,7 +27,6 @@ from app.schemas.auth import (
     EditorSessionResponse,
     ForgotPasswordRequest,
     ForgotPasswordResponse,
-    GoogleLoginResponse,
     LoginRequest,
     LoginResult,
     LogoutRequest,
@@ -191,30 +191,46 @@ async def google_login(
     return RedirectResponse(url=url)
 
 
-@router.get("/google/callback", response_model=GoogleLoginResponse)
+@router.get("/google/callback")
 async def google_callback(
     request: Request,
-    response: Response,
     code: str,
     state: str,
     db: AsyncSession = Depends(get_db),
     redis: aioredis.Redis = Depends(get_redis),
 ):
-    result = await auth_service.handle_google_callback(
-        db,
-        redis,
-        code=code,
-        state=state,
-        user_agent=request.headers.get("user-agent"),
-        ip_address=_client_ip(request),
+    """Finish Google sign-in and send the browser back to the web app.
+
+    The web app (PUBLIC_WEB_URL, e.g. on Vercel) is a different site from the API, so the session
+    travels in the URL *fragment* of `/auth/google/callback` — fragments are never sent to a server
+    or written to access logs. The refresh token is set as the usual HttpOnly cookie.
+    """
+    target = f"{settings.PUBLIC_WEB_URL.rstrip('/')}/auth/google/callback"
+    try:
+        result = await auth_service.handle_google_callback(
+            db,
+            redis,
+            code=code,
+            state=state,
+            user_agent=request.headers.get("user-agent"),
+            ip_address=_client_ip(request),
+        )
+    except AppException as exc:
+        return RedirectResponse(
+            url=f"{target}#{urlencode({'error': exc.code})}",
+            status_code=status.HTTP_303_SEE_OTHER,
+        )
+    fragment = urlencode(
+        {
+            "access_token": result["access_token"],
+            "token_type": result["token_type"],
+            "is_new_user": str(bool(result["is_new_user"])).lower(),
+            "linked": str(bool(result["linked"])).lower(),
+        }
     )
-    _set_refresh_cookie(response, result["refresh_token"])
-    return GoogleLoginResponse(
-        access_token=result["access_token"],
-        token_type=result["token_type"],
-        is_new_user=result["is_new_user"],
-        linked=result["linked"],
-    )
+    redirect = RedirectResponse(url=f"{target}#{fragment}", status_code=status.HTTP_303_SEE_OTHER)
+    _set_refresh_cookie(redirect, result["refresh_token"])
+    return redirect
 
 
 @router.post("/refresh", response_model=AccessTokenResponse)

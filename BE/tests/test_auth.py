@@ -387,10 +387,46 @@ async def test_login_banned_account(client, db, redis):
 # ── UC-AUTH-004: Google OAuth ─────────────────────────────────────────────────
 
 @pytest.mark.asyncio
-async def test_google_callback_state_mismatch(client):
+async def test_google_callback_state_mismatch_returns_to_the_web_app_with_an_error(client):
     res = await client.get("/api/v1/auth/google/callback?code=fake&state=invalid_state")
-    assert res.status_code == 400
-    assert res.json()["code"] == "AUTH_OAUTH_STATE_INVALID"
+    assert res.status_code == 303
+    location = res.headers["location"]
+    assert location.startswith(f"{settings.PUBLIC_WEB_URL.rstrip('/')}/auth/google/callback#")
+    assert "error=AUTH_OAUTH_STATE_INVALID" in location
+    assert "access_token" not in location
+
+
+@pytest.mark.asyncio
+async def test_google_callback_success_puts_the_session_in_the_fragment(client, monkeypatch):
+    from app.services import auth_service
+
+    async def fake_callback(*_args, **_kwargs):
+        return {
+            "access_token": "acc.tok",
+            "refresh_token": "ref-tok",
+            "token_type": "bearer",
+            "is_new_user": True,
+            "linked": False,
+        }
+
+    monkeypatch.setattr(auth_service, "handle_google_callback", fake_callback)
+    res = await client.get("/api/v1/auth/google/callback?code=c&state=s")
+
+    assert res.status_code == 303
+    target, _, fragment = res.headers["location"].partition("#")
+    assert target == f"{settings.PUBLIC_WEB_URL.rstrip('/')}/auth/google/callback"
+    assert "?" not in target  # never in the query string (logged by servers)
+    assert "access_token=acc.tok" in fragment and "is_new_user=true" in fragment
+    assert settings.REFRESH_COOKIE_NAME in res.headers.get("set-cookie", "")
+
+
+@pytest.mark.asyncio
+async def test_cors_allows_the_configured_web_app(client):
+    res = await client.options(
+        "/api/v1/auth/login",
+        headers={"Origin": settings.PUBLIC_WEB_URL.rstrip("/"), "Access-Control-Request-Method": "POST"},
+    )
+    assert res.headers.get("access-control-allow-origin") == settings.PUBLIC_WEB_URL.rstrip("/")
 
 
 # ── UC-AUTH-005: Admin/Staff Login ────────────────────────────────────────────
