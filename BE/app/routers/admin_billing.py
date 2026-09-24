@@ -205,7 +205,7 @@ async def lock_period(
     return await period_service.lock_period(db, admin, period_id)
 
 
-# --- UC-23 coupons (BR-26 / BR-91) ---
+# --- UC-23 coupons (BR-26) ---
 
 
 @router.get("/billing/coupons", response_model=list[CouponResponse])

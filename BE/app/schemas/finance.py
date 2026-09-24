@@ -52,7 +52,6 @@ class CouponCreate(BaseModel):
     discount_type: Literal["percent", "fixed", "fixed_price"]
     value: int = Field(gt=0)
     plan_tiers: list[Literal["basic", "pro"]] | None = None
-    first_payment_only: bool = False
     max_uses: int | None = Field(default=None, gt=0)
     valid_from: datetime | None = None
     valid_until: datetime | None = None
@@ -61,7 +60,6 @@ class CouponCreate(BaseModel):
 class CouponUpdate(BaseModel):
     value: int | None = Field(default=None, gt=0)
     plan_tiers: list[Literal["basic", "pro"]] | None = None
-    first_payment_only: bool | None = None
     max_uses: int | None = Field(default=None, gt=0)
     valid_from: datetime | None = None
     valid_until: datetime | None = None
@@ -74,7 +72,6 @@ class CouponResponse(BaseModel):
     discount_type: str
     value: int
     plan_tiers: list[str] | None
-    first_payment_only: bool
     max_uses: int | None
     used_count: int
     valid_from: datetime | None

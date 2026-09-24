@@ -19,8 +19,7 @@ from app.models.base import TimestampMixin, utcnow
 
 
 class Coupon(Base, TimestampMixin):
-    """BR-26 promo code (also how BR-91 Early Bird is configured: a
-    first_payment_only fixed_price coupon on the Basic tier)."""
+    """BR-26 promo code."""
 
     __tablename__ = "coupons"
     __table_args__ = (
@@ -37,7 +36,6 @@ class Coupon(Base, TimestampMixin):
     discount_type: Mapped[str] = mapped_column(String(20), nullable=False)
     value: Mapped[int] = mapped_column(Integer, nullable=False)
     plan_tiers: Mapped[list[str] | None] = mapped_column(ARRAY(String), nullable=True)
-    first_payment_only: Mapped[bool] = mapped_column(Boolean, nullable=False, default=False)
     max_uses: Mapped[int | None] = mapped_column(Integer, nullable=True)
     used_count: Mapped[int] = mapped_column(Integer, nullable=False, default=0)
     valid_from: Mapped[datetime | None] = mapped_column(DateTime(timezone=True), nullable=True)
