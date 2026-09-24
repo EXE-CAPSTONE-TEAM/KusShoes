@@ -153,23 +153,23 @@ export const Navbar: React.FC<NavbarProps> = ({ navigate, currentPage }) => {
           </div>
         </div>
 
-        {/* Features Dropdown */}
+        {/* Community / Social Proof Dropdown */}
         <div className={styles.navItem}>
-          <a href="#features" onClick={(e) => handleScrollLink(e, 'features')}>
-            Features
+          <a href="#social-proof" onClick={(e) => handleScrollLink(e, 'social-proof')}>
+            Community
           </a>
           <div className={`${styles.dropdownMenu} glass-panel`}>
-            <a href="#features" onClick={(e) => handleSubItemClick(e, '#features')}>
-              <div className={styles.subItemTitle}>Kiri Reconstruction</div>
-              <div className={styles.subItemDesc}>Automated photogrammetry model building</div>
+            <a href="#social-proof" onClick={(e) => handleSubItemClick(e, '#social-proof')}>
+              <div className={styles.subItemTitle}>Designs Created</div>
+              <div className={styles.subItemDesc}>Custom sneaker projects built with KusShoes</div>
             </a>
-            <a href="#features" onClick={(e) => handleSubItemClick(e, '#features')}>
-              <div className={styles.subItemTitle}>Secure Cloud Vault</div>
-              <div className={styles.subItemDesc}>Accessible sneaker database synced in real-time</div>
+            <a href="#social-proof" onClick={(e) => handleSubItemClick(e, '#social-proof')}>
+              <div className={styles.subItemTitle}>Sneakers Scanned</div>
+              <div className={styles.subItemDesc}>Real pairs turned into 3D models</div>
             </a>
-            <a href="#features" onClick={(e) => handleSubItemClick(e, '#features')}>
-              <div className={styles.subItemTitle}>WebGL Studio Editor</div>
-              <div className={styles.subItemDesc}>Pro-grade textures, paint brushes and metallic maps</div>
+            <a href="#social-proof" onClick={(e) => handleSubItemClick(e, '#social-proof')}>
+              <div className={styles.subItemTitle}>Active Creators</div>
+              <div className={styles.subItemDesc}>Sneakerheads designing on KusShoes today</div>
             </a>
           </div>
         </div>

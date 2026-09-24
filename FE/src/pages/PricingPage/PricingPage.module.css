@@ -320,7 +320,7 @@
 .tableWrapper {
   overflow-x: auto;
   border-radius: var(--border-radius-md);
-  background: rgba(18, 18, 21, 0.4);
+  background: var(--card-info-bg);
 }
 
 .compTable {
@@ -334,8 +334,9 @@
   font-family: 'Space Grotesk', sans-serif;
   font-size: 1rem;
   font-weight: 700;
+  color: var(--text-primary);
   border-bottom: 1px solid var(--glass-border);
-  background-color: rgba(0, 0, 0, 0.2);
+  background-color: var(--table-header-bg);
 }
 
 .compTable th:first-child {
@@ -346,7 +347,7 @@
   padding: 18px 20px;
   font-size: 0.9rem;
   color: var(--text-secondary);
-  border-bottom: 1px solid rgba(255, 255, 255, 0.02);
+  border-bottom: 1px solid var(--glass-border);
 }
 
 .featureName {
