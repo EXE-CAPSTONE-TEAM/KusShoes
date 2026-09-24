@@ -9,6 +9,7 @@ import { Select } from '../../../components/Select/Select';
 import { StatusBadge } from '../../../components/Admin/StatusBadge';
 import { useAdminAuth } from '../../../context/AdminAuthContext';
 import { useToast } from '../../../context/ToastContext';
+import { ModerationReportsPanel } from './ModerationReportsPanel';
 import shared from '../admin-shared.module.css';
 
 const KIND_OPTIONS = [
@@ -129,6 +130,7 @@ export const AdminContent: React.FC = () => {
         <Tabs.List style={{ display: 'flex', gap: 8, marginBottom: 20 }}>
           <Tabs.Trigger value="rules" className="btn-outline" style={{ borderRadius: 'var(--border-radius-md)' }}>Quy tắc nội dung</Tabs.Trigger>
           <Tabs.Trigger value="templates" className="btn-outline" style={{ borderRadius: 'var(--border-radius-md)' }}>Template</Tabs.Trigger>
+          <Tabs.Trigger value="reports" className="btn-outline" style={{ borderRadius: 'var(--border-radius-md)' }}>Báo cáo vi phạm</Tabs.Trigger>
         </Tabs.List>
 
         <Tabs.Content value="rules">
@@ -230,6 +232,10 @@ export const AdminContent: React.FC = () => {
               </tbody>
             </table>
           </div>
+        </Tabs.Content>
+
+        <Tabs.Content value="reports">
+          <ModerationReportsPanel />
         </Tabs.Content>
       </Tabs.Root>
 

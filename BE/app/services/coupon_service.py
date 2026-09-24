@@ -1,4 +1,4 @@
-"""BR-26 promo codes (and BR-91 Early Bird, configured as a first-payment-only coupon)."""
+"""BR-26 promo codes."""
 import uuid
 from datetime import UTC, datetime
 
@@ -7,7 +7,7 @@ from sqlalchemy.ext.asyncio import AsyncSession
 from app.exceptions import CouponInvalid
 from app.models.coupon import Coupon
 from app.models.plan import Plan
-from app.repositories import coupon_repo, invoice_repo
+from app.repositories import coupon_repo
 from app.services.audit import record_audit
 
 MIN_CHARGE_VND = 1000  # gateways reject 0đ; BR-26 only requires price >= 0
@@ -30,8 +30,6 @@ async def evaluate(
     if coupon.plan_tiers and plan.tier not in coupon.plan_tiers:
         raise CouponInvalid()
     if await coupon_repo.has_redeemed(db, coupon.id, user.id):
-        raise CouponInvalid()
-    if coupon.first_payment_only and await invoice_repo.has_paid_invoice(db, user.id):
         raise CouponInvalid()
 
     if coupon.discount_type == "percent":

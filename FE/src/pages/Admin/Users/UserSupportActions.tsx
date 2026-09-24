@@ -1,8 +1,8 @@
 import React, { useState } from 'react';
-import { Gift, KeyRound, UserCog } from 'lucide-react';
+import { Gift, KeyRound, ShieldAlert, UserCog } from 'lucide-react';
 import { api } from '../../../api/client';
-import { adminUserActions, AdminApiError } from '../../../api/adminClient';
-import type { AdminUserSummary } from '../../../types/admin';
+import { adminModeration, adminUserActions, AdminApiError } from '../../../api/adminClient';
+import type { AdminUserSummary, ModerationAction } from '../../../types/admin';
 import { AdminDialog } from '../../../components/Admin/AdminDialog';
 import { ConfirmDialog } from '../../../components/ConfirmDialog/ConfirmDialog';
 import { Select } from '../../../components/Select/Select';
@@ -19,14 +19,17 @@ const TIERS = [{ value: 'basic', label: 'Basic' }, { value: 'pro', label: 'Pro' 
 const CYCLES = [{ value: 'monthly', label: 'Tháng' }, { value: 'yearly', label: 'Năm' }];
 
 const errorText = (caught: unknown, fallback: string) => (caught instanceof AdminApiError || caught instanceof Error ? caught.message : fallback);
+const formatDate = (iso: string) => new Date(iso).toLocaleString('vi-VN');
+const ACTION_LABEL: Record<string, string> = { warning: 'Cảnh cáo', share_restriction: 'Hạn chế chia sẻ 30 ngày', ban: 'Khóa tài khoản' };
 
 /** Support tools for one customer: complimentary plan (BR-103), act-as (BR-80), password-reset email. */
 export const UserSupportActions: React.FC<UserSupportActionsProps> = ({ user, allowed }) => {
   const { toast } = useToast();
-  const [dialog, setDialog] = useState<'grant' | 'impersonate' | 'reset' | null>(null);
+  const [dialog, setDialog] = useState<'grant' | 'impersonate' | 'reset' | 'moderation' | null>(null);
   const [busy, setBusy] = useState(false);
   const [grant, setGrant] = useState({ tier: 'pro', billing_cycle: 'monthly', days: '30', reason: '' });
   const [impersonationReason, setImpersonationReason] = useState('');
+  const [moderationHistory, setModerationHistory] = useState<ModerationAction[] | null>(null);
 
   const close = () => setDialog(null);
   const title = (label: string) => (allowed ? label : 'Chỉ Admin mới được thực hiện');
@@ -73,6 +76,12 @@ export const UserSupportActions: React.FC<UserSupportActionsProps> = ({ user, al
       close();
     }, 'Không thể gửi mã đặt lại mật khẩu.');
 
+  const openModerationHistory = () =>
+    run(async () => {
+      setModerationHistory(await adminModeration.userActions(user.id));
+      setDialog('moderation');
+    }, 'Không thể tải lịch sử vi phạm.');
+
   return (
     <>
       <button className={shared.iconBtn} title={title('Cấp gói tặng (COMP)')} disabled={!allowed || busy} onClick={() => setDialog('grant')}>
@@ -83,6 +92,9 @@ export const UserSupportActions: React.FC<UserSupportActionsProps> = ({ user, al
       </button>
       <button className={shared.iconBtn} title={title('Gửi mã đặt lại mật khẩu')} disabled={!allowed || busy} onClick={() => setDialog('reset')}>
         <KeyRound size={14} />
+      </button>
+      <button className={shared.iconBtn} title="Lịch sử vi phạm (BR-77)" disabled={busy} onClick={() => void openModerationHistory()}>
+        <ShieldAlert size={14} />
       </button>
 
       <AdminDialog
@@ -138,6 +150,35 @@ export const UserSupportActions: React.FC<UserSupportActionsProps> = ({ user, al
         danger={false}
         onConfirm={() => void resetPassword()}
       />
+
+      <AdminDialog
+        open={dialog === 'moderation'}
+        onOpenChange={(open) => !open && close()}
+        title={`Lịch sử vi phạm — ${user.email}`}
+        description="Các mức xử lý đã áp dụng cho tài khoản này theo BR-77."
+        submitLabel="Đóng"
+        onSubmit={close}
+      >
+        <div className={`${shared.inputGroup} ${shared.formGridFull}`}>
+          {moderationHistory && moderationHistory.length > 0 ? (
+            <table className={shared.table}>
+              <thead><tr><th>Mức</th><th>Hành động</th><th>Lý do</th><th>Ngày</th></tr></thead>
+              <tbody>
+                {moderationHistory.map((action) => (
+                  <tr key={action.id}>
+                    <td>{action.level}</td>
+                    <td>{ACTION_LABEL[action.action] ?? action.action}</td>
+                    <td className={shared.mutedCell}>{action.reason}</td>
+                    <td className={shared.mutedCell}>{formatDate(action.created_at)}</td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          ) : (
+            <div className={shared.emptyState}>Không có vi phạm nào được ghi nhận.</div>
+          )}
+        </div>
+      </AdminDialog>
     </>
   );
 };

@@ -43,7 +43,7 @@ Legend: `[x]` done · `[~]` partial · `[ ]` not done · `[-]` out of scope
 - [x] Receipt PDF (SF-18, BR-31): immutable `KUS-00001` number from a DB sequence, content frozen in `receipt_snapshot`, bundled Roboto font for Vietnamese, name shortened only with academic-report consent (BR-88), masked email, file name `KUS-{n}-{slug}-{ddmmyy}.pdf`, 15-min signed download
 - [x] PENDING-over-30-minutes cancel job (SF-06, BR-30), every 5 minutes; a late webhook on a cancelled invoice still activates and is logged
 - [x] "Đang xác nhận" (MSG29): `GET /subscription/invoices/{id}` for the success page to poll; receipt returns 409 until issued
-- [x] Coupons (BR-26): percent / fixed / fixed-price, plan filter, validity window, use cap, 1 use per account, 1,000đ minimum charge, no stacking with proration; Early Bird (BR-91) is a first-payment-only fixed-price coupon
+- [x] Coupons (BR-26): percent / fixed / fixed-price, plan filter, validity window, use cap, 1 use per account, 1,000đ minimum charge, no stacking with proration. Early Bird (BR-91) was removed on request: there is no first-payment-only coupon flag
 - [x] VAT toggle (BR-28): `VAT_ENABLED` (default off until there is a legal entity, SRS :2782); VAT is extracted from the listed price, never added; shown on the invoice, coupon preview and receipt only when on; frozen in the receipt snapshot; admin tax-config endpoint
 - [x] Manual transactions (BR-95, UC-28): maker/checker (self-approval blocked), proof-image upload, approve → activates plan + receipt, reject; audited
 - [x] Reporting-period lock (BR-98, UC-29): open/lock periods; manual transactions and refunds dated inside a locked period are rejected

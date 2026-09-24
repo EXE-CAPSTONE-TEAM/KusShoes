@@ -1,11 +1,11 @@
 import React, { useState, useEffect, useRef } from 'react';
 import {
   ArrowLeft, Laptop, RefreshCw, Check, Download, FileText,
-  Globe, Link, EyeOff, Terminal, Share2, History, Lock
+  Globe, Link, EyeOff, Terminal, Share2, History, Lock, Droplets
 } from 'lucide-react';
 import { ConfirmDialog } from '../../components/ConfirmDialog/ConfirmDialog';
 import { useToast } from '../../context/ToastContext';
-import { api, type PortalProject, type ProjectExport } from '../../api/client';
+import { api, type PortalProject, type ProjectExport, type WatermarkPolicy } from '../../api/client';
 import { VersionHistoryPanel } from './VersionHistoryPanel';
 import { ArtisanSharePanel } from './ArtisanSharePanel';
 import styles from './ProjectDetails.module.css';
@@ -25,6 +25,7 @@ export const ProjectDetails: React.FC<ProjectDetailsProps> = ({
   const [confirmResetOpen, setConfirmResetOpen] = useState(false);
 
   const [exports, setExports] = useState<ProjectExport[]>([]);
+  const [watermarkPolicy, setWatermarkPolicy] = useState<WatermarkPolicy | null>(null);
 
   const [syncStatus, setSyncStatus] = useState<'idle' | 'connecting' | 'launched' | 'error'>('idle');
   const [logs, setLogs] = useState<string[]>([]);
@@ -50,6 +51,11 @@ export const ProjectDetails: React.FC<ProjectDetailsProps> = ({
       .then(setExports)
       .catch((caught) => toast(caught instanceof Error ? caught.message : 'Unable to load exports.', 'error'));
   }, [project.id, toast]);
+
+  // BR-65/67: informational only — Free-tier renders carry a watermark.
+  useEffect(() => {
+    api.getWatermarkPolicy(project.id).then(setWatermarkPolicy).catch(() => setWatermarkPolicy(null));
+  }, [project.id]);
 
   const handleDownloadExport = async (item: ProjectExport) => {
     try {
@@ -157,6 +163,11 @@ export const ProjectDetails: React.FC<ProjectDetailsProps> = ({
               {project.isLocked && (
                 <span className={styles.statusBadge} title="Read-only after a plan downgrade. Upgrade to edit it again.">
                   <Lock size={12} /> Read-only
+                </span>
+              )}
+              {watermarkPolicy?.required && (
+                <span className={styles.statusBadge} title="Free-tier renders carry a watermark. Upgrade to export clean.">
+                  <Droplets size={12} /> Watermarked
                 </span>
               )}
             </div>
