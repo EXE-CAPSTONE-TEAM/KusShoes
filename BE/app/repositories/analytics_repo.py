@@ -17,7 +17,7 @@ from app.models.user import User
 
 async def paid_invoice_rows(db: AsyncSession) -> list[tuple]:
     """(invoice_id, user_id, paid_at, amount_vnd, billing_cycle, plan_tier, is_upgrade,
-    is_manual, payment_method, order_code, receipt_number, status)."""
+    is_manual, payment_method, order_code, receipt_number, status, discount_vnd)."""
     result = await db.execute(
         select(
             Invoice.id,
@@ -32,6 +32,7 @@ async def paid_invoice_rows(db: AsyncSession) -> list[tuple]:
             Invoice.order_code,
             Invoice.receipt_number,
             Invoice.status,
+            Invoice.discount_vnd,
         )
         .join(User, User.id == Invoice.user_id)
         .where(
@@ -41,6 +42,21 @@ async def paid_invoice_rows(db: AsyncSession) -> list[tuple]:
             User.is_internal.is_(False),
         )
         .order_by(Invoice.paid_at)
+    )
+    return [tuple(row) for row in result.all()]
+
+
+async def pending_invoice_rows(db: AsyncSession) -> list[tuple]:
+    """(invoice_id, user_id, amount_vnd) — current accounts-receivable snapshot,
+    not period-scoped."""
+    result = await db.execute(
+        select(Invoice.id, Invoice.user_id, Invoice.amount_vnd)
+        .join(User, User.id == Invoice.user_id)
+        .where(
+            Invoice.status.in_(["pending", "awaiting_approval"]),
+            Invoice.amount_vnd > 0,
+            User.is_internal.is_(False),
+        )
     )
     return [tuple(row) for row in result.all()]
 

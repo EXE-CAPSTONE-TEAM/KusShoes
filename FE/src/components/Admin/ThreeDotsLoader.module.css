@@ -1,0 +1,85 @@
+.loaderWrapper {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  vertical-align: middle;
+  line-height: 1;
+}
+
+.dot {
+  border-radius: 50%;
+  background-color: currentColor;
+  display: inline-block;
+  animation: threeDotsBounce 1.2s infinite ease-in-out both;
+}
+
+.sizeSm {
+  gap: 3px;
+}
+
+.sizeSm .dot {
+  width: 4px;
+  height: 4px;
+}
+
+.sizeMd {
+  gap: 4.5px;
+}
+
+.sizeMd .dot {
+  width: 6px;
+  height: 6px;
+}
+
+.sizeLg {
+  gap: 6px;
+}
+
+.sizeLg .dot {
+  width: 8px;
+  height: 8px;
+}
+
+.dot:nth-child(1) {
+  animation-delay: -0.32s;
+}
+
+.dot:nth-child(2) {
+  animation-delay: -0.16s;
+}
+
+.dot:nth-child(3) {
+  animation-delay: 0s;
+}
+
+@keyframes threeDotsBounce {
+  0%, 80%, 100% {
+    transform: translateY(0);
+    opacity: 0.3;
+  }
+  40% {
+    transform: translateY(-6px);
+    opacity: 1;
+  }
+}
+
+/* Khối loading lớn cho cả khung biểu đồ / bảng dữ liệu */
+.blockContainer {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 10px;
+  width: 100%;
+  min-height: 160px;
+  padding: 24px 0;
+  color: var(--text-secondary);
+}
+
+.blockText {
+  font-size: 0.78rem;
+  font-weight: 600;
+  font-family: var(--font-admin, 'Roboto', sans-serif);
+  color: var(--text-secondary);
+  letter-spacing: 0.3px;
+}

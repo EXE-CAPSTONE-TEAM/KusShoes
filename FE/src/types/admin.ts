@@ -244,9 +244,17 @@ export interface AdminAnalytics {
     net_new: number;
   };
   top_customers: { user_id: string; email: string | null; net_paid_vnd: number; orders: number }[];
+  payment_methods: { payment_method: string; revenue_vnd: number; share: number }[];
+  outstanding: { count: number; amount_vnd: number };
+  discounts_vnd: number;
+  vat_collected_vnd: number;
+  credit_revenue_vnd: number;
+  refund_rate: number | null;
+  api_cost_vnd: number;
+  gross_margin_vnd: number;
 }
 
-export type ReportType = 'revenue' | 'users' | 'transactions' | 'channel-funnel';
+export type ReportType = 'revenue' | 'users' | 'transactions' | 'channel-funnel' | 'api-cost';
 export type ReportFormat = 'csv' | 'xlsx' | 'pdf';
 
 // ---- Content guardrail & templates ----

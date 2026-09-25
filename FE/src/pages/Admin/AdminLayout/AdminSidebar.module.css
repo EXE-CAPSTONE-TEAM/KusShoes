@@ -87,11 +87,11 @@
 
 .brandTagline {
   font-family: var(--font-mono);
-  font-size: 0.62rem;
-  font-weight: 700;
-  letter-spacing: 1.2px;
+  font-size: 0.64rem;
+  font-weight: 800;
+  letter-spacing: 1.3px;
   text-transform: uppercase;
-  color: var(--text-muted);
+  color: var(--text-secondary);
 }
 
 /* Nav */
@@ -109,12 +109,13 @@
 
 .groupHeading {
   padding: 0 10px;
-  margin-bottom: 4px;
-  font-size: 0.62rem;
-  font-weight: 700;
+  margin-bottom: 5px;
+  font-size: 0.66rem;
+  font-weight: 800;
   text-transform: uppercase;
-  letter-spacing: 0.8px;
-  color: var(--text-muted);
+  letter-spacing: 1px;
+  color: var(--text-secondary);
+  opacity: 0.9;
 }
 
 .navItem {
@@ -128,9 +129,9 @@
   padding: 9px 10px;
   border-radius: var(--border-radius-md);
   cursor: pointer;
-  font-family: var(--font-sans);
-  font-weight: 500;
-  font-size: 0.84rem;
+  font-family: var(--font-admin, 'Roboto', sans-serif);
+  font-weight: 600;
+  font-size: 0.86rem;
   text-align: left;
   position: relative;
   transition: all var(--transition-fast);
@@ -156,9 +157,9 @@
 
 .navItem.active {
   color: var(--text-primary);
-  background: rgba(var(--color-orange-rgb), 0.1);
-  border-color: rgba(var(--color-orange-rgb), 0.2);
-  font-weight: 600;
+  background: rgba(var(--color-orange-rgb), 0.12);
+  border-color: rgba(var(--color-orange-rgb), 0.25);
+  font-weight: 700;
 }
 
 .navItem.active .navIcon {
@@ -172,7 +173,7 @@
   height: 50%;
   width: 3px;
   background: linear-gradient(to bottom, var(--color-orange), var(--color-crimson));
-  border-radius: 0 4px 4px 0;
+  border-radius: 0 3px 3px 0;
 }
 
 /* Badges on nav items */
@@ -353,8 +354,8 @@
 }
 
 .sessionEmail {
-  font-size: 0.76rem;
-  font-weight: 600;
+  font-size: 0.78rem;
+  font-weight: 700;
   color: var(--text-primary);
   white-space: nowrap;
   overflow: hidden;
@@ -363,10 +364,10 @@
 }
 
 .roleBadge {
-  font-size: 0.6rem;
-  font-weight: 700;
+  font-size: 0.62rem;
+  font-weight: 800;
   text-transform: uppercase;
-  letter-spacing: 0.6px;
+  letter-spacing: 0.7px;
   padding: 2px 8px;
   border-radius: var(--border-radius-full);
   width: fit-content;
