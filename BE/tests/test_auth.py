@@ -387,10 +387,158 @@ async def test_login_banned_account(client, db, redis):
 # ── UC-AUTH-004: Google OAuth ─────────────────────────────────────────────────
 
 @pytest.mark.asyncio
-async def test_google_callback_state_mismatch(client):
+async def test_google_callback_state_mismatch_returns_to_the_web_app_with_an_error(client):
     res = await client.get("/api/v1/auth/google/callback?code=fake&state=invalid_state")
-    assert res.status_code == 400
-    assert res.json()["code"] == "AUTH_OAUTH_STATE_INVALID"
+    assert res.status_code == 303
+    location = res.headers["location"]
+    assert location.startswith(f"{settings.PUBLIC_WEB_URL.rstrip('/')}/auth/google/callback#")
+    assert "error=AUTH_OAUTH_STATE_INVALID" in location
+    assert "access_token" not in location
+
+
+@pytest.mark.asyncio
+async def test_google_callback_success_puts_the_session_in_the_fragment(client, monkeypatch):
+    from app.services import auth_service
+
+    async def fake_callback(*_args, **_kwargs):
+        return {
+            "access_token": "acc.tok",
+            "refresh_token": "ref-tok",
+            "token_type": "bearer",
+            "is_new_user": True,
+            "linked": False,
+        }
+
+    monkeypatch.setattr(auth_service, "handle_google_callback", fake_callback)
+    res = await client.get("/api/v1/auth/google/callback?code=c&state=s")
+
+    assert res.status_code == 303
+    target, _, fragment = res.headers["location"].partition("#")
+    assert target == f"{settings.PUBLIC_WEB_URL.rstrip('/')}/auth/google/callback"
+    assert "?" not in target  # never in the query string (logged by servers)
+    assert "access_token=acc.tok" in fragment and "is_new_user=true" in fragment
+    assert settings.REFRESH_COOKIE_NAME in res.headers.get("set-cookie", "")
+
+
+def _pkce_pair() -> tuple[str, str]:
+    import base64
+    import hashlib
+    import secrets
+
+    verifier = secrets.token_urlsafe(48)
+    digest = hashlib.sha256(verifier.encode("ascii")).digest()
+    return verifier, base64.urlsafe_b64encode(digest).rstrip(b"=").decode("ascii")
+
+
+async def _mobile_callback(client, redis, monkeypatch, challenge: str):
+    """Start a mobile Google sign-in, then finish it with a stubbed Google round-trip."""
+    from urllib.parse import parse_qs, urlparse
+
+    from app.services import auth_service
+
+    start = await client.get(
+        "/api/v1/auth/google", params={"client": "mobile", "code_challenge": challenge}
+    )
+    assert start.status_code in (302, 307)
+    state = parse_qs(urlparse(start.headers["location"]).query)["state"][0]
+
+    async def fake_callback(_db, _redis, **kwargs):
+        assert kwargs["state"] == state
+        await redis.delete(f"oauth:state:{state}")
+        return {
+            "access_token": "acc.mobile",
+            "refresh_token": "ref-mobile",
+            "token_type": "bearer",
+            "is_new_user": False,
+            "linked": False,
+        }
+
+    monkeypatch.setattr(auth_service, "handle_google_callback", fake_callback)
+    return await client.get(f"/api/v1/auth/google/callback?code=c&state={state}")
+
+
+@pytest.mark.asyncio
+async def test_google_mobile_callback_returns_a_one_time_code_to_the_app(client, redis, monkeypatch):
+    _, challenge = _pkce_pair()
+    res = await _mobile_callback(client, redis, monkeypatch, challenge)
+
+    assert res.status_code == 303
+    location = res.headers["location"]
+    assert location.startswith(f"{settings.MOBILE_GOOGLE_REDIRECT_URI}?code=")
+    assert "acc.mobile" not in location and "ref-mobile" not in location
+    # The refresh cookie belongs to the app's HTTP client, not the browser tab.
+    assert settings.REFRESH_COOKIE_NAME not in res.headers.get("set-cookie", "")
+
+
+@pytest.mark.asyncio
+async def test_google_mobile_exchange_needs_the_pkce_verifier_and_is_single_use(
+    client, redis, monkeypatch
+):
+    from urllib.parse import parse_qs, urlparse
+
+    verifier, challenge = _pkce_pair()
+    res = await _mobile_callback(client, redis, monkeypatch, challenge)
+    code = parse_qs(urlparse(res.headers["location"]).query)["code"][0]
+    exchange_url = "/api/v1/auth/google/mobile/exchange"
+
+    wrong_verifier, _ = _pkce_pair()
+    rejected = await client.post(exchange_url, json={"code": code, "code_verifier": wrong_verifier})
+    assert rejected.status_code == 401
+    assert rejected.json()["code"] == "AUTH_GOOGLE_MOBILE_CODE_INVALID"
+
+    # A wrong verifier burns the code: an interceptor cannot keep guessing.
+    retry = await client.post(exchange_url, json={"code": code, "code_verifier": verifier})
+    assert retry.status_code == 401
+
+    res = await _mobile_callback(client, redis, monkeypatch, challenge)
+    code = parse_qs(urlparse(res.headers["location"]).query)["code"][0]
+    ok = await client.post(exchange_url, json={"code": code, "code_verifier": verifier})
+    assert ok.status_code == 200
+    assert ok.json()["access_token"] == "acc.mobile"
+    assert "ref-mobile" in ok.headers.get("set-cookie", "")
+
+    replay = await client.post(exchange_url, json={"code": code, "code_verifier": verifier})
+    assert replay.status_code == 401
+
+
+@pytest.mark.asyncio
+async def test_google_mobile_start_requires_a_pkce_challenge(client):
+    res = await client.get("/api/v1/auth/google", params={"client": "mobile"})
+    assert res.status_code == 422
+
+
+@pytest.mark.asyncio
+async def test_google_mobile_errors_return_to_the_app(client, redis, monkeypatch):
+    from app.exceptions import OAuthFailed
+    from app.services import auth_service
+
+    _, challenge = _pkce_pair()
+    start = await client.get(
+        "/api/v1/auth/google", params={"client": "mobile", "code_challenge": challenge}
+    )
+    from urllib.parse import parse_qs, urlparse
+
+    state = parse_qs(urlparse(start.headers["location"]).query)["state"][0]
+
+    async def failing_callback(*_args, **_kwargs):
+        raise OAuthFailed()
+
+    monkeypatch.setattr(auth_service, "handle_google_callback", failing_callback)
+    res = await client.get(f"/api/v1/auth/google/callback?code=c&state={state}")
+
+    assert res.status_code == 303
+    assert res.headers["location"] == (
+        f"{settings.MOBILE_GOOGLE_REDIRECT_URI}?error=AUTH_OAUTH_FAILED"
+    )
+
+
+@pytest.mark.asyncio
+async def test_cors_allows_the_configured_web_app(client):
+    res = await client.options(
+        "/api/v1/auth/login",
+        headers={"Origin": settings.PUBLIC_WEB_URL.rstrip("/"), "Access-Control-Request-Method": "POST"},
+    )
+    assert res.headers.get("access-control-allow-origin") == settings.PUBLIC_WEB_URL.rstrip("/")
 
 
 # ── UC-AUTH-005: Admin/Staff Login ────────────────────────────────────────────

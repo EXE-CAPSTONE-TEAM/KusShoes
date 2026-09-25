@@ -23,7 +23,12 @@ from typing import Literal
 from sqlalchemy.exc import IntegrityError
 from sqlalchemy.ext.asyncio import AsyncSession
 
-from app.exceptions import ScanQuotaExhausted, SubGracePeriodScanBlocked, SubNotFound
+from app.exceptions import (
+    QuotaExportExceeded,
+    ScanQuotaExhausted,
+    SubGracePeriodScanBlocked,
+    SubNotFound,
+)
 from app.models.monthly_usage import MonthlyUsage
 from app.models.subscription import Subscription
 from app.repositories import (
@@ -72,6 +77,22 @@ async def increment_projects(
     await monthly_usage_repo.increment_projects(
         db, user_id, current_period_start(subscription), delta
     )
+
+
+async def assert_export_quota(
+    db: AsyncSession, user_id: uuid.UUID, subscription: Subscription | None, count: int
+) -> None:
+    """Raise when `count` more exports would exceed the plan's monthly cap (None = unlimited).
+
+    Checked when a bake job is created and again when it completes — the desktop may finish
+    long after creation, and other bakes may have consumed the quota meanwhile (spec §A.5.5).
+    """
+    max_exports = subscription.plan.max_exports_per_month if subscription else 0
+    if max_exports is None:
+        return
+    usage = await get_usage(db, user_id, subscription)
+    if usage.exports_count + count > max_exports:
+        raise QuotaExportExceeded()
 
 
 async def increment_exports(

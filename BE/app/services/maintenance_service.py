@@ -1,8 +1,10 @@
 import uuid
 from datetime import UTC, datetime, timedelta
+from typing import Any
 
 from sqlalchemy.ext.asyncio import AsyncSession
 
+from app.config import settings
 from app.infrastructure import storage, task_queue
 from app.policy import ACCOUNT_RESTORE_DAYS, PROJECT_RESTORE_DAYS
 from app.repositories import (
@@ -169,6 +171,55 @@ async def remove_stale_upload_records(db: AsyncSession) -> list[str]:
     )
     await db.commit()
     return paths
+
+
+def extract_staging_keys(issued_outputs: Any) -> list[str]:
+    if not issued_outputs:
+        return []
+    if isinstance(issued_outputs, str):
+        return [issued_outputs]
+    if isinstance(issued_outputs, dict):
+        path = issued_outputs.get("file_path")
+        return [str(path)] if path else []
+    if not isinstance(issued_outputs, (list, tuple, set)):
+        return []
+    keys: list[str] = []
+    for item in issued_outputs:
+        if isinstance(item, dict) and item.get("file_path"):
+            keys.append(str(item["file_path"]))
+        elif isinstance(item, str):
+            keys.append(item)
+    return keys
+
+
+async def sweep_expired_claims(
+    db: AsyncSession,
+    *,
+    before: datetime | None = None,
+) -> list[str]:
+    """Spec §A.9: Sweep abandoned claimed bake jobs.
+
+    Conditionally sets status='failed' where status='claimed' and
+    claim_expires_at < now - CLAIM_LEASE_SECONDS. Deletes exactly the row's
+    issued_outputs keys and resets project status.
+    """
+    if before is None:
+        # provenance: spec §Parameter & Data Provenance "Sweep threshold", claim_expires_at < now - CLAIM_LEASE_SECONDS
+        before = datetime.now(UTC) - timedelta(seconds=settings.CLAIM_LEASE_SECONDS)
+
+    swept = await bake_job_repo.sweep_expired_claims(db, before=before)
+    if not swept:
+        return []
+
+    project_ids = {row[1] for row in swept}
+    await project_repo.reset_status_for_projects(db, project_ids)
+
+    await db.commit()
+
+    staging_paths: list[str] = []
+    for row in swept:
+        staging_paths.extend(extract_staging_keys(row[2]))
+    return staging_paths
 
 
 def delete_paths(paths: list[str]) -> dict:

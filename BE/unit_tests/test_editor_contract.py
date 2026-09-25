@@ -8,7 +8,12 @@ from pydantic import ValidationError
 from app.exceptions import AppException, DesignRevisionConflict
 from app.infrastructure.storage import ObjectDownload, iter_object_chunks
 from app.schemas.auth import EditorSessionResponse
-from app.schemas.editor import MAX_EDITOR_CONFIG_BYTES, EditorDesignConfig
+from app.schemas.editor import (
+    MAX_EDITOR_CONFIG_BYTES,
+    EditorContextResponse,
+    EditorDesignConfig,
+    EditorPrepareRequest,
+)
 from app.services.editor_service import (
     _design_response,
     _job_response,
@@ -135,23 +140,40 @@ def test_non_glb_canonical_asset_is_not_marked_ready() -> None:
     assert "error" in response.quality_report
 
 
-def test_cancelled_job_maps_to_frontend_failed_terminal_state() -> None:
+def _job(status: str, **extra) -> SimpleNamespace:
     now = datetime.now(UTC)
-    project_id = uuid.uuid4()
-    job = SimpleNamespace(
-        id=uuid.uuid4(),
-        project_id=project_id,
-        status="cancelled",
-        error_message=None,
-        queued_at=now,
-        started_at=None,
-        completed_at=now,
-    )
+    fields = {
+        "id": uuid.uuid4(),
+        "project_id": uuid.uuid4(),
+        "kind": "bake",
+        "status": status,
+        "error_message": None,
+        "queued_at": now,
+        "started_at": None,
+        "completed_at": None,
+        "claim_expires_at": None,
+    }
+    fields.update(extra)
+    return SimpleNamespace(**fields)
 
-    response = _job_response(job)
 
-    assert response.status == "failed"
+def test_cancelled_job_is_reported_as_its_own_terminal_state() -> None:
+    now = datetime.now(UTC)
+    response = _job_response(_job("cancelled", completed_at=now))
+
+    assert response.status == "cancelled"
     assert response.progress == 100
+
+
+def test_job_response_exposes_lease_only_while_claimed() -> None:
+    lease = datetime.now(UTC)
+    claimed = _job_response(_job("claimed", kind="prepare", claim_expires_at=lease))
+    waiting = _job_response(_job("awaiting_client", claim_expires_at=lease))
+
+    assert claimed.type == "prepare"
+    assert claimed.lease_expires_at == lease
+    assert waiting.lease_expires_at is None
+    assert waiting.progress < claimed.progress < 100
 
 
 def test_design_revision_conflict_carries_current_state() -> None:
@@ -255,3 +277,49 @@ def _editor_session() -> EditorSessionResponse:
         scopes=["editor:read", "editor:write"],
         expires_at=int(datetime.now(UTC).timestamp()) + 900,
     )
+
+
+def test_editor_context_response_exposes_model_status_and_raw_asset_id() -> None:
+    now = datetime.now(UTC)
+    raw_id = uuid.uuid4()
+    context = EditorContextResponse(
+        project={
+            "id": uuid.uuid4(),
+            "name": "Project",
+            "status": "ready",
+            "sourceType": "scan",
+            "createdAt": now,
+            "updatedAt": now,
+        },
+        permissions={"canEdit": True, "canBake": True, "canExport": True},
+        modelStatus="raw",
+        rawModelAssetId=raw_id,
+    )
+    dumped = context.model_dump(by_alias=True)
+    assert dumped["modelStatus"] == "raw"
+    assert dumped["rawModelAssetId"] == raw_id
+
+
+def test_editor_prepare_request_parsing() -> None:
+    req = EditorPrepareRequest.model_validate(
+        {
+            "cropBox": {
+                "center": {"x": 0, "y": 0.1, "z": 0},
+                "size": {"x": 0.5, "y": 1, "z": 0.8},
+            },
+            "confirmResetDesign": True,
+        }
+    )
+    stored = req.crop_box.model_dump(mode="json", by_alias=True)
+    # Stored in the sidecar's shape: camelCase coordinate space, default rotation filled in.
+    assert stored["coordinateSpace"] == "normalized"
+    assert stored["rotation"] == {"x": 0.0, "y": 0.0, "z": 0.0}
+    assert stored["size"]["x"] == 0.5
+    assert req.confirm_reset_design is True
+
+    with pytest.raises(ValidationError):
+        EditorPrepareRequest.model_validate({})  # a crop box is required
+    with pytest.raises(ValidationError):
+        EditorPrepareRequest.model_validate(
+            {"cropBox": {"center": {"x": 0, "y": 0, "z": 0}}}  # size missing
+        )

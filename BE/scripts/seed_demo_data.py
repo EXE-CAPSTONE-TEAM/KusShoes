@@ -318,9 +318,9 @@ async def _ensure_bake_job(
     job.status = status
     job.priority = priority
     job.queued_at = queued_at
-    job.started_at = queued_at + timedelta(minutes=5) if status in {"processing", "completed", "failed", "cancelled"} else None
+    job.started_at = queued_at + timedelta(minutes=5) if status in {"claimed", "completed", "failed", "cancelled"} else None
     job.completed_at = queued_at + timedelta(minutes=45) if status in {"completed", "failed", "cancelled"} else None
-    job.worker_id = f"demo-worker-{index % 4 + 1}" if status in {"processing", "completed", "failed"} else None
+    job.worker_id = f"demo-desktop-{index % 4 + 1}" if status in {"claimed", "completed", "failed"} else None
     job.error_message = "Source mesh has insufficient overlap around heel collar." if status == "failed" else None
     await db.flush()
     return job
@@ -559,7 +559,8 @@ async def seed_demo_data() -> None:
             if project.status == "completed":
                 job_status = "completed"
             elif project.status == "baking":
-                job_status = "processing" if index % 2 else "queued"
+                # Bake jobs run on KusStudio Desktop (migration 028): waiting for / held by a desktop.
+                job_status = "claimed" if index % 2 else "awaiting_client"
             elif project.status == "in_progress":
                 job_status = "failed" if index % 3 == 0 else "cancelled"
             else:

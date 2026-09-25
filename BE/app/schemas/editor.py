@@ -38,7 +38,8 @@ class EditorModelAssetResponse(EditorSchema):
     id: uuid.UUID
     scan_session_id: uuid.UUID = Field(alias="scanSessionId")
     project_id: uuid.UUID = Field(alias="projectId")
-    status: Literal["uploaded", "processing", "ready", "failed"]
+    # raw = scan output awaiting desktop crop/cleanup (spec §B.2)
+    status: Literal["uploaded", "processing", "ready", "raw", "failed"]
     source_type: Literal["scan", "uploaded_glb", "uploaded_obj", "template"] = Field(
         alias="sourceType"
     )
@@ -118,18 +119,101 @@ class EditorContextResponse(EditorSchema):
     model_asset: EditorModelAssetResponse | None = Field(default=None, alias="modelAsset")
     latest_design: EditorDesignResponse | None = Field(default=None, alias="latestDesign")
     permissions: EditorPermissionsResponse
+    model_status: Literal["raw", "ready"] | None = Field(default=None, alias="modelStatus")
+    raw_model_asset_id: uuid.UUID | None = Field(default=None, alias="rawModelAssetId")
+
+
+# Crop box contract of the desktop sidecar's /prepare (ar-ai-exe app/schemas/scan.py CropBox).
+# provenance: bounds mirror that schema exactly so a job the API accepts is never rejected by the
+# sidecar after it has been claimed — normalized model space (centre ±0.5, size (0.01, 1]).
+class EditorCropVector(EditorSchema):
+    x: float = Field(ge=-0.5, le=0.5)
+    y: float = Field(ge=-0.5, le=0.5)
+    z: float = Field(ge=-0.5, le=0.5)
+
+
+class EditorCropSize(EditorSchema):
+    x: float = Field(gt=0.01, le=1.0)
+    y: float = Field(gt=0.01, le=1.0)
+    z: float = Field(gt=0.01, le=1.0)
+
+
+class EditorCropRotation(EditorSchema):
+    x: float = Field(default=0.0, ge=-180.0, le=180.0)
+    y: float = Field(default=0.0, ge=-180.0, le=180.0)
+    z: float = Field(default=0.0, ge=-180.0, le=180.0)
+
+
+class EditorCropBox(EditorSchema):
+    model_config = ConfigDict(populate_by_name=True, from_attributes=True, extra="forbid")
+
+    center: EditorCropVector
+    size: EditorCropSize
+    rotation: EditorCropRotation = Field(default_factory=EditorCropRotation)
+    coordinate_space: Literal["normalized"] = Field(default="normalized", alias="coordinateSpace")
+
+
+class EditorPrepareRequest(EditorSchema):
+    crop_box: EditorCropBox = Field(alias="cropBox")
+    confirm_reset_design: bool = Field(default=False, alias="confirmResetDesign")
+
+
+JobType = Literal["bake", "prepare"]
+JobStatus = Literal["awaiting_client", "claimed", "completed", "failed", "cancelled"]
 
 
 class EditorJobResponse(EditorSchema):
     id: uuid.UUID
-    type: Literal["bake"] = "bake"
-    status: Literal["queued", "processing", "completed", "failed"]
+    type: JobType = "bake"
+    status: JobStatus
     progress: int = Field(ge=0, le=100)
     error_message: str | None = Field(default=None, alias="errorMessage")
     design_id: uuid.UUID = Field(alias="designId")
     project_id: uuid.UUID = Field(alias="projectId")
+    lease_expires_at: datetime | None = Field(default=None, alias="leaseExpiresAt")
     created_at: datetime = Field(alias="createdAt")
     updated_at: datetime = Field(alias="updatedAt")
+
+
+class EditorJobClaimRequest(EditorSchema):
+    # Informational only (stored in bake_jobs.worker_id, String(100)).
+    device_label: str | None = Field(default=None, alias="deviceLabel", max_length=100)
+
+
+class EditorJobClaimResponse(EditorSchema):
+    job: EditorJobResponse
+    claim_id: uuid.UUID = Field(alias="claimId")
+    claim_token: str = Field(alias="claimToken")
+    lease_expires_at: datetime = Field(alias="leaseExpiresAt")
+    # Sidecar request body for /bake or /prepare (snake_case — the sidecar's own contract).
+    payload: dict[str, Any]
+
+
+class EditorJobOutput(EditorSchema):
+    format: str = Field(min_length=1, max_length=20)
+    file_path: str = Field(alias="filePath", min_length=1, max_length=512)
+    file_size_bytes: int = Field(alias="fileSizeBytes", gt=0)
+
+
+class EditorJobCompleteRequest(EditorSchema):
+    outputs: list[EditorJobOutput] = Field(min_length=1, max_length=10)
+    watermark_applied: bool = Field(default=False, alias="watermarkApplied")
+    cleanup_report: dict[str, Any] | None = Field(default=None, alias="cleanupReport")
+
+
+class EditorJobFailRequest(EditorSchema):
+    code: str = Field(min_length=1, max_length=64)
+    # UI display bound for bake_jobs.error_message (spec provenance table).
+    message: str = Field(min_length=1, max_length=500)
+
+
+class EditorContentUrlResponse(EditorSchema):
+    """Presigned R2 URL for a file; the client downloads it directly (spec §B, ADR-004)."""
+
+    url: str
+    expires_in: int = Field(alias="expiresIn")
+    filename: str
+    content_type: str = Field(alias="contentType")
 
 
 class EditorExportPackageResponse(EditorSchema):

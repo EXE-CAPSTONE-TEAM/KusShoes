@@ -36,7 +36,11 @@ class ProjectAsset(Base):
     file_size_bytes: Mapped[int | None] = mapped_column(BigInteger, nullable=True)
     mime_type: Mapped[str | None] = mapped_column(String(100), nullable=True)
     status: Mapped[str] = mapped_column(String(20), nullable=False, default="ready")
-    # uploading | processing | ready | failed
+    # uploading | processing | ready | raw | failed
+    # raw = scan output that still needs desktop crop/cleanup (spec §B.5)
+    derived_from_asset_id: Mapped[uuid.UUID | None] = mapped_column(
+        UUID(as_uuid=True), ForeignKey("project_assets.id", ondelete="SET NULL"), nullable=True
+    )
 
     metadata_: Mapped[dict | None] = mapped_column("metadata", JSONB, nullable=True)
 

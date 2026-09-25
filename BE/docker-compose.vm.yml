@@ -1,0 +1,34 @@
+# VM override (GCP e2-small, 2 vCPU / 2 GB): Neon + R2 managed, nginx on 136.85.55.175.sslip.io (sslip.io).
+# Use: docker compose -f docker-compose.prod.yml -f docker-compose.vm.yml up -d --build
+# First TLS certificate: see deploy/nginx-vm/README.md.
+services:
+  api:
+    # Cold import of app.main takes ~55s on this VM; give uvicorn time to bind.
+    healthcheck:
+      start_period: 180s
+  nginx:
+    depends_on:
+      - api
+      - kiri-relay
+    volumes:
+      - ./deploy/nginx-vm:/etc/nginx/conf.d:ro
+    # Reload every 6h so nginx picks up certificates renewed by the certbot container.
+    command: /bin/sh -c 'while :; do sleep 6h & wait $${!}; nginx -s reload; done & exec nginx -g "daemon off;"'
+
+  # KIRI relay (ar-ai-exe backend, APP_ROLE=relay — spec §D). Code lives in ../relay (git archive of
+  # ar-ai-exe/backend); no Blender/OpenMVS/ffmpeg in the image. Served at relay.<ip>.sslip.io.
+  kiri-relay:
+    build:
+      context: ../relay
+      dockerfile: Dockerfile.relay
+    container_name: kusshoes_kiri_relay
+    env_file: ../relay/.env.relay
+    expose:
+      - "8010"
+    healthcheck:
+      test: ["CMD", "python", "-c", "import urllib.request; urllib.request.urlopen('http://127.0.0.1:8010/health', timeout=5)"]
+      interval: 30s
+      timeout: 5s
+      retries: 3
+      start_period: 60s
+    restart: unless-stopped

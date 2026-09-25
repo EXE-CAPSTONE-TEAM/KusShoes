@@ -113,7 +113,7 @@ services:
       - ./scripts:/app/scripts
       - ./migrations:/app/migrations
       - ./alembic.ini:/app/alembic.ini
-    command: celery -A app.workers.celery_app worker --loglevel=info -Q high,normal,low,bake
+    command: celery -A app.workers.celery_app worker --loglevel=info -Q high,normal,low
     restart: unless-stopped
 
   beat:

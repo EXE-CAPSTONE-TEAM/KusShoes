@@ -47,6 +47,22 @@ async def list_for_project(db: AsyncSession, project_id: uuid.UUID) -> list[Proj
     return list(result.scalars())
 
 
+async def get_latest_raw_source_model(
+    db: AsyncSession, project_id: uuid.UUID
+) -> ProjectAsset | None:
+    result = await db.execute(
+        select(ProjectAsset)
+        .where(
+            ProjectAsset.project_id == project_id,
+            ProjectAsset.asset_type == "source_model",
+            ProjectAsset.status == "raw",
+        )
+        .order_by(ProjectAsset.created_at.desc(), ProjectAsset.id.desc())
+        .limit(1)
+    )
+    return result.scalar_one_or_none()
+
+
 async def mark_ready(
     db: AsyncSession,
     asset: ProjectAsset,
@@ -54,6 +70,17 @@ async def mark_ready(
     file_size_bytes: int,
 ) -> None:
     asset.status = "ready"
+    asset.file_size_bytes = file_size_bytes
+    await db.flush()
+
+
+async def mark_raw(
+    db: AsyncSession,
+    asset: ProjectAsset,
+    *,
+    file_size_bytes: int,
+) -> None:
+    asset.status = "raw"
     asset.file_size_bytes = file_size_bytes
     await db.flush()
 

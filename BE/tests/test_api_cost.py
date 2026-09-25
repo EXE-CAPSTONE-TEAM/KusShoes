@@ -17,6 +17,7 @@ from app.config import settings
 from app.exceptions import ScanIntakeSuspended
 from app.utils.jwt import create_access_token
 from tests.conftest import TEST_DATABASE_URL
+from tests.job_helpers import attach_ready_model
 
 BUDGET_VND = 1_000_000  # acceptance criteria 4/5 of TASK_PACK C2
 MSG43 = (  # SRS_v2.2.txt:2446
@@ -282,12 +283,12 @@ async def test_suspension_does_not_touch_customer_quota(
         json={"design_config": {"color": "red"}, "base_revision": 0},
     )
     assert saved.status_code == 200
-    with patch("app.infrastructure.task_queue.enqueue_bake"):
-        bake = await client.post(
-            f"/api/v1/projects/{project_id}/bake",
-            headers=service_headers,
-            json={"design_config": {"color": "red"}},
-        )
+    await attach_ready_model(db, project_id, authenticated_user.id)
+    bake = await client.post(
+        f"/api/v1/projects/{project_id}/bake",
+        headers=service_headers,
+        json={"design_config": {"color": "red"}},
+    )
     assert bake.status_code == 202, bake.text
 
     # The project/bake path may open a usage row for its own period, but no scan is spent and

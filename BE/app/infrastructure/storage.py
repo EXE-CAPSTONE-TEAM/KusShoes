@@ -59,13 +59,14 @@ def generate_presigned_upload_url(file_path: str, content_type: str, ttl: int = 
     )
 
 
-def generate_presigned_download_url(file_path: str, ttl: int = 3600) -> str:
+def generate_presigned_download_url(
+    file_path: str, ttl: int = 3600, *, content_disposition: str | None = None
+) -> str:
+    params: dict[str, str] = {"Bucket": settings.STORAGE_BUCKET, "Key": file_path}
+    if content_disposition:
+        params["ResponseContentDisposition"] = content_disposition
     client = _get_client()
-    return client.generate_presigned_url(
-        "get_object",
-        Params={"Bucket": settings.STORAGE_BUCKET, "Key": file_path},
-        ExpiresIn=ttl,
-    )
+    return client.generate_presigned_url("get_object", Params=params, ExpiresIn=ttl)
 
 
 def open_download_stream(file_path: str):
@@ -177,6 +178,29 @@ def file_exists(file_path: str) -> bool:
 
 def delete_file(file_path: str) -> None:
     _get_client().delete_object(Bucket=settings.STORAGE_BUCKET, Key=file_path)
+
+
+def delete_files(file_paths: list[str]) -> None:
+    """Best-effort bulk delete; a missing key is not an error (S3 DeleteObject is idempotent)."""
+    client = _get_client()
+    for file_path in file_paths:
+        client.delete_object(Bucket=settings.STORAGE_BUCKET, Key=file_path)
+
+
+def copy_object(source_path: str, destination_path: str) -> None:
+    """Server-side copy inside the bucket — finalizes a verified client upload onto a key that
+    no presigned capability covers (ADR-009). Single-request CopyObject handles ≤5 GiB, above
+    the 2 GiB export ceiling."""
+    try:
+        _get_client().copy_object(
+            Bucket=settings.STORAGE_BUCKET,
+            Key=destination_path,
+            CopySource={"Bucket": settings.STORAGE_BUCKET, "Key": source_path},
+        )
+    except ClientError as exc:
+        if _is_not_found(exc):
+            raise ObjectNotFoundError(source_path) from exc
+        raise
 
 
 def upload_bytes(file_path: str, data: bytes, content_type: str) -> None:

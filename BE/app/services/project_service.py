@@ -7,7 +7,7 @@ from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.exceptions import (
     ActionRequiresVerifiedEmail,
-    BakeJobNotCancellable,
+    AppException,
     BakeJobNotFound,
     BakeJobNotRequeueable,
     DesignLayerLimitExceeded,
@@ -19,7 +19,6 @@ from app.exceptions import (
     ProjectQuotaExceeded,
     ProjectRestoreExpired,
     ProjectTrashNotFound,
-    QuotaExportExceeded,
     SubGracePeriodExportBlocked,
 )
 from app.infrastructure import task_queue
@@ -48,7 +47,7 @@ from app.schemas.project import (
     TriggerBakeRequest,
     UpdateProjectRequest,
 )
-from app.services import guardrail_service, quota_service, version_service
+from app.services import guardrail_service, job_service, quota_service, version_service
 from app.services.project_access import require_owner
 
 EDITOR_BASE_URL = "https://app.kusshoes.vn/editor"
@@ -228,13 +227,16 @@ def count_design_layers(design_config: object) -> int:
 async def trigger_bake(
     db: AsyncSession, project_id: uuid.UUID, body: TriggerBakeRequest
 ) -> BakeJobResponse:
-    project = await project_repo.get_by_id(db, project_id)
+    """Create a bake job for KusStudio Desktop to claim (spec §A.1–A.2, ADR-001).
+
+    Shared by the editor route and the service-token route, so the canonical-model check lives
+    here and neither path can bake a raw or missing model (spec §B.4).
+    """
+    project = await project_repo.get_by_id(db, project_id, for_update=True)
     if not project:
         raise ProjectNotFound()
     if project.is_locked:
         raise ProjectLocked()
-    if await bake_job_repo.get_active_for_project(db, project_id):
-        raise ProjectBakeInProgress()
     # BR-03: this endpoint runs behind the service token, not get_current_user,
     # so the global email-verification gate never applies here — check directly.
     owner = await user_repo.get_by_id(db, project.user_id)
@@ -244,17 +246,23 @@ async def trigger_bake(
     if subscription and subscription.status == "grace":
         raise SubGracePeriodExportBlocked()
     priority = subscription.plan.bake_priority if subscription else "low"
-    usage = await quota_service.get_usage(db, project.user_id, subscription)
     formats = subscription.plan.allowed_export_formats if subscription else ["glb"]
-    max_exports = subscription.plan.max_exports_per_month if subscription else 0
-    if max_exports is not None and usage.exports_count + len(formats) > max_exports:
-        raise QuotaExportExceeded()
+    await quota_service.assert_export_quota(db, project.user_id, subscription, len(formats))
+    source = (
+        await project_asset_repo.get_by_id(db, project.canonical_model_asset_id)
+        if project.canonical_model_asset_id
+        else None
+    )
+    if not source or source.project_id != project.id or source.status != "ready":
+        raise AppException(409, "EDITOR_MODEL_NOT_READY", "Project model is not ready.")
     await guardrail_service.check_design(db, body.design_config)
+    stale = await job_service.supersede_active(db, project_id)
     job = await bake_job_repo.create(
         db,
         project_id=project_id,
         design_config=body.design_config,
         priority=priority,
+        source_asset_id=source.id,
     )
     # BR-46: the exact config sent to the factory is pinned so pruning keeps it.
     await version_service.snapshot(
@@ -267,7 +275,7 @@ async def trigger_bake(
     )
     await project_repo.set_status(db, project, "baking")
     await db.commit()
-    task_queue.enqueue_bake(str(job.id), priority)
+    await job_service.delete_staging(stale)
     return BakeJobResponse(job_id=job.id, status=job.status, priority=job.priority)
 
 
@@ -287,8 +295,8 @@ async def get_bake_status(
         started_at=job.started_at,
         completed_at=job.completed_at,
         can_retry=job.status == "failed",
-        can_cancel=job.status == "queued",
-        poll_after_seconds=3 if job.status in {"queued", "processing"} else None,
+        can_cancel=job.status in bake_job_repo.ACTIVE_STATUSES,
+        poll_after_seconds=3 if job.status in bake_job_repo.ACTIVE_STATUSES else None,
     )
 
 
@@ -306,7 +314,6 @@ async def retry_bake(
     await bake_job_repo.mark_requeued(db, job)
     await project_repo.set_status(db, project, "baking")
     await db.commit()
-    task_queue.enqueue_bake(str(job.id), job.priority)
     return BakeJobResponse(job_id=job.id, status=job.status, priority=job.priority)
 
 
@@ -317,11 +324,11 @@ async def cancel_bake(
     job = await bake_job_repo.get_by_id(db, job_id)
     if not job or job.project_id != project_id:
         raise BakeJobNotFound()
-    if job.status != "queued":
-        raise BakeJobNotCancellable()
-    await bake_job_repo.mark_cancelled(db, job)
+    stale = list(job.issued_outputs or [])
+    await job_service.cancel(db, job)
     await project_repo.set_status(db, project, "in_progress")
     await db.commit()
+    await job_service.delete_staging([str(item["file_path"]) for item in stale])
     return BakeJobResponse(job_id=job.id, status=job.status, priority=job.priority)
 
 

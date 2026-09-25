@@ -104,7 +104,12 @@ async def create_upload_url(
 
 
 async def confirm_upload(
-    db: AsyncSession, user, project_id: uuid.UUID, body: AssetConfirmRequest
+    db: AsyncSession,
+    user,
+    project_id: uuid.UUID,
+    body: AssetConfirmRequest,
+    *,
+    target_status: str = "ready",
 ) -> AssetResponse:
     project = await require_owner(db, project_id, user)
     asset = await project_asset_repo.get_by_id(db, body.asset_id)
@@ -127,7 +132,10 @@ async def confirm_upload(
         prefix=prefix,
         reported_size_bytes=body.file_size_bytes,
     )
-    await project_asset_repo.mark_ready(db, asset, file_size_bytes=verified_size)
+    if target_status == "raw":
+        await project_asset_repo.mark_raw(db, asset, file_size_bytes=verified_size)
+    else:
+        await project_asset_repo.mark_ready(db, asset, file_size_bytes=verified_size)
     if asset.asset_type == "source_model":
         await project_repo.set_canonical_asset(db, project, asset.id)
     return AssetResponse.model_validate(asset)

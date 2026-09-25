@@ -158,6 +158,15 @@ class OAuthFailed(AppException):
         super().__init__(502, "AUTH_OAUTH_FAILED", "Đăng nhập Google thất bại. Vui lòng thử lại.")
 
 
+class AuthGoogleMobileCodeInvalid(AppException):
+    def __init__(self):
+        super().__init__(
+            401,
+            "AUTH_GOOGLE_MOBILE_CODE_INVALID",
+            "Phiên đăng nhập Google không hợp lệ hoặc đã được dùng. Vui lòng thử lại.",
+        )
+
+
 class GoogleNoEmail(AppException):
     def __init__(self):
         super().__init__(400, "AUTH_GOOGLE_NO_EMAIL", "Không thể lấy email từ tài khoản Google")
@@ -841,4 +850,53 @@ def register_exception_handlers(app: FastAPI) -> None:
         return JSONResponse(
             status_code=500,
             content={"code": "INTERNAL_ERROR", "message": "Lỗi hệ thống, vui lòng thử lại sau"},
+        )
+
+
+# --- Client-executed 3D jobs (spec §A, prd §3) ---
+
+
+class JobAlreadyClaimed(AppException):
+    def __init__(self):
+        super().__init__(409, "JOB_ALREADY_CLAIMED", "Job đang được xử lý trên một máy khác.")
+
+
+class JobNotClaimable(AppException):
+    def __init__(self):
+        super().__init__(409, "JOB_NOT_CLAIMABLE", "Job này đã kết thúc. Vui lòng chạy lại.")
+
+
+class JobClaimSuperseded(AppException):
+    def __init__(self):
+        super().__init__(409, "JOB_CLAIM_SUPERSEDED", "Job đã được chạy lại trên máy khác.")
+
+
+class JobClaimMismatch(AppException):
+    def __init__(self):
+        super().__init__(403, "JOB_CLAIM_MISMATCH", "Phiên xử lý không hợp lệ.")
+
+
+class JobOutputInvalid(AppException):
+    def __init__(self, reason: str):
+        super().__init__(
+            422, "JOB_OUTPUT_INVALID", f"Kết quả tải lên không hợp lệ: {reason}"
+        )
+
+
+class EditorModelChanged(AppException):
+    def __init__(self):
+        super().__init__(409, "EDITOR_MODEL_CHANGED", "Model đã thay đổi. Vui lòng chạy lại.")
+
+
+class EditorNoRawModel(AppException):
+    def __init__(self):
+        super().__init__(409, "EDITOR_NO_RAW_MODEL", "Không tìm thấy model thô (raw) để chuẩn bị.")
+
+
+class EditorDesignResetRequired(AppException):
+    def __init__(self):
+        super().__init__(
+            409,
+            "EDITOR_DESIGN_RESET_REQUIRED",
+            "Project đã có thiết kế. Cần xác nhận đặt lại thiết kế (confirmResetDesign) để crop lại.",
         )
