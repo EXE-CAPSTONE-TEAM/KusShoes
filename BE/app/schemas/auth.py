@@ -259,6 +259,25 @@ class EditorLaunchExchangeRequest(BaseModel):
         return value
 
 
+class GoogleMobileExchangeRequest(BaseModel):
+    code: str
+    code_verifier: str
+
+    @field_validator("code")
+    @classmethod
+    def validate_code(cls, value: str) -> str:
+        if not 32 <= len(value) <= 256:
+            raise ValueError("code length is invalid")
+        return value
+
+    @field_validator("code_verifier")
+    @classmethod
+    def validate_code_verifier(cls, value: str) -> str:
+        if not re.fullmatch(r"[A-Za-z0-9._~-]{43,128}", value):
+            raise ValueError("code_verifier is not RFC 7636 compliant")
+        return value
+
+
 class EditorLaunchExchangeResponse(BaseModel):
     access_token: str
     token_type: str = "bearer"

@@ -158,6 +158,15 @@ class OAuthFailed(AppException):
         super().__init__(502, "AUTH_OAUTH_FAILED", "Đăng nhập Google thất bại. Vui lòng thử lại.")
 
 
+class AuthGoogleMobileCodeInvalid(AppException):
+    def __init__(self):
+        super().__init__(
+            401,
+            "AUTH_GOOGLE_MOBILE_CODE_INVALID",
+            "Phiên đăng nhập Google không hợp lệ hoặc đã được dùng. Vui lòng thử lại.",
+        )
+
+
 class GoogleNoEmail(AppException):
     def __init__(self):
         super().__init__(400, "AUTH_GOOGLE_NO_EMAIL", "Không thể lấy email từ tài khoản Google")

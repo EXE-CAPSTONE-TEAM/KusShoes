@@ -1,8 +1,10 @@
 import uuid
+from typing import Literal
 from urllib.parse import urlencode
 
 import redis.asyncio as aioredis
-from fastapi import APIRouter, Body, Depends, Request, Response, status
+from fastapi import APIRouter, Body, Depends, Query, Request, Response, status
+from fastapi.exceptions import RequestValidationError
 from fastapi.responses import RedirectResponse
 from sqlalchemy.ext.asyncio import AsyncSession
 
@@ -27,6 +29,7 @@ from app.schemas.auth import (
     EditorSessionResponse,
     ForgotPasswordRequest,
     ForgotPasswordResponse,
+    GoogleMobileExchangeRequest,
     LoginRequest,
     LoginResult,
     LogoutRequest,
@@ -185,9 +188,25 @@ async def verify_two_factor_login(
 
 @router.get("/google")
 async def google_login(
+    client: Literal["web", "mobile"] = "web",
+    code_challenge: str | None = Query(default=None, pattern=r"^[A-Za-z0-9_-]{43}$"),
     redis: aioredis.Redis = Depends(get_redis),
 ):
-    url = await auth_service.get_google_auth_url(redis)
+    """Start Google sign-in. The mobile app passes `client=mobile` plus its PKCE S256 challenge."""
+    if client == auth_service.GOOGLE_CLIENT_MOBILE and not code_challenge:
+        raise RequestValidationError(
+            [
+                {
+                    "type": "missing",
+                    "loc": ("query", "code_challenge"),
+                    "msg": "code_challenge is required for mobile sign-in",
+                    "input": None,
+                }
+            ]
+        )
+    url = await auth_service.get_google_auth_url(
+        redis, client=client, code_challenge=code_challenge
+    )
     return RedirectResponse(url=url)
 
 
@@ -204,7 +223,14 @@ async def google_callback(
     The web app (PUBLIC_WEB_URL, e.g. on Vercel) is a different site from the API, so the session
     travels in the URL *fragment* of `/auth/google/callback` — fragments are never sent to a server
     or written to access logs. The refresh token is set as the usual HttpOnly cookie.
+
+    A mobile sign-in instead returns to MOBILE_GOOGLE_REDIRECT_URI with a one-time `code` that
+    only the app holding the PKCE verifier can exchange (`POST /auth/google/mobile/exchange`).
     """
+    started_by = await auth_service.peek_google_state(redis, state)
+    if started_by.get("client") == auth_service.GOOGLE_CLIENT_MOBILE:
+        return await _finish_mobile_google_login(request, db, redis, code, state, started_by)
+
     target = f"{settings.PUBLIC_WEB_URL.rstrip('/')}/auth/google/callback"
     try:
         result = await auth_service.handle_google_callback(
@@ -231,6 +257,53 @@ async def google_callback(
     redirect = RedirectResponse(url=f"{target}#{fragment}", status_code=status.HTTP_303_SEE_OTHER)
     _set_refresh_cookie(redirect, result["refresh_token"])
     return redirect
+
+
+async def _finish_mobile_google_login(
+    request: Request,
+    db: AsyncSession,
+    redis: aioredis.Redis,
+    code: str,
+    state: str,
+    started_by: dict[str, str],
+) -> RedirectResponse:
+    target = settings.MOBILE_GOOGLE_REDIRECT_URI
+    try:
+        result = await auth_service.handle_google_callback(
+            db,
+            redis,
+            code=code,
+            state=state,
+            user_agent=request.headers.get("user-agent"),
+            ip_address=_client_ip(request),
+        )
+    except AppException as exc:
+        return RedirectResponse(
+            url=f"{target}?{urlencode({'error': exc.code})}",
+            status_code=status.HTTP_303_SEE_OTHER,
+        )
+    one_time_code = await auth_service.create_mobile_google_code(
+        redis, tokens=result, code_challenge=started_by.get("code_challenge", "")
+    )
+    # No cookie here: the browser tab is not the app's HTTP client. The exchange sets it.
+    return RedirectResponse(
+        url=f"{target}?{urlencode({'code': one_time_code})}",
+        status_code=status.HTTP_303_SEE_OTHER,
+    )
+
+
+@router.post("/google/mobile/exchange", response_model=TokenResponse)
+async def google_mobile_exchange(
+    body: GoogleMobileExchangeRequest,
+    response: Response,
+    redis: aioredis.Redis = Depends(get_redis),
+):
+    """Trade the mobile one-time code + PKCE verifier for the session (same shape as /login)."""
+    tokens = await auth_service.exchange_mobile_google_code(
+        redis, code=body.code, code_verifier=body.code_verifier
+    )
+    _set_refresh_cookie(response, tokens.refresh_token)
+    return TokenResponse(access_token=tokens.access_token, token_type=tokens.token_type)
 
 
 @router.post("/refresh", response_model=AccessTokenResponse)

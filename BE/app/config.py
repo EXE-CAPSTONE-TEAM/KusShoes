@@ -20,6 +20,10 @@ class Settings(BaseSettings):
     GOOGLE_CLIENT_ID: str
     GOOGLE_CLIENT_SECRET: str
     GOOGLE_REDIRECT_URI: str
+    # Mobile Google sign-in: the callback hands the app a one-time code on this fixed URI
+    # (never a client-supplied one, so it cannot become an open redirect).
+    MOBILE_GOOGLE_REDIRECT_URI: str = "vn.kusshoes.mobile://auth/google"
+    MOBILE_GOOGLE_CODE_EXPIRE_SECONDS: int = 60
 
     # JWT
     ACCESS_TOKEN_EXPIRE_MINUTES: int = 5
