@@ -68,6 +68,19 @@ class RevenuePoint(BaseModel):
     revenue_vnd: int
 
 
+class PaymentMethodRevenue(BaseModel):
+    payment_method: str  # "payos" | "momo" | "manual"
+    revenue_vnd: int
+    share: float
+
+
+class AccountsReceivable(BaseModel):
+    """Snapshot (not period-scoped): invoices awaiting payment right now."""
+
+    count: int
+    amount_vnd: int
+
+
 class AnalyticsResponse(BaseModel):
     date_from: date
     date_to: date
@@ -87,3 +100,11 @@ class AnalyticsResponse(BaseModel):
     revenue_series: list[RevenuePoint]
     mrr_movement: MrrMovement
     top_customers: list[TopCustomer]
+    payment_methods: list[PaymentMethodRevenue]
+    outstanding: AccountsReceivable
+    discounts_vnd: int  # Invoice.discount_vnd summed over paid+refunded invoices in the period
+    vat_collected_vnd: int  # estimated from the current VAT_ENABLED/rate config, not stored per-invoice
+    credit_revenue_vnd: int  # BR-94 scan Credit purchases — revenue, but never MRR/churn
+    refund_rate: float | None  # refunds / gross revenue in the period
+    api_cost_vnd: int
+    gross_margin_vnd: int  # revenue_vnd.current − api_cost_vnd

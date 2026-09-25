@@ -1,5 +1,6 @@
 import asyncio
 import os
+from datetime import UTC, datetime
 
 from app.database import AsyncSessionLocal
 from app.repositories import monthly_usage_repo, plan_repo, subscription_repo, user_repo
@@ -65,7 +66,7 @@ async def seed_users() -> None:
 
             if free_plan:
                 await subscription_repo.create_free(db, user_id=user.id, plan_id=free_plan.id)
-            await monthly_usage_repo.create_for_user(db, user_id=user.id)
+            await monthly_usage_repo.create_for_user(db, user_id=user.id, period_start=datetime.now(UTC))
 
             print(f"Created {u['role']}: {user.email}")
 

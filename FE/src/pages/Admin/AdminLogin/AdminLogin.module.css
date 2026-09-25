@@ -8,6 +8,7 @@
   overflow: hidden;
   padding: 24px;
   background-color: var(--bg-primary);
+  font-family: var(--font-admin, 'Roboto', sans-serif);
 }
 
 .bgImage {
@@ -123,7 +124,7 @@
 }
 
 .title {
-  font-family: 'Space Grotesk', sans-serif;
+  font-family: var(--font-admin, 'Roboto', sans-serif);
   font-size: 1.5rem;
   font-weight: 800;
   color: var(--text-primary);
@@ -201,7 +202,7 @@
   border: none;
   outline: none;
   color: var(--text-primary);
-  font-family: var(--font-sans);
+  font-family: var(--font-admin, 'Roboto', sans-serif);
   font-size: 0.9rem;
   width: 100%;
   min-width: 0;

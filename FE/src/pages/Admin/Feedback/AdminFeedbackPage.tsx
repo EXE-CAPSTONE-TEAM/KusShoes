@@ -120,19 +120,19 @@ export const AdminFeedbackPage: React.FC = () => {
       </div>
 
       <div className={shared.statsGrid}>
-        <div className={`${shared.statCard} glass-panel`}>
+        <div className={`${shared.statCard}`}>
           <span className={shared.statLabel}>Số phản hồi</span>
           <span className={shared.statValue}>{summary?.count ?? '—'}</span>
         </div>
-        <div className={`${shared.statCard} glass-panel`}>
+        <div className={`${shared.statCard}`}>
           <span className={shared.statLabel}>Điểm trung bình</span>
           <span className={shared.statValue}>{summary ? summary.average_rating.toFixed(2) : '—'}</span>
         </div>
-        <div className={`${shared.statCard} glass-panel`}>
+        <div className={`${shared.statCard}`}>
           <span className={shared.statLabel}>Chưa xử lý</span>
           <span className={shared.statValue}>{summary?.by_status.new ?? 0}</span>
         </div>
-        <div className={`${shared.statCard} glass-panel`}>
+        <div className={`${shared.statCard}`}>
           <span className={shared.statLabel}>Đã hoàn thành</span>
           <span className={shared.statValue}>{summary?.by_status.done ?? 0}</span>
         </div>

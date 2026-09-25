@@ -1,0 +1,138 @@
+.container {
+  width: 100%;
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+  user-select: none;
+}
+
+/* Dải đối soát tài chính tóm tắt (Compact Financial Ledger Strip) */
+.summaryStrip {
+  display: grid;
+  grid-template-columns: repeat(4, 1fr);
+  gap: 8px;
+  padding: 8px 12px;
+  background-color: var(--bg-tertiary);
+  border: 1px solid var(--glass-border);
+  border-radius: var(--border-radius-sm);
+}
+
+.summaryItem {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  min-width: 0;
+}
+
+.summaryLabel {
+  font-size: 0.68rem;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.4px;
+  color: var(--text-secondary);
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.summaryValInflow {
+  font-family: var(--font-admin, 'Roboto', sans-serif);
+  font-size: 0.88rem;
+  font-weight: 800;
+  color: #10B981;
+  font-variant-numeric: tabular-nums;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.summaryValOutflow {
+  font-family: var(--font-admin, 'Roboto', sans-serif);
+  font-size: 0.88rem;
+  font-weight: 800;
+  color: #EF4444;
+  font-variant-numeric: tabular-nums;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.summaryValNet {
+  font-family: var(--font-admin, 'Roboto', sans-serif);
+  font-size: 0.88rem;
+  font-weight: 800;
+  font-variant-numeric: tabular-nums;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.summaryValNetPositive {
+  color: #10B981;
+}
+
+.summaryValNetNegative {
+  color: #EF4444;
+}
+
+.summaryValCoverage {
+  font-family: var(--font-admin, 'Roboto', sans-serif);
+  font-size: 0.88rem;
+  font-weight: 800;
+  color: var(--text-primary);
+  font-variant-numeric: tabular-nums;
+}
+
+/* Khung vẽ SVG */
+.svgWrapper {
+  width: 100%;
+  position: relative;
+  overflow: hidden;
+  border-radius: var(--border-radius-sm);
+}
+
+.svgChart {
+  width: 100%;
+  height: auto;
+  display: block;
+  overflow: visible;
+}
+
+/* Tooltip tương tác */
+.tooltipBox {
+  position: absolute;
+  pointer-events: none;
+  background-color: var(--dropdown-bg);
+  border: 1px solid var(--glass-border);
+  border-radius: var(--border-radius-sm);
+  padding: 6px 10px;
+  box-shadow: var(--shadow-md);
+  z-index: 10;
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  transform: translate(-50%, -100%);
+  margin-top: -10px;
+  white-space: nowrap;
+}
+
+.tooltipTitle {
+  font-size: 0.72rem;
+  font-weight: 700;
+  color: var(--text-secondary);
+  text-transform: uppercase;
+  letter-spacing: 0.4px;
+}
+
+.tooltipValue {
+  font-family: var(--font-admin, 'Roboto', sans-serif);
+  font-size: 0.85rem;
+  font-weight: 800;
+  font-variant-numeric: tabular-nums;
+}
+
+.tooltipSub {
+  font-size: 0.70rem;
+  font-weight: 600;
+  color: var(--text-muted);
+}
