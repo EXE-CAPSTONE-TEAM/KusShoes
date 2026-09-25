@@ -248,7 +248,7 @@
 
 .logList::-webkit-scrollbar-thumb {
   background: var(--glass-border);
-  border-radius: 4px;
+  border-radius: 3px;
 }
 
 .logList::-webkit-scrollbar-thumb:hover {

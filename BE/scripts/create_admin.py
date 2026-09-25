@@ -7,6 +7,7 @@ Idempotent: email đã tồn tại → thoát với mã 0.
 import asyncio
 import os
 import sys
+from datetime import UTC, datetime
 from getpass import getpass
 
 from app.database import AsyncSessionLocal
@@ -52,7 +53,7 @@ async def _create_admin(email: str, username: str, password: str) -> None:
         free_plan = await plan_repo.get_free_plan(db)
         if free_plan:
             await subscription_repo.create_free(db, user_id=user.id, plan_id=free_plan.id)
-        await monthly_usage_repo.create_for_user(db, user_id=user.id)
+        await monthly_usage_repo.create_for_user(db, user_id=user.id, period_start=datetime.now(UTC))
 
         await db.commit()
         print(f"Đã tạo admin: {user.email} · {user.account_code}")

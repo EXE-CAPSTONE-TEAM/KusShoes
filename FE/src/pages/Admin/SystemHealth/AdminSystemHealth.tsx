@@ -40,7 +40,7 @@ export const AdminSystemHealth: React.FC = () => {
             {Object.entries(health.checks).map(([key, value]) => {
               const Icon = CHECK_ICON[key] ?? Database;
               return (
-                <div key={key} className={`${shared.statCard} glass-panel`}>
+                <div key={key} className={`${shared.statCard}`}>
                   <span className={shared.statLabel}>
                     <Icon size={14} style={{ verticalAlign: -2, marginRight: 6 }} />
                     {key.toUpperCase()}
@@ -51,25 +51,25 @@ export const AdminSystemHealth: React.FC = () => {
             })}
           </div>
 
-          <div className={`${shared.chartCard} glass-panel`}>
+          <div className={`${shared.chartCard}`}>
             <span className={shared.chartTitle}>Độ sâu hàng đợi (Queue Depths)</span>
             <div className={shared.statsGrid} style={{ marginTop: 16 }}>
-              <div className={`${shared.statCard} glass-panel`}>
+              <div className={`${shared.statCard}`}>
                 <span className={shared.statLabel}>High Priority</span>
                 <span className={shared.statValue}>{health.queue_depths.high ?? '—'}</span>
               </div>
-              <div className={`${shared.statCard} glass-panel`}>
+              <div className={`${shared.statCard}`}>
                 <span className={shared.statLabel}>Normal Priority</span>
                 <span className={shared.statValue}>{health.queue_depths.normal ?? '—'}</span>
               </div>
-              <div className={`${shared.statCard} glass-panel`}>
+              <div className={`${shared.statCard}`}>
                 <span className={shared.statLabel}>Low Priority</span>
                 <span className={shared.statValue}>{health.queue_depths.low ?? '—'}</span>
               </div>
             </div>
           </div>
 
-          <div className={`${shared.chartCard} glass-panel`}>
+          <div className={`${shared.chartCard}`}>
             <span className={shared.chartTitle}>Bake Jobs theo trạng thái</span>
             <div className={shared.tableWrap} style={{ marginTop: 16 }}>
               <table className={shared.table}>

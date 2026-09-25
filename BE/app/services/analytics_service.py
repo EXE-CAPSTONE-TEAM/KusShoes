@@ -21,10 +21,12 @@ from sqlalchemy.ext.asyncio import AsyncSession
 from app.models.scan_credit import CREDIT_INVOICE_TIER
 from app.repositories import analytics_repo
 from app.schemas.analytics import (
+    AccountsReceivable,
     AnalyticsResponse,
     ChurnMetric,
     FailedPayments,
     MrrMovement,
+    PaymentMethodRevenue,
     PeriodValue,
     PlanRevenue,
     RateMetric,
@@ -33,6 +35,7 @@ from app.schemas.analytics import (
     RevenuePoint,
     TopCustomer,
 )
+from app.services import api_cost_service, tax_service
 from app.services.period_service import GMT7
 
 GRACE_DAYS = 3
@@ -246,6 +249,7 @@ async def get_analytics(
 
     paid_rows = await analytics_repo.paid_invoice_rows(db)
     refund_rows = await analytics_repo.refund_rows(db)
+    pending_rows = await analytics_repo.pending_invoice_rows(db)
     payments = build_payments(paid_rows, refund_rows)
     plan_payments = recurring_payments(payments)
     # Recurring metrics: plan invoices only (SRS_v2.2.txt:2551).
@@ -280,7 +284,8 @@ async def get_analytics(
 
     by_plan: dict[str, int] = defaultdict(int)
     for payment in payments:
-        if _in_range(payment.paid_at, start, end):
+        # Credit has its own line (credit_revenue_vnd below), not a fake "plan tier" here.
+        if _in_range(payment.paid_at, start, end) and not is_credit_payment(payment):
             by_plan[payment.plan_tier] += payment.amount
     plan_total = sum(by_plan.values())
 
@@ -298,6 +303,32 @@ async def get_analytics(
     )[:10]
 
     month = month_key(datetime(end.year, end.month, end.day, 12, tzinfo=GMT7))
+
+    # --- Cash-flow additions: payment method split, discounts, VAT, Credit, AR, margin ---
+    method_by_invoice = {row[0]: row[8] for row in paid_rows}
+    by_method: dict[str, int] = defaultdict(int)
+    for payment in payments:
+        if _in_range(payment.paid_at, start, end):
+            by_method[method_by_invoice.get(payment.invoice_id, "unknown")] += payment.amount
+    method_total = sum(by_method.values())
+
+    discounts_vnd = sum(
+        row[12] for row in paid_rows if row[2] is not None and _in_range(row[2], start, end)
+    )
+    credit_revenue_vnd = sum(
+        payment.amount
+        for payment in payments
+        if is_credit_payment(payment) and _in_range(payment.paid_at, start, end)
+    )
+    vat_collected_vnd = tax_service.vat_breakdown(revenue.current)["vat_vnd"]
+    outstanding = AccountsReceivable(
+        count=len(pending_rows), amount_vnd=sum(row[2] for row in pending_rows)
+    )
+    refund_rate = _ratio(refunds["cur"], gross["cur"])
+
+    api_cost_rows = await api_cost_service.list_daily(db, date_from=start, date_to=end)
+    api_cost_vnd = sum(row.cost_vnd for row in api_cost_rows)
+    gross_margin_vnd = revenue.current - api_cost_vnd
     return AnalyticsResponse(
         date_from=start,
         date_to=end,
@@ -332,4 +363,17 @@ async def get_analytics(
             TopCustomer(user_id=user_id, email=emails.get(user_id), net_paid_vnd=total, orders=n)
             for total, n, user_id in totals
         ],
+        payment_methods=[
+            PaymentMethodRevenue(
+                payment_method=method, revenue_vnd=value, share=_ratio(value, method_total) or 0
+            )
+            for method, value in sorted(by_method.items(), key=lambda item: -item[1])
+        ],
+        outstanding=outstanding,
+        discounts_vnd=discounts_vnd,
+        vat_collected_vnd=vat_collected_vnd,
+        credit_revenue_vnd=credit_revenue_vnd,
+        refund_rate=refund_rate,
+        api_cost_vnd=api_cost_vnd,
+        gross_margin_vnd=gross_margin_vnd,
     )

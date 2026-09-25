@@ -476,8 +476,9 @@ async def test_credit_revenue_appears_in_admin_analytics(
     await _subscribe(db, authenticated_user, "basic")
     await _buy(client, db, authenticated_user, auth_headers, 1)
     body = (await client.get("/api/v1/admin/analytics", headers=admin_headers)).json()
-    by_plan = {row["plan_tier"]: row["revenue_vnd"] for row in body["revenue_by_plan"]}
-    assert by_plan[CREDIT_INVOICE_TIER] == settings.CREDIT_PRICE_VND
+    # Credit has its own line, not a fake "plan tier" row in revenue_by_plan.
+    assert body["credit_revenue_vnd"] == settings.CREDIT_PRICE_VND
+    assert CREDIT_INVOICE_TIER not in {row["plan_tier"] for row in body["revenue_by_plan"]}
     assert body["revenue_vnd"]["current"] == settings.CREDIT_PRICE_VND
 
 
@@ -548,8 +549,10 @@ async def test_credit_revenue_counts_as_cash_revenue(client, db, authenticated_u
     body = (await client.get("/api/v1/admin/analytics", headers=admin_headers)).json()
     total = pro.price_vnd + settings.CREDIT_PRICE_VND
     assert body["revenue_vnd"]["current"] == total
+    # Credit has its own line, not a fake "plan tier" row in revenue_by_plan.
     by_plan = {row["plan_tier"]: row["revenue_vnd"] for row in body["revenue_by_plan"]}
-    assert by_plan == {"pro": pro.price_vnd, CREDIT_INVOICE_TIER: settings.CREDIT_PRICE_VND}
+    assert by_plan == {"pro": pro.price_vnd}
+    assert body["credit_revenue_vnd"] == settings.CREDIT_PRICE_VND
     assert sum(point["revenue_vnd"] for point in body["revenue_series"]) == total
     assert body["top_customers"][0]["net_paid_vnd"] == total
     assert body["top_customers"][0]["orders"] == 2

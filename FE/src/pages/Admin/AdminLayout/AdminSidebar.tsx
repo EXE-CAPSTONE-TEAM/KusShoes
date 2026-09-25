@@ -2,7 +2,7 @@ import React, { useEffect, useState } from 'react';
 import {
   LayoutDashboard, Users, Package, CreditCard, FolderKanban,
   Flame, Download, Activity, ScrollText, LogOut, BarChart3, Sparkles, MessageSquare,
-  PanelLeftClose, PanelLeftOpen,
+  PanelLeftClose, PanelLeftOpen, Sun, Moon,
 } from 'lucide-react';
 import * as Tooltip from '@radix-ui/react-tooltip';
 import { useAdminAuth } from '../../../context/AdminAuthContext';
@@ -29,7 +29,7 @@ interface NavGroup {
 
 export const AdminSidebar: React.FC<AdminSidebarProps> = ({ activePage, navigate }) => {
   const { session, logout, isLoggingOut, isAdmin } = useAdminAuth();
-  const { theme } = useTheme();
+  const { theme, toggleTheme } = useTheme();
 
   const [collapsed, setCollapsed] = useState<boolean>(() => {
     try {
@@ -240,6 +240,24 @@ export const AdminSidebar: React.FC<AdminSidebarProps> = ({ activePage, navigate
                 </span>
               </div>
             )}
+            <Tooltip.Root>
+              <Tooltip.Trigger asChild>
+                <button
+                  className={styles.logoutBtn}
+                  onClick={toggleTheme}
+                  aria-label={theme === 'dark' ? 'Chuyển sang giao diện Sáng' : 'Chuyển sang giao diện Tối'}
+                  title={theme === 'dark' ? 'Chế độ Sáng' : 'Chế độ Tối'}
+                >
+                  {theme === 'dark' ? <Sun size={15} /> : <Moon size={15} />}
+                </button>
+              </Tooltip.Trigger>
+              <Tooltip.Portal>
+                <Tooltip.Content className={styles.tooltipContent} side="top" sideOffset={8}>
+                  {theme === 'dark' ? 'Chế độ Sáng' : 'Chế độ Tối'}
+                  <Tooltip.Arrow className={styles.tooltipArrow} />
+                </Tooltip.Content>
+              </Tooltip.Portal>
+            </Tooltip.Root>
             <Tooltip.Root>
               <Tooltip.Trigger asChild>
                 <button
