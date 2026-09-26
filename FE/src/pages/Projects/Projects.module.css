@@ -194,11 +194,17 @@
   flex-shrink: 0;
 }
 
+/* Overrides Select.module.css's shared .trigger { width: 100% }, which — inside this flex
+   toolbar — let the trigger shrink below its label's intrinsic width, wrapping the text onto a
+   second line and pushing the box past the intended 32px height. */
 .controlTrigger {
   height: 32px;
   padding: 0 10px;
   font-size: 0.8125rem;
   gap: 6px;
+  width: auto;
+  white-space: nowrap;
+  flex-shrink: 0;
 }
 
 .segmented {
@@ -538,6 +544,12 @@
   border-radius: 50%;
   border: 1px solid var(--glass-border);
   flex-shrink: 0;
+  /* A white/near-white swatch color has no visible edge against the card background otherwise. */
+  box-shadow: inset 0 0 0 1px rgba(0, 0, 0, 0.12);
+}
+
+[data-theme='dark'] .swatch {
+  box-shadow: inset 0 0 0 1px rgba(255, 255, 255, 0.16);
 }
 
 .visibilityTag {

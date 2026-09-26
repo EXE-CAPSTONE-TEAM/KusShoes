@@ -29,6 +29,7 @@ import { Select } from '../../components/Select/Select';
 import { ConfirmDialog } from '../../components/ConfirmDialog/ConfirmDialog';
 import { useToast } from '../../context/ToastContext';
 import { api, type PortalProject } from '../../api/client';
+import { formatDateTime, formatRelativeTime } from '../../utils/format';
 import { ProjectsEmptyState } from './ProjectsEmptyState';
 import { ProjectTrashPanel } from './ProjectTrashPanel';
 import styles from './Projects.module.css';
@@ -67,19 +68,6 @@ interface ProjectsProps {
   initialFilter?: ProjectStatusFilter;
   /** True while the project list is being fetched. */
   loading?: boolean;
-}
-
-function formatRelativeDate(value: string): string {
-  const timestamp = new Date(value).getTime();
-  if (!Number.isFinite(timestamp)) return 'Recently';
-  const diffMs = Date.now() - timestamp;
-  const minutes = Math.max(1, Math.floor(diffMs / 60000));
-  if (minutes < 60) return `${minutes} min ago`;
-  const hours = Math.floor(minutes / 60);
-  if (hours < 24) return `${hours} hour${hours === 1 ? '' : 's'} ago`;
-  const days = Math.floor(hours / 24);
-  if (days < 7) return `${days} day${days === 1 ? '' : 's'} ago`;
-  return new Date(value).toLocaleDateString();
 }
 
 function isProjectSortBy(value: string): value is ProjectSortBy {
@@ -143,7 +131,7 @@ export const Projects: React.FC<ProjectsProps> = ({
         id: project.id,
         name: project.name,
         baseModel: project.baseModel,
-        date: formatRelativeDate(project.updatedAt),
+        date: formatRelativeTime(project.updatedAt),
         size: project.fileSize,
         photos: project.photosCount,
         device: project.device,
@@ -677,8 +665,8 @@ export const Projects: React.FC<ProjectsProps> = ({
 
                       <div className={styles.metaRowCompact}>
                         <Footprints size={12} className={styles.metaIcon} />
-                        <span className={styles.metaText}>
-                          {proj.baseModel} · Edited {proj.updatedAt}
+                        <span className={styles.metaText} title={formatDateTime(proj.updatedAt)}>
+                          {proj.baseModel} · Edited {formatRelativeTime(proj.updatedAt)}
                         </span>
                       </div>
 
@@ -773,8 +761,11 @@ export const Projects: React.FC<ProjectsProps> = ({
                                 </span>
                               )}
                             </span>
-                            <span className={styles.rowProjectUpdated}>
-                              Updated {proj.updatedAt}
+                            <span
+                              className={styles.rowProjectUpdated}
+                              title={formatDateTime(proj.updatedAt)}
+                            >
+                              Updated {formatRelativeTime(proj.updatedAt)}
                             </span>
                           </div>
                         </div>
