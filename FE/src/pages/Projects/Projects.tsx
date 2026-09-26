@@ -110,20 +110,12 @@ export const Projects: React.FC<ProjectsProps> = ({
   const [editingProject, setEditingProject] = useState<PortalProject | null>(null);
   const [renameValue, setRenameValue] = useState('');
 
-  // Bulk actions status dropdown state
-  const [showBulkStatusDropdown, setShowBulkStatusDropdown] = useState(false);
-
   // Delete confirmation dialog state
   const [confirmDeleteId, setConfirmDeleteId] = useState<string | null>(null);
   const [confirmBulkDeleteOpen, setConfirmBulkDeleteOpen] = useState(false);
 
   // Trash panel (BR-47: restore a soft-deleted project within 30 days)
   const [isTrashOpen, setIsTrashOpen] = useState(false);
-
-  const handleBulkStatusChange = (status: 'Scanned' | 'Designing' | 'Completed') => {
-    toast(`The backend does not expose manual status changes (${status}).`, 'error');
-    setShowBulkStatusDropdown(false);
-  };
 
   // Step-Wizard (New Project) States
   const [isCreateWizardOpen, setIsCreateWizardOpen] = useState(false);
@@ -377,29 +369,6 @@ export const Projects: React.FC<ProjectsProps> = ({
             </div>
 
             <div className={styles.fabActions}>
-              <div className={styles.fabDropdownWrapper}>
-                <button
-                  className={styles.fabBtn}
-                  onClick={() => setShowBulkStatusDropdown(!showBulkStatusDropdown)}
-                >
-                  Change Status
-                </button>
-                <AnimatePresence>
-                  {showBulkStatusDropdown && (
-                    <motion.div
-                      className={`${styles.fabDropdown} glass-panel`}
-                      initial={{ opacity: 0, y: 10 }}
-                      animate={{ opacity: 1, y: 0 }}
-                      exit={{ opacity: 0, y: 10 }}
-                    >
-                      <button onClick={() => handleBulkStatusChange('Scanned')}>Scanned</button>
-                      <button onClick={() => handleBulkStatusChange('Designing')}>Designing</button>
-                      <button onClick={() => handleBulkStatusChange('Completed')}>Completed</button>
-                    </motion.div>
-                  )}
-                </AnimatePresence>
-              </div>
-
               <button
                 className={`${styles.fabBtn} ${styles.fabDeleteBtn}`}
                 onClick={handleBulkDelete}
@@ -411,10 +380,7 @@ export const Projects: React.FC<ProjectsProps> = ({
 
               <button
                 className={styles.fabCancelBtn}
-                onClick={() => {
-                  setSelectedIds([]);
-                  setShowBulkStatusDropdown(false);
-                }}
+                onClick={() => setSelectedIds([])}
                 title="Cancel selection"
               >
                 <X size={16} />
