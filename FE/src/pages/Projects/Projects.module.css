@@ -130,11 +130,11 @@
   color: var(--color-orange);
 }
 
-/* Grid Layout */
+/* Grid Layout — dense utilitarian grid, ~260px cards */
 .grid {
   display: grid;
-  grid-template-columns: repeat(auto-fill, minmax(320px, 1fr));
-  gap: 24px;
+  grid-template-columns: repeat(auto-fill, minmax(220px, 1fr));
+  gap: 16px;
   align-items: start;
   padding: 16px;
   margin: -16px;
@@ -147,94 +147,104 @@
   position: relative;
 }
 
-/* Card item */
+/* Card item — flat, utilitarian: depth via 1px borders only, no shadows/scale/lift */
 .card {
-  border-radius: var(--border-radius-sm);
+  border-radius: var(--border-radius-md);
   overflow: hidden;
   display: flex;
   flex-direction: column;
+  background-color: var(--bg-secondary);
+  border: 1px solid var(--glass-border);
   transition:
-    transform 0.3s cubic-bezier(0.16, 1, 0.3, 1),
-    border-color var(--transition-normal),
-    box-shadow var(--transition-normal);
+    border-color var(--transition-fast),
+    outline-color var(--transition-fast);
   cursor: pointer;
   position: relative;
   width: 100%;
   height: 100%;
+  outline: 2px solid transparent;
+  outline-offset: 2px;
 }
 
 .card:hover {
-  transform: translateY(-8px);
-  box-shadow:
-    0 16px 32px rgba(0, 0, 0, 0.5),
-    var(--border-glow);
-  border-color: var(--glass-border-hover) !important;
+  border-color: var(--glass-border-hover);
+}
+
+.card:focus-visible {
+  outline-color: var(--color-orange);
 }
 
 .cardSelected {
-  border-color: var(--color-orange) !important;
-  box-shadow: 0 0 15px rgba(255, 90, 54, 0.15);
+  border-color: var(--color-orange);
+  outline-color: var(--color-orange);
 }
 
 .imgContainer {
-  height: 200px;
   position: relative;
+  aspect-ratio: 4 / 3;
   overflow: hidden;
   background-color: var(--bg-tertiary);
-}
-
-.topOverlay {
-  position: absolute;
-  top: 0;
-  left: 0;
-  right: 0;
-  height: 60px;
-  background: linear-gradient(to bottom, rgba(0, 0, 0, 0.6) 0%, rgba(0, 0, 0, 0) 100%);
-  pointer-events: none;
-  z-index: 5;
+  border-bottom: 1px solid var(--glass-border);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 12px;
 }
 
 .shoeImg {
-  width: 100%;
-  height: 100%;
-  object-fit: cover;
-  transition: transform var(--transition-slow);
+  width: 78%;
+  height: 78%;
+  object-fit: contain;
+  margin: 0 auto;
 }
 
-.card:hover .shoeImg {
-  transform: scale(1.05);
+.thumbBadge {
+  position: absolute;
+  bottom: 8px;
+  right: 8px;
+  font-size: 0.68rem;
+  font-weight: 500;
+  padding: 2px 6px;
+  border-radius: var(--border-radius-sm);
+  background-color: var(--bg-secondary);
+  border: 1px solid var(--glass-border);
+  color: var(--text-secondary);
+  line-height: 1.3;
 }
 
-/* Checkbox overlay on card */
+/* Selection checkbox — hidden by default, shown on hover/selected (never on keyboard focus alone) */
 .cardCheck {
   position: absolute;
-  top: 16px;
-  left: 16px;
-  background: rgba(11, 11, 12, 0.6);
+  top: 8px;
+  left: 8px;
+  background: var(--bg-secondary);
   border: 1px solid var(--glass-border);
-  color: var(--text-muted);
-  width: 32px;
-  height: 32px;
-  border-radius: var(--border-radius-sm);
+  color: transparent;
+  width: 16px;
+  height: 16px;
+  border-radius: 3px;
   display: flex;
   align-items: center;
   justify-content: center;
   cursor: pointer;
-  backdrop-filter: blur(4px);
   z-index: 10;
+  opacity: 0;
   transition: all var(--transition-fast);
 }
 
+.card:hover .cardCheck {
+  opacity: 1;
+}
+
 .cardCheck:hover {
-  background: rgba(11, 11, 12, 0.8);
-  color: var(--text-primary);
   border-color: var(--color-orange);
 }
 
 .cardCheckActive {
+  opacity: 1;
   background: var(--color-orange);
   border-color: var(--color-orange);
-  color: var(--text-primary);
+  color: #ffffff;
 }
 
 .badge {
@@ -256,34 +266,35 @@
   backdrop-filter: blur(4px);
 }
 
+.cardHeaderMenu {
+  position: relative;
+  flex-shrink: 0;
+}
+
 .optionsBtn {
-  position: absolute;
-  top: 16px;
-  right: 16px;
-  width: 32px;
-  height: 32px;
+  width: 20px;
+  height: 20px;
   border-radius: var(--border-radius-sm);
   display: flex;
   align-items: center;
   justify-content: center;
   cursor: pointer;
-  background: rgba(11, 11, 12, 0.5);
-  border: 1px solid var(--glass-border);
-  color: var(--text-primary);
-  backdrop-filter: blur(4px);
-  z-index: 12;
+  background: transparent;
+  border: none;
+  color: var(--text-secondary);
+  transition: all var(--transition-fast);
 }
 
 .optionsBtn:hover {
-  background: rgba(11, 11, 12, 0.8);
-  border-color: var(--color-orange);
+  background: var(--hover-bg-item);
+  color: var(--text-primary);
 }
 
 /* Dropdown Menu */
 .dropdown {
   position: absolute;
-  top: 56px;
-  right: 16px;
+  top: calc(100% + 4px);
+  right: 0;
   width: 175px;
   border-radius: var(--border-radius-sm);
   display: flex;
@@ -328,123 +339,95 @@
   margin: 4px 0;
 }
 
-/* Card details */
+/* Card details — dense, 2-size type scale (13px name / 12px meta), 12px padding */
 .cardInfo {
-  padding: 20px;
+  padding: 12px;
   display: flex;
   flex-direction: column;
-  gap: 8px;
-  background-color: var(--card-info-bg);
-  flex-grow: 1;
-  border-top: 1px solid var(--glass-border);
+  gap: 6px;
+  background-color: var(--bg-secondary);
 }
 
 .cardHeader {
   display: flex;
   justify-content: space-between;
   align-items: center;
+  gap: 4px;
 }
 
 .cardName {
-  font-family: 'Space Grotesk', sans-serif;
-  font-weight: 700;
-  font-size: 1.1rem;
+  font-family: inherit;
+  font-weight: 500;
+  font-size: 0.8125rem;
   color: var(--text-primary);
-  display: -webkit-box;
-  -webkit-line-clamp: 2;
-  -webkit-box-orient: vertical;
   overflow: hidden;
   text-overflow: ellipsis;
-  line-height: 1.3;
-  height: 2.86rem;
+  white-space: nowrap;
+  line-height: 1.4;
+  flex: 1;
+  min-width: 0;
 }
 
 .metaRowCompact {
   display: flex;
   align-items: center;
   gap: 6px;
-  font-size: 0.8rem;
-}
-
-.baseModel {
-  color: var(--text-secondary);
-}
-
-.cardMetaDot {
-  color: var(--text-muted);
-}
-
-.hoverDetails {
-  max-height: 0;
-  opacity: 0;
-  overflow: hidden;
-  transition:
-    max-height 0.3s cubic-bezier(0.25, 1, 0.5, 1),
-    opacity 0.2s ease-out,
-    margin-top 0.3s ease,
-    padding-top 0.3s ease;
-  margin-top: 0;
-  display: flex;
-  flex-direction: column;
-  gap: 8px;
-  border-top: 1px dashed rgba(255, 255, 255, 0.08);
-  padding-top: 0;
-}
-
-.card:hover .hoverDetails {
-  max-height: 180px;
-  opacity: 1;
-  margin-top: 12px;
-  padding-top: 12px;
-}
-
-.hoverDetailRow {
-  display: flex;
-  justify-content: space-between;
-  align-items: center;
-  font-size: 0.8rem;
-  color: var(--text-secondary);
-}
-
-.hoverDetailLabel {
-  display: flex;
-  align-items: center;
-  gap: 6px;
-  color: var(--text-muted);
-}
-
-.hoverDetailVal {
-  color: var(--text-primary);
-  font-weight: 500;
-}
-
-.hoverDescription {
   font-size: 0.75rem;
-  color: var(--text-muted);
-  line-height: 1.4;
-  margin: 4px 0 0 0;
-  background: rgba(255, 255, 255, 0.02);
-  padding: 6px 10px;
-  border-radius: var(--border-radius-sm);
-  border-left: 2px solid var(--color-orange);
-  display: -webkit-box;
-  -webkit-line-clamp: 2;
-  -webkit-box-orient: vertical;
+  color: var(--text-secondary);
   overflow: hidden;
+}
+
+.metaIcon {
+  flex-shrink: 0;
+  color: var(--text-secondary);
+}
+
+.metaText {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
 }
 
 .cardFooter {
   display: flex;
   justify-content: space-between;
   align-items: center;
-  margin-top: 12px;
-  border-top: 1px solid rgba(255, 255, 255, 0.03);
-  padding-top: 12px;
+  padding-top: 4px;
 }
 
-.updatedText {
-  font-size: 0.75rem;
-  color: var(--text-muted);
+.swatchRow {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+}
+
+.swatch {
+  width: 12px;
+  height: 12px;
+  border-radius: 50%;
+  border: 1px solid var(--glass-border);
+  flex-shrink: 0;
+}
+
+.visibilityTag {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  font-size: 0.68rem;
+  font-weight: 500;
+  color: var(--text-secondary);
+}
+
+.visibilityPublic {
+  color: var(--status-scanned);
+}
+
+.visibilityLink {
+  color: var(--status-designing);
+}
+
+.visibilityPrivate {
+  color: var(--text-secondary);
 }
 
 /* List view (Table Layout) */

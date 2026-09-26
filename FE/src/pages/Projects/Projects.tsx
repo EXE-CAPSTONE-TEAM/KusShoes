@@ -21,9 +21,8 @@ import {
   CheckCircle2,
   CheckSquare,
   Square,
-  Camera,
-  Cpu,
   Lock,
+  Footprints,
 } from 'lucide-react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { Select } from '../../components/Select/Select';
@@ -473,119 +472,38 @@ export const Projects: React.FC<ProjectsProps> = ({
                   animate={{ opacity: 1, scale: 1 }}
                   exit={{ opacity: 0, scale: 0.95 }}
                   transition={{ duration: 0.25 }}
-                  onClick={() => handleCardClick(proj)}
                 >
                   <div
-                    className={`${styles.card} ${isSelected ? styles.cardSelected : ''} glass-panel`}
+                    className={`${styles.card} ${isSelected ? styles.cardSelected : ''}`}
+                    role="button"
+                    tabIndex={0}
+                    onClick={() => handleCardClick(proj)}
+                    onKeyDown={(e) => {
+                      if (e.key === 'Enter' || e.key === ' ') {
+                        e.preventDefault();
+                        handleCardClick(proj);
+                      }
+                    }}
                   >
-                    {/* Image Container with overlay */}
+                    {/* Thumbnail: flat canvas, contained product shot */}
                     <div className={styles.imgContainer}>
-                      <img src={proj.imageUrl} alt={proj.name} className={styles.shoeImg} />
-                      <div className={styles.topOverlay} />
-
-                      {/* Checkbox overlay */}
                       <button
                         className={`${styles.cardCheck} ${isSelected ? styles.cardCheckActive : ''}`}
                         onClick={(e) => handleSelectCard(e, proj.id)}
+                        aria-label={isSelected ? 'Deselect project' : 'Select project'}
                       >
-                        {isSelected ? <CheckSquare size={18} /> : <Square size={18} />}
+                        {isSelected && <Check size={11} strokeWidth={3} />}
                       </button>
-
-                      {/* Options button */}
-                      <button
-                        className={`${styles.optionsBtn} glass-panel`}
-                        onClick={(e) => {
-                          e.stopPropagation(); // Avoid opening project details.
-                          setActiveMenuId(activeMenuId === proj.id ? null : proj.id);
-                        }}
-                      >
-                        <MoreVertical size={16} />
-                      </button>
-
-                      {/* Dropdown Menu */}
-                      {activeMenuId === proj.id && (
-                        <div
-                          className={`${styles.dropdown} glass-panel`}
-                          onClick={(e) => e.stopPropagation()}
-                        >
-                          <button
-                            disabled={proj.isLocked}
-                            title={proj.isLocked ? 'Read-only project' : undefined}
-                            onClick={() => {
-                              setEditingProject(proj);
-                              setRenameValue(proj.name);
-                              setActiveMenuId(null);
-                            }}
-                          >
-                            <Edit3 size={14} /> Rename
-                          </button>
-                          <button
-                            onClick={() => {
-                              setSharingProject(proj);
-                              setActiveMenuId(null);
-                            }}
-                          >
-                            <Share2 size={14} /> Share Link
-                          </button>
-
-                          <div className={styles.dropdownDivider} />
-
-                          <div className={styles.dropdownSectionTitle}>Visibility</div>
-                          <button
-                            className={`${styles.dropdownItem} ${proj.visibility === 'Private' ? styles.dropdownActiveItem : ''}`}
-                            onClick={() => {
-                              toast(
-                                'Project visibility is not exposed by the backend yet.',
-                                'info',
-                              );
-                              setActiveMenuId(null);
-                            }}
-                          >
-                            <EyeOff size={14} /> Private
-                          </button>
-                          <button
-                            className={`${styles.dropdownItem} ${proj.visibility === 'Link' ? styles.dropdownActiveItem : ''}`}
-                            onClick={() => {
-                              toast(
-                                'Project visibility is not exposed by the backend yet.',
-                                'info',
-                              );
-                              setActiveMenuId(null);
-                            }}
-                          >
-                            <Link size={14} /> Link Share
-                          </button>
-                          <button
-                            className={`${styles.dropdownItem} ${proj.visibility === 'Public' ? styles.dropdownActiveItem : ''}`}
-                            onClick={() => {
-                              toast(
-                                'Project visibility is not exposed by the backend yet.',
-                                'info',
-                              );
-                              setActiveMenuId(null);
-                            }}
-                          >
-                            <Globe size={14} /> Public Showcase
-                          </button>
-
-                          <div className={styles.dropdownDivider} />
-
-                          <button
-                            className={styles.dropdownDeleteBtn}
-                            disabled={proj.isLocked}
-                            title={proj.isLocked ? 'Read-only project' : undefined}
-                            onClick={() => handleDelete(proj.id)}
-                          >
-                            <Trash2 size={14} /> Delete
-                          </button>
-                        </div>
-                      )}
+                      <img src={proj.imageUrl} alt={proj.name} className={styles.shoeImg} />
+                      <span className={styles.thumbBadge}>{proj.fileSize}</span>
                     </div>
 
-                    {/* Info Container */}
+                    {/* Info: name + menu, model/edited meta, palette + visibility */}
                     <div className={styles.cardInfo}>
                       <div className={styles.cardHeader}>
-                        <h3 className={styles.cardName}>{proj.name}</h3>
+                        <h3 className={styles.cardName} title={proj.name}>
+                          {proj.name}
+                        </h3>
                         {proj.isLocked && (
                           <span
                             className={styles.lockedBadge}
@@ -594,53 +512,128 @@ export const Projects: React.FC<ProjectsProps> = ({
                             <Lock size={11} /> Read-only
                           </span>
                         )}
+                        <div className={styles.cardHeaderMenu}>
+                          <button
+                            aria-label="More actions"
+                            className={styles.optionsBtn}
+                            onClick={(e) => {
+                              e.stopPropagation(); // Avoid opening project details.
+                              setActiveMenuId(activeMenuId === proj.id ? null : proj.id);
+                            }}
+                          >
+                            <MoreVertical size={14} />
+                          </button>
+
+                          {activeMenuId === proj.id && (
+                            <div
+                              className={`${styles.dropdown} glass-panel`}
+                              onClick={(e) => e.stopPropagation()}
+                            >
+                              <button
+                                disabled={proj.isLocked}
+                                title={proj.isLocked ? 'Read-only project' : undefined}
+                                onClick={() => {
+                                  setEditingProject(proj);
+                                  setRenameValue(proj.name);
+                                  setActiveMenuId(null);
+                                }}
+                              >
+                                <Edit3 size={14} /> Rename
+                              </button>
+                              <button
+                                onClick={() => {
+                                  setSharingProject(proj);
+                                  setActiveMenuId(null);
+                                }}
+                              >
+                                <Share2 size={14} /> Share Link
+                              </button>
+
+                              <div className={styles.dropdownDivider} />
+
+                              <div className={styles.dropdownSectionTitle}>Visibility</div>
+                              <button
+                                className={`${styles.dropdownItem} ${proj.visibility === 'Private' ? styles.dropdownActiveItem : ''}`}
+                                onClick={() => {
+                                  toast(
+                                    'Project visibility is not exposed by the backend yet.',
+                                    'info',
+                                  );
+                                  setActiveMenuId(null);
+                                }}
+                              >
+                                <EyeOff size={14} /> Private
+                              </button>
+                              <button
+                                className={`${styles.dropdownItem} ${proj.visibility === 'Link' ? styles.dropdownActiveItem : ''}`}
+                                onClick={() => {
+                                  toast(
+                                    'Project visibility is not exposed by the backend yet.',
+                                    'info',
+                                  );
+                                  setActiveMenuId(null);
+                                }}
+                              >
+                                <Link size={14} /> Link Share
+                              </button>
+                              <button
+                                className={`${styles.dropdownItem} ${proj.visibility === 'Public' ? styles.dropdownActiveItem : ''}`}
+                                onClick={() => {
+                                  toast(
+                                    'Project visibility is not exposed by the backend yet.',
+                                    'info',
+                                  );
+                                  setActiveMenuId(null);
+                                }}
+                              >
+                                <Globe size={14} /> Public Showcase
+                              </button>
+
+                              <div className={styles.dropdownDivider} />
+
+                              <button
+                                className={styles.dropdownDeleteBtn}
+                                disabled={proj.isLocked}
+                                title={proj.isLocked ? 'Read-only project' : undefined}
+                                onClick={() => handleDelete(proj.id)}
+                              >
+                                <Trash2 size={14} /> Delete
+                              </button>
+                            </div>
+                          )}
+                        </div>
                       </div>
+
                       <div className={styles.metaRowCompact}>
-                        <span className={styles.baseModel}>{proj.baseModel}</span>
-                        <span className={styles.cardMetaDot}>•</span>
-                        <span className={styles.fileSizeText}>{proj.fileSize}</span>
-                      </div>
-
-                      {/* Hover Details Panel */}
-                      <div className={styles.hoverDetails}>
-                        <div className={styles.hoverDetailRow}>
-                          <span className={styles.hoverDetailLabel}>
-                            {proj.device.toLowerCase().includes('iphone') ||
-                            proj.device.toLowerCase().includes('ipad') ||
-                            proj.device.toLowerCase().includes('samsung') ||
-                            proj.device.toLowerCase().includes('phone') ? (
-                              <Smartphone size={12} />
-                            ) : (
-                              <Laptop size={12} />
-                            )}
-                            Device
-                          </span>
-                          <span className={styles.hoverDetailVal}>{proj.device}</span>
-                        </div>
-
-                        <div className={styles.hoverDetailRow}>
-                          <span className={styles.hoverDetailLabel}>
-                            <Camera size={12} />
-                            Source Photos
-                          </span>
-                          <span className={styles.hoverDetailVal}>{proj.photosCount} photos</span>
-                        </div>
-
-                        <div className={styles.hoverDetailRow}>
-                          <span className={styles.hoverDetailLabel}>
-                            <Cpu size={12} />
-                            Vertices
-                          </span>
-                          <span className={styles.hoverDetailVal}>{proj.verticesCount}</span>
-                        </div>
-
-                        {proj.description && (
-                          <p className={styles.hoverDescription}>{proj.description}</p>
-                        )}
+                        <Footprints size={12} className={styles.metaIcon} />
+                        <span className={styles.metaText}>
+                          {proj.baseModel} · Edited {proj.updatedAt}
+                        </span>
                       </div>
 
                       <div className={styles.cardFooter}>
-                        <span className={styles.updatedText}>Updated {proj.updatedAt}</span>
+                        <div className={styles.swatchRow}>
+                          <span
+                            className={styles.swatch}
+                            style={{ backgroundColor: proj.colorCode }}
+                            title={`Primary color ${proj.colorCode}`}
+                          />
+                          {proj.accentColor && (
+                            <span
+                              className={styles.swatch}
+                              style={{ backgroundColor: proj.accentColor }}
+                              title={`Accent color ${proj.accentColor}`}
+                            />
+                          )}
+                        </div>
+                        <span
+                          className={`${styles.visibilityTag} ${styles[`visibility${proj.visibility}`]}`}
+                        >
+                          {proj.visibility === 'Public' && <Globe size={11} />}
+                          {proj.visibility === 'Link' && <Link size={11} />}
+                          {proj.visibility === 'Private' && <EyeOff size={11} />}
+                          {proj.visibility}
+                        </span>
                       </div>
                     </div>
                   </div>

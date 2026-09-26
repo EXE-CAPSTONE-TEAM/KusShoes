@@ -128,6 +128,7 @@ export type PortalProject = {
   photosCount: number;
   verticesCount: string;
   colorCode: string;
+  accentColor: string | null;
   description: string;
 };
 
@@ -298,6 +299,8 @@ function toPortalProject(project: ProjectResponse): PortalProject {
     photosCount: numberValue(scan.photos_count, 0),
     verticesCount: stringValue(scan.vertices, '—'),
     colorCode: stringValue(palette.primary, '#FF5A36'),
+    accentColor:
+      typeof palette.accent === 'string' && palette.accent.trim() ? palette.accent : null,
     description: project.description ?? '',
   };
 }
