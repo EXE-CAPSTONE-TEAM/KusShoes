@@ -48,7 +48,6 @@ type WizardSource = 'cloud' | 'upload';
 type WizardDesktopStatus = 'idle' | 'packaging' | 'launched';
 type ProjectVisibility = PortalProject['visibility'];
 
-const PROJECT_STATUS_OPTIONS: ProjectStatusFilter[] = ['All', 'Scanned', 'Designing', 'Completed'];
 const WIZARD_VISIBILITY_OPTIONS: Array<{
   value: ProjectVisibility;
   label: string;
@@ -439,19 +438,6 @@ export const Projects: React.FC<ProjectsProps> = ({
           />
         </div>
 
-        {/* Tab Filters */}
-        <div className={`${styles.tabsWrapper} glass-panel`}>
-          {PROJECT_STATUS_OPTIONS.map((tab) => (
-            <button
-              key={tab}
-              onClick={() => setStatusFilter(tab)}
-              className={`${styles.tabBtn} ${statusFilter === tab ? styles.activeTab : ''}`}
-            >
-              {tab}
-            </button>
-          ))}
-        </div>
-
         {/* Layout Toggle (Grid/List) */}
         <div className={`${styles.viewToggle} glass-panel`}>
           <button
@@ -600,11 +586,6 @@ export const Projects: React.FC<ProjectsProps> = ({
                     <div className={styles.cardInfo}>
                       <div className={styles.cardHeader}>
                         <h3 className={styles.cardName}>{proj.name}</h3>
-                        <span
-                          className={`${styles.statusIndicator} ${styles[proj.status.toLowerCase()]}`}
-                        >
-                          {proj.status}
-                        </span>
                         {proj.isLocked && (
                           <span
                             className={styles.lockedBadge}
@@ -687,7 +668,6 @@ export const Projects: React.FC<ProjectsProps> = ({
                 <th>Base Sneaker</th>
                 <th>Source Device</th>
                 <th>File Size</th>
-                <th>Status</th>
                 <th>Visibility</th>
                 <th>Actions</th>
               </tr>
@@ -718,7 +698,17 @@ export const Projects: React.FC<ProjectsProps> = ({
                         <div className={styles.tableProjectNameCol}>
                           <img src={proj.imageUrl} alt="" className={styles.rowThumbnail} />
                           <div>
-                            <span className={styles.rowProjectName}>{proj.name}</span>
+                            <span className={styles.rowProjectName}>
+                              {proj.name}
+                              {proj.isLocked && (
+                                <span
+                                  className={styles.lockedBadge}
+                                  title="Read-only after a plan downgrade. Upgrade to edit it again."
+                                >
+                                  <Lock size={11} /> Read-only
+                                </span>
+                              )}
+                            </span>
                             <span className={styles.rowProjectUpdated}>
                               Updated {proj.updatedAt}
                             </span>
@@ -733,21 +723,6 @@ export const Projects: React.FC<ProjectsProps> = ({
                         </div>
                       </td>
                       <td className={styles.tableSizeCell}>{proj.fileSize}</td>
-                      <td>
-                        <span
-                          className={`${styles.statusIndicator} ${styles[proj.status.toLowerCase()]}`}
-                        >
-                          {proj.status}
-                        </span>
-                        {proj.isLocked && (
-                          <span
-                            className={styles.lockedBadge}
-                            title="Read-only after a plan downgrade. Upgrade to edit it again."
-                          >
-                            <Lock size={11} /> Read-only
-                          </span>
-                        )}
-                      </td>
                       <td>
                         <span
                           className={`${styles.badge} ${styles.visibilityBadge} ${styles.listVisibility}`}

@@ -97,40 +97,6 @@
   font-weight: 600;
 }
 
-/* Tabs */
-.tabsWrapper {
-  display: flex;
-  gap: 4px;
-  height: var(--filter-control-height);
-  padding: 4px;
-  border-radius: var(--border-radius-md);
-  box-sizing: border-box;
-}
-
-.tabBtn {
-  background: transparent;
-  border: none;
-  color: var(--text-secondary);
-  height: 100%;
-  padding: 0 18px;
-  border-radius: var(--border-radius-sm);
-  cursor: pointer;
-  font-family: var(--font-sans);
-  font-weight: 600;
-  font-size: 0.9rem;
-  transition: all var(--transition-fast);
-}
-
-.tabBtn:hover {
-  color: var(--text-primary);
-}
-
-.tabBtn.activeTab {
-  background-color: var(--bg-tertiary);
-  color: var(--color-orange);
-  box-shadow: var(--shadow-sm);
-}
-
 /* View toggle mode */
 .viewToggle {
   display: flex;
@@ -391,35 +357,6 @@
   text-overflow: ellipsis;
   line-height: 1.3;
   height: 2.86rem;
-}
-
-.statusIndicator {
-  font-family: var(--font-mono);
-  font-size: 0.65rem;
-  font-weight: 700;
-  text-transform: uppercase;
-  padding: 3px 8px;
-  border-radius: var(--border-radius-sm);
-  letter-spacing: 0.5px;
-  display: inline-flex;
-}
-
-.statusIndicator.scanned {
-  background-color: rgba(54, 211, 153, 0.08);
-  color: var(--status-scanned);
-  border: 1px solid rgba(54, 211, 153, 0.2);
-}
-
-.statusIndicator.designing {
-  background-color: rgba(217, 119, 6, 0.08); /* Light burnt orange background */
-  color: #d97706; /* Deeper, high-contrast burnt orange */
-  border: 1px solid rgba(217, 119, 6, 0.2);
-}
-
-.statusIndicator.completed {
-  background-color: rgba(56, 189, 248, 0.08);
-  color: var(--status-completed);
-  border: 1px solid rgba(56, 189, 248, 0.2);
 }
 
 .metaRowCompact {
