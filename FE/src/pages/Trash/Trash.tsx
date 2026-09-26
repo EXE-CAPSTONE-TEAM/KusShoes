@@ -34,16 +34,22 @@ export const Trash: React.FC<TrashProps> = ({ setProjects }) => {
   useEffect(() => {
     let cancelled = false;
     setLoading(true);
-    api.listTrash()
-      .then((page) => {
-        if (!cancelled) setItems(page.items);
-      })
-      .catch((caught) => {
+    (async () => {
+      try {
+        const allItems: TrashedProject[] = [];
+        let cursor: string | null = null;
+        do {
+          const page = await api.listTrash(cursor);
+          allItems.push(...page.items);
+          cursor = page.hasNext ? page.nextCursor : null;
+        } while (cursor && !cancelled);
+        if (!cancelled) setItems(allItems);
+      } catch (caught) {
         if (!cancelled) toast(caught instanceof Error ? caught.message : 'Unable to load trash.', 'error');
-      })
-      .finally(() => {
+      } finally {
         if (!cancelled) setLoading(false);
-      });
+      }
+    })();
     return () => {
       cancelled = true;
     };

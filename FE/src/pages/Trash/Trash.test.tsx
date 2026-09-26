@@ -1,6 +1,6 @@
 import React from 'react';
 import { cleanup, fireEvent, render, screen, waitFor, within } from '@testing-library/react';
-import { afterEach, describe, expect, it, vi } from 'vitest';
+import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import { ToastProvider } from '../../context/ToastContext';
 import type { PortalProject, TrashedProject } from '../../api/client';
 
@@ -48,6 +48,7 @@ function makeTrashedProject(overrides: Partial<TrashedProject> = {}): TrashedPro
   };
 }
 
+beforeEach(() => vi.clearAllMocks());
 afterEach(cleanup);
 
 describe('Trash', () => {
@@ -61,6 +62,21 @@ describe('Trash', () => {
 
     expect(await screen.findByText('Air Max Remix')).toBeInTheDocument();
     expect(screen.getByText(/5 days left/i)).toBeInTheDocument();
+  });
+
+  it('fetches every cursor page instead of stopping at the first one', async () => {
+    const first = makeTrashedProject({ id: 'p1', name: 'Air Max Remix' });
+    const second = makeTrashedProject({ id: 'p2', name: 'Jordan Retro' });
+    m(api.listTrash).mockImplementation((cursor?: string | null) => {
+      if (!cursor) return Promise.resolve({ items: [first], nextCursor: 'page-2', hasNext: true });
+      return Promise.resolve({ items: [second], nextCursor: null, hasNext: false });
+    });
+    wrap(<Trash setProjects={vi.fn()} />);
+
+    expect(await screen.findByText('Air Max Remix')).toBeInTheDocument();
+    expect(await screen.findByText('Jordan Retro')).toBeInTheDocument();
+    expect(api.listTrash).toHaveBeenNthCalledWith(1, null);
+    expect(api.listTrash).toHaveBeenNthCalledWith(2, 'page-2');
   });
 
   it('shows an empty state when trash has nothing in it', async () => {

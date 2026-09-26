@@ -135,7 +135,7 @@ function App() {
   };
 
   useEffect(() => {
-    const portalPages = ['dashboard', 'projects', 'archives', 'trash', 'billing', 'settings', 'project-details'];
+    const portalPages = ['dashboard', 'projects', 'archives', 'billing', 'settings', 'project-details'];
     if (!portalPages.includes(activePage)) return;
     setProjectsLoading(true);
     setProjectsError('');
