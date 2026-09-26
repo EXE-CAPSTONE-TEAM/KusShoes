@@ -61,7 +61,6 @@ export type FeedbackEligibility = {
 // ---- Public artisan link viewer (no auth — opened by whoever received the shared link) -----
 
 export type ArtisanPublicView = {
-  project_id: string;
   project_name: string;
   format: string;
   expires_at: string;

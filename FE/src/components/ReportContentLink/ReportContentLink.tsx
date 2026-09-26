@@ -3,13 +3,15 @@ import { Flag, X } from 'lucide-react';
 import { accountApi, type ContentReportReason } from '../../api/account';
 import styles from './ReportContentLink.module.css';
 
+type ReportTarget = { projectId: string } | { templateId: string };
+
 interface ReportContentLinkProps {
-  /** The project this report is filed against — the API requires exactly one real target. */
-  projectId: string;
-  /** URL an admin can open to see exactly what's being flagged. */
-  evidenceUrl: string;
-  /** Human label for what's being reported, shown in the trigger link (e.g. a project name). */
+  /** Exactly one real, existing target — the API rejects anything else. */
+  target: ReportTarget;
+  /** Human label for what's being reported, shown in the trigger link (e.g. a template name). */
   contextLabel: string;
+  /** Defaults to the current page URL — lets a moderator open exactly what was flagged. */
+  evidenceUrl?: string;
 }
 
 const REASONS: { value: ContentReportReason; label: string }[] = [
@@ -20,14 +22,15 @@ const REASONS: { value: ContentReportReason; label: string }[] = [
 ];
 
 /**
- * BR-77 / UC-24: public copyright/trademark report intake. No account or project ID needed —
- * `POST /api/v1/public/content-reports` deliberately accepts a free-text description plus an
- * evidence URL instead, since public pages (like the artisan link viewer) don't expose IDs.
+ * BR-77 / UC-24: a signed-in user's "flag this" action for content someone else made —
+ * a community template, another creator's shared project, etc. The backend endpoint itself
+ * takes no auth (so a report still works even if the session expires mid-flow), but this
+ * component is only ever shown inside the authenticated app, never on a public/anonymous page.
  */
 export const ReportContentLink: React.FC<ReportContentLinkProps> = ({
-  projectId,
-  evidenceUrl,
+  target,
   contextLabel,
+  evidenceUrl,
 }) => {
   const [open, setOpen] = useState(false);
   const [reason, setReason] = useState<ContentReportReason>('copyright');
@@ -47,11 +50,13 @@ export const ReportContentLink: React.FC<ReportContentLinkProps> = ({
     setError(null);
     try {
       const result = await accountApi.submitContentReport({
-        projectId,
+        ...('projectId' in target
+          ? { projectId: target.projectId }
+          : { templateId: target.templateId }),
         reason,
         details: details.trim(),
         reporterEmail: email.trim() || null,
-        evidenceUrl,
+        evidenceUrl: evidenceUrl ?? window.location.href,
       });
       setReportId(result.report_id);
     } catch (caught) {
@@ -73,7 +78,7 @@ export const ReportContentLink: React.FC<ReportContentLinkProps> = ({
     return (
       <button type="button" className={styles.trigger} onClick={() => setOpen(true)}>
         <Flag size={13} />
-        Report a problem with {contextLabel}
+        Report {contextLabel}
       </button>
     );
   }

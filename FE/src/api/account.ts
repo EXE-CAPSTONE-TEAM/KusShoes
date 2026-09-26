@@ -96,12 +96,17 @@ export type MyModerationStatus = {
   is_banned: boolean;
 };
 
-// ---- Public copyright/trademark report intake (BR-77 / UC-24) — no auth required --------
+// ---- Copyright/trademark report intake (BR-77 / UC-24) --------------------------------
+// The endpoint itself takes no auth (so someone without an account can still file a report),
+// but in this app it's surfaced as a signed-in user action — e.g. flagging a community
+// template while browsing it inside a project, never on a public/anonymous page.
 
 export type ContentReportReason = 'copyright' | 'trademark' | 'inappropriate' | 'other';
 
 export type ContentReportInput = {
+  /** Exactly one of these must be set — the API requires a single, real, existing target. */
   projectId?: string | null;
+  templateId?: string | null;
   reason: ContentReportReason;
   details: string;
   reporterEmail?: string | null;
@@ -210,6 +215,7 @@ export const accountApi = {
       method: 'POST',
       body: JSON.stringify({
         project_id: input.projectId ?? null,
+        template_id: input.templateId ?? null,
         reason: input.reason,
         details: input.details,
         reporter_email: input.reporterEmail ?? null,

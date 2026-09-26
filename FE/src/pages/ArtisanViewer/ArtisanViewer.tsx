@@ -3,7 +3,6 @@ import { Download, AlertTriangle, Loader2, Box } from 'lucide-react';
 import { studioApi, type ArtisanPublicView } from '../../api/studio';
 import { LoginBackdrop } from '../Login/LoginBackdrop';
 import loginStyles from '../Login/Login.module.css';
-import { ReportContentLink } from './ReportContentLink';
 import styles from './ArtisanViewer.module.css';
 
 /**
@@ -110,12 +109,6 @@ export const ArtisanViewer: React.FC = () => {
               )}
               {view.downloads_remaining <= 0 ? 'No downloads left' : 'Download file'}
             </button>
-
-            <ReportContentLink
-              projectId={view.project_id}
-              evidenceUrl={window.location.href}
-              contextLabel={`"${view.project_name}"`}
-            />
           </>
         ) : null}
       </div>

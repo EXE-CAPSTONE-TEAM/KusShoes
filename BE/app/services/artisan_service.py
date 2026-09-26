@@ -169,7 +169,6 @@ async def public_view(
     if not project or not record:
         raise ArtisanLinkInvalid()
     return ArtisanPublicView(
-        project_id=project.id,
         project_name=project.name,
         format=record.format,
         expires_at=link.expires_at,
