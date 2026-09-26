@@ -84,6 +84,7 @@ class ArtisanLinkCreated(ArtisanLinkResponse):
 
 
 class ArtisanPublicView(BaseModel):
+    project_id: uuid.UUID  # lets the public viewer file a content report against this project
     project_name: str
     format: str
     expires_at: datetime

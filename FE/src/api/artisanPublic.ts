@@ -3,6 +3,7 @@ import { ApiError, api } from "./client";
 // ---- Public artisan viewer (BR-101): unauthenticated, no cookies, no session token ----
 
 export type ArtisanPublicView = {
+  project_id: string;
   project_name: string;
   format: string;
   expires_at: string;
@@ -17,6 +18,7 @@ export type ArtisanDownloadResponse = {
 export type ContentReportReason = "copyright" | "trademark" | "inappropriate" | "other";
 
 export type ContentReportPayload = {
+  project_id: string;
   reason: ContentReportReason;
   details: string;
   reporter_email?: string;

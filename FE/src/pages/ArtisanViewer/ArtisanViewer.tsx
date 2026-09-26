@@ -104,10 +104,11 @@ export const ArtisanViewer: React.FC<ArtisanViewerProps> = ({ token }) => {
 
   const submitReport = async (event: React.FormEvent) => {
     event.preventDefault();
-    if (reportDetails.trim().length < 20 || reportSubmitting) return;
+    if (!data || reportDetails.trim().length < 20 || reportSubmitting) return;
     setReportSubmitting(true);
     try {
       await artisanPublicApi.reportContent({
+        project_id: data.project_id,
         reason: reportReason,
         details: reportDetails.trim(),
         reporter_email: reportEmail.trim() || undefined,

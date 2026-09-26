@@ -29,6 +29,7 @@ afterEach(() => {
 });
 
 const VIEW = {
+  project_id: 'a3f5b2c0-1111-4a2b-9c3d-111111111111',
   project_name: 'Sneaker Bespoke #12',
   format: 'GLB',
   expires_at: '2026-12-31T00:00:00Z',
@@ -92,5 +93,31 @@ describe('ArtisanViewer (public share link, BR-101)', () => {
     expect(openSpy).toHaveBeenCalledWith('https://storage.example.com/signed/file.glb', '_blank', 'noopener');
 
     await waitFor(() => expect(screen.getByText('2')).toBeInTheDocument());
+  });
+
+  it('submits a content report with the project_id ContentReportCreate requires', async () => {
+    const fetchMock = vi.mocked(fetch);
+    fetchMock
+      .mockResolvedValueOnce(jsonResponse(200, VIEW))
+      .mockResolvedValueOnce(jsonResponse(202, { report_id: 'r1', status: 'new' }));
+
+    wrap(<ArtisanViewer token="good-token" />);
+    await screen.findByText('Sneaker Bespoke #12');
+
+    fireEvent.click(screen.getByRole('button', { name: /Report content/ }));
+    fireEvent.change(screen.getByLabelText(/Chi tiết/), {
+      target: { value: 'This design copies my original pattern exactly.' },
+    });
+    fireEvent.click(screen.getByRole('button', { name: /Submit report/ }));
+
+    await waitFor(() => expect(fetchMock).toHaveBeenCalledTimes(2));
+    const [reportUrl, reportOptions] = fetchMock.mock.calls[1];
+    expect(String(reportUrl)).toBe('http://localhost:8000/api/v1/public/content-reports');
+    const body = JSON.parse(String(reportOptions?.body));
+    expect(body.project_id).toBe(VIEW.project_id);
+    expect(body.reason).toBe('copyright');
+    expect(body.details).toContain('copies my original pattern');
+
+    expect(await screen.findByText(/Cảm ơn bạn/)).toBeInTheDocument();
   });
 });

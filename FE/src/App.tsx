@@ -58,6 +58,17 @@ const getPageFromPath = (path: string): string => {
   }
 };
 
+// A malformed share link (e.g. bad percent-encoding) must fall back to the empty token
+// so the viewer renders its own invalid-link state instead of crashing the whole app.
+const extractArtisanToken = (pathname: string): string => {
+  if (!pathname.startsWith('/artisan/')) return '';
+  try {
+    return decodeURIComponent(pathname.slice('/artisan/'.length));
+  } catch {
+    return '';
+  }
+};
+
 // Helper to convert page key to URL path
 const getPathFromPage = (page: string): string => {
   const parts = page.split('?');
@@ -99,6 +110,7 @@ function App() {
   });
 
   const [activeDetailProject, setActiveDetailProject] = useState<PortalProject | null>(null);
+  const [artisanToken, setArtisanToken] = useState<string>(() => extractArtisanToken(window.location.pathname));
   const [projects, setProjects] = useState<PortalProject[]>([]);
   const [projectsLoading, setProjectsLoading] = useState(false);
   const [projectsError, setProjectsError] = useState('');
@@ -113,7 +125,11 @@ function App() {
       const query = path.includes('?') ? `?${path.split('?')[1]}` : '';
       setActiveSettingTab(getSettingTabFromSearch(query));
     }
-    
+
+    if (page === 'artisan-viewer') {
+      setArtisanToken(extractArtisanToken(path));
+    }
+
     const currentFull = window.location.pathname + window.location.search;
     if (currentFull !== path) {
       window.history.pushState({}, '', path);
@@ -162,7 +178,11 @@ function App() {
       if (page === 'settings') {
         setActiveSettingTab(getSettingTabFromSearch(window.location.search));
       }
-      
+
+      if (page === 'artisan-viewer') {
+        setArtisanToken(extractArtisanToken(window.location.pathname));
+      }
+
       if (page === 'project-details') {
         const params = new URLSearchParams(window.location.search);
         const id = params.get('id');
@@ -192,9 +212,7 @@ function App() {
 
   if (activePage === 'artisan-viewer') {
     // Public share link (BR-101): no auth, no Sidebar, not part of the portal shell.
-    const path = window.location.pathname;
-    const token = path.startsWith('/artisan/') ? decodeURIComponent(path.slice('/artisan/'.length)) : '';
-    return <ArtisanViewer token={token} />;
+    return <ArtisanViewer token={artisanToken} />;
   }
 
   const isPortalView = ['dashboard', 'projects', 'archives', 'billing', 'settings', 'feedback', 'project-details'].includes(activePage);
