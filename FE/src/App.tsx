@@ -12,6 +12,7 @@ import { Feedback } from './pages/Feedback/Feedback';
 import { ImpersonationBanner } from './components/ImpersonationBanner/ImpersonationBanner';
 import { ProjectDetails } from './pages/ProjectDetails/ProjectDetails';
 import { ProductsPage } from './pages/ProductsPage/ProductsPage';
+import { ArtisanViewer } from './pages/ArtisanViewer/ArtisanViewer';
 import { AdminApp } from './pages/Admin/AdminApp';
 import { api, ApiError, type PortalProject } from './api/client';
 import { getSettingTabFromSearch, type SettingTab } from './pages/Settings/settingsNavigation';
@@ -22,6 +23,9 @@ const getPageFromPath = (path: string): string => {
   const cleanPath = parts[0];
   if (cleanPath === '/admin' || cleanPath.startsWith('/admin/')) {
     return 'admin';
+  }
+  if (cleanPath.startsWith('/artisan/')) {
+    return 'artisan-viewer';
   }
   switch (cleanPath) {
     case '/auth/google/callback':
@@ -184,6 +188,13 @@ function App() {
 
   if (activePage === 'admin') {
     return <AdminApp />;
+  }
+
+  if (activePage === 'artisan-viewer') {
+    // Public share link (BR-101): no auth, no Sidebar, not part of the portal shell.
+    const path = window.location.pathname;
+    const token = path.startsWith('/artisan/') ? decodeURIComponent(path.slice('/artisan/'.length)) : '';
+    return <ArtisanViewer token={token} />;
   }
 
   const isPortalView = ['dashboard', 'projects', 'archives', 'billing', 'settings', 'feedback', 'project-details'].includes(activePage);
