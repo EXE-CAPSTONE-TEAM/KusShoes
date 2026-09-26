@@ -715,7 +715,7 @@ export const Projects: React.FC<ProjectsProps> = ({
         </motion.div>
       ) : (
         /* List View (Table layout) */
-        <div className={`${styles.tableContainer} glass-panel`}>
+        <div className={styles.tableContainer}>
           <table className={styles.table}>
             <thead>
               <tr>

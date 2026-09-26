@@ -561,11 +561,12 @@
   color: var(--text-secondary);
 }
 
-/* List view (Table Layout) */
+/* List view (Table Layout) — same flat 1px-border language as the grid card, no glass/glow */
 .tableContainer {
   border-radius: var(--border-radius-md);
   overflow-x: auto;
   background-color: var(--bg-secondary);
+  border: 1px solid var(--glass-border);
 }
 
 .table {
