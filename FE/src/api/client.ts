@@ -1,16 +1,4 @@
-import type {
-  Design,
-  DesignAsset,
-  DesignAssetSource,
-  DesignConfig,
-  ExportPackage,
-  ModelAsset,
-  ModelImportResponse,
-  ReconstructionReadiness,
-  ScanMetadata,
-  ScanSession,
-  User,
-} from "../types";
+import type { User } from "../types";
 import { toast as notifyToast } from "../context/ToastContext";
 
 if (import.meta.env.PROD && !import.meta.env.VITE_API_BASE_URL) {
@@ -129,6 +117,7 @@ export type PortalProject = {
   verticesCount: string;
   colorCode: string;
   description: string;
+  canonicalModelAssetId: string | null;
 };
 
 type ProjectResponse = {
@@ -142,10 +131,28 @@ type ProjectResponse = {
   editor_url: string;
   created_at: string;
   updated_at: string;
+  /** Only present on the single-project GET (ProjectDetailResponse); absent from list items. */
+  canonical_model_asset_id?: string | null;
 };
 
 export type ProjectPage = {
   items: PortalProject[];
+  nextCursor: string | null;
+  hasNext: boolean;
+};
+
+export type TrashedProject = PortalProject & {
+  deletedAt: string;
+  purgeAt: string;
+};
+
+type TrashProjectResponse = ProjectResponse & {
+  deleted_at: string;
+  purge_at: string;
+};
+
+export type ProjectTrashPage = {
+  items: TrashedProject[];
   nextCursor: string | null;
   hasNext: boolean;
 };
@@ -287,6 +294,15 @@ function toPortalProject(project: ProjectResponse): PortalProject {
     verticesCount: stringValue(scan.vertices, "—"),
     colorCode: stringValue(palette.primary, "#FF5A36"),
     description: project.description ?? "",
+    canonicalModelAssetId: project.canonical_model_asset_id ?? null,
+  };
+}
+
+function toTrashedProject(project: TrashProjectResponse): TrashedProject {
+  return {
+    ...toPortalProject(project),
+    deletedAt: project.deleted_at,
+    purgeAt: project.purge_at,
   };
 }
 
@@ -679,6 +695,32 @@ export const api = {
     await request<{ message: string }>(`/api/v1/projects/${projectId}`, { method: "DELETE" });
   },
 
+  async listTrash(cursor?: string | null): Promise<ProjectTrashPage> {
+    const params = new URLSearchParams({ limit: "100" });
+    if (cursor) params.set("cursor", cursor);
+    const page = await request<{
+      items: TrashProjectResponse[];
+      next_cursor: string | null;
+      has_next: boolean;
+    }>(`/api/v1/projects/trash?${params.toString()}`);
+    return {
+      items: page.items.map(toTrashedProject),
+      nextCursor: page.next_cursor,
+      hasNext: page.has_next,
+    };
+  },
+
+  async restoreProject(projectId: string): Promise<PortalProject> {
+    const project = await request<ProjectResponse>(`/api/v1/projects/${projectId}/restore`, {
+      method: "POST",
+    });
+    return toPortalProject(project);
+  },
+
+  async permanentlyDeleteProject(projectId: string): Promise<void> {
+    await request<{ message: string }>(`/api/v1/projects/${projectId}/permanent`, { method: "DELETE" });
+  },
+
   async me(): Promise<User> {
     const profile = await this.profile();
     return {
@@ -802,161 +844,4 @@ export const api = {
     return result.download_url;
   },
 
-  async getReconstructionReadiness(): Promise<ReconstructionReadiness> {
-    return request<ReconstructionReadiness>("/api/system/reconstruction-readiness");
-  },
-
-  async getScanSession(scanSessionId: string): Promise<ScanSession> {
-    return request<ScanSession>(`/api/scan-sessions/${scanSessionId}`);
-  },
-
-  async getModelAsset(modelAssetId: string): Promise<ModelAsset> {
-    return request<ModelAsset>(`/api/models/${modelAssetId}`);
-  },
-
-  async importModel(payload: ModelImportPayload): Promise<ModelImportResponse> {
-    const form = new FormData();
-    form.append("name", payload.name);
-    form.append("format", payload.format);
-    form.append("metadata", JSON.stringify(payload.metadata));
-    if (payload.model) {
-      form.append("model", payload.model);
-    }
-    if (payload.mtl) {
-      form.append("mtl", payload.mtl);
-    }
-    if (payload.texture) {
-      form.append("texture", payload.texture);
-    }
-    if (payload.package) {
-      form.append("package", payload.package);
-    }
-
-    const response = await fetch(`${API_BASE_URL}/api/models/import`, {
-      method: "POST",
-      credentials: "include",
-      headers: {
-        "X-CSRF-Token": getCsrfToken() || "",
-      },
-      body: form,
-    });
-    if (!response.ok) {
-      await throwApiResponseError(response, "/api/models/import");
-    }
-    return response.json() as Promise<ModelImportResponse>;
-  },
-
-  async uploadDesignAsset(file: File, sourceType: DesignAssetSource): Promise<DesignAsset> {
-    const form = new FormData();
-    form.append("file", file);
-    form.append("sourceType", sourceType);
-
-    const response = await fetch(`${API_BASE_URL}/api/design-assets`, {
-      method: "POST",
-      credentials: "include",
-      headers: {
-        "X-CSRF-Token": getCsrfToken() || "",
-      },
-      body: form,
-    });
-    if (!response.ok) {
-      await throwApiResponseError(response, "/api/design-assets");
-    }
-    return response.json() as Promise<DesignAsset>;
-  },
-
-  async fetchDesignAssetBlobUrl(assetId: string): Promise<string> {
-    const path = `/api/design-assets/${assetId}/download`;
-    const response = await fetch(`${API_BASE_URL}${path}`, {
-      credentials: "include",
-    });
-    if (!response.ok) {
-      await throwApiResponseError(response, path);
-    }
-    return URL.createObjectURL(await response.blob());
-  },
-
-  async fetchModelBlobUrl(modelAsset: ModelAsset): Promise<string> {
-    const response = await fetch(`${API_BASE_URL}${modelAsset.glbUrl}`, {
-      credentials: "include",
-    });
-    if (!response.ok) {
-      await throwApiResponseError(response, modelAsset.glbUrl);
-    }
-    return URL.createObjectURL(await response.blob());
-  },
-
-  async fetchDesignPreviewBlobUrl(design: Design): Promise<string | null> {
-    if (!design.previewGlbUrl) {
-      return null;
-    }
-    const response = await fetch(`${API_BASE_URL}${design.previewGlbUrl}`, {
-      credentials: "include",
-      cache: "no-store",
-    });
-    if (!response.ok) {
-      await throwApiResponseError(response, design.previewGlbUrl);
-    }
-    return URL.createObjectURL(await response.blob());
-  },
-
-  async createDesign(modelAssetId: string, name: string, config: DesignConfig): Promise<Design> {
-    return request<Design>("/api/designs", {
-      method: "POST",
-      body: JSON.stringify({ modelAssetId, name, config }),
-    });
-  },
-
-  async getDesign(designId: string): Promise<Design> {
-    return request<Design>(`/api/designs/${designId}`);
-  },
-
-  async updateDesign(designId: string, name: string, config: DesignConfig): Promise<Design> {
-    return request<Design>(`/api/designs/${designId}`, {
-      method: "PUT",
-      body: JSON.stringify({ name, config }),
-    });
-  },
-
-  async exportDesign(designId: string): Promise<ExportPackage> {
-    return request<ExportPackage>(`/api/designs/${designId}/export`, {
-      method: "POST",
-    });
-  },
-
-  async downloadExport(exportPackage: ExportPackage): Promise<void> {
-    const response = await fetch(`${API_BASE_URL}${exportPackage.downloadUrl}`, {
-      credentials: "include",
-    });
-    if (!response.ok) {
-      await throwApiResponseError(response, exportPackage.downloadUrl);
-    }
-
-    downloadBlob(await response.blob(), `${exportPackage.id}.zip`);
-  },
-
-  async downloadModelFile(urlPath: string, filename: string): Promise<void> {
-    const response = await fetch(`${API_BASE_URL}${urlPath}`, {
-      credentials: "include",
-    });
-    if (!response.ok) {
-      await throwApiResponseError(response, urlPath);
-    }
-
-    downloadBlob(await response.blob(), filename);
-  },
 };
-
-export type ModelImportPayload = {
-  name: string;
-  format: "glb" | "obj";
-  metadata: ScanMetadata;
-  model?: File | null;
-  mtl?: File | null;
-  texture?: File | null;
-  package?: File | null;
-};
-
-export function designStorageKey(modelAssetId: string): string {
-  return `shoe-customizer-design-${modelAssetId}`;
-}

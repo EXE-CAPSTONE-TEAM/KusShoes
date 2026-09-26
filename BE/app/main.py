@@ -161,7 +161,6 @@ app.include_router(admin_ops.router, prefix="/api/v1/admin", tags=["Admin Ops"])
 app.include_router(users.router, prefix="/api/v1/users", tags=["Users"])
 app.include_router(projects.router, prefix="/api/v1/projects", tags=["Projects"])
 app.include_router(project_assets.router, prefix="/api/v1/projects", tags=["Assets"])
-app.include_router(editor.router, prefix="/api/v1/editor", tags=["Editor"])
 app.include_router(studio.router, prefix="/api/v1", tags=["Studio"])
 app.include_router(
     public_artisan.router, prefix="/api/v1/public/artisan", tags=["Public Artisan"]
