@@ -1,5 +1,21 @@
 import React from 'react';
 import {
+  LayoutDashboard,
+  FolderKanban,
+  Archive,
+  CreditCard,
+  Settings,
+  LogOut,
+  Plus,
+  ChevronsUpDown,
+  User,
+  Shield,
+  Eye,
+  ChevronDown,
+  Palette,
+  MessageSquare,
+  PanelLeftClose,
+  PanelLeftOpen,
   LayoutDashboard, FolderKanban, Archive, Trash2, CreditCard, Settings, LogOut,
   Plus, ChevronsUpDown, User, Shield, Eye, ChevronDown, Palette, MessageSquare,
   PanelLeftClose, PanelLeftOpen,
@@ -23,10 +39,10 @@ interface SidebarProps {
   activeSettingTab: SettingTab;
 }
 
-export const Sidebar: React.FC<SidebarProps> = ({ 
-  activePage, 
-  setActivePage, 
-  onLogout, 
+export const Sidebar: React.FC<SidebarProps> = ({
+  activePage,
+  setActivePage,
+  onLogout,
   projects,
   activeSettingTab,
 }) => {
@@ -70,6 +86,10 @@ export const Sidebar: React.FC<SidebarProps> = ({
     setSettingsExpanded(isSettingsActive);
   }, [isSettingsActive]);
 
+  // Storage usage isn't exposed by the backend yet; this mirrors the placeholder that was
+  // already hardcoded in the widget below (1.4 GB of 5.0 GB).
+  const storagePercent = 28;
+
   // Get top 3 projects by the server's updated timestamp.
   const recentProjects = React.useMemo(() => {
     return [...projects]
@@ -101,7 +121,6 @@ export const Sidebar: React.FC<SidebarProps> = ({
       >
         <Icon className={styles.navIcon} />
         {!collapsed && <span className={styles.navLabel}>{item.label}</span>}
-        {isActive && <div className={styles.activeIndicator} />}
       </button>
     );
     if (!collapsed) {
@@ -138,212 +157,240 @@ export const Sidebar: React.FC<SidebarProps> = ({
           />
         </>
       )}
-      {isSettingsActive && <div className={styles.activeIndicator} />}
     </button>
   );
 
   return (
     <Tooltip.Provider delayDuration={300}>
-    <aside className={`${styles.sidebar} ${collapsed ? styles.collapsed : ''}`}>
-      {/* Brand Header */}
-      {!collapsed && (
-        <div className={styles.logoSection}>
-          <img
-            src={theme === 'dark' ? '/KusShoes_Logo_Dark_Mode_cropped.png' : '/KusShoes_Logo_cropped.png'}
-            alt="KusShoes"
-            className={styles.logoImage}
-            onClick={() => setActivePage('dashboard')}
-          />
-        </div>
-      )}
-
-      <button
-        type="button"
-        className={styles.collapseToggle}
-        onClick={toggleCollapsed}
-        aria-label={collapsed ? 'Expand sidebar' : 'Collapse sidebar'}
-        title={collapsed ? 'Expand sidebar' : 'Collapse sidebar'}
-      >
-        {collapsed ? <PanelLeftOpen size={14} /> : <PanelLeftClose size={14} />}
-      </button>
-
-      {/* Navigation Links */}
-      <ScrollArea.Root className={styles.navScrollArea} type="hover" scrollHideDelay={500}>
-        <ScrollArea.Viewport className={styles.navScrollViewport}>
-          <nav className={styles.navMenu}>
-            <div className={styles.navGroup}>
-          {menuItems.map(renderNavItem)}
-
-          <div className={styles.settingsNavGroup}>
-            {collapsed ? (
-              <Tooltip.Root>
-                <Tooltip.Trigger asChild>{settingsButton}</Tooltip.Trigger>
-                <Tooltip.Portal>
-                  <Tooltip.Content className={styles.tooltipContent} side="right" sideOffset={8}>
-                    Settings
-                    <Tooltip.Arrow className={styles.tooltipArrow} />
-                  </Tooltip.Content>
-                </Tooltip.Portal>
-              </Tooltip.Root>
-            ) : (
-              settingsButton
-            )}
-
-            {!collapsed && settingsExpanded && (
-              <div id="settings-submenu" className={styles.settingsSubmenu}>
-                {settingItems.map((item) => {
-                  const Icon = item.icon;
-                  const isActive = isSettingsActive && activeSettingTab === item.id;
-
-                  return (
-                    <button
-                      key={item.id}
-                      type="button"
-                      className={`${styles.settingsSubItem} ${isActive ? styles.activeSubItem : ''}`}
-                      onClick={() => setActivePage(`settings?tab=${item.id}`)}
-                      aria-current={isActive ? 'page' : undefined}
-                    >
-                      <Icon className={styles.settingsSubIcon} aria-hidden="true" />
-                      <span>{item.label}</span>
-                    </button>
-                  );
-                })}
-              </div>
-            )}
-          </div>
-            </div>
-
-            {/* Separator and Recent Projects Section */}
-            {!collapsed && recentProjects.length > 0 && (
-              <div className={styles.recentSection}>
-            <Separator.Root className={styles.recentDivider} decorative />
-            <div className={styles.recentHeaderRow}>
-              <span className={styles.recentHeader}>Recent Projects</span>
-              <Tooltip.Root>
-                <Tooltip.Trigger asChild>
-                  <button
-                    className={styles.quickAddBtn}
-                    onClick={(e) => {
-                      e.stopPropagation();
-                      setActivePage('projects?new=true');
-                    }}
-                  >
-                    <Plus size={12} />
-                  </button>
-                </Tooltip.Trigger>
-                <Tooltip.Portal>
-                  <Tooltip.Content className={styles.tooltipContent} side="right" sideOffset={8}>
-                    Quick Create Project
-                    <Tooltip.Arrow className={styles.tooltipArrow} />
-                  </Tooltip.Content>
-                </Tooltip.Portal>
-              </Tooltip.Root>
-            </div>
-            
-            <div className={styles.recentList}>
-              {recentProjects.map((proj) => (
-                <button
-                  key={proj.id}
-                  className={styles.recentItem}
-                  onClick={() => handleRecentClick(proj.id)}
-                  title={proj.name}
-                >
-                  <div className={`${styles.recentDot} ${styles[proj.status.toLowerCase()]}`} />
-                  <span className={styles.recentName}>{proj.name}</span>
-                </button>
-              ))}
-              <button 
-                className={styles.viewAllLink}
-                onClick={() => setActivePage('projects')}
-              >
-                View all
-              </button>
-            </div>
-              </div>
-            )}
-          </nav>
-        </ScrollArea.Viewport>
-        <ScrollArea.Scrollbar className={styles.navScrollbar} orientation="vertical">
-          <ScrollArea.Thumb className={styles.navScrollThumb} />
-        </ScrollArea.Scrollbar>
-      </ScrollArea.Root>
-
-      {/* Storage Widget */}
-      {!collapsed && (
-        <div className={styles.storageWidget}>
-          <div className={styles.storageLabels}>
-            <span>Storage: 1.4 GB / 5.0 GB</span>
-            <span>28%</span>
-          </div>
-          <Progress.Root className={styles.storageBarBg} value={28}>
-            <Progress.Indicator
-              className={styles.storageBarFill}
-              style={{ transform: `translateX(-${100 - 28}%)` }}
+      <aside className={`${styles.sidebar} ${collapsed ? styles.collapsed : ''}`}>
+        {/* Brand Header */}
+        {!collapsed && (
+          <div className={styles.logoSection}>
+            <img
+              src={
+                theme === 'dark'
+                  ? '/KusShoes_Logo_Dark_Mode_cropped.png'
+                  : '/KusShoes_Logo_cropped.png'
+              }
+              alt="KusShoes"
+              className={styles.logoImage}
+              onClick={() => setActivePage('dashboard')}
             />
-          </Progress.Root>
-        </div>
-      )}
+          </div>
+        )}
 
-      {/* User Session Info Footer */}
-      <div className={styles.footerSection}>
-        <DropdownMenu.Root>
-          <DropdownMenu.Trigger asChild>
-            <button className={styles.userInfo}>
-              <Avatar.Root className={styles.avatarRoot}>
-                <Avatar.Image
-                  className={styles.avatar}
-                  src="https://images.unsplash.com/photo-1534528741775-53994a69daeb?auto=format&fit=crop&w=100&q=80"
-                  alt="Duy Nguyen"
-                />
-                <Avatar.Fallback className={styles.avatarFallback} delayMs={300}>
-                  DN
-                </Avatar.Fallback>
-              </Avatar.Root>
-              {!collapsed && (
-                <div className={styles.userDetails}>
-                  <p className={styles.userName}>Duy Nguyen</p>
-                  <p className={styles.userRole}>Sneaker Creator</p>
+        <button
+          type="button"
+          className={styles.collapseToggle}
+          onClick={toggleCollapsed}
+          aria-label={collapsed ? 'Expand sidebar' : 'Collapse sidebar'}
+          title={collapsed ? 'Expand sidebar' : 'Collapse sidebar'}
+        >
+          {collapsed ? <PanelLeftOpen size={14} /> : <PanelLeftClose size={14} />}
+        </button>
+
+        {/* Navigation Links */}
+        <ScrollArea.Root className={styles.navScrollArea} type="hover" scrollHideDelay={500}>
+          <ScrollArea.Viewport className={styles.navScrollViewport}>
+            <nav className={styles.navMenu}>
+              <div className={styles.navGroup}>
+                {menuItems.map(renderNavItem)}
+
+                <div className={styles.settingsNavGroup}>
+                  {collapsed ? (
+                    <Tooltip.Root>
+                      <Tooltip.Trigger asChild>{settingsButton}</Tooltip.Trigger>
+                      <Tooltip.Portal>
+                        <Tooltip.Content
+                          className={styles.tooltipContent}
+                          side="right"
+                          sideOffset={8}
+                        >
+                          Settings
+                          <Tooltip.Arrow className={styles.tooltipArrow} />
+                        </Tooltip.Content>
+                      </Tooltip.Portal>
+                    </Tooltip.Root>
+                  ) : (
+                    settingsButton
+                  )}
+
+                  {!collapsed && settingsExpanded && (
+                    <div id="settings-submenu" className={styles.settingsSubmenu}>
+                      {settingItems.map((item) => {
+                        const Icon = item.icon;
+                        const isActive = isSettingsActive && activeSettingTab === item.id;
+
+                        return (
+                          <button
+                            key={item.id}
+                            type="button"
+                            className={`${styles.settingsSubItem} ${isActive ? styles.activeSubItem : ''}`}
+                            onClick={() => setActivePage(`settings?tab=${item.id}`)}
+                            aria-current={isActive ? 'page' : undefined}
+                          >
+                            <Icon className={styles.settingsSubIcon} aria-hidden="true" />
+                            <span>{item.label}</span>
+                          </button>
+                        );
+                      })}
+                    </div>
+                  )}
+                </div>
+              </div>
+
+              {/* Separator and Recent Projects Section */}
+              {!collapsed && recentProjects.length > 0 && (
+                <div className={styles.recentSection}>
+                  <Separator.Root className={styles.recentDivider} decorative />
+                  <div className={styles.recentHeaderRow}>
+                    <span className={styles.recentHeader}>Recent Projects</span>
+                    <Tooltip.Root>
+                      <Tooltip.Trigger asChild>
+                        <button
+                          className={styles.quickAddBtn}
+                          onClick={(e) => {
+                            e.stopPropagation();
+                            setActivePage('projects?new=true');
+                          }}
+                        >
+                          <Plus size={12} />
+                        </button>
+                      </Tooltip.Trigger>
+                      <Tooltip.Portal>
+                        <Tooltip.Content
+                          className={styles.tooltipContent}
+                          side="right"
+                          sideOffset={8}
+                        >
+                          Quick Create Project
+                          <Tooltip.Arrow className={styles.tooltipArrow} />
+                        </Tooltip.Content>
+                      </Tooltip.Portal>
+                    </Tooltip.Root>
+                  </div>
+
+                  <div className={styles.recentList}>
+                    {recentProjects.map((proj) => (
+                      <button
+                        key={proj.id}
+                        className={styles.recentItem}
+                        onClick={() => handleRecentClick(proj.id)}
+                        title={proj.name}
+                      >
+                        <img src={proj.imageUrl} alt="" className={styles.recentThumb} />
+                        <span className={styles.recentName}>{proj.name}</span>
+                      </button>
+                    ))}
+                    <button
+                      className={styles.viewAllLink}
+                      onClick={() => setActivePage('projects')}
+                    >
+                      View all
+                    </button>
+                  </div>
                 </div>
               )}
-              {!collapsed && <ChevronsUpDown size={14} className={styles.userChevron} />}
-            </button>
-          </DropdownMenu.Trigger>
-          <DropdownMenu.Portal>
-            <DropdownMenu.Content className={styles.dropdownContent} side="top" align="start" sideOffset={8}>
-              <DropdownMenu.Item className={styles.dropdownItem} onSelect={() => setActivePage('settings?tab=profile')}>
-                <User size={14} /> Profile
-              </DropdownMenu.Item>
-              <DropdownMenu.Item className={styles.dropdownItem} onSelect={() => setActivePage(`settings?tab=${activeSettingTab}`)}>
-                <Settings size={14} /> Settings
-              </DropdownMenu.Item>
-              <DropdownMenu.Separator className={styles.dropdownSeparator} />
-              <DropdownMenu.Item
-                className={`${styles.dropdownItem} ${styles.dropdownItemDanger}`}
-                onSelect={onLogout}
-              >
-                <LogOut size={14} /> Log out
-              </DropdownMenu.Item>
-            </DropdownMenu.Content>
-          </DropdownMenu.Portal>
-        </DropdownMenu.Root>
+            </nav>
+          </ScrollArea.Viewport>
+          <ScrollArea.Scrollbar className={styles.navScrollbar} orientation="vertical">
+            <ScrollArea.Thumb className={styles.navScrollThumb} />
+          </ScrollArea.Scrollbar>
+        </ScrollArea.Root>
 
+        {/* Storage Widget */}
         {!collapsed && (
-          <Tooltip.Root>
-            <Tooltip.Trigger asChild>
-              <button className={styles.logoutBtn} onClick={onLogout}>
-                <LogOut size={18} />
-              </button>
-            </Tooltip.Trigger>
-            <Tooltip.Portal>
-              <Tooltip.Content className={styles.tooltipContent} side="top" sideOffset={8}>
-                Log out
-                <Tooltip.Arrow className={styles.tooltipArrow} />
-              </Tooltip.Content>
-            </Tooltip.Portal>
-          </Tooltip.Root>
+          <div className={styles.storageWidget}>
+            <div className={styles.storageLabels}>
+              <span>1.4 GB of 5 GB</span>
+              <span>28%</span>
+            </div>
+            <Progress.Root className={styles.storageBarBg} value={storagePercent}>
+              <Progress.Indicator
+                className={`${styles.storageBarFill} ${
+                  storagePercent > 95
+                    ? styles.storageCritical
+                    : storagePercent > 80
+                      ? styles.storageWarning
+                      : ''
+                }`}
+                style={{ transform: `translateX(-${100 - storagePercent}%)` }}
+              />
+            </Progress.Root>
+          </div>
         )}
-      </div>
-    </aside>
+
+        {/* User Session Info Footer */}
+        <div className={styles.footerSection}>
+          <DropdownMenu.Root>
+            <DropdownMenu.Trigger asChild>
+              <button className={styles.userInfo}>
+                <Avatar.Root className={styles.avatarRoot}>
+                  <Avatar.Image
+                    className={styles.avatar}
+                    src="https://images.unsplash.com/photo-1534528741775-53994a69daeb?auto=format&fit=crop&w=100&q=80"
+                    alt="Duy Nguyen"
+                  />
+                  <Avatar.Fallback className={styles.avatarFallback} delayMs={300}>
+                    DN
+                  </Avatar.Fallback>
+                </Avatar.Root>
+                {!collapsed && (
+                  <div className={styles.userDetails}>
+                    <p className={styles.userName}>Duy Nguyen</p>
+                    <p className={styles.userRole}>Sneaker Creator</p>
+                  </div>
+                )}
+                {!collapsed && <ChevronsUpDown size={14} className={styles.userChevron} />}
+              </button>
+            </DropdownMenu.Trigger>
+            <DropdownMenu.Portal>
+              <DropdownMenu.Content
+                className={styles.dropdownContent}
+                side="top"
+                align="start"
+                sideOffset={8}
+              >
+                <DropdownMenu.Item
+                  className={styles.dropdownItem}
+                  onSelect={() => setActivePage('settings?tab=profile')}
+                >
+                  <User size={14} /> Profile
+                </DropdownMenu.Item>
+                <DropdownMenu.Item
+                  className={styles.dropdownItem}
+                  onSelect={() => setActivePage(`settings?tab=${activeSettingTab}`)}
+                >
+                  <Settings size={14} /> Settings
+                </DropdownMenu.Item>
+                <DropdownMenu.Separator className={styles.dropdownSeparator} />
+                <DropdownMenu.Item
+                  className={`${styles.dropdownItem} ${styles.dropdownItemDanger}`}
+                  onSelect={onLogout}
+                >
+                  <LogOut size={14} /> Log out
+                </DropdownMenu.Item>
+              </DropdownMenu.Content>
+            </DropdownMenu.Portal>
+          </DropdownMenu.Root>
+
+          {!collapsed && (
+            <Tooltip.Root>
+              <Tooltip.Trigger asChild>
+                <button className={styles.logoutBtn} onClick={onLogout}>
+                  <LogOut size={18} />
+                </button>
+              </Tooltip.Trigger>
+              <Tooltip.Portal>
+                <Tooltip.Content className={styles.tooltipContent} side="top" sideOffset={8}>
+                  Log out
+                  <Tooltip.Arrow className={styles.tooltipArrow} />
+                </Tooltip.Content>
+              </Tooltip.Portal>
+            </Tooltip.Root>
+          )}
+        </div>
+      </aside>
     </Tooltip.Provider>
   );
 };

@@ -1,4 +1,4 @@
-import { downloadBlob, request, requestBlob } from "./client";
+import { downloadBlob, request, requestBlob } from './client';
 
 // ---- Design version history (BR-46) ---------------------------------------------------
 
@@ -64,7 +64,7 @@ export type AssetUploadUrl = {
 
 // ---- Feedback (UC-25, BR-109) ---------------------------------------------------------
 
-export type MarketingGroup = "product" | "price" | "place" | "promotion";
+export type MarketingGroup = 'product' | 'price' | 'place' | 'promotion';
 
 export type Feedback = {
   id: string;
@@ -81,36 +81,69 @@ export type FeedbackEligibility = {
   next_allowed_at: string | null;
 };
 
+// ---- Public artisan link viewer (no auth — opened by whoever received the shared link) -----
+
+export type ArtisanPublicView = {
+  project_name: string;
+  format: string;
+  expires_at: string;
+  downloads_remaining: number;
+};
+
+export type ArtisanPublicDownload = {
+  download_url: string;
+  expires_in_seconds: number;
+};
+
 export const studioApi = {
-  listVersions: (projectId: string) => request<DesignVersion[]>(`/api/v1/projects/${projectId}/versions`),
+  listVersions: (projectId: string) =>
+    request<DesignVersion[]>(`/api/v1/projects/${projectId}/versions`),
   restoreVersion: (projectId: string, versionId: string) =>
-    request<DesignVersion>(`/api/v1/projects/${projectId}/versions/${versionId}/restore`, { method: "POST" }),
+    request<DesignVersion>(`/api/v1/projects/${projectId}/versions/${versionId}/restore`, {
+      method: 'POST',
+    }),
 
   listTemplates: (category?: string) =>
-    request<DesignTemplate[]>(`/api/v1/templates${category ? `?category=${encodeURIComponent(category)}` : ""}`),
+    request<DesignTemplate[]>(
+      `/api/v1/templates${category ? `?category=${encodeURIComponent(category)}` : ''}`,
+    ),
   applyTemplate: (projectId: string, templateId: string) =>
-    request<{ message: string }>(`/api/v1/projects/${projectId}/apply-template/${templateId}`, { method: "POST" }),
+    request<{ message: string }>(`/api/v1/projects/${projectId}/apply-template/${templateId}`, {
+      method: 'POST',
+    }),
 
   listArtisanLinks: (projectId: string) =>
     request<ArtisanLink[]>(`/api/v1/projects/${projectId}/artisan-links`),
   createArtisanLink: (projectId: string, exportId?: string) =>
     request<CreatedArtisanLink>(`/api/v1/projects/${projectId}/artisan-links`, {
-      method: "POST",
+      method: 'POST',
       body: JSON.stringify({ export_id: exportId ?? null }),
     }),
   revokeArtisanLink: (linkId: string) =>
-    request<{ message: string }>(`/api/v1/artisan-links/${linkId}/revoke`, { method: "POST" }),
-  renewArtisanLink: (linkId: string) => request<ArtisanLink>(`/api/v1/artisan-links/${linkId}/renew`, { method: "POST" }),
+    request<{ message: string }>(`/api/v1/artisan-links/${linkId}/revoke`, { method: 'POST' }),
+  renewArtisanLink: (linkId: string) =>
+    request<ArtisanLink>(`/api/v1/artisan-links/${linkId}/renew`, { method: 'POST' }),
 
   /** PDF for the craftsperson; passing a fresh link token prints a QR code that opens it (BR-71). */
   async downloadReferencePack(projectId: string, token?: string): Promise<void> {
-    const query = token ? `?token=${encodeURIComponent(token)}` : "";
-    const { blob, filename } = await requestBlob(`/api/v1/projects/${projectId}/reference-pack${query}`);
+    const query = token ? `?token=${encodeURIComponent(token)}` : '';
+    const { blob, filename } = await requestBlob(
+      `/api/v1/projects/${projectId}/reference-pack${query}`,
+    );
     downloadBlob(blob, filename ?? `reference-pack-${projectId}.pdf`);
   },
 
-  eligibility: () => request<FeedbackEligibility>("/api/v1/feedback/eligibility"),
+  eligibility: () => request<FeedbackEligibility>('/api/v1/feedback/eligibility'),
   submitFeedback: (payload: { rating: number; message: string; marketing_group: MarketingGroup }) =>
+    request<Feedback>('/api/v1/feedback', { method: 'POST', body: JSON.stringify(payload) }),
+  myFeedback: () => request<Feedback[]>('/api/v1/feedback/mine'),
+
+  getPublicArtisanLink: (token: string) =>
+    request<ArtisanPublicView>(`/api/v1/public/artisan/${encodeURIComponent(token)}`),
+  downloadPublicArtisanLink: (token: string) =>
+    request<ArtisanPublicDownload>(`/api/v1/public/artisan/${encodeURIComponent(token)}/download`, {
+      method: 'POST',
+    }),
     request<Feedback>("/api/v1/feedback", { method: "POST", body: JSON.stringify(payload) }),
   myFeedback: () => request<Feedback[]>("/api/v1/feedback/mine"),
 

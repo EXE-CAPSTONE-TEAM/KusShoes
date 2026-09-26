@@ -53,20 +53,20 @@ export const SessionsPanel: React.FC = () => {
 
   return (
     <>
-      <div className={`${panel.panel} glass-panel`}>
+      <div className={panel.panel}>
         <div className={panel.panelHeader}>
-          <MonitorSmartphone size={20} className={panel.panelIcon} />
+          <MonitorSmartphone size={16} className={panel.panelIcon} />
           <div>
             <h4 className={panel.panelTitle}>Active sessions</h4>
             <p className={panel.panelDesc}>Devices currently signed in to your account.</p>
           </div>
           <button
             type="button"
-            className={`btn-outline ${panel.headerAction}`}
+            className={`${panel.secondaryBtn} ${panel.headerAction}`}
             onClick={revokeAll}
             disabled={busy || !sessions?.length}
           >
-            <LogOut size={16} /> Sign out everywhere
+            <LogOut size={14} /> Sign out everywhere
           </button>
         </div>
         {sessions === null ? (
@@ -82,7 +82,12 @@ export const SessionsPanel: React.FC = () => {
                   {session.ip_address ?? 'Unknown IP'} · last used {formatDateTime(session.last_used_at ?? session.created_at)}
                 </span>
               </div>
-              <button type="button" className="btn-outline" onClick={() => revoke(session.id)} disabled={busy}>
+              <button
+                type="button"
+                className={`${panel.secondaryBtn} ${panel.secondaryBtnSm}`}
+                onClick={() => revoke(session.id)}
+                disabled={busy}
+              >
                 Sign out
               </button>
             </div>
@@ -90,9 +95,9 @@ export const SessionsPanel: React.FC = () => {
         )}
       </div>
 
-      <div className={`${panel.panel} glass-panel`}>
+      <div className={panel.panel}>
         <div className={panel.panelHeader}>
-          <History size={20} className={panel.panelIcon} />
+          <History size={16} className={panel.panelIcon} />
           <div>
             <h4 className={panel.panelTitle}>Recent sign-in activity</h4>
             <p className={panel.panelDesc}>The last 90 days. If you do not recognise an attempt, change your password.</p>

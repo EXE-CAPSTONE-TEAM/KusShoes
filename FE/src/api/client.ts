@@ -1,5 +1,17 @@
-import type { User } from "../types";
-import { toast as notifyToast } from "../context/ToastContext";
+import type {
+  Design,
+  DesignAsset,
+  DesignAssetSource,
+  DesignConfig,
+  ExportPackage,
+  ModelAsset,
+  ModelImportResponse,
+  ReconstructionReadiness,
+  ScanMetadata,
+  ScanSession,
+  User,
+} from '../types';
+import { toast as notifyToast } from '../context/ToastContext';
 
 if (import.meta.env.PROD && !import.meta.env.VITE_API_BASE_URL) {
   // Falling through to the dev fallback below would silently point at a nonexistent
@@ -10,14 +22,15 @@ if (import.meta.env.PROD && !import.meta.env.VITE_API_BASE_URL) {
   );
 }
 const API_BASE_URL = import.meta.env.VITE_API_BASE_URL ?? `http://${window.location.hostname}:8000`;
-const STORAGE_PUBLIC_URL = import.meta.env.VITE_STORAGE_PUBLIC_URL ?? `http://${window.location.hostname}:9000/kusshoes`;
-const LEGACY_ACCESS_TOKEN_KEY = "kusshoes_access_token";
-const LEGACY_REFRESH_TOKEN_KEY = "kusshoes_refresh_token";
+const STORAGE_PUBLIC_URL =
+  import.meta.env.VITE_STORAGE_PUBLIC_URL ?? `http://${window.location.hostname}:9000/kusshoes`;
+const LEGACY_ACCESS_TOKEN_KEY = 'kusshoes_access_token';
+const LEGACY_REFRESH_TOKEN_KEY = 'kusshoes_refresh_token';
 let accessTokenInMemory: string | null = null;
 
 export type ImpersonationSession = { banner: string; expiresAt: string };
 let impersonationSession: ImpersonationSession | null = null;
-const IMPERSONATION_EVENT = "kusshoes:impersonation";
+const IMPERSONATION_EVENT = 'kusshoes:impersonation';
 
 function setImpersonation(next: ImpersonationSession | null): void {
   impersonationSession = next;
@@ -41,7 +54,7 @@ export class ApiError extends Error {
     data: Record<string, unknown> = {},
   ) {
     super(message);
-    this.name = "ApiError";
+    this.name = 'ApiError';
     this.status = status;
     this.code = code;
     this.data = data;
@@ -54,8 +67,7 @@ type AuthTokens = {
 };
 
 export type LoginOutcome =
-  | { mfaRequired: false }
-  | { mfaRequired: true; challengeToken: string; method: "totp" | "email" };
+  { mfaRequired: false } | { mfaRequired: true; challengeToken: string; method: 'totp' | 'email' };
 
 export type RegisterInput = {
   email: string;
@@ -103,10 +115,10 @@ export type PortalProject = {
   id: string;
   name: string;
   baseModel: string;
-  status: "Scanned" | "Designing" | "Completed";
+  status: 'Scanned' | 'Designing' | 'Completed';
   rawStatus: string;
   isLocked: boolean;
-  visibility: "Private" | "Link" | "Public";
+  visibility: 'Private' | 'Link' | 'Public';
   updatedAt: string;
   createdAt: string;
   imageUrl: string;
@@ -116,6 +128,7 @@ export type PortalProject = {
   photosCount: number;
   verticesCount: string;
   colorCode: string;
+  accentColor: string | null;
   description: string;
   canonicalModelAssetId: string | null;
 };
@@ -141,6 +154,7 @@ export type ProjectPage = {
   hasNext: boolean;
 };
 
+/** BR-47: a soft-deleted project, restorable for PROJECT_RESTORE_DAYS (30) before it's purged. */
 export type TrashedProject = PortalProject & {
   deletedAt: string;
   purgeAt: string;
@@ -218,57 +232,57 @@ export type ProjectExport = {
   created_at: string;
 };
 
-const FALLBACK_PROJECT_IMAGE = new URL("../assets/sneaker-hero.png", import.meta.url).href;
-const COMPLETED_PROJECT_STATUSES = new Set(["completed", "ready", "exported"]);
-const DESIGNING_PROJECT_STATUSES = new Set(["in_progress", "processing", "queued", "baking"]);
+const FALLBACK_PROJECT_IMAGE = new URL('../assets/sneaker-hero.png', import.meta.url).href;
+const COMPLETED_PROJECT_STATUSES = new Set(['completed', 'ready', 'exported']);
+const DESIGNING_PROJECT_STATUSES = new Set(['in_progress', 'processing', 'queued', 'baking']);
 
 function asRecord(value: unknown): Record<string, unknown> {
-  return value && typeof value === "object" && !Array.isArray(value)
+  return value && typeof value === 'object' && !Array.isArray(value)
     ? (value as Record<string, unknown>)
     : {};
 }
 
 function stringValue(value: unknown, fallback: string): string {
-  if (typeof value !== "string") return fallback;
+  if (typeof value !== 'string') return fallback;
   const trimmed = value.trim();
   return trimmed || fallback;
 }
 
 function numberValue(value: unknown, fallback: number): number {
-  return typeof value === "number" && Number.isFinite(value) ? value : fallback;
+  return typeof value === 'number' && Number.isFinite(value) ? value : fallback;
 }
 
 function formatProjectSize(value: unknown): string {
-  if (typeof value !== "number" || !Number.isFinite(value) || value <= 0) return "—";
+  if (typeof value !== 'number' || !Number.isFinite(value) || value <= 0) return '—';
   return `${value.toFixed(value >= 100 ? 0 : 1)} MB`;
 }
 
 function storageUrl(path: string | null): string | undefined {
   if (!path) return undefined;
-  if (/^https?:\/\//i.test(path) || path.startsWith("data:")) return path;
-  return `${STORAGE_PUBLIC_URL.replace(/\/$/, "")}/${path.replace(/^\/+/, "")}`;
+  if (/^https?:\/\//i.test(path) || path.startsWith('data:')) return path;
+  return `${STORAGE_PUBLIC_URL.replace(/\/$/, '')}/${path.replace(/^\/+/, '')}`;
 }
 
 function projectImageUrl(path: string | null): string {
   return storageUrl(path) ?? FALLBACK_PROJECT_IMAGE;
 }
 
-function normalizeProjectStatus(status: string): PortalProject["status"] {
+function normalizeProjectStatus(status: string): PortalProject['status'] {
   const normalizedStatus = status.toLowerCase();
-  if (COMPLETED_PROJECT_STATUSES.has(normalizedStatus)) return "Completed";
-  if (DESIGNING_PROJECT_STATUSES.has(normalizedStatus)) return "Designing";
-  return "Scanned";
+  if (COMPLETED_PROJECT_STATUSES.has(normalizedStatus)) return 'Completed';
+  if (DESIGNING_PROJECT_STATUSES.has(normalizedStatus)) return 'Designing';
+  return 'Scanned';
 }
 
-function normalizeProjectVisibility(value: unknown): PortalProject["visibility"] {
-  if (value === "Private" || value === "Link" || value === "Public") return value;
-  if (typeof value === "string") {
+function normalizeProjectVisibility(value: unknown): PortalProject['visibility'] {
+  if (value === 'Private' || value === 'Link' || value === 'Public') return value;
+  if (typeof value === 'string') {
     const normalized = value.toLowerCase();
-    if (normalized === "private") return "Private";
-    if (normalized === "link") return "Link";
-    if (normalized === "public") return "Public";
+    if (normalized === 'private') return 'Private';
+    if (normalized === 'link') return 'Link';
+    if (normalized === 'public') return 'Public';
   }
-  return "Private";
+  return 'Private';
 }
 
 function toPortalProject(project: ProjectResponse): PortalProject {
@@ -279,7 +293,7 @@ function toPortalProject(project: ProjectResponse): PortalProject {
   return {
     id: project.id,
     name: project.name,
-    baseModel: stringValue(config.base_model, "Custom sneaker model"),
+    baseModel: stringValue(config.base_model, 'Custom sneaker model'),
     status: normalizeProjectStatus(project.status),
     rawStatus: project.status,
     isLocked: Boolean(project.is_locked),
@@ -288,9 +302,14 @@ function toPortalProject(project: ProjectResponse): PortalProject {
     createdAt: project.created_at,
     imageUrl: projectImageUrl(project.thumbnail_path),
     editorUrl: project.editor_url,
-    device: stringValue(scan.device, "KusStudio"),
+    device: stringValue(scan.device, 'KusStudio'),
     fileSize: formatProjectSize(scan.file_size_mb),
     photosCount: numberValue(scan.photos_count, 0),
+    verticesCount: stringValue(scan.vertices, '—'),
+    colorCode: stringValue(palette.primary, '#FF5A36'),
+    accentColor:
+      typeof palette.accent === 'string' && palette.accent.trim() ? palette.accent : null,
+    description: project.description ?? '',
     verticesCount: stringValue(scan.vertices, "—"),
     colorCode: stringValue(palette.primary, "#FF5A36"),
     description: project.description ?? "",
@@ -338,9 +357,9 @@ async function refreshAccessToken(): Promise<string | null> {
   refreshPromise = (async () => {
     try {
       const response = await fetch(`${API_BASE_URL}/api/v1/auth/refresh`, {
-        method: "POST",
-        credentials: "include",
-        headers: { "Content-Type": "application/json" },
+        method: 'POST',
+        credentials: 'include',
+        headers: { 'Content-Type': 'application/json' },
       });
       if (!response.ok) {
         clearTokens();
@@ -361,65 +380,65 @@ async function refreshAccessToken(): Promise<string | null> {
 
 function canRefreshRequest(path: string): boolean {
   return ![
-    "/api/v1/auth/login",
-    "/api/v1/auth/2fa/verify",
-    "/api/v1/auth/register",
-    "/api/v1/auth/verify-otp",
-    "/api/v1/auth/refresh",
-    "/api/v1/auth/forgot-password",
-    "/api/v1/auth/reset-password",
-    "/api/v1/auth/restore-account/request",
-    "/api/v1/auth/restore-account/confirm",
+    '/api/v1/auth/login',
+    '/api/v1/auth/2fa/verify',
+    '/api/v1/auth/register',
+    '/api/v1/auth/verify-otp',
+    '/api/v1/auth/refresh',
+    '/api/v1/auth/forgot-password',
+    '/api/v1/auth/reset-password',
+    '/api/v1/auth/restore-account/request',
+    '/api/v1/auth/restore-account/confirm',
   ].includes(path);
 }
 
 function notifyApiError(error: ApiError, path: string): void {
   if (responseIsAuthNoise(path)) return;
   if (error.status >= 500) {
-    notifyToast.error("Server error. Please try again later.");
+    notifyToast.error('Server error. Please try again later.');
     return;
   }
   if (error.status === 401) {
-    notifyToast.error("Session expired. Please sign in again.");
+    notifyToast.error('Session expired. Please sign in again.');
     return;
   }
   if (error.status >= 400) {
-    notifyToast.error(error.message || "Request failed. Please check your input.");
+    notifyToast.error(error.message || 'Request failed. Please check your input.');
   }
 }
 
 function responseIsAuthNoise(path: string): boolean {
   return [
-    "/api/v1/auth/login",
-    "/api/v1/auth/2fa/verify",
-    "/api/v1/auth/register",
-    "/api/v1/auth/verify-otp",
-    "/api/v1/auth/resend-otp",
-    "/api/v1/auth/restore-account/request",
-    "/api/v1/auth/restore-account/confirm",
-    "/api/v1/auth/forgot-password",
-    "/api/v1/auth/reset-password",
+    '/api/v1/auth/login',
+    '/api/v1/auth/2fa/verify',
+    '/api/v1/auth/register',
+    '/api/v1/auth/verify-otp',
+    '/api/v1/auth/resend-otp',
+    '/api/v1/auth/restore-account/request',
+    '/api/v1/auth/restore-account/confirm',
+    '/api/v1/auth/forgot-password',
+    '/api/v1/auth/reset-password',
   ].includes(path);
 }
 
 export async function request<T>(path: string, options: RequestInit = {}): Promise<T> {
   const headers: Record<string, string> = {
-    "Content-Type": "application/json",
+    'Content-Type': 'application/json',
   };
   const accessToken = accessTokenInMemory;
   if (accessToken) {
     headers.Authorization = `Bearer ${accessToken}`;
   }
-  if (options.method && ["POST", "PUT", "PATCH", "DELETE"].includes(options.method.toUpperCase())) {
+  if (options.method && ['POST', 'PUT', 'PATCH', 'DELETE'].includes(options.method.toUpperCase())) {
     const csrfToken = getCsrfToken();
     if (csrfToken) {
-      headers["X-CSRF-Token"] = csrfToken;
+      headers['X-CSRF-Token'] = csrfToken;
     }
   }
 
   let response = await fetch(`${API_BASE_URL}${path}`, {
     ...options,
-    credentials: "include",
+    credentials: 'include',
     headers: {
       ...headers,
       ...options.headers,
@@ -432,7 +451,7 @@ export async function request<T>(path: string, options: RequestInit = {}): Promi
       headers.Authorization = `Bearer ${refreshedAccessToken}`;
       response = await fetch(`${API_BASE_URL}${path}`, {
         ...options,
-        credentials: "include",
+        credentials: 'include',
         headers: {
           ...headers,
           ...options.headers,
@@ -454,7 +473,7 @@ export async function request<T>(path: string, options: RequestInit = {}): Promi
 export async function requestBlob(path: string): Promise<{ blob: Blob; filename: string | null }> {
   const send = (token: string | null) =>
     fetch(`${API_BASE_URL}${path}`, {
-      credentials: "include",
+      credentials: 'include',
       headers: token ? { Authorization: `Bearer ${token}` } : {},
     });
   let response = await send(accessTokenInMemory);
@@ -463,7 +482,7 @@ export async function requestBlob(path: string): Promise<{ blob: Blob; filename:
     if (refreshed) response = await send(refreshed);
   }
   if (!response.ok) await throwApiResponseError(response, path);
-  const disposition = response.headers.get("Content-Disposition") ?? "";
+  const disposition = response.headers.get('Content-Disposition') ?? '';
   const match = /filename="?([^";]+)"?/.exec(disposition);
   return { blob: await response.blob(), filename: match ? match[1] : null };
 }
@@ -472,26 +491,26 @@ async function apiError(response: Response): Promise<ApiError> {
   try {
     const payload = (await response.json()) as Record<string, unknown>;
     const detail = payload.detail;
-    let message = typeof payload.message === "string" ? payload.message : response.statusText;
-    if (typeof detail === "string") {
+    let message = typeof payload.message === 'string' ? payload.message : response.statusText;
+    if (typeof detail === 'string') {
       message = detail;
     } else if (Array.isArray(detail)) {
       message = detail
         .map((item) => {
-          if (typeof item !== "object" || item === null) return String(item);
+          if (typeof item !== 'object' || item === null) return String(item);
           const validationError = item as { msg?: string };
           return validationError.msg ?? JSON.stringify(item);
         })
-        .join("; ");
+        .join('; ');
     }
     return new ApiError(
       message || `Request failed (${response.status})`,
       response.status,
-      typeof payload.code === "string" ? payload.code : null,
+      typeof payload.code === 'string' ? payload.code : null,
       payload,
     );
   } catch {
-    return new ApiError(response.statusText || "Unable to connect to the server", response.status);
+    return new ApiError(response.statusText || 'Unable to connect to the server', response.status);
   }
 }
 
@@ -503,10 +522,10 @@ async function throwApiResponseError(response: Response, path: string): Promise<
 
 export function downloadBlob(blob: Blob, filename: string): void {
   const url = URL.createObjectURL(blob);
-  const anchor = document.createElement("a");
+  const anchor = document.createElement('a');
   anchor.href = url;
   anchor.download = filename;
-  anchor.style.display = "none";
+  anchor.style.display = 'none';
   document.body.appendChild(anchor);
   anchor.click();
   anchor.remove();
@@ -538,7 +557,7 @@ export const api = {
   /** Tell the server the session is over (it emails the customer), then drop the token. */
   async endImpersonation(): Promise<void> {
     try {
-      await request("/api/v1/users/me/impersonation/end", { method: "POST" });
+      await request('/api/v1/users/me/impersonation/end', { method: 'POST' });
     } catch {
       // The token may already have expired; the local session must end either way.
     } finally {
@@ -549,7 +568,7 @@ export const api = {
 
   async logout(): Promise<void> {
     try {
-      await request("/api/v1/auth/logout", { method: "POST" });
+      await request('/api/v1/auth/logout', { method: 'POST' });
     } catch {
       // Local logout must still succeed when the API/token is unavailable.
     } finally {
@@ -558,17 +577,20 @@ export const api = {
   },
 
   async register(input: RegisterInput): Promise<RegisterResult> {
-    const payload = await request<{ user_id: string; email: string; message: string }>("/api/v1/auth/register", {
-      method: "POST",
-      body: JSON.stringify({
-        email: input.email,
-        username: input.username,
-        password: input.password,
-        confirm_password: input.confirmPassword,
-        full_name: input.fullName,
-        age_confirmed: input.ageConfirmed,
-      }),
-    });
+    const payload = await request<{ user_id: string; email: string; message: string }>(
+      '/api/v1/auth/register',
+      {
+        method: 'POST',
+        body: JSON.stringify({
+          email: input.email,
+          username: input.username,
+          password: input.password,
+          confirm_password: input.confirmPassword,
+          full_name: input.fullName,
+          age_confirmed: input.ageConfirmed,
+        }),
+      },
+    );
     return { userId: payload.user_id, email: payload.email, message: payload.message };
   },
 
@@ -589,18 +611,18 @@ export const api = {
       mfa_required: boolean;
       challenge_token: string | null;
       method: string | null;
-    }>("/api/v1/auth/login", {
-      method: "POST",
+    }>('/api/v1/auth/login', {
+      method: 'POST',
       body: JSON.stringify({ email, password }),
     });
     if (result.mfa_required && result.challenge_token) {
       return {
         mfaRequired: true,
         challengeToken: result.challenge_token,
-        method: result.method === "email" ? "email" : "totp",
+        method: result.method === 'email' ? 'email' : 'totp',
       };
     }
-    if (!result.access_token) throw new ApiError("Sign-in did not return a session.", 500);
+    if (!result.access_token) throw new ApiError('Sign-in did not return a session.', 500);
     saveTokens({ access_token: result.access_token, token_type: result.token_type }, remember);
     return { mfaRequired: false };
   },
@@ -611,35 +633,40 @@ export const api = {
     credential: { code: string } | { recoveryCode: string },
     remember = true,
   ): Promise<void> {
-    const tokens = await request<AuthTokens>("/api/v1/auth/2fa/verify", {
-      method: "POST",
+    const tokens = await request<AuthTokens>('/api/v1/auth/2fa/verify', {
+      method: 'POST',
       body: JSON.stringify({
         challenge_token: challengeToken,
-        ...("code" in credential ? { code: credential.code } : { recovery_code: credential.recoveryCode }),
+        ...('code' in credential
+          ? { code: credential.code }
+          : { recovery_code: credential.recoveryCode }),
       }),
     });
     saveTokens(tokens, remember);
   },
 
   async verifyOtp(userId: string, otpCode: string, remember = true): Promise<void> {
-    const tokens = await request<AuthTokens>("/api/v1/auth/verify-otp", {
-      method: "POST",
+    const tokens = await request<AuthTokens>('/api/v1/auth/verify-otp', {
+      method: 'POST',
       body: JSON.stringify({ user_id: userId, otp_code: otpCode }),
     });
     saveTokens(tokens, remember);
   },
 
   async resendOtp(userId: string): Promise<{ message: string; resendRemaining: number }> {
-    const payload = await request<{ message: string; resend_remaining: number }>("/api/v1/auth/resend-otp", {
-      method: "POST",
-      body: JSON.stringify({ user_id: userId }),
-    });
+    const payload = await request<{ message: string; resend_remaining: number }>(
+      '/api/v1/auth/resend-otp',
+      {
+        method: 'POST',
+        body: JSON.stringify({ user_id: userId }),
+      },
+    );
     return { message: payload.message, resendRemaining: payload.resend_remaining };
   },
 
   async listProjects(cursor?: string | null): Promise<ProjectPage> {
-    const params = new URLSearchParams({ limit: "100" });
-    if (cursor) params.set("cursor", cursor);
+    const params = new URLSearchParams({ limit: '100' });
+    if (cursor) params.set('cursor', cursor);
     const page = await request<{
       items: ProjectResponse[];
       next_cursor: string | null;
@@ -662,8 +689,8 @@ export const api = {
       launch_ticket: string;
       desktop_url: string;
       expires_in: number;
-    }>("/api/v1/auth/editor/launch", {
-      method: "POST",
+    }>('/api/v1/auth/editor/launch', {
+      method: 'POST',
       body: JSON.stringify({ project_id: projectId }),
     });
     return {
@@ -672,9 +699,12 @@ export const api = {
     };
   },
 
-  async createProject(payload: { name: string; description?: string | null }): Promise<PortalProject> {
-    const project = await request<ProjectResponse>("/api/v1/projects", {
-      method: "POST",
+  async createProject(payload: {
+    name: string;
+    description?: string | null;
+  }): Promise<PortalProject> {
+    const project = await request<ProjectResponse>('/api/v1/projects', {
+      method: 'POST',
       body: JSON.stringify({ name: payload.name, description: payload.description ?? null }),
     });
     return toPortalProject(project);
@@ -685,14 +715,47 @@ export const api = {
     payload: { name?: string; description?: string | null },
   ): Promise<PortalProject> {
     const project = await request<ProjectResponse>(`/api/v1/projects/${projectId}`, {
-      method: "PATCH",
+      method: 'PATCH',
       body: JSON.stringify(payload),
     });
     return toPortalProject(project);
   },
 
   async deleteProject(projectId: string): Promise<void> {
-    await request<{ message: string }>(`/api/v1/projects/${projectId}`, { method: "DELETE" });
+    await request<{ message: string }>(`/api/v1/projects/${projectId}`, { method: 'DELETE' });
+  },
+
+  /** BR-47: projects moved to trash by deleteProject(), listed here until they're purged. */
+  async listTrash(cursor?: string | null): Promise<TrashedProjectPage> {
+    const params = new URLSearchParams({ limit: '50' });
+    if (cursor) params.set('cursor', cursor);
+    const page = await request<{
+      items: (ProjectResponse & { deleted_at: string; purge_at: string })[];
+      next_cursor: string | null;
+      has_next: boolean;
+    }>(`/api/v1/projects/trash?${params.toString()}`);
+    return {
+      items: page.items.map((project) => ({
+        ...toPortalProject(project),
+        deletedAt: project.deleted_at,
+        purgeAt: project.purge_at,
+      })),
+      nextCursor: page.next_cursor,
+      hasNext: page.has_next,
+    };
+  },
+
+  async restoreProject(projectId: string): Promise<PortalProject> {
+    const project = await request<ProjectResponse>(`/api/v1/projects/${projectId}/restore`, {
+      method: 'POST',
+    });
+    return toPortalProject(project);
+  },
+
+  async permanentlyDeleteProject(projectId: string): Promise<void> {
+    await request<{ message: string }>(`/api/v1/projects/${projectId}/permanent`, {
+      method: 'DELETE',
+    });
   },
 
   async listTrash(cursor?: string | null): Promise<ProjectTrashPage> {
@@ -725,7 +788,7 @@ export const api = {
     const profile = await this.profile();
     return {
       id: profile.id,
-      role: "user",
+      role: 'user',
       name: `${profile.first_name} ${profile.last_name}`.trim(),
       email: profile.email,
       createdAt: profile.member_since,
@@ -733,7 +796,7 @@ export const api = {
   },
 
   async profile(): Promise<UserProfile> {
-    return request<UserProfile>("/api/v1/users/me");
+    return request<UserProfile>('/api/v1/users/me');
   },
 
   async updateProfile(payload: {
@@ -743,11 +806,11 @@ export const api = {
     avatar_path?: string | null;
     phone_number?: string | null;
     bio?: string | null;
-    language?: "vi" | "en";
+    language?: 'vi' | 'en';
     preferred_styles?: string[];
   }): Promise<UserProfile> {
-    return request<UserProfile>("/api/v1/users/me", {
-      method: "PATCH",
+    return request<UserProfile>('/api/v1/users/me', {
+      method: 'PATCH',
       body: JSON.stringify(payload),
     });
   },
@@ -757,17 +820,24 @@ export const api = {
   },
 
   async uploadAvatar(file: File): Promise<UserProfile> {
-    const upload = await request<{ upload_url: string; file_path: string }>("/api/v1/users/me/avatar", {
-      method: "POST",
-      body: JSON.stringify({ filename: file.name, content_type: file.type }),
-    });
+    const upload = await request<{ upload_url: string; file_path: string }>(
+      '/api/v1/users/me/avatar',
+      {
+        method: 'POST',
+        body: JSON.stringify({ filename: file.name, content_type: file.type }),
+      },
+    );
     const response = await fetch(upload.upload_url, {
-      method: "PUT",
-      headers: { "Content-Type": file.type },
+      method: 'PUT',
+      headers: { 'Content-Type': file.type },
       body: file,
     });
-    if (!response.ok) throw new ApiError("Unable to upload avatar.", response.status);
+    if (!response.ok) throw new ApiError('Unable to upload avatar.', response.status);
     return this.updateProfile({ avatar_path: upload.file_path });
+  },
+
+  async deleteAvatar(): Promise<void> {
+    await request<{ message: string }>('/api/v1/users/me/avatar', { method: 'DELETE' });
   },
 
   async changePassword(payload: {
@@ -775,8 +845,8 @@ export const api = {
     newPassword: string;
     confirmPassword: string;
   }): Promise<string> {
-    const result = await request<{ message: string }>("/api/v1/users/me/password", {
-      method: "PUT",
+    const result = await request<{ message: string }>('/api/v1/users/me/password', {
+      method: 'PUT',
       body: JSON.stringify({
         current_password: payload.currentPassword,
         new_password: payload.newPassword,
@@ -787,29 +857,29 @@ export const api = {
   },
 
   async usage(): Promise<Usage> {
-    return request<Usage>("/api/v1/users/me/usage");
+    return request<Usage>('/api/v1/users/me/usage');
   },
 
   async listPlans(): Promise<Plan[]> {
-    return request<Plan[]>("/api/v1/plans");
+    return request<Plan[]>('/api/v1/plans');
   },
 
   async subscription(): Promise<Subscription> {
-    return request<Subscription>("/api/v1/subscription");
+    return request<Subscription>('/api/v1/subscription');
   },
 
   async listInvoices(): Promise<Invoice[]> {
-    return request<Invoice[]>("/api/v1/subscription/invoices?limit=100");
+    return request<Invoice[]>('/api/v1/subscription/invoices?limit=100');
   },
 
   async createCheckout(
     tier: string,
     billingCycle: string,
-    gateway: "payos" | "momo",
+    gateway: 'payos' | 'momo',
     couponCode?: string | null,
   ): Promise<string> {
-    const result = await request<{ checkout_url: string }>("/api/v1/subscription/checkout", {
-      method: "POST",
+    const result = await request<{ checkout_url: string }>('/api/v1/subscription/checkout', {
+      method: 'POST',
       body: JSON.stringify({
         tier,
         billing_cycle: billingCycle,
@@ -821,8 +891,8 @@ export const api = {
   },
 
   async cancelSubscription(immediate = false): Promise<void> {
-    await request<{ status: string }>("/api/v1/subscription/cancel", {
-      method: "POST",
+    await request<{ status: string }>('/api/v1/subscription/cancel', {
+      method: 'POST',
       body: JSON.stringify({ immediate }),
     });
   },
@@ -833,14 +903,19 @@ export const api = {
   },
 
   async listProjectExports(projectId: string): Promise<ProjectExport[]> {
-    const result = await request<{ items: ProjectExport[] }>(`/api/v1/projects/${projectId}/exports`);
+    const result = await request<{ items: ProjectExport[] }>(
+      `/api/v1/projects/${projectId}/exports`,
+    );
     return result.items;
   },
 
   async createExportDownloadUrl(exportId: string): Promise<string> {
-    const result = await request<{ download_url: string }>(`/api/v1/exports/${exportId}/download-url`, {
-      method: "POST",
-    });
+    const result = await request<{ download_url: string }>(
+      `/api/v1/exports/${exportId}/download-url`,
+      {
+        method: 'POST',
+      },
+    );
     return result.download_url;
   },
 

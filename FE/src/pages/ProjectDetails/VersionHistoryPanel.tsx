@@ -2,6 +2,7 @@ import React, { useCallback, useEffect, useState } from 'react';
 import { History, LayoutTemplate, Pin, RotateCcw } from 'lucide-react';
 import { studioApi, type DesignTemplate, type DesignVersion } from '../../api/studio';
 import { ConfirmDialog } from '../../components/ConfirmDialog/ConfirmDialog';
+import { ReportContentLink } from '../../components/ReportContentLink/ReportContentLink';
 import { useToast } from '../../context/ToastContext';
 import { formatDateTime } from '../../utils/format';
 import styles from './ProjectPanels.module.css';
@@ -71,7 +72,8 @@ export const VersionHistoryPanel: React.FC<VersionHistoryPanelProps> = ({ projec
     <div className={styles.stack}>
       {locked && (
         <div className={styles.lockedBanner}>
-          This project is read-only after a plan downgrade, so versions cannot be restored and templates cannot be applied.
+          This project is read-only after a plan downgrade, so versions cannot be restored and
+          templates cannot be applied.
         </div>
       )}
 
@@ -81,21 +83,26 @@ export const VersionHistoryPanel: React.FC<VersionHistoryPanelProps> = ({ projec
           <div>
             <h4 className={styles.panelTitle}>Version history</h4>
             <p className={styles.panelDesc}>
-              A version is saved each time the design changes. Versions sent to export are pinned and never removed.
+              A version is saved each time the design changes. Versions sent to export are pinned
+              and never removed.
             </p>
           </div>
         </div>
         {versions === null ? (
           <p className={styles.muted}>Loading versions…</p>
         ) : versions.length === 0 ? (
-          <p className={styles.muted}>No saved versions yet. Save a design in KusStudio to start the history.</p>
+          <p className={styles.muted}>
+            No saved versions yet. Save a design in KusStudio to start the history.
+          </p>
         ) : (
           versions.map((version, index) => (
             <div key={version.id} className={styles.row}>
               <div className={styles.rowMain}>
                 <span className={styles.rowTitle}>
                   Version {version.version_no}
-                  {index === 0 && <span className={`${styles.chip} ${styles.chipOk}`}>Current</span>}
+                  {index === 0 && (
+                    <span className={`${styles.chip} ${styles.chipOk}`}>Current</span>
+                  )}
                   {version.is_pinned && (
                     <span className={`${styles.chip} ${styles.chipPin}`}>
                       <Pin size={10} /> Exported
@@ -124,7 +131,9 @@ export const VersionHistoryPanel: React.FC<VersionHistoryPanelProps> = ({ projec
           <LayoutTemplate size={20} className={styles.panelIcon} />
           <div>
             <h4 className={styles.panelTitle}>Start from a template</h4>
-            <p className={styles.panelDesc}>Applying a template replaces the current design (the old one stays in the history).</p>
+            <p className={styles.panelDesc}>
+              Applying a template replaces the current design (the old one stays in the history).
+            </p>
           </div>
         </div>
         {templates === null ? (
@@ -137,11 +146,17 @@ export const VersionHistoryPanel: React.FC<VersionHistoryPanelProps> = ({ projec
               <div key={template.id} className={styles.templateCard}>
                 <span className={styles.templateName}>{template.name}</span>
                 <span className={styles.templateMeta}>
-                  {[template.category, `${template.layer_count} layers`, `${template.use_count} uses`]
+                  {[
+                    template.category,
+                    `${template.layer_count} layers`,
+                    `${template.use_count} uses`,
+                  ]
                     .filter(Boolean)
                     .join(' · ')}
                 </span>
-                {template.description && <span className={styles.templateMeta}>{template.description}</span>}
+                {template.description && (
+                  <span className={styles.templateMeta}>{template.description}</span>
+                )}
                 <button
                   type="button"
                   className="btn-outline"
@@ -150,6 +165,10 @@ export const VersionHistoryPanel: React.FC<VersionHistoryPanelProps> = ({ projec
                 >
                   Use template
                 </button>
+                <ReportContentLink
+                  target={{ templateId: template.id }}
+                  contextLabel={`"${template.name}"`}
+                />
               </div>
             ))}
           </div>
