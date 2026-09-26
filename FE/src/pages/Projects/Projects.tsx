@@ -34,10 +34,13 @@ import { ProjectTrashPanel } from './ProjectTrashPanel';
 import styles from './Projects.module.css';
 
 const SORT_OPTIONS = [
-  { value: 'date', label: 'Last Updated' },
+  { value: 'date', label: 'Last edited' },
   { value: 'name', label: 'Alphabetical (A-Z)' },
   { value: 'size', label: 'File Size' },
 ];
+
+const BASE_MODEL_ALL = 'All';
+type VisibilityFilter = 'All' | 'Private' | 'Shared';
 
 type ProjectStatusFilter = 'All' | 'Scanned' | 'Designing' | 'Completed';
 type ProjectSortBy = 'name' | 'date' | 'size';
@@ -96,6 +99,10 @@ export const Projects: React.FC<ProjectsProps> = ({
   const [searchTerm, setSearchTerm] = useState('');
   const [statusFilter, setStatusFilter] = useState<ProjectStatusFilter>(initialFilter || 'All');
   const [sortBy, setSortBy] = useState<ProjectSortBy>('date');
+  // Real, persisted fields (set at creation) — "Shared" groups Link + Public since both mean
+  // "not private"; there's no cross-account collaboration in this app to filter by instead.
+  const [visibilityFilter, setVisibilityFilter] = useState<VisibilityFilter>('All');
+  const [baseModelFilter, setBaseModelFilter] = useState<string>(BASE_MODEL_ALL);
 
   // Selection states
   const [selectedIds, setSelectedIds] = useState<string[]>([]);
@@ -171,6 +178,18 @@ export const Projects: React.FC<ProjectsProps> = ({
     return parseFloat(sizeStr.replace(' MB', '')) || 0;
   };
 
+  // Real base models present in the account — not a fixed list, so it never shows a model
+  // the user doesn't actually have.
+  const baseModelOptions = useMemo(() => {
+    const unique = Array.from(new Set(projects.map((p) => p.baseModel))).sort((a, b) =>
+      a.localeCompare(b),
+    );
+    return [
+      { value: BASE_MODEL_ALL, label: 'All base models' },
+      ...unique.map((model) => ({ value: model, label: model })),
+    ];
+  }, [projects]);
+
   // Filter & Sort
   const filteredAndSortedProjects = useMemo(() => {
     let result = projects.filter((proj) => {
@@ -178,7 +197,14 @@ export const Projects: React.FC<ProjectsProps> = ({
         proj.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
         proj.baseModel.toLowerCase().includes(searchTerm.toLowerCase());
       const matchesStatus = statusFilter === 'All' || proj.status === statusFilter;
-      return matchesSearch && matchesStatus;
+      const matchesVisibility =
+        visibilityFilter === 'All' ||
+        (visibilityFilter === 'Private'
+          ? proj.visibility === 'Private'
+          : proj.visibility !== 'Private');
+      const matchesBaseModel =
+        baseModelFilter === BASE_MODEL_ALL || proj.baseModel === baseModelFilter;
+      return matchesSearch && matchesStatus && matchesVisibility && matchesBaseModel;
     });
 
     // Sorting
@@ -193,7 +219,7 @@ export const Projects: React.FC<ProjectsProps> = ({
     });
 
     return result;
-  }, [projects, searchTerm, statusFilter, sortBy]);
+  }, [projects, searchTerm, statusFilter, visibilityFilter, baseModelFilter, sortBy]);
 
   // Bulk delete
   const handleBulkDelete = () => {
@@ -388,71 +414,116 @@ export const Projects: React.FC<ProjectsProps> = ({
         )}
       </AnimatePresence>
 
-      {/* Header section */}
-      <div className={styles.header}>
-        <div>
-          <h1 className={styles.title}>Project Directory</h1>
-          <p className={styles.subtitle}>
-            Manage, share, and review details of all scanned models and desktop configurations.
-          </p>
+      {/* Row 1: title/count, search, primary action */}
+      <div className={styles.headerBlock}>
+        <div className={styles.headerTop}>
+          <div className={styles.headerTitleGroup}>
+            <h1 className={styles.title}>Projects</h1>
+            <span className={styles.headerCount} aria-label={`${projects.length} projects`}>
+              {projects.length}
+            </span>
+          </div>
+
+          <div className={styles.headerActions}>
+            <label className={styles.searchWrapper}>
+              <Search size={14} className={styles.searchIcon} />
+              <input
+                type="search"
+                placeholder="Search projects…"
+                aria-label="Search projects"
+                value={searchTerm}
+                onChange={(e) => setSearchTerm(e.target.value)}
+                className={styles.searchInput}
+              />
+            </label>
+            <button className={styles.newProjectBtn} onClick={() => setIsCreateWizardOpen(true)}>
+              <Plus size={14} />
+              New project
+            </button>
+          </div>
         </div>
 
-        <div className={styles.headerActions}>
-          <button className="btn-outline" onClick={() => setIsTrashOpen(true)}>
-            <Trash2 size={16} />
-            Trash
-          </button>
-          <button className="btn-neon-orange" onClick={() => setIsCreateWizardOpen(true)}>
-            <Plus size={18} />
-            New Project
-          </button>
-        </div>
-      </div>
+        {/* Row 2: visibility tabs (+ Trash), base-model filter, sort, view toggle */}
+        <div className={styles.toolbar}>
+          <nav className={styles.tabs} role="tablist" aria-label="Project filters">
+            <button
+              type="button"
+              role="tab"
+              aria-selected={visibilityFilter === 'All'}
+              className={styles.tab}
+              onClick={() => setVisibilityFilter('All')}
+            >
+              All
+            </button>
+            <button
+              type="button"
+              role="tab"
+              aria-selected={visibilityFilter === 'Private'}
+              className={styles.tab}
+              onClick={() => setVisibilityFilter('Private')}
+            >
+              Private
+            </button>
+            <button
+              type="button"
+              role="tab"
+              aria-selected={visibilityFilter === 'Shared'}
+              className={styles.tab}
+              onClick={() => setVisibilityFilter('Shared')}
+            >
+              Shared
+            </button>
+            <span className={styles.tabsDivider} aria-hidden="true" />
+            <button
+              type="button"
+              role="tab"
+              aria-selected={false}
+              className={styles.tab}
+              onClick={() => setIsTrashOpen(true)}
+            >
+              <Trash2 size={14} />
+              Trash
+            </button>
+          </nav>
 
-      {/* Filters & Controls Bar */}
-      <div className={styles.filtersBar}>
-        {/* Search */}
-        <div className={`${styles.searchWrapper} glass-panel`}>
-          <Search size={18} className={styles.searchIcon} />
-          <input
-            type="text"
-            placeholder="Search projects or base models..."
-            value={searchTerm}
-            onChange={(e) => setSearchTerm(e.target.value)}
-            className={styles.searchInput}
-          />
-        </div>
-
-        {/* Sorting Dropdown */}
-        <div className={`${styles.sortWrapper} glass-panel`}>
-          <span className={styles.controlLabel}>Sort:</span>
-          <Select
-            value={sortBy}
-            onValueChange={(value) => {
-              if (isProjectSortBy(value)) setSortBy(value);
-            }}
-            options={SORT_OPTIONS}
-            ariaLabel="Sort projects"
-            triggerClassName={styles.sortSelectTrigger}
-          />
-        </div>
-
-        {/* Layout Toggle (Grid/List) */}
-        <div className={`${styles.viewToggle} glass-panel`}>
-          <button
-            className={`${styles.viewBtn} ${viewMode === 'grid' ? styles.viewBtnActive : ''}`}
-            onClick={() => setViewMode('grid')}
-            aria-label="Grid View"
-          >
-            <Grid size={16} />
-          </button>
-          <button
-            className={`${styles.viewBtn} ${viewMode === 'list' ? styles.viewBtnActive : ''}`}
-            onClick={() => setViewMode('list')}
-            aria-label="List View"
-          >
-            <List size={16} />
-          </button>
+          <div className={styles.toolbarControls}>
+            <Select
+              value={baseModelFilter}
+              onValueChange={setBaseModelFilter}
+              options={baseModelOptions}
+              ariaLabel="Filter by base model"
+              triggerClassName={styles.controlTrigger}
+            />
+            <Select
+              value={sortBy}
+              onValueChange={(value) => {
+                if (isProjectSortBy(value)) setSortBy(value);
+              }}
+              options={SORT_OPTIONS}
+              ariaLabel="Sort projects"
+              triggerClassName={styles.controlTrigger}
+            />
+            <div className={styles.segmented} role="group" aria-label="View mode">
+              <button
+                type="button"
+                aria-pressed={viewMode === 'grid'}
+                aria-label="Grid view"
+                className={styles.segmentBtn}
+                onClick={() => setViewMode('grid')}
+              >
+                <Grid size={14} />
+              </button>
+              <button
+                type="button"
+                aria-pressed={viewMode === 'list'}
+                aria-label="List view"
+                className={styles.segmentBtn}
+                onClick={() => setViewMode('list')}
+              >
+                <List size={14} />
+              </button>
+            </div>
+          </div>
         </div>
       </div>
 
@@ -782,11 +853,15 @@ export const Projects: React.FC<ProjectsProps> = ({
           activeFilters={[
             ...(searchTerm.trim() ? [`\u201c${searchTerm.trim()}\u201d`] : []),
             ...(statusFilter !== 'All' ? [statusFilter] : []),
+            ...(visibilityFilter !== 'All' ? [visibilityFilter] : []),
+            ...(baseModelFilter !== BASE_MODEL_ALL ? [baseModelFilter] : []),
           ]}
           onCreate={() => setIsCreateWizardOpen(true)}
           onClearFilters={() => {
             setSearchTerm('');
             setStatusFilter('All');
+            setVisibilityFilter('All');
+            setBaseModelFilter(BASE_MODEL_ALL);
           }}
         />
       )}
