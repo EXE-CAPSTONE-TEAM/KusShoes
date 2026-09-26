@@ -2,7 +2,7 @@
 
 import io
 import uuid
-from unittest.mock import AsyncMock, patch
+from unittest.mock import AsyncMock
 
 import pytest
 from PIL import Image
@@ -11,6 +11,7 @@ from app.config import settings
 from app.infrastructure.storage import ObjectDownload
 from app.utils.jwt import create_access_token
 from app.utils.watermark import stamp
+from tests.job_helpers import GLB_BYTES, ZIP_BYTES, FakeStorage, attach_ready_model
 
 SRS_FREE_MAX_EDGE_PX = 1080  # SRS_v2.2.txt:1922 "cạnh dài ≤1080px"
 
@@ -116,71 +117,77 @@ async def test_watermark_policy_endpoint_reflects_owner_tier(
 # --- bake payload + export_records ---
 
 
-async def _run_bake(db, user_id) -> tuple[dict, uuid.UUID]:
-    """Run bake_service.process_bake against a mocked editor worker; return (payload, project_id)."""
-    from app.models.project_asset import ProjectAsset
+async def _run_bake(db, user_id, monkeypatch, *, watermark_applied=True) -> tuple[dict, uuid.UUID]:
+    """Claim and complete a desktop bake against fake storage; return (payload, project_id)."""
     from app.repositories import bake_job_repo, project_repo
-    from app.services import bake_service
+    from app.schemas.editor import EditorJobCompleteRequest
+    from app.services import job_service, quota_service
+
+    fake = FakeStorage().install(monkeypatch)
+    # Free has 0 exports/cycle (BR-99); these tests exercise the watermark rule, not quota.
+    monkeypatch.setattr(quota_service, "assert_export_quota", AsyncMock())
 
     project = await project_repo.create(db, user_id=user_id, name="Bake", description=None)
-    source = ProjectAsset(
-        project_id=project.id,
-        user_id=user_id,
-        asset_type="source_model",
-        file_path=f"assets/{project.id}/source.glb",
-        file_size_bytes=2048,
-        mime_type="model/gltf-binary",
-        status="ready",
-    )
-    db.add(source)
-    await db.flush()
-    project.canonical_model_asset_id = source.id
+    await db.commit()
+    source = await attach_ready_model(db, project.id, user_id)
     job = await bake_job_repo.create(
-        db, project_id=project.id, design_config={"color": "red"}, priority="low"
+        db,
+        project_id=project.id,
+        design_config={"color": "red"},
+        priority="low",
+        source_asset_id=source.id,
     )
     await db.commit()
 
-    captured: dict = {}
-
-    async def fake_request_bake(payload):
-        captured.update(payload)
-        return {
-            "exports": [
-                {"format": output["format"], "file_path": output["file_path"], "file_size_bytes": 4096}
-                for output in payload["outputs"]
-            ]
-        }
-
-    with (
-        patch("app.infrastructure.editor_worker.request_bake", new=AsyncMock(side_effect=fake_request_bake)),
-        patch("app.infrastructure.storage.generate_presigned_download_url", return_value="https://s3/get"),
-        patch("app.infrastructure.storage.generate_presigned_upload_url", return_value="https://s3/put"),
-    ):
-        result = await bake_service.process_bake(db, job.id, worker_id=None)
-    assert result["status"] == "completed", result
-    return captured, project.id
+    claimed = await job_service.claim(db, job.id, project=project, device_label="test")
+    outputs = []
+    for output in claimed.payload["outputs"]:
+        data = GLB_BYTES if output["format"] == "glb" else ZIP_BYTES
+        fake.objects[output["file_path"]] = data
+        outputs.append(
+            {"format": output["format"], "filePath": output["file_path"], "fileSizeBytes": len(data)}
+        )
+    await job_service.complete(
+        db,
+        job.id,
+        claimed.claim_token,
+        EditorJobCompleteRequest(outputs=outputs, watermarkApplied=watermark_applied),
+    )
+    return claimed.payload, project.id
 
 
 @pytest.mark.asyncio
-async def test_bake_payload_carries_watermark_block(db, authenticated_user):
-    free_payload, _ = await _run_bake(db, authenticated_user.id)
+async def test_bake_payload_carries_watermark_block(db, authenticated_user, monkeypatch):
+    free_payload, _ = await _run_bake(db, authenticated_user.id, monkeypatch)
     assert free_payload["watermark"]["required"] is True
-    assert free_payload["watermark"]["max_edge_px"] == settings.WATERMARK_FREE_MAX_EDGE_PX
-    assert settings.WATERMARK_FREE_MAX_EDGE_PX == SRS_FREE_MAX_EDGE_PX
     assert free_payload["watermark"]["text"] == settings.WATERMARK_TEXT
+    assert free_payload["watermark"]["opacity_percent"] == settings.WATERMARK_OPACITY_PERCENT
+    # The 2D thumbnail knob stays server-side; the sidecar schema forbids unknown keys.
+    assert "max_edge_px" not in free_payload["watermark"]
+    assert settings.WATERMARK_FREE_MAX_EDGE_PX == SRS_FREE_MAX_EDGE_PX
 
     await _set_tier(db, authenticated_user.id, "basic", "monthly")
-    paid_payload, _ = await _run_bake(db, authenticated_user.id)
+    paid_payload, _ = await _run_bake(db, authenticated_user.id, monkeypatch)
     assert paid_payload["watermark"]["required"] is False
 
 
 @pytest.mark.asyncio
-async def test_export_record_persists_is_watermarked(client, db, auth_headers, authenticated_user):
+async def test_free_bake_without_watermark_is_rejected(db, authenticated_user, monkeypatch):
+    from app.exceptions import JobOutputInvalid
+
+    with pytest.raises(JobOutputInvalid):
+        await _run_bake(db, authenticated_user.id, monkeypatch, watermark_applied=False)
+
+
+@pytest.mark.asyncio
+async def test_export_record_persists_is_watermarked(
+    client, db, auth_headers, authenticated_user, monkeypatch
+):
     from app.repositories import export_record_repo
 
-    _, free_project = await _run_bake(db, authenticated_user.id)
+    _, free_project = await _run_bake(db, authenticated_user.id, monkeypatch)
     await _set_tier(db, authenticated_user.id, "basic", "monthly")
-    _, paid_project = await _run_bake(db, authenticated_user.id)
+    _, paid_project = await _run_bake(db, authenticated_user.id, monkeypatch, watermark_applied=False)
 
     free_records = await export_record_repo.list_for_project(db, free_project)
     paid_records = await export_record_repo.list_for_project(db, paid_project)

@@ -5,6 +5,7 @@ import bcrypt
 import pytest
 
 from app.utils.jwt import create_access_token
+from tests.job_helpers import attach_ready_model
 
 
 async def _create_project(client, headers, name="Studio Shoe"):
@@ -142,12 +143,12 @@ async def test_bake_pins_version(
 ):
     await _upgrade(db, authenticated_user.id)
     project_id = await _create_project(client, auth_headers)
-    with patch("app.infrastructure.task_queue.enqueue_bake"):
-        response = await client.post(
-            f"/api/v1/projects/{project_id}/bake",
-            headers=service_headers,
-            json={"design_config": {"baseColor": "green"}},
-        )
+    await attach_ready_model(db, project_id, authenticated_user.id)
+    response = await client.post(
+        f"/api/v1/projects/{project_id}/bake",
+        headers=service_headers,
+        json={"design_config": {"baseColor": "green"}},
+    )
     assert response.status_code == 202
     versions = (
         await client.get(f"/api/v1/projects/{project_id}/versions", headers=auth_headers)

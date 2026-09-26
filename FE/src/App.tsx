@@ -6,6 +6,7 @@ import { PricingPage } from './pages/PricingPage/PricingPage';
 import { Sidebar } from './components/Sidebar/Sidebar';
 import { Dashboard } from './pages/Dashboard/Dashboard';
 import { Projects } from './pages/Projects/Projects';
+import { Trash } from './pages/Trash/Trash';
 import { Billing } from './pages/Billing/Billing';
 import { Settings } from './pages/Settings/Settings';
 import { Feedback } from './pages/Feedback/Feedback';
@@ -44,6 +45,8 @@ const getPageFromPath = (path: string): string => {
       return 'projects';
     case '/archives':
       return 'archives';
+    case '/trash':
+      return 'trash';
     case '/billing':
     case '/billing/success': // PayOS / MoMo return URLs
     case '/billing/cancel':
@@ -76,6 +79,8 @@ const getPathFromPage = (page: string): string => {
       return '/projects' + query;
     case 'archives':
       return '/archives' + query;
+    case 'trash':
+      return '/trash' + query;
     case 'billing':
       return '/billing' + query;
     case 'settings':
@@ -268,6 +273,7 @@ function App() {
             initialFilter="Completed"
           />
         )}
+        {activePage === 'trash' && <Trash setProjects={setProjects} />}
         {activePage === 'billing' && <Billing />}
         {activePage === 'settings' && (
           <Settings

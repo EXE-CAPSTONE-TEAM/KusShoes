@@ -1,0 +1,186 @@
+.container {
+  flex-grow: 1;
+  padding: 40px;
+  max-width: 1400px;
+  margin: 0 auto;
+  display: flex;
+  flex-direction: column;
+  gap: 32px;
+  position: relative;
+}
+
+.header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+}
+
+.title {
+  font-family: 'Space Grotesk', sans-serif;
+  font-size: 2.2rem;
+  font-weight: 800;
+  letter-spacing: -0.5px;
+}
+
+.subtitle {
+  color: var(--text-secondary);
+  font-size: 0.95rem;
+  margin-top: 4px;
+}
+
+.tableContainer {
+  border-radius: var(--border-radius-md);
+  overflow-x: auto;
+  background-color: var(--bg-secondary);
+}
+
+.table {
+  width: 100%;
+  border-collapse: collapse;
+  text-align: left;
+}
+
+.table th {
+  background-color: var(--table-header-bg);
+  padding: 16px 20px;
+  font-size: 0.8rem;
+  text-transform: uppercase;
+  color: var(--text-secondary);
+  font-family: var(--font-sans);
+  font-weight: 700;
+  letter-spacing: 0.5px;
+  border-bottom: 1px solid var(--glass-border);
+}
+
+.table td {
+  padding: 16px 20px;
+  font-size: 0.9rem;
+  color: var(--text-primary);
+  vertical-align: middle;
+}
+
+.tableRow {
+  border-bottom: 1px solid rgba(255, 255, 255, 0.03);
+  transition: all var(--transition-fast);
+}
+
+.tableRow:hover {
+  background-color: rgba(18, 18, 21, 0.03);
+}
+
+[data-theme="dark"] .tableRow:hover {
+  background-color: rgba(255, 255, 255, 0.03);
+}
+
+.projectNameCol {
+  display: flex;
+  align-items: center;
+  gap: 16px;
+}
+
+.rowThumbnail {
+  width: 48px;
+  height: 48px;
+  border-radius: var(--border-radius-sm);
+  object-fit: cover;
+  background-color: var(--bg-tertiary);
+  border: 1px solid var(--glass-border);
+}
+
+.rowProjectName {
+  display: block;
+  font-family: 'Space Grotesk', sans-serif;
+  font-weight: 700;
+  font-size: 0.95rem;
+}
+
+.daysLeftBadge {
+  padding: 4px 10px;
+  border-radius: var(--border-radius-full);
+  font-size: 0.78rem;
+  font-weight: 600;
+}
+
+.daysLeftNormal {
+  background: rgba(var(--color-orange-rgb), 0.1);
+  color: var(--color-orange);
+}
+
+.daysLeftUrgent {
+  background: rgba(230, 30, 67, 0.1);
+  color: var(--color-crimson);
+}
+
+.rowActions {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.actionBtn {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  padding: 8px 12px;
+  border-radius: var(--border-radius-sm);
+  border: 1px solid var(--glass-border);
+  background: transparent;
+  color: var(--text-secondary);
+  cursor: pointer;
+  font-size: 0.82rem;
+  font-weight: 600;
+  transition: all var(--transition-fast);
+}
+
+.actionBtn:hover {
+  color: var(--text-primary);
+  border-color: var(--glass-border-hover);
+}
+
+.deleteBtn:hover {
+  color: var(--color-crimson);
+  border-color: var(--color-crimson);
+  background-color: rgba(230, 30, 67, 0.08);
+}
+
+.emptyState {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  text-align: center;
+  gap: 14px;
+  padding: 56px 32px;
+  border-radius: var(--border-radius-md);
+}
+
+.emptyIconRing {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 72px;
+  height: 72px;
+  border-radius: var(--border-radius-full);
+  color: var(--color-orange);
+  background: rgba(var(--color-orange-rgb), 0.1);
+  border: 1px solid rgba(var(--color-orange-rgb), 0.25);
+}
+
+.emptyTitle {
+  font-family: 'Space Grotesk', sans-serif;
+  font-size: 1.4rem;
+  font-weight: 700;
+  color: var(--text-primary);
+}
+
+.emptyText {
+  max-width: 420px;
+  color: var(--text-secondary);
+  font-size: 0.95rem;
+  line-height: 1.5;
+}
+
+.loadingText {
+  color: var(--text-secondary);
+  padding: 24px;
+  text-align: center;
+}

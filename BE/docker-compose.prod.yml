@@ -49,7 +49,7 @@ services:
     # Bỏ entrypoint (migration) — chỉ api chạy migration, tránh 3 container
     # cùng alembic upgrade một lúc trên Neon
     entrypoint: []
-    command: celery -A app.workers.celery_app worker --loglevel=info -Q high,normal,low,bake
+    command: celery -A app.workers.celery_app worker --loglevel=info -Q high,normal,low
     depends_on:
       redis:
         condition: service_healthy

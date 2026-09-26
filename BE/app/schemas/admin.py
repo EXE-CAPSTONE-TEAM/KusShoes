@@ -9,7 +9,7 @@ from app.types import JsonObject
 T = TypeVar("T")
 
 
-class CursorPage(BaseModel, Generic[T]):
+class CursorPage(BaseModel, Generic[T]):  # noqa: UP046 — pre-existing; PEP 695 generics not yet adopted in this codebase
     items: list[T]
     next_cursor: str | None
 
@@ -25,7 +25,7 @@ SubscriptionStatus = Literal["active", "grace", "cancelled", "expired"]
 InvoiceStatus = Literal[
     "pending", "awaiting_approval", "paid", "failed", "cancelled", "refunded"
 ]
-BakeStatus = Literal["queued", "processing", "completed", "failed", "cancelled"]
+BakeStatus = Literal["awaiting_client", "claimed", "completed", "failed", "cancelled"]
 BakePriority = Literal["low", "normal", "high"]
 ExportFormat = Literal["glb", "obj", "zip"]
 ProjectStatus = Literal["draft", "in_progress", "baking", "completed"]

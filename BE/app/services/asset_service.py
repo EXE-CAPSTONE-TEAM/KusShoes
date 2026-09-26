@@ -4,7 +4,7 @@ import uuid
 
 from sqlalchemy.ext.asyncio import AsyncSession
 
-from app.exceptions import AssetNotFound, AssetUploadInvalid, StorageFileNotFound
+from app.exceptions import AssetNotFound, AssetUploadInvalid, ProjectLocked, StorageFileNotFound
 from app.infrastructure import storage, task_queue
 from app.repositories import project_asset_repo, project_repo
 from app.schemas.project_asset import (
@@ -80,7 +80,9 @@ def _matches_file_signature(content_type: str, prefix: bytes) -> bool:
 async def create_upload_url(
     db: AsyncSession, user, project_id: uuid.UUID, body: AssetUploadURLRequest
 ) -> AssetUploadURLResponse:
-    await require_owner(db, project_id, user)
+    project = await require_owner(db, project_id, user)
+    if project.is_locked:
+        raise ProjectLocked()
     safe_filename = sanitize_filename(body.filename)
     extension = pathlib.Path(safe_filename).suffix.lower()
     allowed_extensions = ALLOWED_UPLOADS[body.asset_type].get(body.content_type, set())
@@ -104,9 +106,16 @@ async def create_upload_url(
 
 
 async def confirm_upload(
-    db: AsyncSession, user, project_id: uuid.UUID, body: AssetConfirmRequest
+    db: AsyncSession,
+    user,
+    project_id: uuid.UUID,
+    body: AssetConfirmRequest,
+    *,
+    target_status: str = "ready",
 ) -> AssetResponse:
     project = await require_owner(db, project_id, user)
+    if project.is_locked:
+        raise ProjectLocked()
     asset = await project_asset_repo.get_by_id(db, body.asset_id)
     if not asset or asset.project_id != project_id or asset.user_id != user.id:
         raise AssetNotFound()
@@ -127,7 +136,10 @@ async def confirm_upload(
         prefix=prefix,
         reported_size_bytes=body.file_size_bytes,
     )
-    await project_asset_repo.mark_ready(db, asset, file_size_bytes=verified_size)
+    if target_status == "raw":
+        await project_asset_repo.mark_raw(db, asset, file_size_bytes=verified_size)
+    else:
+        await project_asset_repo.mark_ready(db, asset, file_size_bytes=verified_size)
     if asset.asset_type == "source_model":
         await project_repo.set_canonical_asset(db, project, asset.id)
     return AssetResponse.model_validate(asset)
@@ -143,6 +155,8 @@ async def delete_asset(
     db: AsyncSession, user, project_id: uuid.UUID, asset_id: uuid.UUID
 ) -> dict[str, str]:
     project = await require_owner(db, project_id, user)
+    if project.is_locked:
+        raise ProjectLocked()
     asset = await project_asset_repo.get_by_id(db, asset_id)
     if not asset or asset.project_id != project_id:
         raise AssetNotFound()

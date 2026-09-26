@@ -61,14 +61,6 @@ def enqueue_account_locked_email(email: str) -> None:
     )
 
 
-def enqueue_bake(job_id: str, priority: str) -> None:
-    celery_app.send_task(
-        "app.workers.tasks.bake_tasks.bake_shoe",
-        args=[job_id],
-        queue=priority,
-    )
-
-
 def enqueue_storage_delete(file_path: str) -> None:
     celery_app.send_task(
         "app.workers.tasks.maintenance_tasks.delete_storage_file",

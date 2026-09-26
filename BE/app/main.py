@@ -91,9 +91,18 @@ app = FastAPI(
     lifespan=lifespan,
 )
 
+def _cors_origins(static: list[str]) -> list[str]:
+    """Static origins plus the deployed web app (PUBLIC_WEB_URL), so moving the FE is config-only."""
+    origins = list(static)
+    web = settings.PUBLIC_WEB_URL.rstrip("/")
+    if web and web not in origins:
+        origins.append(web)
+    return origins
+
+
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=[
+    allow_origins=_cors_origins([
         "https://kusshoes.vn",
         "https://app.kusshoes.vn",
         "http://localhost:3000",  # local FE dev
@@ -106,7 +115,7 @@ app.add_middleware(
         "http://tauri.localhost",  # Tauri desktop webview
         "https://tauri.localhost",
         "tauri://localhost",
-    ],
+    ]),
     allow_credentials=True,
     allow_methods=["*"],
     allow_headers=["*"],
@@ -152,7 +161,6 @@ app.include_router(admin_ops.router, prefix="/api/v1/admin", tags=["Admin Ops"])
 app.include_router(users.router, prefix="/api/v1/users", tags=["Users"])
 app.include_router(projects.router, prefix="/api/v1/projects", tags=["Projects"])
 app.include_router(project_assets.router, prefix="/api/v1/projects", tags=["Assets"])
-app.include_router(editor.router, prefix="/api/v1/editor", tags=["Editor"])
 app.include_router(studio.router, prefix="/api/v1", tags=["Studio"])
 app.include_router(
     public_artisan.router, prefix="/api/v1/public/artisan", tags=["Public Artisan"]

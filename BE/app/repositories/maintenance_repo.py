@@ -116,10 +116,11 @@ async def downgrade_to_free(
 
 
 async def delete_stale_uploads(db: AsyncSession, *, before: datetime) -> list[str]:
+    cutoff = before.replace(tzinfo=None) if before.tzinfo is not None else before
     result = await db.execute(
         select(ProjectAsset).where(
             ProjectAsset.status == "uploading",
-            ProjectAsset.created_at < before,
+            ProjectAsset.created_at < cutoff,
         )
     )
     assets = list(result.scalars())

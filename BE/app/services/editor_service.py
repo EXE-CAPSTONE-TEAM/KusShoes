@@ -1,15 +1,19 @@
-import asyncio
 import pathlib
 import re
 import uuid
-from collections.abc import Iterable
-from dataclasses import dataclass
 from datetime import datetime
 from typing import Any
 
 from sqlalchemy.ext.asyncio import AsyncSession
 
-from app.exceptions import AppException, AssetNotFound, ProjectNotFound, StorageFileNotFound
+from app.config import settings
+from app.exceptions import (
+    AppException,
+    AssetNotFound,
+    EditorDesignResetRequired,
+    EditorNoRawModel,
+    ProjectNotFound,
+)
 from app.infrastructure import storage
 from app.repositories import (
     bake_job_repo,
@@ -20,18 +24,24 @@ from app.repositories import (
 )
 from app.schemas.auth import EditorSessionResponse
 from app.schemas.editor import (
+    EditorContentUrlResponse,
     EditorContextResponse,
     EditorDesignResponse,
     EditorDesignSaveRequest,
     EditorExportPackageResponse,
+    EditorJobClaimRequest,
+    EditorJobClaimResponse,
+    EditorJobCompleteRequest,
+    EditorJobFailRequest,
     EditorJobResponse,
     EditorModelAssetResponse,
     EditorPermissionsResponse,
+    EditorPrepareRequest,
     EditorProjectResponse,
     EditorUserResponse,
 )
 from app.schemas.project import TriggerBakeRequest
-from app.services import guardrail_service, project_service, version_service
+from app.services import guardrail_service, job_service, project_service, version_service
 
 
 async def get_editor_user(db: AsyncSession, session: EditorSessionResponse):
@@ -77,6 +87,16 @@ async def get_context(
 ) -> EditorContextResponse:
     project = await require_editor_project(db, session, project_id)
     asset = await _canonical_asset(db, project)
+    raw_asset = await project_asset_repo.get_latest_raw_source_model(db, project.id)
+    raw_model_asset_id = raw_asset.id if raw_asset else None
+    if asset and asset.status == "ready":
+        model_status = "ready"
+    elif asset and asset.status == "raw":
+        model_status = "raw"
+    elif raw_asset:
+        model_status = "raw"
+    else:
+        model_status = None
     latest_job = await bake_job_repo.get_latest_for_project(db, project.id)
     exports = await export_record_repo.list_for_project(db, project.id)
     return EditorContextResponse(
@@ -88,6 +108,8 @@ async def get_context(
             else None
         ),
         permissions=_permissions(session),
+        modelStatus=model_status,
+        rawModelAssetId=raw_model_asset_id,
     )
 
 
@@ -168,6 +190,37 @@ async def trigger_bake(
     return _job_response(job)
 
 
+async def trigger_prepare(
+    db: AsyncSession,
+    session: EditorSessionResponse,
+    project_id: uuid.UUID,
+    body: EditorPrepareRequest,
+) -> EditorJobResponse:
+    _require_scope(session, "editor:write")
+    project = await require_editor_project(db, session, project_id, for_update=True)
+    raw_asset = await project_asset_repo.get_latest_raw_source_model(db, project.id)
+    if not raw_asset:
+        raise EditorNoRawModel()
+
+    # OD-1: only a design with decal layers loses work when the mesh is re-cropped/rescaled.
+    if project_service.count_design_layers(project.design_config) and not body.confirm_reset_design:
+        raise EditorDesignResetRequired()
+
+    stale = await job_service.supersede_active(db, project.id)
+    job = await bake_job_repo.create(
+        db,
+        project_id=project.id,
+        design_config=None,
+        priority="normal",
+        kind="prepare",
+        source_asset_id=raw_asset.id,
+        crop_box=body.crop_box.model_dump(mode="json", by_alias=True),
+    )
+    await db.commit()
+    await job_service.delete_staging(stale)
+    return _job_response(job)
+
+
 async def get_job(
     db: AsyncSession,
     session: EditorSessionResponse,
@@ -244,11 +297,15 @@ async def get_asset_for_session(
 ):
     await require_editor_project(db, session)
     asset = await project_asset_repo.get_by_id(db, asset_id)
+    readable = asset is not None and (
+        asset.status == "ready"
+        # A raw scan must be downloadable so the desktop crop screen can load it (spec §B.2).
+        or (asset.status == "raw" and asset.asset_type == "source_model")
+    )
     if (
-        not asset
+        not readable
         or asset.project_id != session.project_id
         or asset.user_id != session.user_id
-        or asset.status != "ready"
     ):
         raise AssetNotFound()
     return asset
@@ -267,63 +324,57 @@ async def get_export_for_session(
     return record
 
 
-@dataclass(frozen=True)
-class EditorFileDownload:
-    """Nội dung file cùng header đã chuẩn hoá để router trả về StreamingResponse."""
-
-    chunks: Iterable[bytes]
-    media_type: str
-    headers: dict[str, str]
+def _safe_filename(filename: str) -> str:
+    safe = re.sub(r"[^A-Za-z0-9._-]+", "_", filename).strip("._")[:180]
+    return safe or "kusshoes-download"
 
 
-async def open_asset_content(
-    db: AsyncSession,
-    session: EditorSessionResponse,
-    asset_id: uuid.UUID,
-) -> EditorFileDownload:
-    asset = await get_asset_for_session(db, session, asset_id)
-    filename = asset.original_filename or f"{asset.id}{pathlib.Path(asset.file_path).suffix}"
-    return await _open_object(asset.file_path, filename, disposition="inline")
+def _content_url(
+    file_path: str, filename: str, content_type: str, *, disposition: str
+) -> EditorContentUrlResponse:
+    """Presigned GET for a stored file — bytes never pass through the API (ADR-004).
 
-
-async def open_export_content(
-    db: AsyncSession,
-    session: EditorSessionResponse,
-    export_id: uuid.UUID,
-) -> EditorFileDownload:
-    record = await get_export_for_session(db, session, export_id)
-    suffix = pathlib.Path(record.file_path).suffix or f".{record.format}"
-    return await _open_object(
-        record.file_path,
-        f"kusshoes-{record.project_id}-{record.id}{suffix}",
-        disposition="attachment",
+    TTL is NFR-SEC-05's 15-minute ceiling (SIGNED_URL_TTL_SECONDS)."""
+    safe_filename = _safe_filename(filename)
+    ttl = settings.SIGNED_URL_TTL_SECONDS
+    url = storage.generate_presigned_download_url(
+        file_path,
+        ttl,
+        content_disposition=f'{disposition}; filename="{safe_filename}"',
+    )
+    return EditorContentUrlResponse(
+        url=url, expiresIn=ttl, filename=safe_filename, contentType=content_type
     )
 
 
-async def _open_object(
-    file_path: str,
-    filename: str,
-    *,
-    disposition: str,
-) -> EditorFileDownload:
-    try:
-        download = await asyncio.to_thread(storage.open_object_download, file_path)
-    except storage.ObjectNotFoundError:
-        raise StorageFileNotFound()
-    safe_filename = re.sub(r"[^A-Za-z0-9._-]+", "_", filename).strip("._")[:180]
-    safe_filename = safe_filename or "kusshoes-download"
-    headers = {
-        "Cache-Control": "private, no-store",
-        "Content-Disposition": f'{disposition}; filename="{safe_filename}"',
-        "Content-Length": str(download.size_bytes),
-        "X-Content-Type-Options": "nosniff",
-    }
-    if download.etag:
-        headers["ETag"] = f'"{download.etag}"'
-    return EditorFileDownload(
-        chunks=storage.iter_object_chunks(download),
-        media_type=download.content_type,
-        headers=headers,
+async def get_asset_content_url(
+    db: AsyncSession,
+    session: EditorSessionResponse,
+    asset_id: uuid.UUID,
+) -> EditorContentUrlResponse:
+    asset = await get_asset_for_session(db, session, asset_id)
+    filename = asset.original_filename or f"{asset.id}{pathlib.Path(asset.file_path).suffix}"
+    return _content_url(
+        asset.file_path,
+        filename,
+        asset.mime_type or "application/octet-stream",
+        disposition="inline",
+    )
+
+
+async def get_export_content_url(
+    db: AsyncSession,
+    session: EditorSessionResponse,
+    export_id: uuid.UUID,
+) -> EditorContentUrlResponse:
+    record = await get_export_for_session(db, session, export_id)
+    suffix = ".zip" if record.format == "obj" else pathlib.Path(record.file_path).suffix
+    content_type = "application/zip" if suffix == ".zip" else "model/gltf-binary"
+    return _content_url(
+        record.file_path,
+        f"kusshoes-{record.project_id}-{record.id}{suffix or '.' + record.format}",
+        content_type,
+        disposition="attachment",
     )
 
 
@@ -356,7 +407,9 @@ def _project_response(project, asset) -> EditorProjectResponse:
 
 
 def _model_asset_response(project, asset) -> EditorModelAssetResponse:
-    asset_status = asset.status if asset.status in {"processing", "ready", "failed"} else "uploaded"
+    asset_status = (
+        asset.status if asset.status in {"processing", "ready", "raw", "failed"} else "uploaded"
+    )
     asset_url = f"/api/v1/editor/assets/{asset.id}/content"
     quality_report = dict(asset.metadata_ or {})
     if asset.mime_type != "model/gltf-binary":
@@ -397,9 +450,9 @@ def _design_response(project, asset, latest_job, exports: list) -> EditorDesignR
     )
     preview_status = "ready" if preview_export else "none"
     preview_error = None
-    if matching_job and latest_job.status == "processing":
+    if matching_job and latest_job.status == "claimed":
         preview_status = "processing"
-    elif matching_job and latest_job.status == "queued":
+    elif matching_job and latest_job.status == "awaiting_client":
         preview_status = "pending"
     elif matching_job and latest_job.status in {"failed", "cancelled"}:
         preview_status = "failed"
@@ -423,22 +476,56 @@ def _design_response(project, asset, latest_job, exports: list) -> EditorDesignR
     )
 
 
+# Coarse progress for UI polling; the desktop reports fine-grained progress locally.
+_JOB_PROGRESS = {"awaiting_client": 0, "claimed": 50}
+
+
 def _job_response(job) -> EditorJobResponse:
-    status = (
-        job.status if job.status in {"queued", "processing", "completed", "failed"} else "failed"
-    )
-    progress = {"queued": 0, "processing": 50}.get(status, 100)
     updated_at: datetime = job.completed_at or job.started_at or job.queued_at
     return EditorJobResponse(
         id=job.id,
-        status=status,
-        progress=progress,
+        type=job.kind,
+        status=job.status,
+        progress=_JOB_PROGRESS.get(job.status, 100),
         errorMessage=job.error_message,
         designId=job.project_id,
         projectId=job.project_id,
+        leaseExpiresAt=job.claim_expires_at if job.status == "claimed" else None,
         createdAt=job.queued_at,
         updatedAt=updated_at,
     )
+
+
+async def claim_job(
+    db: AsyncSession,
+    session: EditorSessionResponse,
+    job_id: uuid.UUID,
+    body: EditorJobClaimRequest,
+) -> EditorJobClaimResponse:
+    _require_scope(session, "editor:write")
+    project = await require_editor_project(db, session)
+    result = await job_service.claim(db, job_id, project=project, device_label=body.device_label)
+    return EditorJobClaimResponse(
+        job=_job_response(result.job),
+        claimId=result.job.claim_id,
+        claimToken=result.claim_token,
+        leaseExpiresAt=result.job.claim_expires_at,
+        payload=result.payload,
+    )
+
+
+async def complete_job(
+    db: AsyncSession, job_id: uuid.UUID, claim_token: str, body: EditorJobCompleteRequest
+) -> EditorJobResponse:
+    """Authenticated by the claim token alone — editor sessions expire before long bakes do."""
+    return _job_response(await job_service.complete(db, job_id, claim_token, body))
+
+
+async def fail_job(
+    db: AsyncSession, job_id: uuid.UUID, claim_token: str, body: EditorJobFailRequest
+) -> EditorJobResponse:
+    job = await job_service.fail(db, job_id, claim_token, code=body.code, message=body.message)
+    return _job_response(job)
 
 
 def _permissions(session: EditorSessionResponse) -> EditorPermissionsResponse:

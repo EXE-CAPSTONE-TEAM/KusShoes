@@ -20,6 +20,10 @@ class Settings(BaseSettings):
     GOOGLE_CLIENT_ID: str
     GOOGLE_CLIENT_SECRET: str
     GOOGLE_REDIRECT_URI: str
+    # Mobile Google sign-in: the callback hands the app a one-time code on this fixed URI
+    # (never a client-supplied one, so it cannot become an open redirect).
+    MOBILE_GOOGLE_REDIRECT_URI: str = "vn.kusshoes.mobile://auth/google"
+    MOBILE_GOOGLE_CODE_EXPIRE_SECONDS: int = 60
 
     # JWT
     ACCESS_TOKEN_EXPIRE_MINUTES: int = 5
@@ -44,10 +48,11 @@ class Settings(BaseSettings):
     PASSWORD_RESET_RATE_LIMIT: int = 3
     PASSWORD_RESET_RATE_WINDOW_SECONDS: int = 3600
 
-    # Editor/3D worker integration
-    EDITOR_WORKER_URL: str = ""
-    EDITOR_WORKER_SERVICE_TOKEN: str = ""
-    EDITOR_WORKER_TIMEOUT_SECONDS: int = 300
+    # Client-executed 3D jobs (bake/prepare run on KusStudio Desktop — spec §A, ADR-001).
+    # A claim's lease and the TTL of the presigned capabilities it grants. 3600 s is the
+    # upper clamp the former worker payload already used for capability TTL; a lease must
+    # never outlive the capabilities it hands out.
+    CLAIM_LEASE_SECONDS: int = 3600
     MOBILE_COMPUTE_URL: str = ""
     MOBILE_COMPUTE_SERVICE_TOKEN: str = ""
     MOBILE_GRANT_TTL_SECONDS: int = 60
@@ -87,6 +92,7 @@ class Settings(BaseSettings):
     PAYOS_CANCEL_URL: str = ""
 
     # MoMo (billing) — https://developers.momo.vn
+    MOMO_ENABLED: bool = False
     MOMO_PARTNER_CODE: str = ""
     MOMO_ACCESS_KEY: str = ""
     MOMO_SECRET_KEY: str = ""

@@ -8,7 +8,6 @@ from app.exceptions import (
     AdminCannotModifyPrivileged,
     AdminResetNotAllowed,
     AdminUserNotFound,
-    BakeJobNotCancellable,
     BakeJobNotFound,
     BakeJobNotRequeueable,
     EmailAlreadyTaken,
@@ -48,7 +47,7 @@ from app.schemas.admin import (
     MonthlyPoint,
     SystemHealthResponse,
 )
-from app.services import quota_service
+from app.services import job_service, quota_service
 from app.services.audit import record_audit
 from app.utils.jwt import create_impersonation_token
 from app.utils.password import hash_password
@@ -433,18 +432,17 @@ async def requeue_bake_job(db: AsyncSession, actor, job_id: uuid.UUID) -> None:
     await bake_job_repo.mark_requeued(db, job)
     await record_audit(db, actor, "bake_job.requeue", target_type="bake_job", target_id=job_id)
     await db.commit()
-    task_queue.enqueue_bake(str(job.id), job.priority)
 
 
 async def cancel_bake_job(db: AsyncSession, actor, job_id: uuid.UUID) -> None:
     job = await bake_job_repo.get_by_id(db, job_id)
     if not job:
         raise BakeJobNotFound()
-    if job.status != "queued":
-        raise BakeJobNotCancellable()
-    await bake_job_repo.mark_cancelled(db, job)
+    stale = [str(item["file_path"]) for item in job.issued_outputs or []]
+    await job_service.cancel(db, job)
     await record_audit(db, actor, "bake_job.cancel", target_type="bake_job", target_id=job_id)
     await db.commit()
+    await job_service.delete_staging(stale)
 
 
 # --- System health ---

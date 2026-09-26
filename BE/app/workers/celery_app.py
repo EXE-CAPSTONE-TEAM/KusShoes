@@ -7,7 +7,6 @@ celery_app = Celery(
     broker=settings.REDIS_URL,
     backend=settings.REDIS_URL,
     include=[
-        "app.workers.tasks.bake_tasks",
         "app.workers.tasks.email_tasks",
         "app.workers.tasks.maintenance_tasks",
         "app.workers.tasks.credit_tasks",
@@ -22,7 +21,6 @@ celery_app.conf.update(
     timezone="Asia/Ho_Chi_Minh",
     enable_utc=True,
     task_routes={
-        "app.workers.tasks.bake_tasks.bake_shoe": {"queue": "normal"},
         "app.workers.tasks.maintenance_tasks.*": {"queue": "low"},
         "app.workers.tasks.credit_tasks.*": {"queue": "low"},
         "app.workers.tasks.api_cost_tasks.*": {"queue": "low"},

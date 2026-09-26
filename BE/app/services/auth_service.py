@@ -19,6 +19,7 @@ from app.exceptions import (
     AccountRestoreInvalid,
     AuthAccountLocked,
     AuthEditorLaunchInvalid,
+    AuthGoogleMobileCodeInvalid,
     AuthRateLimited,
     AuthRefreshInvalid,
     AuthRoleForbidden,
@@ -405,10 +406,84 @@ async def _complete_login(
 # ── UC-AUTH-004: Google OAuth ─────────────────────────────────────────────────
 
 
-async def get_google_auth_url(redis: aioredis.Redis) -> str:
+GOOGLE_CLIENT_WEB = "web"
+GOOGLE_CLIENT_MOBILE = "mobile"
+
+
+async def get_google_auth_url(
+    redis: aioredis.Redis,
+    *,
+    client: str = GOOGLE_CLIENT_WEB,
+    code_challenge: str | None = None,
+) -> str:
     state = secrets.token_hex(32)
-    await redis.set(f"oauth:state:{state}", "1", ex=600)
+    record = {"client": client}
+    if client == GOOGLE_CLIENT_MOBILE:
+        record["code_challenge"] = code_challenge or ""
+    await redis.set(f"oauth:state:{state}", json.dumps(record, separators=(",", ":")), ex=600)
     return google_oauth.create_authorization_url(state)
+
+
+async def peek_google_state(redis: aioredis.Redis, state: str) -> dict[str, str]:
+    """Who started this sign-in, read before the callback consumes the state.
+
+    Unknown or legacy ("1") states are treated as web, the historical behaviour.
+    """
+    raw = await redis.get(f"oauth:state:{state}")
+    try:
+        record = json.loads(raw) if raw else None
+    except (TypeError, json.JSONDecodeError):
+        record = None
+    if not isinstance(record, dict):
+        return {"client": GOOGLE_CLIENT_WEB}
+    return {key: str(value) for key, value in record.items()}
+
+
+async def create_mobile_google_code(
+    redis: aioredis.Redis,
+    *,
+    tokens: dict,
+    code_challenge: str,
+) -> str:
+    """Park a finished Google session behind a one-time code bound to the app's PKCE challenge.
+
+    The tokens never travel in the app redirect URL, which another app could intercept.
+    """
+    from app.config import settings
+
+    return await _store_opaque_record(
+        redis,
+        prefix="google-mobile-code",
+        payload={
+            "access_token": tokens["access_token"],
+            "refresh_token": tokens["refresh_token"],
+            "token_type": tokens.get("token_type", "bearer"),
+            "code_challenge": code_challenge,
+        },
+        ttl=settings.MOBILE_GOOGLE_CODE_EXPIRE_SECONDS,
+    )
+
+
+async def exchange_mobile_google_code(
+    redis: aioredis.Redis,
+    *,
+    code: str,
+    code_verifier: str,
+) -> IssuedTokens:
+    # Consumed before the verifier check: a wrong guess burns the code.
+    record = await _consume_opaque_record(redis, "google-mobile-code", code)
+    if not record:
+        raise AuthGoogleMobileCodeInvalid()
+    expected_challenge = str(record.get("code_challenge", ""))
+    if not expected_challenge or not hmac.compare_digest(
+        expected_challenge, _pkce_s256(code_verifier)
+    ):
+        raise AuthGoogleMobileCodeInvalid()
+    return IssuedTokens(
+        access_token=str(record["access_token"]),
+        refresh_token=str(record["refresh_token"]),
+        token_type=str(record.get("token_type", "bearer")),
+    )
 
 
 async def handle_google_callback(

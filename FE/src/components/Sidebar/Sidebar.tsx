@@ -16,6 +16,9 @@ import {
   MessageSquare,
   PanelLeftClose,
   PanelLeftOpen,
+  LayoutDashboard, FolderKanban, Archive, Trash2, CreditCard, Settings, LogOut,
+  Plus, ChevronsUpDown, User, Shield, Eye, ChevronDown, Palette, MessageSquare,
+  PanelLeftClose, PanelLeftOpen,
 } from 'lucide-react';
 import * as Tooltip from '@radix-ui/react-tooltip';
 import * as Progress from '@radix-ui/react-progress';
@@ -68,6 +71,7 @@ export const Sidebar: React.FC<SidebarProps> = ({
     { id: 'dashboard', label: 'Overview', icon: LayoutDashboard },
     { id: 'projects', label: 'Projects', icon: FolderKanban },
     { id: 'archives', label: 'Archives', icon: Archive },
+    { id: 'trash', label: 'Trash', icon: Trash2 },
     { id: 'billing', label: 'Billing', icon: CreditCard },
     { id: 'feedback', label: 'Feedback', icon: MessageSquare },
   ];
