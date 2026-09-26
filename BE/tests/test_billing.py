@@ -123,10 +123,21 @@ async def test_checkout_creates_pending_invoice_via_payos(
 
 
 @pytest.mark.asyncio
+async def test_checkout_momo_coming_soon(client, auth_headers):
+    response = await client.post(
+        "/api/v1/subscription/checkout",
+        headers=auth_headers,
+        json={"tier": "basic", "billing_cycle": "monthly", "gateway": "momo"},
+    )
+    assert response.status_code == 400
+    assert response.json()["code"] == "SUB_GATEWAY_COMING_SOON"
+
+
+@pytest.mark.asyncio
 async def test_checkout_creates_pending_invoice_via_momo(
     client, db, auth_headers, authenticated_user
 ):
-    with patch(
+    with patch.object(settings, "MOMO_ENABLED", True), patch(
         "app.infrastructure.momo_client.create_payment",
         new=AsyncMock(return_value=("https://payment.momo.vn/pay/xyz", "momo://deeplink")),
     ):

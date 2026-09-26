@@ -433,6 +433,15 @@ class SubInvalidGateway(AppException):
         super().__init__(422, "SUB_INVALID_GATEWAY", "Phương thức thanh toán không hợp lệ")
 
 
+class SubGatewayComingSoon(AppException):
+    def __init__(self, gateway: str = "MoMo"):
+        super().__init__(
+            400,
+            "SUB_GATEWAY_COMING_SOON",
+            f"Phương thức thanh toán {gateway} hiện đang được cập nhật (Coming Soon). Vui lòng chọn PayOS để tiếp tục.",
+        )
+
+
 class SubPaymentGatewayError(AppException):
     def __init__(self):
         super().__init__(

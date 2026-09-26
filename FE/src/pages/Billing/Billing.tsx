@@ -736,9 +736,11 @@ export const Billing: React.FC = () => {
                         </button>
                         <button
                           className={`btn-outline ${styles.pricingCta}`}
-                          onClick={() => handleChoosePlan(tier.plan, 'momo')}
+                          disabled
+                          style={{ opacity: 0.6, cursor: 'not-allowed' }}
+                          title="Cổng thanh toán MoMo sắp ra mắt (Coming Soon)"
                         >
-                          <span>Pay via MoMo</span>
+                          <span>MoMo (Coming Soon)</span>
                         </button>
                       </div>
                     )}

@@ -92,6 +92,7 @@ class Settings(BaseSettings):
     PAYOS_CANCEL_URL: str = ""
 
     # MoMo (billing) — https://developers.momo.vn
+    MOMO_ENABLED: bool = False
     MOMO_PARTNER_CODE: str = ""
     MOMO_ACCESS_KEY: str = ""
     MOMO_SECRET_KEY: str = ""

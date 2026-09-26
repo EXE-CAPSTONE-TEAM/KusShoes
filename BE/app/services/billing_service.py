@@ -14,6 +14,7 @@ from app.exceptions import (
     RefundInvalidAmount,
     RefundPolicyViolation,
     SubAlreadyActive,
+    SubGatewayComingSoon,
     SubInvalidGateway,
     SubNotFound,
     SubPaymentGatewayError,
@@ -162,6 +163,8 @@ async def create_checkout_session(
     # users before any handler runs, so this endpoint is unreachable for them.
     if gateway not in ("payos", "momo"):
         raise SubInvalidGateway()
+    if gateway == "momo" and not settings.MOMO_ENABLED:
+        raise SubGatewayComingSoon("MoMo")
 
     plan = await plan_repo.get_by_tier_and_cycle(db, tier, billing_cycle)
     if not plan:
@@ -254,6 +257,8 @@ async def create_credit_checkout(db: AsyncSession, user, *, quantity: int, gatew
     (SRS_v2.2.txt:1597). The cycle the purchase counts against is recorded on the invoice."""
     if gateway not in ("payos", "momo"):
         raise SubInvalidGateway()
+    if gateway == "momo" and not settings.MOMO_ENABLED:
+        raise SubGatewayComingSoon("MoMo")
     cycle_start = await credit_service.assert_can_purchase(db, user, quantity)
     listed_price_vnd = settings.CREDIT_PRICE_VND * quantity
     invoice = await invoice_repo.create_pending(
