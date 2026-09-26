@@ -117,6 +117,7 @@ export type PortalProject = {
   verticesCount: string;
   colorCode: string;
   description: string;
+  canonicalModelAssetId: string | null;
 };
 
 type ProjectResponse = {
@@ -130,6 +131,8 @@ type ProjectResponse = {
   editor_url: string;
   created_at: string;
   updated_at: string;
+  /** Only present on the single-project GET (ProjectDetailResponse); absent from list items. */
+  canonical_model_asset_id?: string | null;
 };
 
 export type ProjectPage = {
@@ -275,6 +278,7 @@ function toPortalProject(project: ProjectResponse): PortalProject {
     verticesCount: stringValue(scan.vertices, "—"),
     colorCode: stringValue(palette.primary, "#FF5A36"),
     description: project.description ?? "",
+    canonicalModelAssetId: project.canonical_model_asset_id ?? null,
   };
 }
 

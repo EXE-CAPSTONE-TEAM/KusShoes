@@ -39,6 +39,29 @@ export type ArtisanLink = {
 /** Returned once, at creation: the raw token is never stored server-side. */
 export type CreatedArtisanLink = ArtisanLink & { token: string; url: string };
 
+// ---- Project assets / source 3D model import (C3) -------------------------------------
+
+export type ProjectAssetType = "source_model" | "sticker" | "texture" | "reference_image";
+
+export type ProjectAsset = {
+  id: string;
+  project_id: string;
+  asset_type: string;
+  original_filename: string | null;
+  file_path: string;
+  file_size_bytes: number | null;
+  mime_type: string | null;
+  status: string;
+  created_at: string;
+};
+
+export type AssetUploadUrl = {
+  upload_url: string;
+  asset_id: string;
+  file_path: string;
+  expires_in: number;
+};
+
 // ---- Feedback (UC-25, BR-109) ---------------------------------------------------------
 
 export type MarketingGroup = "product" | "price" | "place" | "promotion";
@@ -90,4 +113,35 @@ export const studioApi = {
   submitFeedback: (payload: { rating: number; message: string; marketing_group: MarketingGroup }) =>
     request<Feedback>("/api/v1/feedback", { method: "POST", body: JSON.stringify(payload) }),
   myFeedback: () => request<Feedback[]>("/api/v1/feedback/mine"),
+
+  listAssets: (projectId: string) =>
+    request<{ items: ProjectAsset[] }>(`/api/v1/projects/${projectId}/assets`).then((page) => page.items),
+  createAssetUploadUrl: (
+    projectId: string,
+    payload: { asset_type: ProjectAssetType; filename: string; content_type: string },
+  ) =>
+    request<AssetUploadUrl>(`/api/v1/projects/${projectId}/assets/upload-url`, {
+      method: "POST",
+      body: JSON.stringify(payload),
+    }),
+  confirmAssetUpload: (projectId: string, payload: { asset_id: string; file_size_bytes?: number }) =>
+    request<ProjectAsset>(`/api/v1/projects/${projectId}/assets/confirm`, {
+      method: "POST",
+      body: JSON.stringify(payload),
+    }),
+  deleteAsset: (projectId: string, assetId: string) =>
+    request<{ message: string }>(`/api/v1/projects/${projectId}/assets/${assetId}`, { method: "DELETE" }),
+
+  /** Uploads straight to the presigned storage URL: no auth header, no cookies sent. */
+  async putAssetFile(uploadUrl: string, file: File, contentType: string): Promise<void> {
+    const response = await fetch(uploadUrl, {
+      method: "PUT",
+      credentials: "omit",
+      headers: { "Content-Type": contentType },
+      body: file,
+    });
+    if (!response.ok) {
+      throw new Error(`Unable to upload the file to storage (status ${response.status}).`);
+    }
+  },
 };
