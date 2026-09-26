@@ -1,16 +1,4 @@
-import type {
-  Design,
-  DesignAsset,
-  DesignAssetSource,
-  DesignConfig,
-  ExportPackage,
-  ModelAsset,
-  ModelImportResponse,
-  ReconstructionReadiness,
-  ScanMetadata,
-  ScanSession,
-  User,
-} from '../types';
+import type { User } from '../types';
 import { toast as notifyToast } from '../context/ToastContext';
 
 if (import.meta.env.PROD && !import.meta.env.VITE_API_BASE_URL) {
@@ -128,7 +116,7 @@ export type PortalProject = {
   photosCount: number;
   verticesCount: string;
   colorCode: string;
-  accentColor: string | null;
+  accentColor?: string | null;
   description: string;
   canonicalModelAssetId: string | null;
 };
@@ -310,9 +298,6 @@ function toPortalProject(project: ProjectResponse): PortalProject {
     accentColor:
       typeof palette.accent === 'string' && palette.accent.trim() ? palette.accent : null,
     description: project.description ?? '',
-    verticesCount: stringValue(scan.vertices, "—"),
-    colorCode: stringValue(palette.primary, "#FF5A36"),
-    description: project.description ?? "",
     canonicalModelAssetId: project.canonical_model_asset_id ?? null,
   };
 }
@@ -725,38 +710,7 @@ export const api = {
     await request<{ message: string }>(`/api/v1/projects/${projectId}`, { method: 'DELETE' });
   },
 
-  /** BR-47: projects moved to trash by deleteProject(), listed here until they're purged. */
-  async listTrash(cursor?: string | null): Promise<TrashedProjectPage> {
-    const params = new URLSearchParams({ limit: '50' });
-    if (cursor) params.set('cursor', cursor);
-    const page = await request<{
-      items: (ProjectResponse & { deleted_at: string; purge_at: string })[];
-      next_cursor: string | null;
-      has_next: boolean;
-    }>(`/api/v1/projects/trash?${params.toString()}`);
-    return {
-      items: page.items.map((project) => ({
-        ...toPortalProject(project),
-        deletedAt: project.deleted_at,
-        purgeAt: project.purge_at,
-      })),
-      nextCursor: page.next_cursor,
-      hasNext: page.has_next,
-    };
-  },
 
-  async restoreProject(projectId: string): Promise<PortalProject> {
-    const project = await request<ProjectResponse>(`/api/v1/projects/${projectId}/restore`, {
-      method: 'POST',
-    });
-    return toPortalProject(project);
-  },
-
-  async permanentlyDeleteProject(projectId: string): Promise<void> {
-    await request<{ message: string }>(`/api/v1/projects/${projectId}/permanent`, {
-      method: 'DELETE',
-    });
-  },
 
   async listTrash(cursor?: string | null): Promise<ProjectTrashPage> {
     const params = new URLSearchParams({ limit: "100" });
@@ -918,5 +872,4 @@ export const api = {
     );
     return result.download_url;
   },
-
 };

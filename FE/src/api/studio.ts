@@ -144,8 +144,6 @@ export const studioApi = {
     request<ArtisanPublicDownload>(`/api/v1/public/artisan/${encodeURIComponent(token)}/download`, {
       method: 'POST',
     }),
-    request<Feedback>("/api/v1/feedback", { method: "POST", body: JSON.stringify(payload) }),
-  myFeedback: () => request<Feedback[]>("/api/v1/feedback/mine"),
 
   listAssets: (projectId: string) =>
     request<{ items: ProjectAsset[] }>(`/api/v1/projects/${projectId}/assets`).then((page) => page.items),
@@ -154,23 +152,23 @@ export const studioApi = {
     payload: { asset_type: ProjectAssetType; filename: string; content_type: string },
   ) =>
     request<AssetUploadUrl>(`/api/v1/projects/${projectId}/assets/upload-url`, {
-      method: "POST",
+      method: 'POST',
       body: JSON.stringify(payload),
     }),
   confirmAssetUpload: (projectId: string, payload: { asset_id: string; file_size_bytes?: number }) =>
     request<ProjectAsset>(`/api/v1/projects/${projectId}/assets/confirm`, {
-      method: "POST",
+      method: 'POST',
       body: JSON.stringify(payload),
     }),
   deleteAsset: (projectId: string, assetId: string) =>
-    request<{ message: string }>(`/api/v1/projects/${projectId}/assets/${assetId}`, { method: "DELETE" }),
+    request<{ message: string }>(`/api/v1/projects/${projectId}/assets/${assetId}`, { method: 'DELETE' }),
 
   /** Uploads straight to the presigned storage URL: no auth header, no cookies sent. */
   async putAssetFile(uploadUrl: string, file: File, contentType: string): Promise<void> {
     const response = await fetch(uploadUrl, {
-      method: "PUT",
-      credentials: "omit",
-      headers: { "Content-Type": contentType },
+      method: 'PUT',
+      credentials: 'omit',
+      headers: { 'Content-Type': contentType },
       body: file,
     });
     if (!response.ok) {
