@@ -1,5 +1,5 @@
 import React from 'react';
-import { cleanup, fireEvent, render, screen, waitFor } from '@testing-library/react';
+import { cleanup, fireEvent, render, screen, waitFor, within } from '@testing-library/react';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import { ToastProvider } from '../context/ToastContext';
 import { ThemeProvider } from '../context/ThemeContext';
@@ -56,6 +56,11 @@ vi.mock('../api/studio', () => ({
     eligibility: vi.fn(),
     submitFeedback: vi.fn(),
     myFeedback: vi.fn(),
+    listAssets: vi.fn(),
+    createAssetUploadUrl: vi.fn(),
+    putAssetFile: vi.fn(),
+    confirmAssetUpload: vi.fn(),
+    deleteAsset: vi.fn(),
   },
 }));
 vi.mock('../api/adminClient', async () => {
@@ -73,6 +78,7 @@ import { PrivacyPanel } from './Settings/PrivacyPanel';
 import { Feedback } from './Feedback/Feedback';
 import { ArtisanSharePanel } from './ProjectDetails/ArtisanSharePanel';
 import { VersionHistoryPanel } from './ProjectDetails/VersionHistoryPanel';
+import { ModelPanel } from './ProjectDetails/ModelPanel';
 import { AdminAnalytics } from './Admin/Analytics/AdminAnalytics';
 
 const wrap = (ui: React.ReactElement) => render(<ThemeProvider><ToastProvider>{ui}</ToastProvider></ThemeProvider>);
@@ -269,6 +275,107 @@ describe('Artisan sharing and version history', () => {
     expect(await screen.findByRole('button', { name: /restore/i })).toBeDisabled();
     expect(screen.getByRole('button', { name: /use template/i })).toBeDisabled();
     expect(screen.getByText(/exported/i)).toBeInTheDocument();
+  });
+});
+
+describe('ModelPanel (import the source 3D model, C3)', () => {
+  const uploadResponse = {
+    upload_url: 'https://storage.example/put',
+    asset_id: 'a1',
+    file_path: 'source_models/p1/a1.glb',
+    expires_in: 900,
+  };
+  const readyAsset = {
+    id: 'a1',
+    project_id: 'p1',
+    asset_type: 'source_model',
+    original_filename: 'model.glb',
+    file_path: 'source_models/p1/a1.glb',
+    file_size_bytes: 9,
+    mime_type: 'model/gltf-binary',
+    status: 'ready',
+    created_at: '2026-09-01T00:00:00Z',
+  };
+
+  const chooseFile = async (file: File) => {
+    const input = await screen.findByLabelText('Import 3D model file');
+    fireEvent.change(input, { target: { files: [file] } });
+  };
+
+  it('imports a model by calling upload-url, then PUT, then confirm, in order', async () => {
+    m(studioApi.listAssets).mockResolvedValue([]);
+    m(studioApi.createAssetUploadUrl).mockResolvedValue(uploadResponse);
+    m(studioApi.putAssetFile).mockResolvedValue(undefined);
+    m(studioApi.confirmAssetUpload).mockResolvedValue(readyAsset);
+    const onModelChange = vi.fn();
+    wrap(<ModelPanel projectId="p1" canonicalModelAssetId={null} onModelChange={onModelChange} />);
+
+    const file = new File(['glb-bytes'], 'model.glb', { type: 'model/gltf-binary' });
+    await chooseFile(file);
+
+    await waitFor(() =>
+      expect(studioApi.confirmAssetUpload).toHaveBeenCalledWith('p1', { asset_id: 'a1', file_size_bytes: file.size }),
+    );
+    expect(studioApi.createAssetUploadUrl).toHaveBeenCalledWith('p1', {
+      asset_type: 'source_model',
+      filename: 'model.glb',
+      content_type: 'model/gltf-binary',
+    });
+    expect(studioApi.putAssetFile).toHaveBeenCalledWith(uploadResponse.upload_url, file, 'model/gltf-binary');
+
+    const createOrder = m(studioApi.createAssetUploadUrl).mock.invocationCallOrder[0];
+    const putOrder = m(studioApi.putAssetFile).mock.invocationCallOrder[0];
+    const confirmOrder = m(studioApi.confirmAssetUpload).mock.invocationCallOrder[0];
+    expect(createOrder).toBeLessThan(putOrder);
+    expect(putOrder).toBeLessThan(confirmOrder);
+    await waitFor(() => expect(onModelChange).toHaveBeenCalled());
+  });
+
+  it('does not confirm the upload when the PUT to storage fails', async () => {
+    m(studioApi.listAssets).mockResolvedValue([]);
+    m(studioApi.createAssetUploadUrl).mockResolvedValue(uploadResponse);
+    m(studioApi.putAssetFile).mockRejectedValue(new Error('Unable to upload the file to storage (status 403).'));
+    const onModelChange = vi.fn();
+    wrap(<ModelPanel projectId="p1" canonicalModelAssetId={null} onModelChange={onModelChange} />);
+
+    await chooseFile(new File(['glb-bytes'], 'model.glb', { type: 'model/gltf-binary' }));
+
+    expect(await screen.findByText(/unable to upload the file to storage/i)).toBeInTheDocument();
+    expect(studioApi.confirmAssetUpload).not.toHaveBeenCalled();
+    expect(onModelChange).not.toHaveBeenCalled();
+  });
+
+  it('rejects a non-model file before calling the upload API', async () => {
+    m(studioApi.listAssets).mockResolvedValue([]);
+    wrap(<ModelPanel projectId="p1" canonicalModelAssetId={null} onModelChange={vi.fn()} />);
+
+    await chooseFile(new File(['hello'], 'notes.txt', { type: 'text/plain' }));
+
+    expect(await screen.findByText(/only \.glb and \.gltf files/i)).toBeInTheDocument();
+    expect(studioApi.createAssetUploadUrl).not.toHaveBeenCalled();
+  });
+
+  it('lists assets and marks the canonical model', async () => {
+    m(studioApi.listAssets).mockResolvedValue([readyAsset]);
+    wrap(<ModelPanel projectId="p1" canonicalModelAssetId="a1" onModelChange={vi.fn()} />);
+
+    expect(await screen.findByText('model.glb')).toBeInTheDocument();
+    expect(screen.getByText('Canonical model')).toBeInTheDocument();
+  });
+
+  it('deletes an asset after confirmation and surfaces a refused deletion', async () => {
+    m(studioApi.listAssets).mockResolvedValue([readyAsset]);
+    m(studioApi.deleteAsset).mockRejectedValue(new ApiError('Asset không tồn tại', 404, 'ASSET_NOT_FOUND'));
+    const onModelChange = vi.fn();
+    wrap(<ModelPanel projectId="p1" canonicalModelAssetId="a1" onModelChange={onModelChange} />);
+
+    fireEvent.click(await screen.findByRole('button', { name: /delete/i }));
+    const dialog = await screen.findByRole('alertdialog');
+    fireEvent.click(within(dialog).getByRole('button', { name: /delete/i }));
+
+    await waitFor(() => expect(studioApi.deleteAsset).toHaveBeenCalledWith('p1', 'a1'));
+    expect(await screen.findByText(/asset không tồn tại/i)).toBeInTheDocument();
+    expect(onModelChange).not.toHaveBeenCalled();
   });
 });
 

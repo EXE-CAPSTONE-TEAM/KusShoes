@@ -1,13 +1,14 @@
-import React, { useState, useEffect, useRef } from 'react';
+import React, { useState, useEffect, useRef, useCallback } from 'react';
 import {
   ArrowLeft, Laptop, RefreshCw, Check, Download, FileText,
-  Globe, Link, EyeOff, Terminal, Share2, History, Lock, Droplets
+  Globe, Link, EyeOff, Terminal, Share2, History, Lock, Droplets, Box
 } from 'lucide-react';
 import { ConfirmDialog } from '../../components/ConfirmDialog/ConfirmDialog';
 import { useToast } from '../../context/ToastContext';
 import { api, type PortalProject, type ProjectExport, type WatermarkPolicy } from '../../api/client';
 import { VersionHistoryPanel } from './VersionHistoryPanel';
 import { ArtisanSharePanel } from './ArtisanSharePanel';
+import { ModelPanel } from './ModelPanel';
 import styles from './ProjectDetails.module.css';
 
 interface ProjectDetailsProps {
@@ -18,14 +19,16 @@ interface ProjectDetailsProps {
 
 export const ProjectDetails: React.FC<ProjectDetailsProps> = ({
   project,
-  onBack
+  onBack,
+  setProjects
 }) => {
   const { toast } = useToast();
-  const [activeTab, setActiveTab] = useState<'overview' | 'history' | 'share'>('overview');
+  const [activeTab, setActiveTab] = useState<'overview' | 'model' | 'history' | 'share'>('overview');
   const [confirmResetOpen, setConfirmResetOpen] = useState(false);
 
   const [exports, setExports] = useState<ProjectExport[]>([]);
   const [watermarkPolicy, setWatermarkPolicy] = useState<WatermarkPolicy | null>(null);
+  const [canonicalModelAssetId, setCanonicalModelAssetId] = useState(project.canonicalModelAssetId);
 
   const [syncStatus, setSyncStatus] = useState<'idle' | 'connecting' | 'launched' | 'error'>('idle');
   const [logs, setLogs] = useState<string[]>([]);
@@ -45,6 +48,21 @@ export const ProjectDetails: React.FC<ProjectDetailsProps> = ({
     setLogs([]);
     setLaunchError(null);
   }, [project.id]);
+
+  useEffect(() => {
+    setCanonicalModelAssetId(project.canonicalModelAssetId);
+  }, [project.id, project.canonicalModelAssetId]);
+
+  // After an asset import/delete: the canonical model may have changed on the server.
+  const refreshProject = useCallback(async () => {
+    try {
+      const updated = await api.getProject(project.id);
+      setCanonicalModelAssetId(updated.canonicalModelAssetId);
+      setProjects((prev) => prev.map((item) => (item.id === updated.id ? updated : item)));
+    } catch (caught) {
+      toast(caught instanceof Error ? caught.message : 'Unable to refresh the project.', 'error');
+    }
+  }, [project.id, setProjects, toast]);
 
   useEffect(() => {
     api.listProjectExports(project.id)
@@ -184,6 +202,13 @@ export const ProjectDetails: React.FC<ProjectDetailsProps> = ({
             >
               <FileText size={14} />
               Overview
+            </button>
+            <button
+              className={`${styles.tabBtn} ${activeTab === 'model' ? styles.tabBtnActive : ''}`}
+              onClick={() => setActiveTab('model')}
+            >
+              <Box size={14} />
+              Model 3D
             </button>
             <button
               className={`${styles.tabBtn} ${activeTab === 'history' ? styles.tabBtnActive : ''}`}
@@ -332,6 +357,15 @@ export const ProjectDetails: React.FC<ProjectDetailsProps> = ({
                 </div>
               </div>
             </>
+          )}
+
+          {/* ========================= MODEL 3D TAB ========================= */}
+          {activeTab === 'model' && (
+            <ModelPanel
+              projectId={project.id}
+              canonicalModelAssetId={canonicalModelAssetId}
+              onModelChange={refreshProject}
+            />
           )}
 
           {/* ========================= HISTORY TAB ========================= */}
