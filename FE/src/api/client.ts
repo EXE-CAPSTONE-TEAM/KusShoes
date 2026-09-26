@@ -141,6 +141,22 @@ export type ProjectPage = {
   hasNext: boolean;
 };
 
+export type TrashedProject = PortalProject & {
+  deletedAt: string;
+  purgeAt: string;
+};
+
+type TrashProjectResponse = ProjectResponse & {
+  deleted_at: string;
+  purge_at: string;
+};
+
+export type ProjectTrashPage = {
+  items: TrashedProject[];
+  nextCursor: string | null;
+  hasNext: boolean;
+};
+
 export type EditorLaunch = {
   desktopUrl: string;
   expiresIn: number;
@@ -279,6 +295,14 @@ function toPortalProject(project: ProjectResponse): PortalProject {
     colorCode: stringValue(palette.primary, "#FF5A36"),
     description: project.description ?? "",
     canonicalModelAssetId: project.canonical_model_asset_id ?? null,
+  };
+}
+
+function toTrashedProject(project: TrashProjectResponse): TrashedProject {
+  return {
+    ...toPortalProject(project),
+    deletedAt: project.deleted_at,
+    purgeAt: project.purge_at,
   };
 }
 
@@ -669,6 +693,32 @@ export const api = {
 
   async deleteProject(projectId: string): Promise<void> {
     await request<{ message: string }>(`/api/v1/projects/${projectId}`, { method: "DELETE" });
+  },
+
+  async listTrash(cursor?: string | null): Promise<ProjectTrashPage> {
+    const params = new URLSearchParams({ limit: "100" });
+    if (cursor) params.set("cursor", cursor);
+    const page = await request<{
+      items: TrashProjectResponse[];
+      next_cursor: string | null;
+      has_next: boolean;
+    }>(`/api/v1/projects/trash?${params.toString()}`);
+    return {
+      items: page.items.map(toTrashedProject),
+      nextCursor: page.next_cursor,
+      hasNext: page.has_next,
+    };
+  },
+
+  async restoreProject(projectId: string): Promise<PortalProject> {
+    const project = await request<ProjectResponse>(`/api/v1/projects/${projectId}/restore`, {
+      method: "POST",
+    });
+    return toPortalProject(project);
+  },
+
+  async permanentlyDeleteProject(projectId: string): Promise<void> {
+    await request<{ message: string }>(`/api/v1/projects/${projectId}/permanent`, { method: "DELETE" });
   },
 
   async me(): Promise<User> {
