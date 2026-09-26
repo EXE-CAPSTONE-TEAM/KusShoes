@@ -3,6 +3,7 @@ import {
   LayoutDashboard,
   FolderKanban,
   Archive,
+  Trash2,
   CreditCard,
   Settings,
   LogOut,
@@ -16,9 +17,6 @@ import {
   MessageSquare,
   PanelLeftClose,
   PanelLeftOpen,
-  LayoutDashboard, FolderKanban, Archive, Trash2, CreditCard, Settings, LogOut,
-  Plus, ChevronsUpDown, User, Shield, Eye, ChevronDown, Palette, MessageSquare,
-  PanelLeftClose, PanelLeftOpen,
 } from 'lucide-react';
 import * as Tooltip from '@radix-ui/react-tooltip';
 import * as Progress from '@radix-ui/react-progress';

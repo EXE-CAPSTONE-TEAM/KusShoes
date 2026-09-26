@@ -207,6 +207,7 @@ function App() {
     'dashboard',
     'projects',
     'archives',
+    'trash',
     'billing',
     'settings',
     'feedback',
