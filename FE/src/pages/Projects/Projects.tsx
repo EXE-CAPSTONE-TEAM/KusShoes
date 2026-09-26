@@ -1106,7 +1106,7 @@ export const Projects: React.FC<ProjectsProps> = ({
         open={confirmDeleteId !== null}
         onOpenChange={(open) => !open && setConfirmDeleteId(null)}
         title="Delete this project?"
-        description="This will permanently remove the project and its scanned assets. This action cannot be undone."
+        description="This will move the project to trash. You can restore it from Trash within 30 days, after which it will be permanently deleted."
         confirmLabel="Delete Project"
         onConfirm={confirmSingleDelete}
       />
@@ -1115,7 +1115,7 @@ export const Projects: React.FC<ProjectsProps> = ({
         open={confirmBulkDeleteOpen}
         onOpenChange={setConfirmBulkDeleteOpen}
         title={`Delete ${selectedIds.length} selected projects?`}
-        description="This will permanently remove all selected projects and their scanned assets. This action cannot be undone."
+        description="This will move the selected projects to trash. You can restore them from Trash within 30 days, after which they will be permanently deleted."
         confirmLabel="Delete Projects"
         onConfirm={confirmBulkDelete}
       />

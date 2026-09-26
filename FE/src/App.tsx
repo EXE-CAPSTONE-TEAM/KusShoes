@@ -6,6 +6,7 @@ import { PricingPage } from './pages/PricingPage/PricingPage';
 import { Sidebar } from './components/Sidebar/Sidebar';
 import { Dashboard } from './pages/Dashboard/Dashboard';
 import { Projects } from './pages/Projects/Projects';
+import { Trash } from './pages/Trash/Trash';
 import { Billing } from './pages/Billing/Billing';
 import { Settings } from './pages/Settings/Settings';
 import { Feedback } from './pages/Feedback/Feedback';
@@ -40,6 +41,8 @@ const getPageFromPath = (path: string): string => {
       return 'projects';
     case '/archives':
       return 'archives';
+    case '/trash':
+      return 'trash';
     case '/billing':
     case '/billing/success': // PayOS / MoMo return URLs
     case '/billing/cancel':
@@ -72,6 +75,8 @@ const getPathFromPage = (page: string): string => {
       return '/projects' + query;
     case 'archives':
       return '/archives' + query;
+    case 'trash':
+      return '/trash' + query;
     case 'billing':
       return '/billing' + query;
     case 'settings':
@@ -130,7 +135,7 @@ function App() {
   };
 
   useEffect(() => {
-    const portalPages = ['dashboard', 'projects', 'archives', 'billing', 'settings', 'project-details'];
+    const portalPages = ['dashboard', 'projects', 'archives', 'trash', 'billing', 'settings', 'project-details'];
     if (!portalPages.includes(activePage)) return;
     setProjectsLoading(true);
     setProjectsError('');
@@ -186,7 +191,7 @@ function App() {
     return <AdminApp />;
   }
 
-  const isPortalView = ['dashboard', 'projects', 'archives', 'billing', 'settings', 'feedback', 'project-details'].includes(activePage);
+  const isPortalView = ['dashboard', 'projects', 'archives', 'trash', 'billing', 'settings', 'feedback', 'project-details'].includes(activePage);
 
   const handleLogout = async () => {
     try {
@@ -238,6 +243,7 @@ function App() {
             initialFilter="Completed"
           />
         )}
+        {activePage === 'trash' && <Trash setProjects={setProjects} />}
         {activePage === 'billing' && <Billing />}
         {activePage === 'settings' && <Settings activeTab={activeSettingTab} />}
         {activePage === 'feedback' && <Feedback />}
