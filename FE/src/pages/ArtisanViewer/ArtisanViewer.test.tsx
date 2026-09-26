@@ -18,6 +18,12 @@ function jsonResponse(status: number, body: unknown) {
   } as Response;
 }
 
+/** Renders the viewer past its initial GET and waits for the ready state to land. */
+async function renderReady() {
+  wrap(<ArtisanViewer token="good-token" />);
+  await screen.findByText('Sneaker Bespoke #12');
+}
+
 beforeEach(() => {
   vi.stubGlobal('fetch', vi.fn());
 });
@@ -81,8 +87,7 @@ describe('ArtisanViewer (public share link, BR-101)', () => {
       .mockResolvedValueOnce(jsonResponse(200, { ...VIEW, downloads_remaining: 2 }));
     const openSpy = vi.spyOn(window, 'open').mockImplementation(() => null);
 
-    wrap(<ArtisanViewer token="good-token" />);
-    await screen.findByText('Sneaker Bespoke #12');
+    await renderReady();
 
     fireEvent.click(screen.getByRole('button', { name: /Download/ }));
 
@@ -101,8 +106,7 @@ describe('ArtisanViewer (public share link, BR-101)', () => {
       .mockResolvedValueOnce(jsonResponse(200, VIEW))
       .mockResolvedValueOnce(jsonResponse(202, { report_id: 'r1', status: 'new' }));
 
-    wrap(<ArtisanViewer token="good-token" />);
-    await screen.findByText('Sneaker Bespoke #12');
+    await renderReady();
 
     fireEvent.click(screen.getByRole('button', { name: /Report content/ }));
     fireEvent.change(screen.getByLabelText(/Chi tiết/), {

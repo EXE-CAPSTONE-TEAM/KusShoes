@@ -3,16 +3,11 @@ import { AlertTriangle, Download, Flag, RefreshCw } from 'lucide-react';
 import { ApiError } from '../../api/client';
 import { artisanPublicApi, type ArtisanPublicView, type ContentReportReason } from '../../api/artisanPublic';
 import { useToast } from '../../context/ToastContext';
-import { dictionaries } from '../../i18n/dictionaries';
+import { artisanViewerText as t } from '../../i18n/dictionaries';
 import { formatDateTime } from '../../utils/format';
 import styles from './ArtisanViewer.module.css';
 
 type Status = 'loading' | 'ready' | 'invalid' | 'rate_limited' | 'error';
-
-const t = dictionaries.vi.artisanViewer;
-const tEn = dictionaries.en.artisanViewer;
-/** This page has no logged-in owner to pick a language for, so every label ships bilingual. */
-const bi = (key: keyof typeof t) => `${t[key]} / ${tEn[key]}`;
 
 const REPORT_REASONS: { value: ContentReportReason; labelKey: keyof typeof t }[] = [
   { value: 'copyright', labelKey: 'reportReasonCopyright' },
@@ -24,6 +19,22 @@ const REPORT_REASONS: { value: ContentReportReason; labelKey: keyof typeof t }[]
 interface ArtisanViewerProps {
   token: string;
 }
+
+/** The invalid-link and rate-limited pages share the same alert-card shape as the error page. */
+const StatusCard: React.FC<{ title: string; message?: string; children?: React.ReactNode }> = ({
+  title,
+  message,
+  children,
+}) => (
+  <div className={styles.container}>
+    <div className={styles.card} role="alert">
+      <AlertTriangle size={32} className={styles.iconWarning} />
+      <h1 className={styles.title}>{title}</h1>
+      {message && <p className={styles.message}>{message}</p>}
+      {children}
+    </div>
+  </div>
+);
 
 /** BR-101 public share link viewer: no auth, no cookies — anyone with the link can open it. */
 export const ArtisanViewer: React.FC<ArtisanViewerProps> = ({ token }) => {
@@ -40,10 +51,25 @@ export const ArtisanViewer: React.FC<ArtisanViewerProps> = ({ token }) => {
   const [reportSubmitting, setReportSubmitting] = useState(false);
   const [reportSubmitted, setReportSubmitted] = useState(false);
 
+  /** The public link and download endpoints both fail the same way; report both identically. */
+  const applyLinkError = (caught: unknown): boolean => {
+    if (caught instanceof ApiError && caught.status === 410) {
+      setStatus('invalid');
+      setErrorMessage(caught.message);
+      return true;
+    }
+    if (caught instanceof ApiError && caught.status === 429) {
+      setStatus('rate_limited');
+      setErrorMessage(caught.message);
+      return true;
+    }
+    return false;
+  };
+
   const load = useCallback(async () => {
     if (!token) {
       setStatus('invalid');
-      setErrorMessage(bi('invalidTitle'));
+      setErrorMessage(t.invalidTitle);
       return;
     }
     setStatus('loading');
@@ -52,17 +78,11 @@ export const ArtisanViewer: React.FC<ArtisanViewerProps> = ({ token }) => {
       setData(view);
       setStatus('ready');
     } catch (caught) {
-      if (caught instanceof ApiError && caught.status === 410) {
-        setStatus('invalid');
-        setErrorMessage(caught.message);
-      } else if (caught instanceof ApiError && caught.status === 429) {
-        setStatus('rate_limited');
-        setErrorMessage(caught.message);
-      } else {
-        // Not an ApiError: a real network failure (offline, DNS, CORS) whose raw message
-        // (e.g. "Failed to fetch") is meaningless to a public link recipient.
+      // Not an ApiError: a real network failure (offline, DNS, CORS) whose raw message
+      // (e.g. "Failed to fetch") is meaningless to a public link recipient.
+      if (!applyLinkError(caught)) {
         setStatus('error');
-        setErrorMessage(bi('networkErrorMessage'));
+        setErrorMessage(t.networkErrorMessage);
       }
     }
   }, [token]);
@@ -77,25 +97,16 @@ export const ArtisanViewer: React.FC<ArtisanViewerProps> = ({ token }) => {
     try {
       const result = await artisanPublicApi.download(token);
       window.open(result.download_url, '_blank', 'noopener');
-      toast(bi('downloadSuccess'));
+      toast(t.downloadSuccess);
       try {
         const refreshed = await artisanPublicApi.view(token);
         setData(refreshed);
       } catch (refreshError) {
-        if (refreshError instanceof ApiError && refreshError.status === 410) {
-          setStatus('invalid');
-          setErrorMessage(refreshError.message);
-        }
+        applyLinkError(refreshError);
       }
     } catch (caught) {
-      if (caught instanceof ApiError && caught.status === 410) {
-        setStatus('invalid');
-        setErrorMessage(caught.message);
-      } else if (caught instanceof ApiError && caught.status === 429) {
-        setStatus('rate_limited');
-        setErrorMessage(caught.message);
-      } else {
-        toast(bi('downloadError'), 'error');
+      if (!applyLinkError(caught)) {
+        toast(t.downloadError, 'error');
       }
     } finally {
       setDownloading(false);
@@ -116,7 +127,7 @@ export const ArtisanViewer: React.FC<ArtisanViewerProps> = ({ token }) => {
       });
       setReportSubmitted(true);
     } catch (caught) {
-      toast(caught instanceof ApiError ? caught.message : bi('reportError'), 'error');
+      toast(caught instanceof ApiError ? caught.message : t.reportError, 'error');
     } finally {
       setReportSubmitting(false);
     }
@@ -126,48 +137,27 @@ export const ArtisanViewer: React.FC<ArtisanViewerProps> = ({ token }) => {
     return (
       <div className={styles.container}>
         <div className={styles.card}>
-          <p className={styles.muted}>{bi('loading')}</p>
+          <p className={styles.muted}>{t.loading}</p>
         </div>
       </div>
     );
   }
 
   if (status === 'invalid') {
-    return (
-      <div className={styles.container}>
-        <div className={styles.card} role="alert">
-          <AlertTriangle size={32} className={styles.iconWarning} />
-          <h1 className={styles.title}>{bi('invalidTitle')}</h1>
-          <p className={styles.message}>{errorMessage}</p>
-        </div>
-      </div>
-    );
+    return <StatusCard title={t.invalidTitle} message={errorMessage} />;
   }
 
   if (status === 'rate_limited') {
-    return (
-      <div className={styles.container}>
-        <div className={styles.card} role="alert">
-          <AlertTriangle size={32} className={styles.iconWarning} />
-          <h1 className={styles.title}>{bi('rateLimitedTitle')}</h1>
-          <p className={styles.message}>{errorMessage || bi('rateLimitedMessage')}</p>
-        </div>
-      </div>
-    );
+    return <StatusCard title={t.rateLimitedTitle} message={errorMessage || t.rateLimitedMessage} />;
   }
 
   if (status === 'error') {
     return (
-      <div className={styles.container}>
-        <div className={styles.card} role="alert">
-          <AlertTriangle size={32} className={styles.iconWarning} />
-          <h1 className={styles.title}>{bi('networkErrorTitle')}</h1>
-          <p className={styles.message}>{errorMessage || bi('networkErrorMessage')}</p>
-          <button type="button" className="btn-neon-orange" onClick={() => void load()}>
-            <RefreshCw size={16} /> {bi('retry')}
-          </button>
-        </div>
-      </div>
+      <StatusCard title={t.networkErrorTitle} message={errorMessage || t.networkErrorMessage}>
+        <button type="button" className="btn-neon-orange" onClick={() => void load()}>
+          <RefreshCw size={16} /> {t.retry}
+        </button>
+      </StatusCard>
     );
   }
 
@@ -176,25 +166,20 @@ export const ArtisanViewer: React.FC<ArtisanViewerProps> = ({ token }) => {
   return (
     <div className={styles.container}>
       <div className={styles.card}>
-        <h1 className={styles.title}>{bi('title')}</h1>
+        <h1 className={styles.title}>{t.title}</h1>
 
         <dl className={styles.details}>
-          <div className={styles.row}>
-            <dt>{bi('project')}</dt>
-            <dd>{data.project_name}</dd>
-          </div>
-          <div className={styles.row}>
-            <dt>{bi('format')}</dt>
-            <dd>{data.format}</dd>
-          </div>
-          <div className={styles.row}>
-            <dt>{bi('expiresAt')}</dt>
-            <dd>{formatDateTime(data.expires_at)}</dd>
-          </div>
-          <div className={styles.row}>
-            <dt>{bi('downloadsRemaining')}</dt>
-            <dd>{data.downloads_remaining}</dd>
-          </div>
+          {[
+            { label: t.project, value: data.project_name },
+            { label: t.format, value: data.format },
+            { label: t.expiresAt, value: formatDateTime(data.expires_at) },
+            { label: t.downloadsRemaining, value: data.downloads_remaining },
+          ].map((row) => (
+            <div className={styles.row} key={row.label}>
+              <dt>{row.label}</dt>
+              <dd>{row.value}</dd>
+            </div>
+          ))}
         </dl>
 
         <button
@@ -203,37 +188,37 @@ export const ArtisanViewer: React.FC<ArtisanViewerProps> = ({ token }) => {
           onClick={() => void handleDownload()}
           disabled={downloading || data.downloads_remaining <= 0}
         >
-          <Download size={16} /> {downloading ? bi('downloading') : bi('download')}
+          <Download size={16} /> {downloading ? t.downloading : t.download}
         </button>
 
-        {reportSubmitted && <p className={styles.success}>{bi('reportSuccess')}</p>}
+        {reportSubmitted && <p className={styles.success}>{t.reportSuccess}</p>}
 
         {!reportOpen && !reportSubmitted && (
           <button type="button" className={styles.reportLink} onClick={() => setReportOpen(true)}>
-            <Flag size={14} /> {bi('reportContent')}
+            <Flag size={14} /> {t.reportContent}
           </button>
         )}
 
         {reportOpen && !reportSubmitted && (
           <form className={styles.reportForm} onSubmit={(event) => void submitReport(event)}>
-            <h2 className={styles.reportTitle}>{bi('reportTitle')}</h2>
+            <h2 className={styles.reportTitle}>{t.reportTitle}</h2>
 
             <label className={styles.field}>
-              <span>{bi('reportReason')}</span>
+              <span>{t.reportReason}</span>
               <select
                 value={reportReason}
                 onChange={(event) => setReportReason(event.target.value as ContentReportReason)}
               >
                 {REPORT_REASONS.map((reason) => (
                   <option key={reason.value} value={reason.value}>
-                    {bi(reason.labelKey)}
+                    {t[reason.labelKey]}
                   </option>
                 ))}
               </select>
             </label>
 
             <label className={styles.field}>
-              <span>{bi('reportDetails')}</span>
+              <span>{t.reportDetails}</span>
               <textarea
                 value={reportDetails}
                 onChange={(event) => setReportDetails(event.target.value)}
@@ -244,7 +229,7 @@ export const ArtisanViewer: React.FC<ArtisanViewerProps> = ({ token }) => {
             </label>
 
             <label className={styles.field}>
-              <span>{bi('reportEmail')}</span>
+              <span>{t.reportEmail}</span>
               <input type="email" value={reportEmail} onChange={(event) => setReportEmail(event.target.value)} />
             </label>
 
@@ -255,14 +240,14 @@ export const ArtisanViewer: React.FC<ArtisanViewerProps> = ({ token }) => {
                 onClick={() => setReportOpen(false)}
                 disabled={reportSubmitting}
               >
-                {bi('reportCancel')}
+                {t.reportCancel}
               </button>
               <button
                 type="submit"
                 className="btn-neon-orange"
                 disabled={reportSubmitting || reportDetails.trim().length < 20}
               >
-                {reportSubmitting ? bi('reportSubmitting') : bi('reportSubmit')}
+                {reportSubmitting ? t.reportSubmitting : t.reportSubmit}
               </button>
             </div>
           </form>

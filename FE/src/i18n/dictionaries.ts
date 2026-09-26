@@ -176,38 +176,6 @@ export const dictionaries = {
         col4_3: "Beginners Series",
         col4_4: "Community"
       }
-    },
-    artisanViewer: {
-      loading: "Đang tải liên kết chia sẻ...",
-      title: "Thiết kế được chia sẻ",
-      project: "Dự án",
-      format: "Định dạng",
-      expiresAt: "Hết hạn",
-      downloadsRemaining: "Lượt tải còn lại",
-      download: "Tải xuống",
-      downloading: "Đang tải xuống...",
-      downloadSuccess: "Đã bắt đầu tải xuống.",
-      downloadError: "Không thể tải xuống. Vui lòng thử lại.",
-      reportContent: "Báo cáo nội dung",
-      reportTitle: "Báo cáo nội dung vi phạm",
-      reportReason: "Lý do",
-      reportReasonCopyright: "Vi phạm bản quyền",
-      reportReasonTrademark: "Vi phạm nhãn hiệu",
-      reportReasonInappropriate: "Nội dung không phù hợp",
-      reportReasonOther: "Khác",
-      reportDetails: "Chi tiết (tối thiểu 20 ký tự)",
-      reportEmail: "Email của bạn (không bắt buộc)",
-      reportSubmit: "Gửi báo cáo",
-      reportSubmitting: "Đang gửi...",
-      reportCancel: "Huỷ",
-      reportSuccess: "Cảm ơn bạn. Báo cáo đã được gửi và sẽ được xem xét.",
-      reportError: "Không thể gửi báo cáo. Vui lòng thử lại.",
-      invalidTitle: "Liên kết không hợp lệ",
-      rateLimitedTitle: "Quá nhiều yêu cầu",
-      rateLimitedMessage: "Vui lòng thử lại sau.",
-      networkErrorTitle: "Lỗi kết nối",
-      networkErrorMessage: "Không thể kết nối tới máy chủ. Vui lòng kiểm tra mạng và thử lại.",
-      retry: "Thử lại"
     }
   },
   en: {
@@ -387,41 +355,45 @@ export const dictionaries = {
         col4_3: "Beginners Series",
         col4_4: "Community"
       }
-    },
-    artisanViewer: {
-      loading: "Loading shared link...",
-      title: "Shared design",
-      project: "Project",
-      format: "Format",
-      expiresAt: "Expires",
-      downloadsRemaining: "Downloads remaining",
-      download: "Download",
-      downloading: "Downloading...",
-      downloadSuccess: "Download started.",
-      downloadError: "Unable to download. Please try again.",
-      reportContent: "Report content",
-      reportTitle: "Report content violation",
-      reportReason: "Reason",
-      reportReasonCopyright: "Copyright infringement",
-      reportReasonTrademark: "Trademark infringement",
-      reportReasonInappropriate: "Inappropriate content",
-      reportReasonOther: "Other",
-      reportDetails: "Details (at least 20 characters)",
-      reportEmail: "Your email (optional)",
-      reportSubmit: "Submit report",
-      reportSubmitting: "Submitting...",
-      reportCancel: "Cancel",
-      reportSuccess: "Thank you. Your report has been submitted for review.",
-      reportError: "Unable to submit the report. Please try again.",
-      invalidTitle: "Invalid link",
-      rateLimitedTitle: "Too many requests",
-      rateLimitedMessage: "Please try again later.",
-      networkErrorTitle: "Connection error",
-      networkErrorMessage: "Unable to reach the server. Please check your connection and try again.",
-      retry: "Retry"
     }
   }
 };
 
 export type Language = 'vi' | 'en';
 export type Dictionary = typeof dictionaries['vi'];
+
+// BR-101 public artisan viewer: it has no logged-in owner to pick a language for, so every
+// label ships as a single bilingual string instead of a separate vi/en dictionary entry.
+export const artisanViewerText = {
+  loading: "Đang tải liên kết chia sẻ... / Loading shared link...",
+  title: "Thiết kế được chia sẻ / Shared design",
+  project: "Dự án / Project",
+  format: "Định dạng / Format",
+  expiresAt: "Hết hạn / Expires",
+  downloadsRemaining: "Lượt tải còn lại / Downloads remaining",
+  download: "Tải xuống / Download",
+  downloading: "Đang tải xuống... / Downloading...",
+  downloadSuccess: "Đã bắt đầu tải xuống. / Download started.",
+  downloadError: "Không thể tải xuống. Vui lòng thử lại. / Unable to download. Please try again.",
+  reportContent: "Báo cáo nội dung / Report content",
+  reportTitle: "Báo cáo nội dung vi phạm / Report content violation",
+  reportReason: "Lý do / Reason",
+  reportReasonCopyright: "Vi phạm bản quyền / Copyright infringement",
+  reportReasonTrademark: "Vi phạm nhãn hiệu / Trademark infringement",
+  reportReasonInappropriate: "Nội dung không phù hợp / Inappropriate content",
+  reportReasonOther: "Khác / Other",
+  reportDetails: "Chi tiết (tối thiểu 20 ký tự) / Details (at least 20 characters)",
+  reportEmail: "Email của bạn (không bắt buộc) / Your email (optional)",
+  reportSubmit: "Gửi báo cáo / Submit report",
+  reportSubmitting: "Đang gửi... / Submitting...",
+  reportCancel: "Huỷ / Cancel",
+  reportSuccess: "Cảm ơn bạn. Báo cáo đã được gửi và sẽ được xem xét. / Thank you. Your report has been submitted for review.",
+  reportError: "Không thể gửi báo cáo. Vui lòng thử lại. / Unable to submit the report. Please try again.",
+  invalidTitle: "Liên kết không hợp lệ / Invalid link",
+  rateLimitedTitle: "Quá nhiều yêu cầu / Too many requests",
+  rateLimitedMessage: "Vui lòng thử lại sau. / Please try again later.",
+  networkErrorTitle: "Lỗi kết nối / Connection error",
+  networkErrorMessage:
+    "Không thể kết nối tới máy chủ. Vui lòng kiểm tra mạng và thử lại. / Unable to reach the server. Please check your connection and try again.",
+  retry: "Thử lại / Retry",
+};
