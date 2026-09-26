@@ -49,11 +49,9 @@ export const ProjectDetails: React.FC<ProjectDetailsProps> = ({
     setLaunchError(null);
   }, [project.id]);
 
-  useEffect(() => {
-    setCanonicalModelAssetId(project.canonicalModelAssetId);
-  }, [project.id, project.canonicalModelAssetId]);
-
-  // After an asset import/delete: the canonical model may have changed on the server.
+  // The list this page is usually opened from (api.listProjects) never carries
+  // canonical_model_asset_id, so re-fetch the single-project detail to get it — both on
+  // first entry and after an asset import/delete that may have changed it on the server.
   const refreshProject = useCallback(async () => {
     try {
       const updated = await api.getProject(project.id);
@@ -63,6 +61,11 @@ export const ProjectDetails: React.FC<ProjectDetailsProps> = ({
       toast(caught instanceof Error ? caught.message : 'Unable to refresh the project.', 'error');
     }
   }, [project.id, setProjects, toast]);
+
+  useEffect(() => {
+    setCanonicalModelAssetId(project.canonicalModelAssetId);
+    void refreshProject();
+  }, [project.id, project.canonicalModelAssetId, refreshProject]);
 
   useEffect(() => {
     api.listProjectExports(project.id)
@@ -364,6 +367,7 @@ export const ProjectDetails: React.FC<ProjectDetailsProps> = ({
             <ModelPanel
               projectId={project.id}
               canonicalModelAssetId={canonicalModelAssetId}
+              locked={project.isLocked}
               onModelChange={refreshProject}
             />
           )}

@@ -9,6 +9,7 @@ import styles from './ProjectPanels.module.css';
 interface ModelPanelProps {
   projectId: string;
   canonicalModelAssetId: string | null;
+  locked: boolean;
   /** Called after an import or a delete that may have changed the project's canonical model. */
   onModelChange: () => void | Promise<void>;
 }
@@ -30,19 +31,23 @@ function formatAssetSize(bytes: number | null): string {
 }
 
 /** Import the source 3D model from the web (C3): the desktop-only upload-url/PUT/confirm flow. */
-export const ModelPanel: React.FC<ModelPanelProps> = ({ projectId, canonicalModelAssetId, onModelChange }) => {
+export const ModelPanel: React.FC<ModelPanelProps> = ({ projectId, canonicalModelAssetId, locked, onModelChange }) => {
   const { toast } = useToast();
   const [assets, setAssets] = useState<ProjectAsset[] | null>(null);
+  const [loadError, setLoadError] = useState<string | null>(null);
   const [uploadStep, setUploadStep] = useState<string | null>(null);
   const [deleteTarget, setDeleteTarget] = useState<ProjectAsset | null>(null);
   const [busy, setBusy] = useState(false);
   const fileInputRef = useRef<HTMLInputElement>(null);
 
   const load = useCallback(async () => {
+    setLoadError(null);
     try {
       setAssets(await studioApi.listAssets(projectId));
     } catch (caught) {
-      toast(caught instanceof Error ? caught.message : 'Unable to load assets.', 'error');
+      const message = caught instanceof Error ? caught.message : 'Unable to load assets.';
+      toast(message, 'error');
+      setLoadError(message);
     }
   }, [projectId, toast]);
 
@@ -51,6 +56,7 @@ export const ModelPanel: React.FC<ModelPanelProps> = ({ projectId, canonicalMode
   }, [load]);
 
   const importModel = async (file: File) => {
+    if (locked) return;
     const contentType = inferSourceModelContentType(file.name);
     if (!contentType) {
       toast('Only .glb and .gltf files are supported for the 3D model.', 'error');
@@ -102,7 +108,7 @@ export const ModelPanel: React.FC<ModelPanelProps> = ({ projectId, canonicalMode
   };
 
   const deleteAsset = async () => {
-    if (!deleteTarget) return;
+    if (!deleteTarget || locked) return;
     setBusy(true);
     try {
       await studioApi.deleteAsset(projectId, deleteTarget.id);
@@ -121,6 +127,12 @@ export const ModelPanel: React.FC<ModelPanelProps> = ({ projectId, canonicalMode
 
   return (
     <div className={styles.stack}>
+      {locked && (
+        <div className={styles.lockedBanner}>
+          This project is read-only after a plan downgrade, so the 3D model cannot be imported or deleted.
+        </div>
+      )}
+
       <div className={`${styles.panel} glass-panel`}>
         <div className={styles.panelHeader}>
           <Box size={20} className={styles.panelIcon} />
@@ -135,7 +147,7 @@ export const ModelPanel: React.FC<ModelPanelProps> = ({ projectId, canonicalMode
             type="button"
             className={`btn-neon-orange ${styles.headerAction}`}
             onClick={() => fileInputRef.current?.click()}
-            disabled={uploading}
+            disabled={uploading || locked}
           >
             <UploadCloud size={16} /> {uploading ? 'Importing…' : 'Import model'}
           </button>
@@ -155,7 +167,14 @@ export const ModelPanel: React.FC<ModelPanelProps> = ({ projectId, canonicalMode
           </div>
         )}
 
-        {assets === null ? (
+        {loadError ? (
+          <div className={styles.notice} role="alert">
+            <span>{loadError}</span>
+            <button type="button" className="btn-outline" onClick={() => void load()}>
+              Retry
+            </button>
+          </div>
+        ) : assets === null ? (
           <p className={styles.muted}>Loading assets…</p>
         ) : assets.length === 0 ? (
           <p className={styles.muted}>No assets yet. Import a 3D model to get started.</p>
@@ -178,7 +197,7 @@ export const ModelPanel: React.FC<ModelPanelProps> = ({ projectId, canonicalMode
                 <button
                   type="button"
                   className="btn-outline"
-                  disabled={busy}
+                  disabled={busy || locked}
                   onClick={() => setDeleteTarget(asset)}
                 >
                   <Trash2 size={14} /> Delete

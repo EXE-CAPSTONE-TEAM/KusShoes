@@ -308,7 +308,7 @@ describe('ModelPanel (import the source 3D model, C3)', () => {
     m(studioApi.putAssetFile).mockResolvedValue(undefined);
     m(studioApi.confirmAssetUpload).mockResolvedValue(readyAsset);
     const onModelChange = vi.fn();
-    wrap(<ModelPanel projectId="p1" canonicalModelAssetId={null} onModelChange={onModelChange} />);
+    wrap(<ModelPanel projectId="p1" canonicalModelAssetId={null} locked={false} onModelChange={onModelChange} />);
 
     const file = new File(['glb-bytes'], 'model.glb', { type: 'model/gltf-binary' });
     await chooseFile(file);
@@ -336,7 +336,7 @@ describe('ModelPanel (import the source 3D model, C3)', () => {
     m(studioApi.createAssetUploadUrl).mockResolvedValue(uploadResponse);
     m(studioApi.putAssetFile).mockRejectedValue(new Error('Unable to upload the file to storage (status 403).'));
     const onModelChange = vi.fn();
-    wrap(<ModelPanel projectId="p1" canonicalModelAssetId={null} onModelChange={onModelChange} />);
+    wrap(<ModelPanel projectId="p1" canonicalModelAssetId={null} locked={false} onModelChange={onModelChange} />);
 
     await chooseFile(new File(['glb-bytes'], 'model.glb', { type: 'model/gltf-binary' }));
 
@@ -347,7 +347,7 @@ describe('ModelPanel (import the source 3D model, C3)', () => {
 
   it('rejects a non-model file before calling the upload API', async () => {
     m(studioApi.listAssets).mockResolvedValue([]);
-    wrap(<ModelPanel projectId="p1" canonicalModelAssetId={null} onModelChange={vi.fn()} />);
+    wrap(<ModelPanel projectId="p1" canonicalModelAssetId={null} locked={false} onModelChange={vi.fn()} />);
 
     await chooseFile(new File(['hello'], 'notes.txt', { type: 'text/plain' }));
 
@@ -357,7 +357,7 @@ describe('ModelPanel (import the source 3D model, C3)', () => {
 
   it('lists assets and marks the canonical model', async () => {
     m(studioApi.listAssets).mockResolvedValue([readyAsset]);
-    wrap(<ModelPanel projectId="p1" canonicalModelAssetId="a1" onModelChange={vi.fn()} />);
+    wrap(<ModelPanel projectId="p1" canonicalModelAssetId="a1" locked={false} onModelChange={vi.fn()} />);
 
     expect(await screen.findByText('model.glb')).toBeInTheDocument();
     expect(screen.getByText('Canonical model')).toBeInTheDocument();
@@ -367,7 +367,7 @@ describe('ModelPanel (import the source 3D model, C3)', () => {
     m(studioApi.listAssets).mockResolvedValue([readyAsset]);
     m(studioApi.deleteAsset).mockRejectedValue(new ApiError('Asset không tồn tại', 404, 'ASSET_NOT_FOUND'));
     const onModelChange = vi.fn();
-    wrap(<ModelPanel projectId="p1" canonicalModelAssetId="a1" onModelChange={onModelChange} />);
+    wrap(<ModelPanel projectId="p1" canonicalModelAssetId="a1" locked={false} onModelChange={onModelChange} />);
 
     fireEvent.click(await screen.findByRole('button', { name: /delete/i }));
     const dialog = await screen.findByRole('alertdialog');
@@ -376,6 +376,28 @@ describe('ModelPanel (import the source 3D model, C3)', () => {
     await waitFor(() => expect(studioApi.deleteAsset).toHaveBeenCalledWith('p1', 'a1'));
     expect(await screen.findByText(/asset không tồn tại/i)).toBeInTheDocument();
     expect(onModelChange).not.toHaveBeenCalled();
+  });
+
+  it('disables import and delete on a read-only (locked) project', async () => {
+    m(studioApi.listAssets).mockResolvedValue([readyAsset]);
+    wrap(<ModelPanel projectId="p1" canonicalModelAssetId="a1" locked onModelChange={vi.fn()} />);
+
+    expect(await screen.findByText(/read-only after a plan downgrade/i)).toBeInTheDocument();
+    expect(screen.getByRole('button', { name: /import model/i })).toBeDisabled();
+    expect(await screen.findByRole('button', { name: /delete/i })).toBeDisabled();
+  });
+
+  it('shows a retry action instead of loading forever when listing assets fails', async () => {
+    m(studioApi.listAssets).mockRejectedValueOnce(new Error('Unable to load assets.'));
+    m(studioApi.listAssets).mockResolvedValueOnce([]);
+    wrap(<ModelPanel projectId="p1" canonicalModelAssetId={null} locked={false} onModelChange={vi.fn()} />);
+
+    expect(await screen.findByRole('alert')).toHaveTextContent('Unable to load assets.');
+    expect(screen.queryByText(/loading assets/i)).not.toBeInTheDocument();
+
+    fireEvent.click(screen.getByRole('button', { name: /retry/i }));
+    await waitFor(() => expect(studioApi.listAssets).toHaveBeenCalledTimes(2));
+    expect(await screen.findByText(/no assets yet/i)).toBeInTheDocument();
   });
 });
 
