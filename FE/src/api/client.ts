@@ -787,6 +787,10 @@ export const api = {
     return this.updateProfile({ avatar_path: upload.file_path });
   },
 
+  async deleteAvatar(): Promise<void> {
+    await request<{ message: string }>('/api/v1/users/me/avatar', { method: 'DELETE' });
+  },
+
   async changePassword(payload: {
     currentPassword: string;
     newPassword: string;

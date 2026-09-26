@@ -84,6 +84,9 @@ class ArtisanLinkCreated(ArtisanLinkResponse):
 
 
 class ArtisanPublicView(BaseModel):
+    # Safe to expose: the public content-report endpoint (BR-77) needs a real project_id to
+    # file against, and this link already grants the holder view access to the project.
+    project_id: uuid.UUID
     project_name: str
     format: str
     expires_at: datetime

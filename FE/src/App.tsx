@@ -13,6 +13,7 @@ import { ImpersonationBanner } from './components/ImpersonationBanner/Impersonat
 import { ProjectDetails } from './pages/ProjectDetails/ProjectDetails';
 import { ProductsPage } from './pages/ProductsPage/ProductsPage';
 import { AdminApp } from './pages/Admin/AdminApp';
+import { ArtisanViewer } from './pages/ArtisanViewer/ArtisanViewer';
 import { api, ApiError, type PortalProject } from './api/client';
 import { getSettingTabFromSearch, type SettingTab } from './pages/Settings/settingsNavigation';
 
@@ -22,6 +23,9 @@ const getPageFromPath = (path: string): string => {
   const cleanPath = parts[0];
   if (cleanPath === '/admin' || cleanPath.startsWith('/admin/')) {
     return 'admin';
+  }
+  if (cleanPath.startsWith('/artisan/')) {
+    return 'artisan-viewer';
   }
   switch (cleanPath) {
     case '/auth/google/callback':
@@ -109,7 +113,7 @@ function App() {
       const query = path.includes('?') ? `?${path.split('?')[1]}` : '';
       setActiveSettingTab(getSettingTabFromSearch(query));
     }
-    
+
     const currentFull = window.location.pathname + window.location.search;
     if (currentFull !== path) {
       window.history.pushState({}, '', path);
@@ -120,21 +124,29 @@ function App() {
       const searchStr = path.includes('?') ? '?' + path.split('?')[1] : '';
       const params = new URLSearchParams(searchStr);
       const id = params.get('id');
-      const found = projects.find(p => p.id === id);
+      const found = projects.find((p) => p.id === id);
       if (found) {
         setActiveDetailProject(found);
       }
     }
-    
+
     setActivePage(page);
   };
 
   useEffect(() => {
-    const portalPages = ['dashboard', 'projects', 'archives', 'billing', 'settings', 'project-details'];
+    const portalPages = [
+      'dashboard',
+      'projects',
+      'archives',
+      'billing',
+      'settings',
+      'project-details',
+    ];
     if (!portalPages.includes(activePage)) return;
     setProjectsLoading(true);
     setProjectsError('');
-    api.listProjects()
+    api
+      .listProjects()
       .then((page) => setProjects(page.items))
       .catch((caught) => {
         if (caught instanceof ApiError && caught.status === 401) {
@@ -158,11 +170,11 @@ function App() {
       if (page === 'settings') {
         setActiveSettingTab(getSettingTabFromSearch(window.location.search));
       }
-      
+
       if (page === 'project-details') {
         const params = new URLSearchParams(window.location.search);
         const id = params.get('id');
-        const found = projects.find(p => p.id === id);
+        const found = projects.find((p) => p.id === id);
         if (found) {
           setActiveDetailProject(found);
         }
@@ -177,7 +189,7 @@ function App() {
     if (activePage === 'project-details' && !activeDetailProject && projects.length > 0) {
       const params = new URLSearchParams(window.location.search);
       const id = params.get('id');
-      const found = projects.find(p => p.id === id) || projects[0];
+      const found = projects.find((p) => p.id === id) || projects[0];
       setActiveDetailProject(found);
     }
   }, [activePage, projects, activeDetailProject]);
@@ -186,7 +198,15 @@ function App() {
     return <AdminApp />;
   }
 
-  const isPortalView = ['dashboard', 'projects', 'archives', 'billing', 'settings', 'feedback', 'project-details'].includes(activePage);
+  const isPortalView = [
+    'dashboard',
+    'projects',
+    'archives',
+    'billing',
+    'settings',
+    'feedback',
+    'project-details',
+  ].includes(activePage);
 
   const handleLogout = async () => {
     try {
@@ -202,37 +222,47 @@ function App() {
 
       {/* If it's a logged-in view, show the Sidebar navigation */}
       {isPortalView && (
-        <Sidebar 
-          activePage={activePage} 
-          setActivePage={navigate} 
-          onLogout={handleLogout} 
+        <Sidebar
+          activePage={activePage}
+          setActivePage={navigate}
+          onLogout={handleLogout}
           projects={projects}
           activeSettingTab={activeSettingTab}
         />
       )}
 
       {/* Main Content Area */}
-      <main style={{ flexGrow: 1, backgroundColor: 'var(--bg-primary)', height: '100vh', overflowY: 'auto', display: 'flex', flexDirection: 'column', transition: 'background-color var(--transition-normal)' }}>
-
+      <main
+        style={{
+          flexGrow: 1,
+          backgroundColor: 'var(--bg-primary)',
+          height: '100vh',
+          overflowY: 'auto',
+          display: 'flex',
+          flexDirection: 'column',
+          transition: 'background-color var(--transition-normal)',
+        }}
+      >
         {activePage === 'landing' && <Landing navigate={navigate} />}
         {activePage === 'products-info' && <ProductsPage navigate={navigate} />}
         {activePage === 'login' && <Login setPage={navigate} />}
         {activePage === 'google-callback' && <GoogleCallback setPage={navigate} />}
+        {activePage === 'artisan-viewer' && <ArtisanViewer />}
         {activePage === 'pricing' && <PricingPage navigate={navigate} />}
-        
+
         {/* Portal pages */}
         {activePage === 'dashboard' && <Dashboard setActivePage={navigate} projects={projects} />}
         {activePage === 'projects' && (
-          <Projects 
-            projects={projects} 
+          <Projects
+            projects={projects}
             setProjects={setProjects}
             onViewDetails={(id) => navigate(`/project-details?id=${id}`)}
             loading={projectsLoading}
           />
         )}
         {activePage === 'archives' && (
-          <Projects 
-            projects={projects} 
+          <Projects
+            projects={projects}
             setProjects={setProjects}
             onViewDetails={(id) => navigate(`/project-details?id=${id}`)}
             initialFilter="Completed"
@@ -242,13 +272,15 @@ function App() {
         {activePage === 'settings' && <Settings activeTab={activeSettingTab} />}
         {activePage === 'feedback' && <Feedback />}
         {projectsError && isPortalView && (
-          <div role="alert" style={{ margin: '24px', color: '#ef4444' }}>{projectsError}</div>
+          <div role="alert" style={{ margin: '24px', color: '#ef4444' }}>
+            {projectsError}
+          </div>
         )}
         {projectsLoading && isPortalView && projects.length === 0 && (
           <div style={{ margin: '24px' }}>Loading data from server...</div>
         )}
         {activePage === 'project-details' && (activeDetailProject || projects[0]) && (
-          <ProjectDetails 
+          <ProjectDetails
             project={activeDetailProject || projects[0]}
             onBack={() => navigate('/projects')}
             setProjects={setProjects}

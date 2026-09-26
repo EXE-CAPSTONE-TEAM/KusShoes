@@ -1,8 +1,8 @@
-import { request } from "./client";
+import { request } from './client';
 
 // ---- Two-factor authentication (BR-12/13) ----------------------------------------------
 
-export type TwoFactorMethod = "totp" | "email";
+export type TwoFactorMethod = 'totp' | 'email';
 
 export type TwoFactorStatus = {
   enabled: boolean;
@@ -46,7 +46,7 @@ export type PrivacySettings = {
   allow_ads_personalization: boolean;
 };
 
-export type ConsentType = "marketing_content" | "academic_report" | "cookie_analytics";
+export type ConsentType = 'marketing_content' | 'academic_report' | 'cookie_analytics';
 
 export type ConsentRecord = {
   id: string;
@@ -59,7 +59,7 @@ export type ConsentRecord = {
 
 // ---- Data import from backup (BR-20) ---------------------------------------------------
 
-export type DataImportStatus = "pending" | "completed" | "rejected";
+export type DataImportStatus = 'pending' | 'completed' | 'rejected';
 
 export type DataImportUpload = {
   import_id: string;
@@ -96,64 +96,125 @@ export type MyModerationStatus = {
   is_banned: boolean;
 };
 
-const json = (body: unknown): RequestInit => ({ method: "POST", body: JSON.stringify(body) });
+// ---- Public copyright/trademark report intake (BR-77 / UC-24) — no auth required --------
+
+export type ContentReportReason = 'copyright' | 'trademark' | 'inappropriate' | 'other';
+
+export type ContentReportInput = {
+  projectId?: string | null;
+  reason: ContentReportReason;
+  details: string;
+  reporterEmail?: string | null;
+  reporterName?: string | null;
+  evidenceUrl?: string | null;
+};
+
+export type ContentReportAccepted = {
+  report_id: string;
+  status: string;
+};
+
+const json = (body: unknown): RequestInit => ({ method: 'POST', body: JSON.stringify(body) });
 
 export const accountApi = {
   // 2FA
-  twoFactorStatus: () => request<TwoFactorStatus>("/api/v1/users/me/2fa"),
+  twoFactorStatus: () => request<TwoFactorStatus>('/api/v1/users/me/2fa'),
   setRecoveryEmail: (recoveryEmail: string) =>
-    request<{ message: string }>("/api/v1/users/me/2fa/recovery-email", json({ recovery_email: recoveryEmail })),
+    request<{ message: string }>(
+      '/api/v1/users/me/2fa/recovery-email',
+      json({ recovery_email: recoveryEmail }),
+    ),
   verifyRecoveryEmail: (code: string) =>
-    request<{ message: string }>("/api/v1/users/me/2fa/recovery-email/verify", json({ code })),
+    request<{ message: string }>('/api/v1/users/me/2fa/recovery-email/verify', json({ code })),
   setupTwoFactor: (method: TwoFactorMethod) =>
-    request<TwoFactorSetup>("/api/v1/users/me/2fa/setup", json({ method })),
+    request<TwoFactorSetup>('/api/v1/users/me/2fa/setup', json({ method })),
   enableTwoFactor: (method: TwoFactorMethod, code: string) =>
-    request<{ message: string; recovery_codes: string[] }>("/api/v1/users/me/2fa/enable", json({ method, code })),
+    request<{ message: string; recovery_codes: string[] }>(
+      '/api/v1/users/me/2fa/enable',
+      json({ method, code }),
+    ),
   disableTwoFactor: (payload: { password?: string; code?: string }) =>
-    request<{ message: string }>("/api/v1/users/me/2fa/disable", json(payload)),
+    request<{ message: string }>('/api/v1/users/me/2fa/disable', json(payload)),
 
   // Sessions and history
-  listSessions: async () => (await request<{ items: SessionInfo[] }>("/api/v1/auth/sessions")).items,
+  listSessions: async () =>
+    (await request<{ items: SessionInfo[] }>('/api/v1/auth/sessions')).items,
   revokeSession: (sessionId: string) =>
-    request<{ message: string }>(`/api/v1/auth/sessions/${sessionId}`, { method: "DELETE" }),
-  revokeAllSessions: () => request<{ message: string }>("/api/v1/auth/sessions", { method: "DELETE" }),
+    request<{ message: string }>(`/api/v1/auth/sessions/${sessionId}`, { method: 'DELETE' }),
+  revokeAllSessions: () =>
+    request<{ message: string }>('/api/v1/auth/sessions', { method: 'DELETE' }),
   loginHistory: async () =>
-    (await request<{ items: LoginHistoryItem[] }>("/api/v1/users/me/login-history")).items,
+    (await request<{ items: LoginHistoryItem[] }>('/api/v1/users/me/login-history')).items,
 
   // Privacy and consent
-  getPrivacy: () => request<PrivacySettings>("/api/v1/users/me/privacy"),
+  getPrivacy: () => request<PrivacySettings>('/api/v1/users/me/privacy'),
   updatePrivacy: (changes: Partial<PrivacySettings>) =>
-    request<PrivacySettings>("/api/v1/users/me/privacy", { method: "PATCH", body: JSON.stringify(changes) }),
-  listConsents: () => request<ConsentRecord[]>("/api/v1/users/me/consents"),
+    request<PrivacySettings>('/api/v1/users/me/privacy', {
+      method: 'PATCH',
+      body: JSON.stringify(changes),
+    }),
+  listConsents: () => request<ConsentRecord[]>('/api/v1/users/me/consents'),
   recordConsent: (type: ConsentType, granted: boolean) =>
-    request<ConsentRecord>("/api/v1/users/me/consents", json({ type, granted, doc_version: "1.0" })),
+    request<ConsentRecord>(
+      '/api/v1/users/me/consents',
+      json({ type, granted, doc_version: '1.0' }),
+    ),
 
   // Password recovery (no session needed)
   forgotPassword: (email: string) =>
-    request<{ message: string }>("/api/v1/auth/forgot-password", json({ email })),
+    request<{ message: string }>('/api/v1/auth/forgot-password', json({ email })),
   resetPassword: (email: string, otpCode: string, newPassword: string, confirmPassword: string) =>
     request<{ message: string }>(
-      "/api/v1/auth/reset-password",
-      json({ email, otp_code: otpCode, new_password: newPassword, confirm_password: confirmPassword }),
+      '/api/v1/auth/reset-password',
+      json({
+        email,
+        otp_code: otpCode,
+        new_password: newPassword,
+        confirm_password: confirmPassword,
+      }),
     ),
 
   // Data lifecycle
   requestDataExport: () =>
-    request<{ download_url: string; expires_in: number }>("/api/v1/users/me/data-export", { method: "POST" }),
+    request<{ download_url: string; expires_in: number }>('/api/v1/users/me/data-export', {
+      method: 'POST',
+    }),
   deleteAccount: (password: string) =>
-    request<{ message: string }>("/api/v1/users/me", { method: "DELETE", body: JSON.stringify({ password }) }),
+    request<{ message: string }>('/api/v1/users/me', {
+      method: 'DELETE',
+      body: JSON.stringify({ password }),
+    }),
   requestAccountRestore: (email: string) =>
-    request<{ message: string }>("/api/v1/auth/restore-account/request", json({ email })),
+    request<{ message: string }>('/api/v1/auth/restore-account/request', json({ email })),
   confirmAccountRestore: (email: string, otpCode: string) =>
-    request<{ message: string }>("/api/v1/auth/restore-account/confirm", json({ email, otp_code: otpCode })),
+    request<{ message: string }>(
+      '/api/v1/auth/restore-account/confirm',
+      json({ email, otp_code: otpCode }),
+    ),
 
   // Data import from a KusShoes backup (BR-20)
   requestDataImportUpload: () =>
-    request<DataImportUpload>("/api/v1/users/me/data-import/upload-url", { method: "POST" }),
+    request<DataImportUpload>('/api/v1/users/me/data-import/upload-url', { method: 'POST' }),
   confirmDataImport: (importId: string) =>
-    request<DataImportResult>(`/api/v1/users/me/data-import/${importId}/confirm`, { method: "POST" }),
-  listDataImports: () => request<DataImportHistoryItem[]>("/api/v1/users/me/data-imports"),
+    request<DataImportResult>(`/api/v1/users/me/data-import/${importId}/confirm`, {
+      method: 'POST',
+    }),
+  listDataImports: () => request<DataImportHistoryItem[]>('/api/v1/users/me/data-imports'),
 
   // Content moderation status (BR-77)
-  myModerationStatus: () => request<MyModerationStatus>("/api/v1/moderation/me"),
+  myModerationStatus: () => request<MyModerationStatus>('/api/v1/moderation/me'),
+
+  // Public report intake — anyone can flag content they encountered, no account needed.
+  submitContentReport: (input: ContentReportInput) =>
+    request<ContentReportAccepted>('/api/v1/public/content-reports', {
+      method: 'POST',
+      body: JSON.stringify({
+        project_id: input.projectId ?? null,
+        reason: input.reason,
+        details: input.details,
+        reporter_email: input.reporterEmail ?? null,
+        reporter_name: input.reporterName ?? null,
+        evidence_url: input.evidenceUrl ?? null,
+      }),
+    }),
 };
