@@ -121,27 +121,30 @@ export const TwoFactorPanel: React.FC = () => {
   const emailReady = Boolean(status?.recovery_email_verified);
 
   return (
-    <div className={`${panel.panel} glass-panel`}>
+    <div className={panel.panel}>
       <div className={panel.panelHeader}>
-        <Smartphone size={20} className={panel.panelIcon} />
+        <Smartphone size={16} className={panel.panelIcon} />
         <div>
           <h4 className={panel.panelTitle}>Two-Factor Authentication (2FA)</h4>
           <p className={panel.panelDesc}>Require a second step when signing in, on top of your password.</p>
         </div>
-        <span className={`${panel.badge} ${enabled ? panel.badgeOn : panel.badgeOff} ${panel.headerAction}`}>
-          {enabled ? `On · ${status?.method === 'email' ? 'Email' : 'Authenticator'}` : 'Off'}
-        </span>
+        <div className={`${panel.statusGroup} ${panel.headerAction}`}>
+          <span className={`${panel.statusDot} ${enabled ? panel.statusDotOn : panel.statusDotOff}`} />
+          <span className={panel.statusText}>
+            {enabled ? `On · ${status?.method === 'email' ? 'Email' : 'Authenticator'}` : 'Off'}
+          </span>
+        </div>
       </div>
 
       {view === 'idle' && (
         <div className={panel.actions}>
           {enabled ? (
-            <button type="button" className="btn-outline" onClick={() => setView('disable')}>
-              <ShieldOff size={16} /> Turn off 2FA
+            <button type="button" className={panel.secondaryBtn} onClick={() => setView('disable')}>
+              <ShieldOff size={14} /> Turn off 2FA
             </button>
           ) : (
-            <button type="button" className="btn-neon-orange" onClick={() => setView('choose')} disabled={!status}>
-              <ShieldCheck size={16} /> Set up 2FA
+            <button type="button" className={panel.primaryBtn} onClick={() => setView('choose')} disabled={!status}>
+              <ShieldCheck size={14} /> Set up 2FA
             </button>
           )}
         </div>
@@ -157,7 +160,7 @@ export const TwoFactorPanel: React.FC = () => {
               onClick={() => !busy && void startSetup('totp')}
               onKeyDown={(event) => event.key === 'Enter' && !busy && void startSetup('totp')}
             >
-              <Smartphone size={20} className={panel.panelIcon} />
+              <Smartphone size={16} className={panel.panelIcon} />
               <div>
                 <h4 className={styles.radioTitle}>Authenticator app</h4>
                 <p className={styles.radioDesc}>Google Authenticator, 1Password, Authy… Works offline.</p>
@@ -178,7 +181,7 @@ export const TwoFactorPanel: React.FC = () => {
               }}
               onKeyDown={(event) => event.key === 'Enter' && !busy && emailReady && void startSetup('email')}
             >
-              <Mail size={20} className={panel.panelIcon} />
+              <Mail size={16} className={panel.panelIcon} />
               <div>
                 <h4 className={styles.radioTitle}>Email code</h4>
                 <p className={styles.radioDesc}>We email a code each time you sign in. Needs a verified recovery email.</p>
@@ -186,7 +189,9 @@ export const TwoFactorPanel: React.FC = () => {
             </div>
           </div>
           <div className={panel.actions}>
-            <button type="button" className="btn-outline" onClick={() => setView('idle')}>Cancel</button>
+            <button type="button" className={panel.secondaryBtn} onClick={() => setView('idle')}>
+              Cancel
+            </button>
           </div>
         </>
       )}
@@ -222,10 +227,10 @@ export const TwoFactorPanel: React.FC = () => {
                 onChange={(event) => setCode(event.target.value.replace(/\D/g, ''))}
               />
             </div>
-            <button type="submit" className="btn-neon-orange" disabled={busy || code.length !== 6}>
+            <button type="submit" className={panel.primaryBtn} disabled={busy || code.length !== 6}>
               Turn on 2FA
             </button>
-            <button type="button" className="btn-outline" onClick={() => setView('idle')} disabled={busy}>
+            <button type="button" className={panel.secondaryBtn} onClick={() => setView('idle')} disabled={busy}>
               Cancel
             </button>
           </div>
@@ -235,11 +240,14 @@ export const TwoFactorPanel: React.FC = () => {
       {view === 'recoveryCodes' && (
         <div className={panel.stack}>
           <div className={panel.warn}>
-            <AlertTriangle size={18} />
-            <span>
-              Save these one-time recovery codes now. Each works once if you lose access to your second factor, and
-              they will not be shown again.
-            </span>
+            <AlertTriangle size={16} />
+            <div>
+              <strong>Save recovery codes</strong>
+              <span>
+                Save these one-time recovery codes now. Each works once if you lose access to your second factor, and
+                they will not be shown again.
+              </span>
+            </div>
           </div>
           <div className={panel.recoveryGrid}>
             {recoveryCodes.map((item) => (
@@ -247,11 +255,15 @@ export const TwoFactorPanel: React.FC = () => {
             ))}
           </div>
           <div className={panel.actions}>
-            <button type="button" className="btn-outline" onClick={copyCodes}><Copy size={16} /> Copy</button>
-            <button type="button" className="btn-outline" onClick={downloadCodes}><Download size={16} /> Download</button>
+            <button type="button" className={panel.secondaryBtn} onClick={copyCodes}>
+              <Copy size={14} /> Copy
+            </button>
+            <button type="button" className={panel.secondaryBtn} onClick={downloadCodes}>
+              <Download size={14} /> Download
+            </button>
             <button
               type="button"
-              className="btn-neon-orange"
+              className={panel.primaryBtn}
               onClick={() => {
                 setRecoveryCodes([]);
                 setView('idle');
@@ -293,17 +305,17 @@ export const TwoFactorPanel: React.FC = () => {
             </div>
           </div>
           <div className={panel.actions}>
-            <button type="submit" className="btn-neon-orange" disabled={busy || (!password && code.length !== 6)}>
+            <button type="submit" className={panel.primaryBtn} disabled={busy || (!password && code.length !== 6)}>
               Turn off 2FA
             </button>
-            <button type="button" className="btn-outline" onClick={() => setView('idle')} disabled={busy}>
+            <button type="button" className={panel.secondaryBtn} onClick={() => setView('idle')} disabled={busy}>
               Cancel
             </button>
           </div>
         </form>
       )}
 
-      {/* Recovery email (needed for email-code 2FA, BR-13) */}
+      {/* Recovery email */}
       <div className={panel.row}>
         <div className={panel.rowMain}>
           <span className={panel.rowTitle}>Recovery email</span>
@@ -327,8 +339,12 @@ export const TwoFactorPanel: React.FC = () => {
               onChange={(event) => setRecoveryEmailCode(event.target.value.replace(/\D/g, ''))}
             />
           </div>
-          <button type="submit" className="btn-neon-orange" disabled={busy || recoveryEmailCode.length < 6}>Verify</button>
-          <button type="button" className="btn-outline" onClick={() => setAwaitingEmailCode(false)} disabled={busy}>Cancel</button>
+          <button type="submit" className={panel.primaryBtn} disabled={busy || recoveryEmailCode.length < 6}>
+            Verify
+          </button>
+          <button type="button" className={panel.secondaryBtn} onClick={() => setAwaitingEmailCode(false)} disabled={busy}>
+            Cancel
+          </button>
         </form>
       ) : (
         <form onSubmit={saveRecoveryEmail} className={panel.inlineForm}>
@@ -343,7 +359,9 @@ export const TwoFactorPanel: React.FC = () => {
               onChange={(event) => setRecoveryEmail(event.target.value)}
             />
           </div>
-          <button type="submit" className="btn-outline" disabled={busy || !recoveryEmail.includes('@')}>Send code</button>
+          <button type="submit" className={panel.secondaryBtn} disabled={busy || !recoveryEmail.includes('@')}>
+            Send code
+          </button>
         </form>
       )}
     </div>

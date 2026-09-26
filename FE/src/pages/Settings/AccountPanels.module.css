@@ -1,4 +1,5 @@
-/* Extra building blocks for the security / privacy panels; base look comes from Settings.module.css. */
+/* Account panels (Two-Factor, Sessions, Privacy, Moderation) conforming to docs/DESIGN.md */
+
 .stack {
   display: flex;
   flex-direction: column;
@@ -7,7 +8,9 @@
 
 .panel {
   padding: 24px;
-  border-radius: var(--border-radius-md);
+  border-radius: var(--radius-lg, 8px);
+  background-color: var(--bg-surface);
+  border: 1px solid var(--border);
   display: flex;
   flex-direction: column;
   gap: 16px;
@@ -15,26 +18,30 @@
 
 .panelHeader {
   display: flex;
-  align-items: flex-start;
-  gap: 14px;
+  align-items: center;
+  gap: 12px;
 }
 
 .panelIcon {
-  color: var(--color-orange);
+  color: var(--text-primary);
   flex-shrink: 0;
-  margin-top: 2px;
+  width: 16px;
+  height: 16px;
 }
 
 .panelTitle {
-  font-size: 1rem;
+  font-family: var(--font-sans);
+  font-size: 0.875rem; /* 14px */
   font-weight: 600;
   color: var(--text-primary);
+  line-height: 1.3;
 }
 
 .panelDesc {
-  font-size: 0.85rem;
+  font-size: 0.75rem; /* 12px */
   color: var(--text-secondary);
   margin-top: 2px;
+  line-height: 1.4;
 }
 
 .headerAction {
@@ -42,37 +49,42 @@
   flex-shrink: 0;
 }
 
-.badge {
+/* Status indicator dot + text according to DESIGN.md 5.7 */
+.statusGroup {
   display: inline-flex;
   align-items: center;
   gap: 6px;
-  padding: 3px 10px;
-  border-radius: var(--border-radius-full);
-  font-size: 0.72rem;
-  font-weight: 600;
-  letter-spacing: 0.04em;
-  text-transform: uppercase;
-  border: 1px solid var(--glass-border);
+}
+
+.statusDot {
+  width: 6px;
+  height: 6px;
+  border-radius: 50%;
+  flex-shrink: 0;
+}
+
+.statusDotOn {
+  background-color: var(--success);
+}
+
+.statusDotOff {
+  background-color: var(--neutral);
+}
+
+.statusText {
+  font-size: 0.75rem; /* 12px */
   color: var(--text-secondary);
+  font-weight: 400;
 }
 
-.badgeOn {
-  color: var(--status-scanned);
-  border-color: rgba(54, 211, 153, 0.35);
-  background: rgba(54, 211, 153, 0.08);
-}
-
-.badgeOff {
-  color: var(--text-muted);
-}
-
+/* Row (List row according to DESIGN.md 5.12) */
 .row {
   display: flex;
   align-items: center;
   justify-content: space-between;
   gap: 12px;
   padding: 12px 0;
-  border-top: 1px solid var(--glass-border);
+  border-top: 1px solid var(--border);
 }
 
 .rowMain {
@@ -83,13 +95,14 @@
 }
 
 .rowTitle {
-  font-size: 0.9rem;
+  font-size: 0.8125rem; /* 13px */
+  font-weight: 500;
   color: var(--text-primary);
 }
 
 .rowMeta {
-  font-size: 0.78rem;
-  color: var(--text-muted);
+  font-size: 0.75rem; /* 12px */
+  color: var(--text-secondary);
   overflow: hidden;
   text-overflow: ellipsis;
   white-space: nowrap;
@@ -103,12 +116,13 @@
 
 .codeBlock {
   font-family: var(--font-mono);
-  font-size: 0.9rem;
-  letter-spacing: 0.08em;
-  padding: 12px 14px;
-  border-radius: var(--border-radius-sm);
-  background: var(--bg-primary);
-  border: 1px dashed var(--glass-border-hover);
+  font-size: 0.8125rem; /* 13px */
+  font-variant-numeric: tabular-nums;
+  letter-spacing: 0.05em;
+  padding: 10px 12px;
+  border-radius: var(--radius-sm, 4px);
+  background: var(--bg-subtle);
+  border: 1px solid var(--border);
   color: var(--text-primary);
   word-break: break-all;
   user-select: all;
@@ -116,7 +130,7 @@
 
 .recoveryGrid {
   display: grid;
-  grid-template-columns: repeat(auto-fit, minmax(160px, 1fr));
+  grid-template-columns: repeat(auto-fit, minmax(140px, 1fr));
   gap: 8px;
 }
 
@@ -138,62 +152,153 @@
 }
 
 .field label {
-  font-size: 0.8rem;
-  color: var(--text-secondary);
+  font-size: 0.75rem; /* 12px */
+  font-weight: 500;
+  color: var(--text-primary);
 }
 
 .actions {
   display: flex;
-  gap: 10px;
+  gap: 8px;
   flex-wrap: wrap;
 }
 
+/* Buttons compliant with DESIGN.md 5.1 */
+.primaryBtn {
+  height: 32px;
+  padding: 0 14px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 6px;
+  background-color: var(--accent);
+  color: #ffffff;
+  font-family: inherit;
+  font-size: 0.8125rem; /* 13px */
+  font-weight: 500;
+  border: none;
+  border-radius: var(--radius-md, 6px);
+  cursor: pointer;
+  white-space: nowrap;
+  transition: background-color var(--duration-fast, 120ms) ease;
+}
+
+.primaryBtn:hover {
+  background-color: var(--accent-hover);
+}
+
+.primaryBtn:active {
+  background-color: var(--accent-active);
+}
+
+.primaryBtn:disabled {
+  opacity: 0.4;
+  cursor: not-allowed;
+}
+
+.secondaryBtn {
+  height: 32px;
+  padding: 0 14px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 6px;
+  background-color: var(--bg-surface);
+  color: var(--text-primary);
+  font-family: inherit;
+  font-size: 0.8125rem; /* 13px */
+  font-weight: 500;
+  border: 1px solid var(--border);
+  border-radius: var(--radius-md, 6px);
+  cursor: pointer;
+  white-space: nowrap;
+  transition: border-color var(--duration-fast, 120ms) ease, background-color var(--duration-fast, 120ms) ease;
+}
+
+.secondaryBtn:hover {
+  border-color: var(--border-strong);
+  background-color: var(--bg-hover);
+}
+
+.secondaryBtn:active {
+  background-color: var(--bg-subtle);
+}
+
+.secondaryBtn:disabled {
+  opacity: 0.4;
+  cursor: not-allowed;
+}
+
+.secondaryBtnSm {
+  height: 28px;
+  padding: 0 10px;
+  font-size: 0.75rem; /* 12px */
+}
+
+/* Subtle warning notice */
 .warn {
   display: flex;
   gap: 10px;
   align-items: flex-start;
-  padding: 12px 14px;
-  border-radius: var(--border-radius-sm);
-  background: rgba(251, 189, 35, 0.06);
-  border: 1px solid rgba(251, 189, 35, 0.25);
-  color: var(--status-designing);
-  font-size: 0.85rem;
+  padding: 10px 12px;
+  border-radius: var(--radius-md, 6px);
+  background: rgba(245, 158, 11, 0.08);
+  border: 1px solid rgba(245, 158, 11, 0.25);
+  color: var(--warning);
+  font-size: 0.75rem; /* 12px */
+  line-height: 1.4;
 }
 
+.warn strong {
+  color: var(--text-primary);
+  font-weight: 600;
+  display: block;
+  margin-bottom: 2px;
+}
+
+/* Light table conforming to DESIGN.md 5.12 */
 .table {
   width: 100%;
   border-collapse: collapse;
-  font-size: 0.85rem;
+  font-size: 0.8125rem; /* 13px */
 }
 
 .table th {
   text-align: left;
   font-weight: 500;
-  color: var(--text-muted);
+  font-size: 0.75rem; /* 12px */
+  color: var(--text-secondary);
   padding: 8px 10px;
-  border-bottom: 1px solid var(--glass-border);
+  border-bottom: 1px solid var(--border);
 }
 
 .table td {
   padding: 10px;
-  border-bottom: 1px solid var(--glass-border);
-  color: var(--text-secondary);
+  border-bottom: 1px solid var(--border);
+  color: var(--text-primary);
+  font-size: 0.8125rem; /* 13px */
+}
+
+.table tr:hover td {
+  background-color: var(--bg-hover);
 }
 
 .ok {
-  color: var(--status-scanned);
+  color: var(--success);
+  font-weight: 500;
 }
 
 .fail {
-  color: var(--color-crimson);
+  color: var(--danger);
+  font-weight: 500;
 }
 
 .muted {
-  color: var(--text-muted);
-  font-size: 0.85rem;
+  color: var(--text-secondary);
+  font-size: 0.75rem; /* 12px */
 }
 
-/* Two columns on wide screens; the last block (danger zone / history) spans the full width. */
+/* Two columns on wide screens */
 .grid2 {
   display: grid;
   grid-template-columns: repeat(2, minmax(0, 1fr));

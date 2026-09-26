@@ -10,6 +10,7 @@ import {
 import { api } from '../../api/client';
 import { useToast } from '../../context/ToastContext';
 import { ConfirmDialog } from '../../components/ConfirmDialog/ConfirmDialog';
+import { formatDateTime } from '../../utils/format';
 import styles from './Settings.module.css';
 import panel from './AccountPanels.module.css';
 
@@ -85,7 +86,7 @@ export const PrivacyPanel: React.FC = () => {
     const previous = privacy;
     setPrivacy({ ...privacy, [key]: next }); // optimistic; rolled back if the server refuses
     try {
-      setPrivacy(await accountApi.updatePrivacy({ [key]: next }));
+      await accountApi.updatePrivacy({ [key]: next });
     } catch (caught) {
       setPrivacy(previous);
       toast(caught instanceof Error ? caught.message : 'Unable to save that setting.', 'error');
@@ -162,7 +163,7 @@ export const PrivacyPanel: React.FC = () => {
 
   return (
     <div className={panel.grid2}>
-      <div className={`${panel.panel} glass-panel`}>
+      <div className={panel.panel}>
         <div>
           <h4 className={panel.panelTitle}>Profile visibility</h4>
           <p className={panel.panelDesc}>Everything is private by default. Turn on only what you want to share.</p>
@@ -183,7 +184,7 @@ export const PrivacyPanel: React.FC = () => {
         ))}
       </div>
 
-      <div className={`${panel.panel} glass-panel`}>
+      <div className={panel.panel}>
         <div>
           <h4 className={panel.panelTitle}>Consents</h4>
           <p className={panel.panelDesc}>Optional permissions you can grant or withdraw at any time.</p>
@@ -204,7 +205,7 @@ export const PrivacyPanel: React.FC = () => {
         ))}
       </div>
 
-      <div className={`${panel.panel} glass-panel`}>
+      <div className={panel.panel}>
         <div>
           <h4 className={panel.panelTitle}>Your data</h4>
           <p className={panel.panelDesc}>
@@ -212,13 +213,13 @@ export const PrivacyPanel: React.FC = () => {
           </p>
         </div>
         <div className={panel.actions}>
-          <button type="button" className="btn-outline" onClick={exportData} disabled={busy}>
-            <Download size={16} /> Export my data
+          <button type="button" className={panel.secondaryBtn} onClick={exportData} disabled={busy}>
+            <Download size={14} /> Export my data
           </button>
         </div>
       </div>
 
-      <div className={`${panel.panel} glass-panel`}>
+      <div className={panel.panel}>
         <div>
           <h4 className={panel.panelTitle}>Restore from backup</h4>
           <p className={panel.panelDesc}>
@@ -239,11 +240,11 @@ export const PrivacyPanel: React.FC = () => {
           />
           <button
             type="button"
-            className="btn-outline"
+            className={panel.secondaryBtn}
             onClick={() => fileInputRef.current?.click()}
             disabled={importing}
           >
-            <Upload size={16} /> {importing ? 'Restoring…' : 'Restore from backup'}
+            <Upload size={14} /> {importing ? 'Restoring…' : 'Restore from backup'}
           </button>
         </div>
         {importHistory !== null && importHistory.length > 0 && (
@@ -259,7 +260,7 @@ export const PrivacyPanel: React.FC = () => {
             <tbody>
               {importHistory.map((item) => (
                 <tr key={item.id}>
-                  <td>{new Date(item.created_at).toLocaleString()}</td>
+                  <td>{formatDateTime(item.created_at)}</td>
                   <td>{item.status}</td>
                   <td>{item.projects_imported}</td>
                   <td>{item.rejected_reason ?? '—'}</td>
@@ -272,7 +273,7 @@ export const PrivacyPanel: React.FC = () => {
 
       <div className={styles.dangerZone}>
         <div className={styles.dangerHeader}>
-          <AlertTriangle size={18} className={styles.dangerIcon} />
+          <AlertTriangle size={16} className={styles.dangerIcon} />
           <h4 className={styles.dangerTitle}>Danger Zone</h4>
         </div>
         <p className={styles.dangerDesc}>

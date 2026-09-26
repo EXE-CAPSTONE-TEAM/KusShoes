@@ -5,7 +5,7 @@ import styles from './Settings.module.css';
 import { useTheme } from '../../context/ThemeContext';
 import { useToast } from '../../context/ToastContext';
 import { api } from '../../api/client';
-import { DEFAULT_SETTING_TAB, type SettingTab } from './settingsNavigation';
+import { DEFAULT_SETTING_TAB, SETTINGS_TABS, type SettingTab } from './settingsNavigation';
 import { TwoFactorPanel } from './TwoFactorPanel';
 import { SessionsPanel } from './SessionsPanel';
 import { PrivacyPanel } from './PrivacyPanel';
@@ -13,6 +13,7 @@ import { ModerationStatusPanel } from './ModerationStatusPanel';
 
 interface SettingsProps {
   activeTab?: SettingTab;
+  onTabChange?: (tab: SettingTab) => void;
 }
 
 interface PresetAvatar {
@@ -20,9 +21,28 @@ interface PresetAvatar {
   url: string;
 }
 
-export const Settings: React.FC<SettingsProps> = ({ activeTab = DEFAULT_SETTING_TAB }) => {
+export const Settings: React.FC<SettingsProps> = ({
+  activeTab = DEFAULT_SETTING_TAB,
+  onTabChange,
+}) => {
   const { theme, setTheme } = useTheme();
   const { toast } = useToast();
+
+  const [localTab, setLocalTab] = useState<SettingTab>(activeTab);
+
+  useEffect(() => {
+    setLocalTab(activeTab);
+  }, [activeTab]);
+
+  const currentTab = onTabChange ? activeTab : localTab;
+
+  const handleTabClick = (tab: SettingTab) => {
+    if (onTabChange) {
+      onTabChange(tab);
+    } else {
+      setLocalTab(tab);
+    }
+  };
 
   // Curated Preset Avatars
   const presetAvatars: PresetAvatar[] = [
@@ -63,8 +83,6 @@ export const Settings: React.FC<SettingsProps> = ({ activeTab = DEFAULT_SETTING_
     tiktok: '',
   });
   const [saving, setSaving] = useState(false);
-  // Tracks the server's real avatar_path (not the locally-previewed preset default), so
-  // "Remove current avatar" only shows up when there's actually something to remove.
   const [avatarPath, setAvatarPath] = useState<string | null>(null);
 
   useEffect(() => {
@@ -175,359 +193,416 @@ export const Settings: React.FC<SettingsProps> = ({ activeTab = DEFAULT_SETTING_
     }
   };
 
+  const tabLabels: Record<SettingTab, string> = {
+    profile: 'Profile',
+    security: 'Security',
+    privacy: 'Privacy',
+    appearance: 'Appearance',
+  };
+
   return (
     <div className={styles.container}>
-      {/* Header */}
-      <div className={styles.header}>
-        <div>
-          <h1 className={styles.title}>Account Settings</h1>
-          <p className={styles.subtitle}>
-            Configure your designer profile, toggle security protocols, and manage model privacy.
-          </p>
+      {/* Header Block conforming to DESIGN.md 6.1 */}
+      <div className={styles.headerBlock}>
+        {/* Row 1 · 56px: Title */}
+        <div className={styles.headerTop}>
+          <h1 className={styles.title}>Settings</h1>
         </div>
+
+        {/* Row 2 · 40px: Underline tabs (DESIGN.md 5.4) */}
+        <nav className={styles.tabs} role="tablist" aria-label="Settings navigation">
+          {SETTINGS_TABS.map((tab) => (
+            <button
+              key={tab}
+              type="button"
+              role="tab"
+              aria-selected={currentTab === tab}
+              className={`${styles.tab} ${currentTab === tab ? styles.tabActive : ''}`}
+              onClick={() => handleTabClick(tab)}
+            >
+              {tabLabels[tab]}
+            </button>
+          ))}
+        </nav>
       </div>
 
-      {/* Settings Layout */}
-      <div className={styles.settingsLayout}>
-        {/* Tab Content Panel */}
-        <div className={`${styles.contentColumn} glass-panel`}>
-          <AnimatePresence mode="wait">
-            {activeTab === 'profile' && (
-              <motion.div
-                key="profile"
-                initial={{ opacity: 0, x: 10 }}
-                animate={{ opacity: 1, x: 0 }}
-                exit={{ opacity: 0, x: -10 }}
-                transition={{ duration: 0.2 }}
-                className={styles.tabContent}
-              >
-                {/* Right Column: Profile forms */}
-                <form
-                  onSubmit={handleProfileSave}
-                  className={`${styles.form} ${styles.profileColumns}`}
-                >
-                  <div className={`${styles.sectionHeaderCompact} ${styles.spanAll}`}>
-                    <h2 className={styles.sectionTitle}>Profile Details</h2>
-                    <p className={styles.sectionSubtitle}>
-                      Manage public information regarding your designer account profile.
-                    </p>
-                  </div>
+      {/* Settings Main Content Card */}
+      <div className={styles.contentCard}>
+        <AnimatePresence mode="wait">
+          {currentTab === 'profile' && (
+            <motion.div
+              key="profile"
+              initial={{ opacity: 0 }}
+              animate={{ opacity: 1 }}
+              exit={{ opacity: 0 }}
+              transition={{ duration: 0.15 }}
+              className={styles.tabContent}
+            >
+              <div className={styles.sectionHeader}>
+                <h2 className={styles.sectionTitle}>Profile Details</h2>
+                <p className={styles.sectionSubtitle}>
+                  Manage public information regarding your designer account profile.
+                </p>
+              </div>
 
-                  {/* Group A: Designer Identity */}
-                  <div className={styles.formSectionGroup}>
-                    <h4 className={styles.formGroupTitle}>Designer Identity</h4>
-                    <div className={styles.formGrid}>
-                      <div className={styles.inputGroup}>
-                        <label>Designer Name</label>
-                        <input
-                          type="text"
-                          value={profileData.name}
-                          onChange={(e) => setProfileData({ ...profileData, name: e.target.value })}
-                          className={styles.input}
-                          required
-                        />
-                      </div>
-                      <div className={styles.inputGroup}>
-                        <label>Email Address</label>
-                        <input
-                          type="email"
-                          value={profileData.email}
-                          className={styles.input}
-                          readOnly
-                        />
-                      </div>
-                      <div className={styles.inputGroup}>
-                        <label>Primary Role</label>
-                        <input
-                          type="text"
-                          value={profileData.role}
-                          onChange={(e) => setProfileData({ ...profileData, role: e.target.value })}
-                          className={styles.input}
-                          required
-                        />
-                      </div>
-                      <div className={styles.inputGroup}>
-                        <label>Studio Location</label>
-                        <input
-                          type="text"
-                          value={profileData.location}
-                          onChange={(e) =>
-                            setProfileData({ ...profileData, location: e.target.value })
-                          }
-                          className={styles.input}
-                          required
-                        />
-                      </div>
+              {/* Designer Avatar Preview & Actions */}
+              <div className={styles.avatarSection}>
+                <div className={styles.avatarPreviewWrapper}>
+                  <img
+                    src={profileData.avatar}
+                    alt={profileData.name || 'Avatar'}
+                    className={styles.avatarPreviewImg}
+                  />
+                </div>
+                <div className={styles.avatarDetails}>
+                  <span className={styles.avatarName}>{profileData.name || 'Designer'}</span>
+                  <span className={styles.avatarEmail}>{profileData.email}</span>
+                  <div className={styles.avatarActions}>
+                    <button
+                      type="button"
+                      className={styles.secondaryBtn}
+                      onClick={() => setIsAvatarModalOpen(true)}
+                    >
+                      Change avatar
+                    </button>
+                    {avatarPath && (
+                      <button
+                        type="button"
+                        className={styles.dangerBtn}
+                        onClick={() => void handleRemoveAvatar()}
+                        disabled={uploadProgress}
+                      >
+                        Remove avatar
+                      </button>
+                    )}
+                  </div>
+                </div>
+              </div>
+
+              {/* Profile Details Form */}
+              <form onSubmit={handleProfileSave} className={styles.form}>
+                {/* Group A: Designer Identity */}
+                <div className={styles.formSectionGroup}>
+                  <h4 className={styles.formGroupTitle}>Designer Identity</h4>
+                  <div className={styles.formGrid}>
+                    <div className={styles.inputGroup}>
+                      <label htmlFor="designer-name">Designer Name</label>
+                      <input
+                        id="designer-name"
+                        type="text"
+                        value={profileData.name}
+                        onChange={(e) => setProfileData({ ...profileData, name: e.target.value })}
+                        className={styles.input}
+                        required
+                      />
                     </div>
-                  </div>
-
-                  {/* Group B: Studio Bio */}
-                  <div className={styles.formSectionGroup}>
-                    <h4 className={styles.formGroupTitle}>Studio Bio & Slogan</h4>
-                    <div className={styles.inputGroupFull}>
-                      <label>Creative Bio</label>
-                      <textarea
-                        value={profileData.bio}
-                        onChange={(e) => setProfileData({ ...profileData, bio: e.target.value })}
-                        className={styles.textarea}
-                        rows={4}
-                        placeholder="Introduce your shoe customizer studio brand..."
+                    <div className={styles.inputGroup}>
+                      <label htmlFor="designer-email">Email Address</label>
+                      <input
+                        id="designer-email"
+                        type="email"
+                        value={profileData.email}
+                        className={styles.input}
+                        readOnly
+                      />
+                    </div>
+                    <div className={styles.inputGroup}>
+                      <label htmlFor="designer-role">Primary Role</label>
+                      <input
+                        id="designer-role"
+                        type="text"
+                        value={profileData.role}
+                        onChange={(e) => setProfileData({ ...profileData, role: e.target.value })}
+                        className={styles.input}
+                        required
+                      />
+                    </div>
+                    <div className={styles.inputGroup}>
+                      <label htmlFor="designer-location">Studio Location</label>
+                      <input
+                        id="designer-location"
+                        type="text"
+                        value={profileData.location}
+                        onChange={(e) =>
+                          setProfileData({ ...profileData, location: e.target.value })
+                        }
+                        className={styles.input}
                         required
                       />
                     </div>
                   </div>
+                </div>
 
-                  {/* Group C: Connected Portfolios */}
-                  <div className={`${styles.formSectionGroup} ${styles.spanAll}`}>
-                    <h4 className={styles.formGroupTitle}>Connected Showcase Handles</h4>
-                    <div className={styles.formGrid}>
-                      <div className={styles.inputGroup}>
-                        <label>Instagram Handle</label>
-                        <div className={styles.inputWithIconWrapper}>
-                          <Instagram size={14} className={styles.fieldIcon} />
-                          <input
-                            type="text"
-                            value={profileData.instagram}
-                            onChange={(e) =>
-                              setProfileData({ ...profileData, instagram: e.target.value })
-                            }
-                            className={styles.input}
-                            placeholder="@duy.sneaker"
-                          />
-                        </div>
+                {/* Group B: Studio Bio */}
+                <div className={styles.formSectionGroup}>
+                  <h4 className={styles.formGroupTitle}>Studio Bio & Slogan</h4>
+                  <div className={styles.inputGroupFull}>
+                    <label htmlFor="designer-bio">Creative Bio</label>
+                    <textarea
+                      id="designer-bio"
+                      value={profileData.bio}
+                      onChange={(e) => setProfileData({ ...profileData, bio: e.target.value })}
+                      className={styles.textarea}
+                      rows={4}
+                      placeholder="Introduce your shoe customizer studio brand..."
+                      required
+                    />
+                  </div>
+                </div>
+
+                {/* Group C: Connected Portfolios */}
+                <div className={styles.formSectionGroup}>
+                  <h4 className={styles.formGroupTitle}>Connected Showcase Handles</h4>
+                  <div className={styles.formGrid}>
+                    <div className={styles.inputGroup}>
+                      <label htmlFor="designer-instagram">Instagram Handle</label>
+                      <div className={styles.inputWithIconWrapper}>
+                        <Instagram size={14} className={styles.fieldIcon} />
+                        <input
+                          id="designer-instagram"
+                          type="text"
+                          value={profileData.instagram}
+                          onChange={(e) =>
+                            setProfileData({ ...profileData, instagram: e.target.value })
+                          }
+                          placeholder="@duy.sneaker"
+                        />
                       </div>
-                      <div className={styles.inputGroup}>
-                        <label>Behance Username</label>
-                        <div className={styles.inputWithIconWrapper}>
-                          <Globe size={14} className={styles.fieldIcon} />
-                          <input
-                            type="text"
-                            value={profileData.behance}
-                            onChange={(e) =>
-                              setProfileData({ ...profileData, behance: e.target.value })
-                            }
-                            className={styles.input}
-                            placeholder="duynguyen"
-                          />
-                        </div>
+                    </div>
+                    <div className={styles.inputGroup}>
+                      <label htmlFor="designer-behance">Behance Username</label>
+                      <div className={styles.inputWithIconWrapper}>
+                        <Globe size={14} className={styles.fieldIcon} />
+                        <input
+                          id="designer-behance"
+                          type="text"
+                          value={profileData.behance}
+                          onChange={(e) =>
+                            setProfileData({ ...profileData, behance: e.target.value })
+                          }
+                          placeholder="duynguyen"
+                        />
                       </div>
-                      <div className={styles.inputGroup}>
-                        <label>TikTok Handle</label>
-                        <div className={styles.inputWithIconWrapper}>
-                          <Smartphone size={14} className={styles.fieldIcon} />
-                          <input
-                            type="text"
-                            value={profileData.tiktok}
-                            onChange={(e) =>
-                              setProfileData({ ...profileData, tiktok: e.target.value })
-                            }
-                            className={styles.input}
-                            placeholder="@duy.hypebeast"
-                          />
-                        </div>
+                    </div>
+                    <div className={styles.inputGroup}>
+                      <label htmlFor="designer-tiktok">TikTok Handle</label>
+                      <div className={styles.inputWithIconWrapper}>
+                        <Smartphone size={14} className={styles.fieldIcon} />
+                        <input
+                          id="designer-tiktok"
+                          type="text"
+                          value={profileData.tiktok}
+                          onChange={(e) =>
+                            setProfileData({ ...profileData, tiktok: e.target.value })
+                          }
+                          placeholder="@duy.hypebeast"
+                        />
                       </div>
                     </div>
                   </div>
+                </div>
 
-                  <button
-                    type="submit"
-                    className={`btn-neon-orange ${styles.spanAll}`}
-                    style={{ justifySelf: 'flex-start' }}
-                    disabled={saving}
-                  >
-                    <Save size={16} />
-                    <span>Save Profile Settings</span>
+                <div>
+                  <button type="submit" className={styles.primaryBtn} disabled={saving}>
+                    <Save size={14} />
+                    <span>Save profile settings</span>
                   </button>
-                </form>
-              </motion.div>
-            )}
+                </div>
+              </form>
+            </motion.div>
+          )}
 
-            {activeTab === 'security' && (
-              <motion.div
-                key="security"
-                initial={{ opacity: 0, x: 10 }}
-                animate={{ opacity: 1, x: 0 }}
-                exit={{ opacity: 0, x: -10 }}
-                transition={{ duration: 0.2 }}
-                className={styles.tabContent}
-              >
+          {currentTab === 'security' && (
+            <motion.div
+              key="security"
+              initial={{ opacity: 0 }}
+              animate={{ opacity: 1 }}
+              exit={{ opacity: 0 }}
+              transition={{ duration: 0.15 }}
+              className={styles.tabContent}
+            >
+              <div className={styles.sectionHeader}>
                 <h2 className={styles.sectionTitle}>Security & Credentials</h2>
                 <p className={styles.sectionSubtitle}>
-                  Change password tokens and adjust identity verification credentials.
+                  Change password and adjust identity verification credentials.
                 </p>
+              </div>
 
-                <div className={styles.twoColGrid}>
-                  {/* 2FA (real: setup / enable / disable / recovery codes) */}
-                  <TwoFactorPanel />
+              <div className={styles.twoColGrid}>
+                {/* 2FA Panel */}
+                <TwoFactorPanel />
 
-                  {/* Change Password Form */}
-                  <form
-                    onSubmit={handlePasswordSave}
-                    className={`${styles.form} ${styles.passwordCard} glass-panel`}
-                  >
-                    <h3 className={styles.subFormTitle}>
-                      <Key size={16} />
-                      Update Password
-                    </h3>
-                    <div className={styles.formGrid}>
-                      <div className={styles.inputGroup}>
-                        <label>Current Password</label>
-                        <input
-                          type="password"
-                          placeholder="••••••••"
-                          value={passwordForm.currentPassword}
-                          onChange={(e) =>
-                            setPasswordForm({ ...passwordForm, currentPassword: e.target.value })
-                          }
-                          className={styles.input}
-                        />
-                      </div>
-                      <div className={styles.inputGroup}>
-                        <label>New Password</label>
-                        <input
-                          type="password"
-                          placeholder="••••••••"
-                          value={passwordForm.newPassword}
-                          onChange={(e) =>
-                            setPasswordForm({ ...passwordForm, newPassword: e.target.value })
-                          }
-                          className={styles.input}
-                        />
-                      </div>
-                      <div className={styles.inputGroup}>
-                        <label>Confirm New Password</label>
-                        <input
-                          type="password"
-                          placeholder="••••••••"
-                          value={passwordForm.confirmPassword}
-                          onChange={(e) =>
-                            setPasswordForm({ ...passwordForm, confirmPassword: e.target.value })
-                          }
-                          className={styles.input}
-                        />
-                      </div>
+                {/* Change Password Form */}
+                <form onSubmit={handlePasswordSave} className={styles.passwordCard}>
+                  <h3 className={styles.subFormTitle}>
+                    <Key size={14} />
+                    Update Password
+                  </h3>
+                  <div className={styles.formGrid}>
+                    <div className={styles.inputGroup}>
+                      <label htmlFor="current-password">Current Password</label>
+                      <input
+                        id="current-password"
+                        type="password"
+                        placeholder="••••••••"
+                        value={passwordForm.currentPassword}
+                        onChange={(e) =>
+                          setPasswordForm({ ...passwordForm, currentPassword: e.target.value })
+                        }
+                        className={styles.input}
+                      />
                     </div>
+                    <div className={styles.inputGroup}>
+                      <label htmlFor="new-password">New Password</label>
+                      <input
+                        id="new-password"
+                        type="password"
+                        placeholder="••••••••"
+                        value={passwordForm.newPassword}
+                        onChange={(e) =>
+                          setPasswordForm({ ...passwordForm, newPassword: e.target.value })
+                        }
+                        className={styles.input}
+                      />
+                    </div>
+                    <div className={styles.inputGroup}>
+                      <label htmlFor="confirm-password">Confirm New Password</label>
+                      <input
+                        id="confirm-password"
+                        type="password"
+                        placeholder="••••••••"
+                        value={passwordForm.confirmPassword}
+                        onChange={(e) =>
+                          setPasswordForm({ ...passwordForm, confirmPassword: e.target.value })
+                        }
+                        className={styles.input}
+                      />
+                    </div>
+                  </div>
 
-                    <button
-                      type="submit"
-                      className="btn-neon-orange"
-                      style={{ alignSelf: 'flex-start' }}
-                      disabled={saving}
-                    >
-                      <Save size={16} />
+                  <div>
+                    <button type="submit" className={styles.primaryBtn} disabled={saving}>
+                      <Save size={14} />
                       Update Password
                     </button>
-                  </form>
+                  </div>
+                </form>
 
-                  <SessionsPanel />
-                  <ModerationStatusPanel />
-                </div>
-              </motion.div>
-            )}
+                <SessionsPanel />
+                <ModerationStatusPanel />
+              </div>
+            </motion.div>
+          )}
 
-            {activeTab === 'privacy' && (
-              <motion.div
-                key="privacy"
-                initial={{ opacity: 0, x: 10 }}
-                animate={{ opacity: 1, x: 0 }}
-                exit={{ opacity: 0, x: -10 }}
-                transition={{ duration: 0.2 }}
-                className={styles.tabContent}
-              >
+          {currentTab === 'privacy' && (
+            <motion.div
+              key="privacy"
+              initial={{ opacity: 0 }}
+              animate={{ opacity: 1 }}
+              exit={{ opacity: 0 }}
+              transition={{ duration: 0.15 }}
+              className={styles.tabContent}
+            >
+              <div className={styles.sectionHeader}>
                 <h2 className={styles.sectionTitle}>Privacy & Data</h2>
                 <p className={styles.sectionSubtitle}>
                   Control who can see your work, what you consent to, and your personal data.
                 </p>
+              </div>
 
-                <PrivacyPanel />
-              </motion.div>
-            )}
+              <PrivacyPanel />
+            </motion.div>
+          )}
 
-            {activeTab === 'appearance' && (
-              <motion.div
-                key="appearance"
-                initial={{ opacity: 0, x: 10 }}
-                animate={{ opacity: 1, x: 0 }}
-                exit={{ opacity: 0, x: -10 }}
-                transition={{ duration: 0.2 }}
-                className={styles.tabContent}
-              >
+          {currentTab === 'appearance' && (
+            <motion.div
+              key="appearance"
+              initial={{ opacity: 0 }}
+              animate={{ opacity: 1 }}
+              exit={{ opacity: 0 }}
+              transition={{ duration: 0.15 }}
+              className={styles.tabContent}
+            >
+              <div className={styles.sectionHeader}>
                 <h2 className={styles.sectionTitle}>Appearance</h2>
                 <p className={styles.sectionSubtitle}>
                   Pick how the KusShoes workspace looks. The choice is remembered on this device.
                 </p>
-                <div className={styles.appearanceGroup}>
-                  <h4 className={styles.formGroupTitle}>Theme Preferences</h4>
-                  <p className={styles.inputLabelDesc} style={{ marginBottom: '16px' }}>
-                    Choose the primary look and feel for your KusShoes workspace.
-                  </p>
+              </div>
 
-                  <div className={styles.themeSelectorGrid}>
-                    {/* Dark Theme Card */}
-                    <div
-                      className={`${styles.themeCard} ${theme === 'dark' ? styles.themeCardActive : ''}`}
-                      onClick={() => {
-                        setTheme('dark');
-                        toast('Theme set to Streetwear Dark');
-                      }}
-                    >
-                      <div className={styles.themeCardPreviewDark}>
-                        <div className={styles.previewSidebar} />
-                        <div className={styles.previewContent}>
-                          <div className={styles.previewHeader} />
-                          <div className={styles.previewItem} />
-                          <div className={styles.previewItemSub} />
-                        </div>
-                      </div>
-                      <div className={styles.themeCardMeta}>
-                        <span className={styles.themeCardTitle}>Streetwear Dark</span>
-                        <span className={styles.themeCardDesc}>
-                          Default neon-accented dark system
-                        </span>
+              <div className={styles.appearanceGroup}>
+                <h4 className={styles.formGroupTitle}>Theme Preferences</h4>
+
+                <div className={styles.themeSelectorGrid}>
+                  {/* Dark Theme Card */}
+                  <div
+                    className={`${styles.themeCard} ${theme === 'dark' ? styles.themeCardActive : ''}`}
+                    onClick={() => {
+                      setTheme('dark');
+                      toast('Theme set to Streetwear Dark');
+                    }}
+                  >
+                    <div className={styles.themeCardPreviewDark}>
+                      <div className={styles.previewSidebar} />
+                      <div className={styles.previewContent}>
+                        <div className={styles.previewHeader} />
+                        <div className={styles.previewItem} />
+                        <div className={styles.previewItemSub} />
                       </div>
                     </div>
+                    <div className={styles.themeCardMeta}>
+                      <span className={styles.themeCardTitle}>Streetwear Dark</span>
+                      <span className={styles.themeCardDesc}>
+                        Default neon-accented dark system
+                      </span>
+                    </div>
+                  </div>
 
-                    {/* Light Theme Card */}
-                    <div
-                      className={`${styles.themeCard} ${theme === 'light' ? styles.themeCardActive : ''}`}
-                      onClick={() => {
-                        setTheme('light');
-                        toast('Theme set to Premium Cream');
-                      }}
-                    >
-                      <div className={styles.themeCardPreviewLight}>
-                        <div className={styles.previewSidebar} />
-                        <div className={styles.previewContent}>
-                          <div className={styles.previewHeader} />
-                          <div className={styles.previewItem} />
-                          <div className={styles.previewItemSub} />
-                        </div>
+                  {/* Light Theme Card */}
+                  <div
+                    className={`${styles.themeCard} ${theme === 'light' ? styles.themeCardActive : ''}`}
+                    onClick={() => {
+                      setTheme('light');
+                      toast('Theme set to Premium Cream');
+                    }}
+                  >
+                    <div className={styles.themeCardPreviewLight}>
+                      <div className={styles.previewSidebar} />
+                      <div className={styles.previewContent}>
+                        <div className={styles.previewHeader} />
+                        <div className={styles.previewItem} />
+                        <div className={styles.previewItemSub} />
                       </div>
-                      <div className={styles.themeCardMeta}>
-                        <span className={styles.themeCardTitle}>Premium Cream</span>
-                        <span className={styles.themeCardDesc}>Warm editorial streetwear look</span>
-                      </div>
+                    </div>
+                    <div className={styles.themeCardMeta}>
+                      <span className={styles.themeCardTitle}>Premium Cream</span>
+                      <span className={styles.themeCardDesc}>Warm editorial streetwear look</span>
                     </div>
                   </div>
                 </div>
-              </motion.div>
-            )}
-          </AnimatePresence>
-        </div>
+              </div>
+            </motion.div>
+          )}
+        </AnimatePresence>
       </div>
 
-      {/* Interactive Avatar Picker Selector Modal */}
+      {/* Interactive Avatar Picker Selector Modal (Dialog 5.15) */}
       {isAvatarModalOpen && (
         <div className={styles.modalBackdrop}>
           <motion.div
-            className={`${styles.modal} glass-panel`}
-            initial={{ opacity: 0, scale: 0.95 }}
+            className={styles.modal}
+            initial={{ opacity: 0, scale: 0.98 }}
             animate={{ opacity: 1, scale: 1 }}
           >
             <div className={styles.modalHeader}>
               <h3 className={styles.modalTitle}>Choose Designer Avatar</h3>
-              <button className={styles.modalCloseBtn} onClick={() => setIsAvatarModalOpen(false)}>
-                <X size={18} />
+              <button
+                type="button"
+                className={styles.modalCloseBtn}
+                onClick={() => setIsAvatarModalOpen(false)}
+                aria-label="Close dialog"
+              >
+                <X size={16} />
               </button>
             </div>
             <p className={styles.modalDesc}>
@@ -541,6 +616,11 @@ export const Settings: React.FC<SettingsProps> = ({ activeTab = DEFAULT_SETTING_
                   key={preset.name}
                   className={`${styles.avatarGridItem} ${profileData.avatar === preset.url ? styles.avatarItemActive : ''}`}
                   onClick={() => handleSelectPresetAvatar(preset.url)}
+                  role="button"
+                  tabIndex={0}
+                  onKeyDown={(e) => {
+                    if (e.key === 'Enter') handleSelectPresetAvatar(preset.url);
+                  }}
                 >
                   <img src={preset.url} alt={preset.name} className={styles.gridAvatarImg} />
                   <span className={styles.gridAvatarName}>{preset.name}</span>
@@ -548,19 +628,19 @@ export const Settings: React.FC<SettingsProps> = ({ activeTab = DEFAULT_SETTING_
               ))}
             </div>
 
-            <div className={styles.divider} style={{ margin: '16px 0' }} />
+            <div className={styles.divider} />
 
             {/* Custom avatar upload */}
             <div className={styles.uploadArea}>
               {uploadProgress ? (
                 <div className={styles.uploadProgress}>
-                  <RefreshCw className={styles.spinIcon} size={20} />
+                  <RefreshCw className={styles.spinIcon} size={16} />
                   <span>Uploading mesh file avatar...</span>
                 </div>
               ) : (
                 <label
-                  className="btn-outline"
-                  style={{ width: '100%', justifyContent: 'center', cursor: 'pointer' }}
+                  className={styles.secondaryBtn}
+                  style={{ width: '100%', cursor: 'pointer' }}
                 >
                   <input
                     type="file"
@@ -568,7 +648,7 @@ export const Settings: React.FC<SettingsProps> = ({ activeTab = DEFAULT_SETTING_
                     onChange={handleCustomUpload}
                     style={{ display: 'none' }}
                   />
-                  <Upload size={16} />
+                  <Upload size={14} />
                   <span>Upload custom photo (.png, .jpg)</span>
                 </label>
               )}
@@ -576,17 +656,22 @@ export const Settings: React.FC<SettingsProps> = ({ activeTab = DEFAULT_SETTING_
 
             {avatarPath && !uploadProgress && (
               <button
-                className="btn-outline"
-                style={{ width: '100%', justifyContent: 'center', marginTop: 10 }}
+                type="button"
+                className={styles.secondaryBtn}
+                style={{ width: '100%' }}
                 onClick={() => void handleRemoveAvatar()}
               >
-                <X size={16} />
+                <X size={14} />
                 <span>Remove current avatar</span>
               </button>
             )}
 
-            <div className={styles.modalActions} style={{ marginTop: '16px' }}>
-              <button className="btn-outline" onClick={() => setIsAvatarModalOpen(false)}>
+            <div className={styles.modalActions}>
+              <button
+                type="button"
+                className={styles.secondaryBtn}
+                onClick={() => setIsAvatarModalOpen(false)}
+              >
                 Cancel
               </button>
             </div>

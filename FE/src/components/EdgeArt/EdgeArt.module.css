@@ -1,0 +1,82 @@
+/* Decorative sneaker line art on the viewport edges — see EdgeArt.tsx.
+   Tokens follow docs/DESIGN.md: monochrome 1px strokes, brand orange #FF6B35 accent only,
+   no gradients, no shadows. Opacity is the single tuning knob (--edge-opacity). */
+
+.layer {
+  --edge-opacity: 0.14;
+
+  position: absolute;
+  top: 0;
+  bottom: 0;
+  left: 50%;
+  width: 100vw; /* full-bleed even inside a max-width section; .container clips overflow-x */
+  transform: translateX(-50%);
+  z-index: -1; /* behind the section's content, inside the section's own stacking context */
+  pointer-events: none;
+  user-select: none;
+}
+
+.edge {
+  position: absolute;
+  top: 24px; /* the art never grows taller than its section */
+  bottom: 24px;
+  display: flex;
+  align-items: center;
+  width: clamp(160px, 16vw, 320px);
+  opacity: var(--edge-opacity);
+}
+
+.left {
+  left: 0;
+}
+
+.right {
+  right: 0;
+  justify-content: flex-end;
+}
+
+.img {
+  display: block;
+  width: auto;
+  height: auto;
+  max-width: 100%;
+  max-height: 100%;
+}
+
+/* Hero: the sneaker drawing is the focal point, so it is larger and stronger */
+.hero {
+  --edge-opacity: 0.6;
+}
+
+.hero .edge {
+  width: clamp(200px, 24vw, 440px);
+}
+
+/* Theme swap — black strokes on light, near-white strokes on dark; the orange accent is baked
+   into both files, so no CSS filter/invert is needed. */
+.dark {
+  display: none;
+}
+
+:global([data-theme='dark']) .light {
+  display: none;
+}
+
+:global([data-theme='dark']) .dark {
+  display: block;
+}
+
+:global([data-theme='dark']) .layer {
+  --edge-opacity: 0.12;
+}
+
+:global([data-theme='dark']) .hero {
+  --edge-opacity: 0.5;
+}
+
+/* Below this width the section content spans almost the full viewport — hide the art. */
+@media (max-width: 1100px) {
+  .layer {
+    display: none;
+  }
+}

@@ -27,13 +27,13 @@ export const ModerationStatusPanel: React.FC = () => {
   if (!status || (status.level === 0 && !status.is_restricted && !status.is_banned)) return null;
 
   return (
-    <div className={`${panel.panel} glass-panel`}>
+    <div className={panel.panel}>
       <div>
         <h4 className={panel.panelTitle}>Content standing</h4>
         <p className={panel.panelDesc}>Outcome of copyright/trademark reports against your account (BR-77).</p>
       </div>
       <div className={panel.warn}>
-        {status.is_banned ? <ShieldAlert size={18} /> : <AlertTriangle size={18} />}
+        {status.is_banned ? <ShieldAlert size={16} /> : <AlertTriangle size={16} />}
         <div>
           <strong>{status.is_banned ? 'Account suspended' : LEVEL_LABEL[status.level] ?? 'Under review'}</strong>
           {status.is_restricted && status.restricted_until && (

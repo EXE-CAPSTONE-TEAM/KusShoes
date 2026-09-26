@@ -1,8 +1,6 @@
 import React, { useState, useRef, useEffect } from 'react';
 import {
-  Smartphone,
   Monitor,
-  Cloud,
   Send,
   CheckCircle2,
   Check,
@@ -17,19 +15,40 @@ import {
   TrendingUp,
   BadgeCheck,
   Flame,
+  Clock,
+  Sparkles,
+  ChevronRight,
 } from 'lucide-react';
 import { motion, AnimatePresence, useInView } from 'framer-motion';
 import { Navbar } from '../../components/Navbar/Navbar';
 import { Footer } from '../../components/Footer/Footer';
 import { AnimatedPrice } from '../../components/AnimatedPrice/AnimatedPrice';
 import { InteractiveParticleGrid } from '../../components/InteractiveParticleGrid/InteractiveParticleGrid';
-import { useTheme } from '../../context/ThemeContext';
+import { EdgeArt } from '../../components/EdgeArt/EdgeArt';
 import dashboardShowcase from '../../assets/showcase/dashboard-screenshot.png';
 import projectsShowcase from '../../assets/showcase/projects-screenshot.png';
 import mobileOnboarding from '../../assets/showcase/mobile-onboarding.png';
 import mobileScan from '../../assets/showcase/mobile-scan.png';
 import mobileExplore from '../../assets/showcase/mobile-explore.png';
 import mobileProfile from '../../assets/showcase/mobile-profile.png';
+import mobileAppIcon from '../../assets/kusshoes-mobile-app-icon.jpeg';
+import sneakerHero from '../../assets/sneaker-hero.png';
+import galleryClassicOrange from '../../assets/gallery/classic-orange-studio.png';
+import galleryInvertedBlock from '../../assets/gallery/inverted-block-studio.png';
+import galleryStreetGraffiti from '../../assets/gallery/street-graffiti-skate.png';
+import galleryNeonAlley from '../../assets/gallery/neon-alley-rain.png';
+import galleryWebCrimson from '../../assets/gallery/web-crimson-dark.png';
+import galleryCourtNavy from '../../assets/gallery/court-navy-outdoor.png';
+import galleryCoquettePink from '../../assets/gallery/coquette-pink-bedroom.png';
+import gallerySweetheartBow from '../../assets/gallery/sweetheart-bow-desk.png';
+import gallerySkyDreamer from '../../assets/gallery/sky-dreamer-clouds.png';
+import galleryFlameNavy from '../../assets/gallery/flame-navy-skate.png';
+import gallerySignatureDuo from '../../assets/gallery/signature-duo-box.png';
+import gallerySplashStreet from '../../assets/gallery/splash-street-wall.png';
+import galleryStudioClassic from '../../assets/gallery/studio-classic-angle.png';
+import galleryBlockEdition from '../../assets/gallery/block-edition-single.png';
+import galleryDetailFocus from '../../assets/gallery/detail-focus-single.png';
+import galleryTagDetail from '../../assets/gallery/tag-detail-pair.png';
 import styles from './Landing.module.css';
 
 const showcaseTabs = [
@@ -82,112 +101,65 @@ const testimonials = [
   },
 ] as const;
 
-// Stock photography standing in for real customer designs until there's a public gallery
-// endpoint (see docs/SRS_Implementation_Checklist.md — SC-34 has no FE page yet).
+// Real KusShoes custom colorway renders (from the design team's shoe-photo drop), standing in
+// for a live community gallery until there's a public gallery endpoint (see
+// docs/SRS_Implementation_Checklist.md — SC-34 has no FE page yet).
 // Each tile cycles through its own small set so the section keeps feeling alive.
 const galleryTiles = [
   {
     size: 'tall',
     frames: [
-      {
-        tag: 'Street Classic',
-        img: 'https://images.unsplash.com/photo-1595950653106-6c9ebd614d3a?auto=format&fit=crop&w=900&q=80',
-      },
-      {
-        tag: 'Neon Pop',
-        img: 'https://images.unsplash.com/photo-1600269452121-4f2416e55c28?auto=format&fit=crop&w=900&q=80',
-      },
+      { tag: 'Classic Orange', img: galleryClassicOrange },
+      { tag: 'Inverted Block', img: galleryInvertedBlock },
     ],
   },
   {
     size: 'wide',
     frames: [
-      {
-        tag: 'Minimal White',
-        img: 'https://images.unsplash.com/photo-1600185365483-26d7a4cc7519?auto=format&fit=crop&w=900&q=80',
-      },
-      {
-        tag: 'Court Ready',
-        img: 'https://images.unsplash.com/photo-1549298916-b41d501d3772?auto=format&fit=crop&w=900&q=80',
-      },
+      { tag: 'Street Graffiti', img: galleryStreetGraffiti },
+      { tag: 'Neon Alley', img: galleryNeonAlley },
     ],
   },
   {
     size: 'square',
     frames: [
-      {
-        tag: 'Bold Crimson',
-        img: 'https://images.unsplash.com/photo-1542291026-7eec264c27ff?auto=format&fit=crop&w=900&q=80',
-      },
-      {
-        tag: 'Sunset Fade',
-        img: 'https://images.unsplash.com/photo-1595341888016-a392ef81b7de?auto=format&fit=crop&w=900&q=80',
-      },
+      { tag: 'Web Crimson', img: galleryWebCrimson },
+      { tag: 'Court Navy', img: galleryCourtNavy },
     ],
   },
   {
     size: 'square',
     frames: [
-      {
-        tag: 'Studio Detail',
-        img: 'https://images.unsplash.com/photo-1552346154-21d32810aba3?auto=format&fit=crop&w=900&q=80',
-      },
-      {
-        tag: 'Texture Play',
-        img: 'https://images.unsplash.com/photo-1608231387042-66d1773070a5?auto=format&fit=crop&w=900&q=80',
-      },
+      { tag: 'Coquette Pink', img: galleryCoquettePink },
+      { tag: 'Sweetheart Bow', img: gallerySweetheartBow },
     ],
   },
   {
     size: 'wide',
     frames: [
-      {
-        tag: 'Retro Runner',
-        img: 'https://images.unsplash.com/photo-1460353581641-37baddab0fa2?auto=format&fit=crop&w=900&q=80',
-      },
-      {
-        tag: 'Track Icon',
-        img: 'https://images.unsplash.com/photo-1520256862855-398228c41684?auto=format&fit=crop&w=900&q=80',
-      },
+      { tag: 'Sky Dreamer', img: gallerySkyDreamer },
+      { tag: 'Flame Navy', img: galleryFlameNavy },
     ],
   },
   {
     size: 'square',
     frames: [
-      {
-        tag: 'Pastel Pop',
-        img: 'https://images.unsplash.com/photo-1606107557195-0e29a4b5b4aa?auto=format&fit=crop&w=900&q=80',
-      },
-      {
-        tag: 'Soft Tones',
-        img: 'https://images.unsplash.com/photo-1525966222134-fcfa99b8ae77?auto=format&fit=crop&w=900&q=80',
-      },
+      { tag: 'Signature Duo', img: gallerySignatureDuo },
+      { tag: 'Splash Street', img: gallerySplashStreet },
     ],
   },
   {
     size: 'tall',
     frames: [
-      {
-        tag: 'Signature Drop',
-        img: 'https://images.unsplash.com/photo-1465453869711-7e174808ace9?auto=format&fit=crop&w=900&q=80',
-      },
-      {
-        tag: 'Statement Piece',
-        img: 'https://images.unsplash.com/photo-1543508282-6319a3e2621f?auto=format&fit=crop&w=900&q=80',
-      },
+      { tag: 'Studio Classic', img: galleryStudioClassic },
+      { tag: 'Block Edition', img: galleryBlockEdition },
     ],
   },
   {
     size: 'square',
     frames: [
-      {
-        tag: 'Everyday Icon',
-        img: 'https://images.unsplash.com/photo-1491553895911-0055eca6402d?auto=format&fit=crop&w=900&q=80',
-      },
-      {
-        tag: 'Clean Kicks',
-        img: 'https://images.unsplash.com/photo-1584735175315-9d5df23860e6?auto=format&fit=crop&w=900&q=80',
-      },
+      { tag: 'Detail Focus', img: galleryDetailFocus },
+      { tag: 'Tag Detail', img: galleryTagDetail },
     ],
   },
 ] as const;
@@ -495,7 +467,6 @@ interface LandingProps {
 }
 
 export const Landing: React.FC<LandingProps> = ({ navigate }) => {
-  const { theme } = useTheme();
   const [emailInput, setEmailInput] = useState('');
   const [submittedEmail, setSubmittedEmail] = useState(false);
   const [isAnnual, setIsAnnual] = useState(false);
@@ -514,27 +485,36 @@ export const Landing: React.FC<LandingProps> = ({ navigate }) => {
   const steps = [
     {
       num: '01',
-      title: 'KusShoes Scanning',
-      icon: Smartphone,
-      description:
-        'Use your smartphone to capture pictures of your favorite shoe. Powered by Kiri Engine API, the images are instantly converted into detailed 3D models.',
-      tags: ['Photogrammetry', 'Auto-Alignment', 'Kiri Engine API'],
+      title: 'Scan with your phone',
+      description: 'Walk around your sneaker and snap photos. No special gear needed.',
+      image: mobileScan,
+      imageAlt: 'Scanning a sneaker with AI 3D capture in the KusShoes mobile app',
+      cornerBadge: '4 angles captured',
+      MetaIcon: Clock,
+      metaText: 'About 3 minutes',
     },
     {
       num: '02',
-      title: 'Cloud Compilation',
-      icon: Cloud,
-      description:
-        'All 3D models are uploaded to our Cloud Vault. The cloud servers process mesh details and keep your files secure and accessible anywhere.',
-      tags: ['Cloud Mesh Processing', 'AES-256 Storage', 'Auto Retopology'],
+      title: 'We build the 3D model',
+      description: 'Your photos turn into a detailed 3D model in the cloud, automatically.',
+      image: dashboardShowcase,
+      imageAlt: 'Cloud dashboard syncing and processing a scan',
+      cornerBadge: 'Cloud sync active',
+      tagText: 'cloud pipeline',
+      dashed: true,
+      MetaIcon: Sparkles,
+      metaText: 'Automatic · no action needed',
     },
     {
       num: '03',
-      title: 'KusStudio Customization',
-      icon: Monitor,
-      description:
-        'Sync your cloud assets directly into KusStudio, our desktop client. Customize colors, textures, and export print-ready formats.',
-      tags: ['Real-time PBR', 'Multi-Format Export', '3D Print Ready'],
+      title: 'Make it yours in KusStudio',
+      description: 'Recolor, swap materials, and export for 3D printing.',
+      image: sneakerHero,
+      imageAlt: 'Finished 3D sneaker customized in KusStudio',
+      cornerBadge: 'KusStudio',
+      swatches: true,
+      MetaIcon: Monitor,
+      metaText: 'Desktop app · Windows & macOS',
     },
   ];
 
@@ -638,75 +618,12 @@ export const Landing: React.FC<LandingProps> = ({ navigate }) => {
       {/* Vignette: darkens edges, focuses eye on center */}
       <div className={styles.vignette} />
 
-      {/* Topographic Contour Waves */}
-      <div className={styles.topoLeft}>
-        <svg viewBox="0 0 400 800" fill="none" xmlns="http://www.w3.org/2000/svg">
-          <path
-            d="M-100,100 C100,150 200,50 300,200 C400,350 250,500 450,600"
-            stroke="var(--grid-line-color)"
-            strokeWidth="1.5"
-            strokeDasharray="4 4"
-          />
-          <path
-            d="M-100,150 C120,200 220,100 320,250 C420,400 270,550 470,650"
-            stroke="var(--grid-line-color)"
-            strokeWidth="1.5"
-          />
-          <path
-            d="M-100,200 C140,250 240,150 340,300 C440,450 290,600 490,700"
-            stroke="var(--grid-line-color)"
-            strokeWidth="1.5"
-          />
-          <path
-            d="M-100,250 C160,300 260,200 360,350 C460,500 310,650 510,750"
-            stroke="var(--grid-line-color)"
-            strokeWidth="1.5"
-            strokeDasharray="4 4"
-          />
-          <path
-            d="M-100,300 C180,350 280,250 380,400 C480,550 330,700 530,800"
-            stroke="var(--grid-line-color)"
-            strokeWidth="1.5"
-          />
-        </svg>
-      </div>
-      <div className={styles.topoRight}>
-        <svg viewBox="0 0 400 800" fill="none" xmlns="http://www.w3.org/2000/svg">
-          <path
-            d="M500,100 C300,150 200,50 100,200 C0,350 150,500 -50,600"
-            stroke="var(--grid-line-color)"
-            strokeWidth="1.5"
-          />
-          <path
-            d="M500,150 C280,200 180,100 80,250 C-20,400 130,550 -70,650"
-            stroke="var(--grid-line-color)"
-            strokeWidth="1.5"
-            strokeDasharray="4 4"
-          />
-          <path
-            d="M500,200 C260,250 160,150 60,300 C-40,450 110,600 -90,700"
-            stroke="var(--grid-line-color)"
-            strokeWidth="1.5"
-          />
-          <path
-            d="M500,250 C240,300 140,200 40,350 C-60,500 90,650 -110,750"
-            stroke="var(--grid-line-color)"
-            strokeWidth="1.5"
-          />
-          <path
-            d="M500,300 C220,350 120,250 20,400 C-80,550 70,700 -130,800"
-            stroke="var(--grid-line-color)"
-            strokeWidth="1.5"
-            strokeDasharray="4 4"
-          />
-        </svg>
-      </div>
-
       {/* Reusable Navbar */}
       <Navbar navigate={navigate} currentPage="landing" />
 
       {/* Hero Section */}
       <section className={styles.heroSection}>
+        <EdgeArt variant="hero" />
         <motion.div
           className={styles.heroContent}
           initial={{ opacity: 0, y: 30 }}
@@ -744,6 +661,7 @@ export const Landing: React.FC<LandingProps> = ({ navigate }) => {
 
       {/* Products Showcase Section */}
       <section id="products" className={styles.productsSection}>
+        <EdgeArt variant="products" />
         <div className={styles.sectionHeader}>
           <h2 className={styles.sectionTitle}>KusShoes Products</h2>
           <p className={styles.sectionSubtitle}>
@@ -761,15 +679,13 @@ export const Landing: React.FC<LandingProps> = ({ navigate }) => {
             transition={{ duration: 0.6 }}
           >
             <div className={styles.productBadge}>MOBILE APP</div>
-            <img
-              src={
-                theme === 'dark'
-                  ? '/KusShoes_Logo_Dark_Mode_cropped.png'
-                  : '/KusShoes_Logo_cropped.png'
-              }
-              alt="KusShoes"
-              className={styles.productLogoImage}
-            />
+            <div className={styles.productLogoFrame}>
+              <img
+                src={mobileAppIcon}
+                alt="KusShoes Mobile app icon"
+                className={styles.productLogoImage}
+              />
+            </div>
             <p className={styles.productDesc}>
               Our mobile scanning companion. Aim, shoot, and capture 360° photos of your footwear.
               Uploads images directly to the Kiri Engine API server for cloud 3D modeling.
@@ -836,6 +752,7 @@ export const Landing: React.FC<LandingProps> = ({ navigate }) => {
 
       {/* Gallery Section — visual proof of what you can create */}
       <section id="gallery" className={styles.gallerySection}>
+        <EdgeArt variant="gallery" />
         <div className={styles.sectionHeader}>
           <h2 className={styles.sectionTitle}>One Base Shoe, Infinite Styles</h2>
           <p className={styles.sectionSubtitle}>
@@ -856,81 +773,107 @@ export const Landing: React.FC<LandingProps> = ({ navigate }) => {
 
       {/* Workflow (3-step) Section */}
       <section id="workflow" className={styles.workflowSection}>
+        <EdgeArt variant="workflow" />
         <div className={styles.sectionHeader}>
-          <div className={styles.pipelineBadge}>
-            <span className={styles.pulseDotWrap}>
-              <span className={styles.pulseRing} />
-              <span className={styles.pulseDot} />
-            </span>
-            <span className={styles.pipelineBadgeLabel}>Photogrammetry Pipeline 3.0</span>
-          </div>
-          <h2 className={styles.sectionTitle}>
-            The Creation <span className="text-gradient-orange">Workflow</span>
-          </h2>
+          <span className={styles.sectionEyebrow}>How it works</span>
+          <h2 className={styles.sectionTitle}>From your shelf to your screen in minutes</h2>
           <p className={styles.sectionSubtitle}>
-            Simple, automated process to digitize and personalize your sneakers.
+            Scan a real sneaker with your phone. We handle the 3D. You make it yours.
           </p>
         </div>
 
         <div className={styles.stepsGridWrapper}>
-          <div className={styles.stepsConnector} aria-hidden="true" />
+          <div className={`${styles.stepConnector} ${styles.stepConnectorOne}`} aria-hidden="true">
+            <span className={styles.stepConnectorLine} />
+            <ChevronRight size={14} className={styles.stepConnectorArrow} />
+          </div>
+          <div className={`${styles.stepConnector} ${styles.stepConnectorTwo}`} aria-hidden="true">
+            <span className={styles.stepConnectorLine} />
+            <ChevronRight size={14} className={styles.stepConnectorArrow} />
+          </div>
+
           <div className={styles.stepsGrid}>
             {steps.map((step, index) => {
-              const Icon = step.icon;
+              const MetaIcon = step.MetaIcon;
               return (
-                <motion.div
-                  key={step.num}
-                  className={`${styles.stepCard} glass-panel`}
-                  initial={{ opacity: 0, y: 20 }}
-                  whileInView={{ opacity: 1, y: 0 }}
-                  viewport={{ once: true }}
-                  transition={{ duration: 0.5, delay: 0.1 * index }}
-                >
-                  <div className={styles.stepCardTop}>
-                    <div className={styles.stepNumHeader}>
-                      <span className={styles.stepNum}>{step.num}</span>
-                      <div className={styles.stepIconWrapper}>
-                        <Icon size={20} className={styles.stepIcon} />
+                <React.Fragment key={step.num}>
+                  <motion.div
+                    className={`${styles.stepCard} ${step.dashed ? styles.stepCardDashed : ''}`}
+                    initial={{ opacity: 0, y: 20 }}
+                    whileInView={{ opacity: 1, y: 0 }}
+                    viewport={{ once: true }}
+                    transition={{ duration: 0.5, delay: 0.1 * index }}
+                  >
+                    <div
+                      className={`${styles.stepVisual} ${step.dashed ? styles.stepVisualDashed : ''}`}
+                    >
+                      <img src={step.image} alt={step.imageAlt} className={styles.stepImage} />
+                      <span
+                        className={`${styles.stepCornerBadge} ${step.swatches ? styles.stepCornerBadgeAccent : ''}`}
+                      >
+                        {step.cornerBadge}
+                      </span>
+                      {step.swatches && (
+                        <div className={styles.stepSwatches}>
+                          <span
+                            className={`${styles.swatchDot} ${styles.swatchWhite}`}
+                            title="White"
+                          />
+                          <span
+                            className={`${styles.swatchDot} ${styles.swatchFog}`}
+                            title="Light Fog"
+                          />
+                          <span
+                            className={`${styles.swatchDot} ${styles.swatchAccent}`}
+                            title="Sole Amber Glow"
+                          />
+                          <span
+                            className={`${styles.swatchDot} ${styles.swatchDark}`}
+                            title="Obsidian"
+                          />
+                          <span
+                            className={`${styles.swatchDot} ${styles.swatchGum}`}
+                            title="Gum Rubber"
+                          />
+                          <span className={styles.swatchLabel}>Colorway</span>
+                        </div>
+                      )}
+                    </div>
+
+                    <div className={styles.stepBody}>
+                      <div className={styles.stepMetaRow}>
+                        <span className={styles.stepEyebrowLabel}>Step {index + 1}</span>
+                        {step.tagText && <span className={styles.stepTagText}>{step.tagText}</span>}
+                      </div>
+                      <h3 className={styles.stepTitle}>{step.title}</h3>
+                      <p className={styles.stepDesc}>{step.description}</p>
+                      <div className={styles.stepFooter}>
+                        <MetaIcon size={14} className={styles.stepFooterIcon} />
+                        <span>{step.metaText}</span>
                       </div>
                     </div>
-                    <h3 className={styles.stepTitle}>{step.title}</h3>
-                    <p className={styles.stepDesc}>{step.description}</p>
-                  </div>
-                  <div className={styles.stepTags}>
-                    {step.tags.map((tag) => (
-                      <span key={tag} className={styles.stepTag}>
-                        <span className={styles.stepTagDot} />
-                        {tag}
-                      </span>
-                    ))}
-                  </div>
-                </motion.div>
+                  </motion.div>
+
+                  {index < steps.length - 1 && (
+                    <div className={styles.stepConnectorMobile} aria-hidden="true">
+                      <span className={styles.stepConnectorMobileLine} />
+                      <ChevronRight size={14} className={styles.stepConnectorMobileArrow} />
+                    </div>
+                  )}
+                </React.Fragment>
               );
             })}
           </div>
         </div>
 
-        <motion.div
-          className={`${styles.workflowCta} glass-panel`}
-          initial={{ opacity: 0, y: 20 }}
-          whileInView={{ opacity: 1, y: 0 }}
-          viewport={{ once: true }}
-          transition={{ duration: 0.5 }}
-        >
-          <div className={styles.workflowCtaText}>
-            <h3>Ready to digitize your sneakers?</h3>
-            <p>Get started with free 3D mobile capture in minutes.</p>
-          </div>
-          <div className={styles.workflowCtaActions}>
-            <button className="btn-neon-orange" onClick={() => navigate('/login')}>
-              <span>Start Free Scan</span>
-              <ArrowRight size={16} />
-            </button>
-            <a href="#features" className="btn-outline" style={{ textDecoration: 'none' }}>
-              Documentation
-            </a>
-          </div>
-        </motion.div>
+        <div className={styles.workflowQuietRow}>
+          <p className={styles.workflowQuietText}>
+            Secure cloud storage · Print-ready exports · Real-time material preview
+          </p>
+          <button className={styles.workflowQuietBtn} onClick={() => navigate('/login')}>
+            Start Free Scan
+          </button>
+        </div>
       </section>
 
       {/* Social Proof Section */}

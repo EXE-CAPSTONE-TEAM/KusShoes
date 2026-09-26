@@ -1,231 +1,164 @@
-import React, { useEffect, useRef, useState } from 'react';
-import * as THREE from 'three';
-import { Canvas, useFrame } from '@react-three/fiber';
-import { OrbitControls, Stage } from '@react-three/drei';
+import React, { useEffect, useMemo, useState } from 'react';
 import * as Dialog from '@radix-ui/react-dialog';
-import * as Tooltip from '@radix-ui/react-tooltip';
-import * as Progress from '@radix-ui/react-progress';
-import * as DropdownMenu from '@radix-ui/react-dropdown-menu';
-import * as Avatar from '@radix-ui/react-avatar';
-import * as Separator from '@radix-ui/react-separator';
-import { FolderKanban, HardDrive, ShieldCheck, Download, RefreshCw, Plus, ArrowRight, X, MoreVertical, Trash2, Eye, Pin } from 'lucide-react';
+import { ArrowRight, Download, Plus, X } from 'lucide-react';
 import { motion } from 'framer-motion';
-import { api, type PortalProject, type Usage, type UserProfile } from '../../api/client';
+import {
+  api,
+  type PortalProject,
+  type Subscription,
+  type Usage,
+  type UserProfile,
+} from '../../api/client';
+import { formatDate, formatRelativeTime } from '../../utils/format';
 import styles from './Dashboard.module.css';
-
-// 3D Sneaker Model built using standard Three.js primitives
-const SneakerModel: React.FC = () => {
-  const groupRef = useRef<THREE.Group>(null);
-
-  // Auto rotate the sneaker
-  useFrame((state) => {
-    if (groupRef.current) {
-      groupRef.current.rotation.y = state.clock.getElapsedTime() * 0.4;
-    }
-  });
-
-  return (
-    <group ref={groupRef} position={[0, -0.2, 0]} rotation={[0.1, -0.5, 0.15]}>
-      {/* Sole (Sole of the shoe) */}
-      <mesh position={[0, -0.4, 0]}>
-        <boxGeometry args={[3.2, 0.25, 1.3]} />
-        <meshStandardMaterial color="#ffffff" roughness={0.9} metalness={0.1} />
-      </mesh>
-      
-      {/* Midsole Layer */}
-      <mesh position={[0, -0.2, 0]}>
-        <boxGeometry args={[3.22, 0.15, 1.32]} />
-        <meshStandardMaterial color="#1a1a1e" roughness={0.5} metalness={0.4} />
-      </mesh>
-
-      {/* Main Body (Upper part) */}
-      <mesh position={[-0.2, 0.2, 0]}>
-        <boxGeometry args={[2.0, 0.8, 1.25]} />
-        <meshStandardMaterial color="#FF5A36" roughness={0.4} metalness={0.2} />
-      </mesh>
-
-      {/* Front Toe Box */}
-      <mesh position={[0.9, 0.05, 0]}>
-        <boxGeometry args={[0.8, 0.5, 1.2]} />
-        <meshStandardMaterial color="#e61e43" roughness={0.6} metalness={0.1} />
-      </mesh>
-
-      {/* Heel Collar (Ankle support) */}
-      <mesh position={[-0.8, 0.6, 0]} rotation={[0, 0, -0.2]}>
-        <boxGeometry args={[0.8, 1.0, 1.2]} />
-        <meshStandardMaterial color="#0b0b0c" roughness={0.8} />
-      </mesh>
-
-      {/* Accent Neon Stripe (Sunset Orange glow) */}
-      <mesh position={[0, 0.15, 0.63]}>
-        <boxGeometry args={[1.5, 0.1, 0.03]} />
-        <meshStandardMaterial 
-          color="#FF5A36" 
-          emissive="#FF5A36" 
-          emissiveIntensity={1.5} 
-        />
-      </mesh>
-      
-      {/* Accent Neon Stripe 2 (Crimson glow) */}
-      <mesh position={[0, 0.0, 0.63]}>
-        <boxGeometry args={[1.2, 0.08, 0.03]} />
-        <meshStandardMaterial 
-          color="#e61e43" 
-          emissive="#e61e43" 
-          emissiveIntensity={1.2} 
-        />
-      </mesh>
-
-      {/* Lacing System Base */}
-      <mesh position={[0.3, 0.5, 0]} rotation={[0, 0, -0.5]}>
-        <boxGeometry args={[0.8, 0.1, 0.8]} />
-        <meshStandardMaterial color="#121215" roughness={0.9} />
-      </mesh>
-    </group>
-  );
-};
 
 interface DashboardProps {
   setActivePage: (page: string) => void;
   projects: PortalProject[];
 }
 
+function greetingForHour(hour: number): string {
+  if (hour < 12) return 'Good morning';
+  if (hour < 18) return 'Good afternoon';
+  return 'Good evening';
+}
+
+function formatTierLabel(tier: string): string {
+  return tier
+    .split('_')
+    .filter(Boolean)
+    .map((part) => part.charAt(0).toUpperCase() + part.slice(1))
+    .join(' · ');
+}
+
+const UsageMetric: React.FC<{
+  label: string;
+  used: number;
+  max: number | null;
+  percent: number;
+}> = ({ label, used, max, percent }) => (
+  <div className={styles.usageMetric}>
+    <div className={styles.usageMetricRow}>
+      <span>{label}</span>
+      <span className={styles.usageMetricValue}>
+        {max != null ? `${used} of ${max}` : `${used} used`}
+      </span>
+    </div>
+    <div className={styles.usageBarBg}>
+      <div className={styles.usageBarFill} style={{ width: `${max != null ? percent : 0}%` }} />
+    </div>
+  </div>
+);
+
 export const Dashboard: React.FC<DashboardProps> = ({ setActivePage, projects }) => {
-  const [syncing, setSyncing] = useState(false);
   const [profile, setProfile] = useState<UserProfile | null>(null);
   const [usage, setUsage] = useState<Usage | null>(null);
-  const [syncLogs, setSyncLogs] = useState(() => projects.slice(0, 5).map((project) => ({
-    id: project.id,
-    text: `${project.name} · ${project.rawStatus}`,
-    time: new Date(project.updatedAt).toLocaleString(),
-  })));
+  const [subscription, setSubscription] = useState<Subscription | null>(null);
 
   useEffect(() => {
-    Promise.all([api.profile(), api.usage()])
-      .then(([nextProfile, nextUsage]) => {
+    Promise.all([api.profile(), api.usage(), api.subscription().catch(() => null)])
+      .then(([nextProfile, nextUsage, nextSubscription]) => {
         setProfile(nextProfile);
         setUsage(nextUsage);
+        setSubscription(nextSubscription);
       })
       .catch(() => {
         // The global request client handles token refresh; page-level fallbacks remain visible.
       });
   }, []);
 
-  useEffect(() => {
-    setSyncLogs(projects.slice(0, 5).map((project) => ({
-      id: project.id,
-      text: `${project.name} · ${project.rawStatus}`,
-      time: new Date(project.updatedAt).toLocaleString(),
-    })));
-  }, [projects]);
-
-  const handleSync = async () => {
-    setSyncing(true);
-    try {
-      const page = await api.listProjects();
-      setSyncLogs(page.items.slice(0, 5).map((project) => ({
-        id: project.id,
-        text: `${project.name} · ${project.rawStatus}`,
-        time: new Date(project.updatedAt).toLocaleString(),
-      })));
-    } finally {
-      setSyncing(false);
-    }
-  };
-
-  const handleRemoveLog = (id: string) => {
-    setSyncLogs(prev => prev.filter(log => log.id !== id));
-  };
-
-  const maxProjects = usage?.max_projects;
-  const maxExports = usage?.max_exports_per_month;
-  const projectProgress = maxProjects ? Math.min(100, (usage?.projects_count ?? projects.length) / maxProjects * 100) : 0;
-  const statCards = [
-    {
-      label: 'Total Projects',
-      value: maxProjects ? `${usage?.projects_count ?? projects.length} / ${maxProjects}` : `${projects.length} Active`,
-      icon: FolderKanban,
-      link: 'projects',
-      progress: maxProjects ? projectProgress : undefined,
-    },
-    {
-      label: 'Monthly Exports',
-      value: maxExports ? `${usage?.exports_count ?? 0} / ${maxExports}` : `${usage?.exports_count ?? 0} used`,
-      icon: HardDrive,
-      link: 'billing',
-    },
-    { label: 'Subscription Plan', value: usage?.tier ?? 'Free', icon: ShieldCheck, link: 'billing' },
-  ];
-
   const displayName = profile
     ? `${profile.first_name} ${profile.last_name}`.trim() || profile.username
     : 'Creator';
-  const avatarUrl = profile ? api.avatarUrl(profile.avatar_path) : undefined;
+  const greeting = greetingForHour(new Date().getHours());
+
+  const sortedByRecent = useMemo(
+    () =>
+      [...projects].sort(
+        (a, b) => new Date(b.updatedAt).getTime() - new Date(a.updatedAt).getTime(),
+      ),
+    [projects],
+  );
+  const spotlightProject = sortedByRecent[0];
+  const gridProjects = sortedByRecent.slice(1, 5);
+  const recentActivity = sortedByRecent.slice(0, 5);
+  // BR-27: a project left over after a plan downgrade is read-only until the user upgrades —
+  // the closest real "needs attention" signal this app has, so it drives the hero's status line.
+  const lockedCount = projects.filter((p) => p.isLocked).length;
+
+  const openProject = (id: string) => setActivePage(`/project-details?id=${id}`);
+  const handleCardKeyDown = (e: React.KeyboardEvent, id: string) => {
+    if (e.key === 'Enter' || e.key === ' ') {
+      e.preventDefault();
+      openProject(id);
+    }
+  };
+
+  const maxProjects = usage?.max_projects ?? null;
+  const maxExports = usage?.max_exports_per_month ?? null;
+  const projectsUsed = usage?.projects_count ?? projects.length;
+  const exportsUsed = usage?.exports_count ?? 0;
+  const projectPercent = maxProjects ? Math.min(100, (projectsUsed / maxProjects) * 100) : 0;
+  const exportPercent = maxExports ? Math.min(100, (exportsUsed / maxExports) * 100) : 0;
 
   return (
-    <Tooltip.Provider delayDuration={200}>
     <div className={styles.container}>
-      {/* Welcome Banner */}
+      {/* Hero */}
       <motion.div
-        className={`${styles.banner} glass-panel`}
-        initial={{ opacity: 0, y: 20 }}
+        className={styles.hero}
+        initial={{ opacity: 0, y: 12 }}
         animate={{ opacity: 1, y: 0 }}
-        transition={{ duration: 0.5 }}
+        transition={{ duration: 0.4 }}
       >
-        <div className={styles.bannerInfo}>
-          <div className={styles.bannerIdentity}>
-            <Avatar.Root className={styles.avatarRoot}>
-              <Avatar.Image
-                className={styles.avatarImage}
-                src={avatarUrl}
-                alt={displayName}
-              />
-              <Avatar.Fallback className={styles.avatarFallback} delayMs={300}>
-                {displayName.slice(0, 2).toUpperCase()}
-              </Avatar.Fallback>
-            </Avatar.Root>
-            <span className={styles.badge}>SNEAKER FLOW 3D</span>
-          </div>
-          <h1 className={styles.bannerTitle}>Keep Creating, <span className="text-gradient-orange">{displayName}</span></h1>
-          <p className={styles.bannerDesc}>
-            Manage your mobile scans, billing, and system configurations. Sync shoe assets instantly to the Desktop App for full 3D rendering.
+        <div className={styles.heroLeft}>
+          <h1 className={styles.greeting}>
+            {greeting}, {displayName}
+          </h1>
+          <p className={styles.statusLine}>
+            <span className={styles.statusDot} />
+            {lockedCount > 0 ? (
+              <>
+                <span className={styles.statusStrong}>{lockedCount}</span> project
+                {lockedCount === 1 ? '' : 's'} read-only after your plan changed
+              </>
+            ) : (
+              <>
+                All projects synced <span className={styles.statusDivider}>·</span>{' '}
+                <span className={styles.statusStrong}>{projects.length}</span> total
+              </>
+            )}
           </p>
-          <div className={styles.bannerActions}>
-            <Tooltip.Root>
-              <Tooltip.Trigger asChild>
-                <button className="btn-neon-orange" onClick={handleSync} disabled={syncing}>
-                  <RefreshCw className={`${styles.icon} ${syncing ? styles.spin : ''}`} size={18} />
-                  {syncing ? 'Syncing assets...' : 'Sync Cloud Scan'}
-                </button>
-              </Tooltip.Trigger>
-              <Tooltip.Portal>
-                <Tooltip.Content className={styles.tooltipContent} sideOffset={8}>
-                  Pulls the latest scans from your mobile device
-                  <Tooltip.Arrow className={styles.tooltipArrow} />
-                </Tooltip.Content>
-              </Tooltip.Portal>
-            </Tooltip.Root>
-
+          <div className={styles.heroActions}>
+            <button
+              className={styles.primaryBtn}
+              onClick={() => setActivePage('projects?new=true')}
+            >
+              <Plus size={16} />
+              <span>New project</span>
+            </button>
             <Dialog.Root>
               <Dialog.Trigger asChild>
-                <button className="btn-outline">
-                  <Download size={18} />
-                  Get Desktop App
+                <button className={styles.secondaryBtn}>
+                  <Download size={16} />
+                  <span>Get Desktop App</span>
                 </button>
               </Dialog.Trigger>
               <Dialog.Portal>
                 <Dialog.Overlay className={styles.dialogOverlay} />
                 <Dialog.Content className={styles.dialogContent}>
-                  <Dialog.Title className={styles.dialogTitle}>KusShoes Desktop v1.4.2</Dialog.Title>
+                  <Dialog.Title className={styles.dialogTitle}>
+                    KusShoes Desktop v1.4.2
+                  </Dialog.Title>
                   <Dialog.Description className={styles.dialogDescription}>
-                    Get full 3D rendering, paint mapping, and offline project sync by installing the Desktop companion app.
+                    Get full 3D rendering, paint mapping, and offline project sync by installing the
+                    Desktop companion app.
                   </Dialog.Description>
                   <div className={styles.dialogActions}>
                     <Dialog.Close asChild>
-                      <button className="btn-outline">Cancel</button>
+                      <button className={styles.secondaryBtn}>Cancel</button>
                     </Dialog.Close>
                     <Dialog.Close asChild>
-                      <button className="btn-neon-orange">Start Download</button>
+                      <button className={styles.primaryBtn}>Start Download</button>
                     </Dialog.Close>
                   </div>
                   <Dialog.Close asChild>
@@ -238,145 +171,181 @@ export const Dashboard: React.FC<DashboardProps> = ({ setActivePage, projects })
             </Dialog.Root>
           </div>
         </div>
-        
-        {/* Dynamic 3D Sneaker Showcase */}
-        <div className={styles.canvasContainer}>
-          <div className={styles.canvasWrapper}>
-            <Canvas camera={{ position: [0, 0, 4.5], fov: 45 }}>
-              <ambientLight intensity={0.4} />
-              <pointLight position={[10, 10, 10]} intensity={1.5} />
-              <pointLight position={[-10, -10, -10]} intensity={0.5} />
-              <spotLight position={[0, 5, 2]} angle={0.3} penumbra={1} intensity={2} color="#FF5A36" />
-              <spotLight position={[-2, -5, -2]} angle={0.3} penumbra={1} intensity={1} color="#e61e43" />
-              <Stage intensity={0.5} environment="city" adjustCamera={false}>
-                <SneakerModel />
-              </Stage>
-              <OrbitControls enableZoom={false} autoRotate={false} />
-            </Canvas>
+
+        {spotlightProject && (
+          <div className={styles.heroRight}>
+            <div className={styles.spotlightLabel}>Last edited</div>
+            <div
+              className={styles.spotlightThumb}
+              role="button"
+              tabIndex={0}
+              onClick={() => openProject(spotlightProject.id)}
+              onKeyDown={(e) => handleCardKeyDown(e, spotlightProject.id)}
+            >
+              <img src={spotlightProject.imageUrl} alt={spotlightProject.name} />
+              <span className={styles.thumbBadge}>{spotlightProject.fileSize}</span>
+            </div>
+            <div className={styles.spotlightMeta}>
+              <div className={styles.spotlightInfo}>
+                <div className={styles.spotlightName} title={spotlightProject.name}>
+                  {spotlightProject.name}
+                </div>
+                <div className={styles.spotlightSub} title={formatDate(spotlightProject.updatedAt)}>
+                  {spotlightProject.baseModel} · Edited{' '}
+                  {formatRelativeTime(spotlightProject.updatedAt)}
+                </div>
+              </div>
+              <div className={styles.spotlightActions}>
+                <div className={styles.swatchRow} title="Colorway">
+                  <span
+                    className={styles.swatch}
+                    style={{ backgroundColor: spotlightProject.colorCode }}
+                  />
+                  {spotlightProject.accentColor && (
+                    <span
+                      className={styles.swatch}
+                      style={{ backgroundColor: spotlightProject.accentColor }}
+                    />
+                  )}
+                </div>
+                <button className={styles.openBtn} onClick={() => openProject(spotlightProject.id)}>
+                  <span>Open project</span>
+                  <ArrowRight size={12} />
+                </button>
+              </div>
+            </div>
           </div>
-          <span className={styles.canvasTip}>Drag to spin 3D Sneaker</span>
-        </div>
+        )}
       </motion.div>
 
-      {/* Stats Grid */}
-      <div className={styles.statsGrid}>
-        {statCards.map((stat, index) => {
-          const Icon = stat.icon;
-          return (
-            <motion.div
-              key={stat.label}
-              className={`${styles.statCard} glass-panel`}
-              initial={{ opacity: 0, y: 20 }}
-              animate={{ opacity: 1, y: 0 }}
-              transition={{ duration: 0.5, delay: 0.1 * (index + 1) }}
-              onClick={() => setActivePage(stat.link)}
-            >
-              <div className={styles.statHeader}>
-                <span className={styles.statLabel}>{stat.label}</span>
-                <Tooltip.Root>
-                  <Tooltip.Trigger asChild>
-                    <div className={styles.statIconWrapper}>
-                      <Icon size={20} className={styles.statIcon} />
-                    </div>
-                  </Tooltip.Trigger>
-                  <Tooltip.Portal>
-                    <Tooltip.Content className={styles.tooltipContent} sideOffset={6}>
-                      {stat.label}
-                      <Tooltip.Arrow className={styles.tooltipArrow} />
-                    </Tooltip.Content>
-                  </Tooltip.Portal>
-                </Tooltip.Root>
-              </div>
-              <div className={styles.statValue}>{stat.value}</div>
-              {stat.progress !== undefined && (
-                <Progress.Root className={styles.progressRoot} value={stat.progress}>
-                  <Progress.Indicator
-                    className={styles.progressIndicator}
-                    style={{ transform: `translateX(-${100 - stat.progress}%)` }}
-                  />
-                </Progress.Root>
-              )}
-              <div className={styles.statFooter}>
-                <span>View details</span>
-                <ArrowRight size={14} />
-              </div>
-            </motion.div>
-          );
-        })}
-      </div>
-
-      {/* Bottom Grid */}
-      <div className={styles.bottomGrid}>
-        {/* Recent sync logs */}
-        <motion.div
-          className={`${styles.logPanel} glass-panel`}
-          initial={{ opacity: 0, x: -20 }}
-          animate={{ opacity: 1, x: 0 }}
-          transition={{ duration: 0.5, delay: 0.4 }}
-        >
-          <div className={styles.panelHeader}>
-            <h2 className={styles.panelTitle}>Cloud Synced Scans</h2>
-            <button className={styles.panelActionBtn} onClick={handleSync}>
-              Sync Now
+      {/* Continue designing */}
+      {gridProjects.length > 0 && (
+        <section>
+          <div className={styles.sectionHeaderRow}>
+            <h2 className={styles.sectionTitle}>Continue designing</h2>
+            <button className={styles.viewAllLink} onClick={() => setActivePage('projects')}>
+              <span>View all projects</span>
+              <ArrowRight size={12} />
             </button>
           </div>
-          <Separator.Root className={styles.separator} decorative />
-          <div className={styles.logList}>
-            {syncLogs.map(log => (
-              <div key={log.id} className={styles.logItem}>
-                <div className={styles.logIndicator} />
-                <div className={styles.logBody}>
-                  <p className={styles.logText}>{log.text}</p>
-                  <span className={styles.logTime}>{log.time}</span>
+          <div className={styles.projectGrid}>
+            {gridProjects.map((proj) => (
+              <article
+                key={proj.id}
+                className={styles.projectCard}
+                role="button"
+                tabIndex={0}
+                onClick={() => openProject(proj.id)}
+                onKeyDown={(e) => handleCardKeyDown(e, proj.id)}
+              >
+                <div className={styles.projectThumb}>
+                  <img src={proj.imageUrl} alt={proj.name} />
+                  <span className={styles.thumbBadge}>{proj.fileSize}</span>
                 </div>
-                <DropdownMenu.Root>
-                  <DropdownMenu.Trigger asChild>
-                    <button className={styles.logMenuBtn} aria-label="Log actions">
-                      <MoreVertical size={16} />
-                    </button>
-                  </DropdownMenu.Trigger>
-                  <DropdownMenu.Portal>
-                    <DropdownMenu.Content className={styles.dropdownContent} sideOffset={6} align="end">
-                      <DropdownMenu.Item className={styles.dropdownItem} onSelect={() => setActivePage('projects')}>
-                        <Eye size={14} /> View project
-                      </DropdownMenu.Item>
-                      <DropdownMenu.Item className={styles.dropdownItem}>
-                        <Pin size={14} /> Pin to top
-                      </DropdownMenu.Item>
-                      <DropdownMenu.Separator className={styles.dropdownSeparator} />
-                      <DropdownMenu.Item
-                        className={`${styles.dropdownItem} ${styles.dropdownItemDanger}`}
-                        onSelect={() => handleRemoveLog(log.id)}
-                      >
-                        <Trash2 size={14} /> Remove
-                      </DropdownMenu.Item>
-                    </DropdownMenu.Content>
-                  </DropdownMenu.Portal>
-                </DropdownMenu.Root>
+                <div className={styles.projectBody}>
+                  <div className={styles.projectName} title={proj.name}>
+                    {proj.name}
+                  </div>
+                  <div className={styles.projectMeta} title={formatDate(proj.updatedAt)}>
+                    {proj.baseModel} · Edited {formatRelativeTime(proj.updatedAt)}
+                  </div>
+                  <div className={styles.swatchRow} title="Colorway">
+                    <span className={styles.swatch} style={{ backgroundColor: proj.colorCode }} />
+                    {proj.accentColor && (
+                      <span
+                        className={styles.swatch}
+                        style={{ backgroundColor: proj.accentColor }}
+                      />
+                    )}
+                  </div>
+                </div>
+              </article>
+            ))}
+          </div>
+        </section>
+      )}
+
+      {/* Recent activity + Usage */}
+      <div className={styles.bottomGrid}>
+        <div className={styles.activityCard}>
+          <div className={styles.cardHeader}>
+            <h3 className={styles.cardTitle}>Recent activity</h3>
+          </div>
+          <div className={styles.activityList}>
+            {recentActivity.length === 0 && (
+              <div className={styles.emptyState}>No projects yet — create one to get started.</div>
+            )}
+            {recentActivity.map((proj) => (
+              <div key={proj.id} className={styles.activityRow}>
+                <div className={styles.activityLeft}>
+                  <img src={proj.imageUrl} alt="" className={styles.activityThumb} />
+                  <div className={styles.activityInfo}>
+                    <div className={styles.activityName} title={proj.name}>
+                      {proj.name}
+                    </div>
+                    <div className={styles.activityTime} title={formatDate(proj.updatedAt)}>
+                      Edited {formatRelativeTime(proj.updatedAt)}
+                    </div>
+                  </div>
+                </div>
+                <button className={styles.activityOpenBtn} onClick={() => openProject(proj.id)}>
+                  Open
+                </button>
               </div>
             ))}
           </div>
-        </motion.div>
+        </div>
 
-        {/* Quick action card */}
-        <motion.div 
-          className={`${styles.actionPanel} glass-panel`}
-          initial={{ opacity: 0, x: 20 }}
-          animate={{ opacity: 1, x: 0 }}
-          transition={{ duration: 0.5, delay: 0.4 }}
-        >
-          <div className={styles.actionContent}>
-            <h3 className={styles.actionTitle}>Create New Sneaker</h3>
-            <p className={styles.actionDesc}>Create an empty workspace project and begin designing from scratch.</p>
-            <button className="btn-neon-orange" onClick={() => setActivePage('projects')}>
-              <Plus size={18} />
-              Create Project
+        <div className={styles.usageCard}>
+          <div>
+            <div className={styles.usageHeader}>
+              <div>
+                <div className={styles.usageTier}>{formatTierLabel(usage?.tier ?? 'free')}</div>
+                {subscription?.expires_at && (
+                  <div className={styles.usageRenew}>
+                    Renews {formatDate(subscription.expires_at)}
+                  </div>
+                )}
+              </div>
+              <button className={styles.manageLink} onClick={() => setActivePage('billing')}>
+                Manage plan
+              </button>
+            </div>
+            <div className={styles.usageDivider} />
+            <div className={styles.usageMetrics}>
+              <UsageMetric
+                label="Projects"
+                used={projectsUsed}
+                max={maxProjects}
+                percent={projectPercent}
+              />
+              <UsageMetric
+                label="Exports this month"
+                used={exportsUsed}
+                max={maxExports}
+                percent={exportPercent}
+              />
+              <div className={styles.usageMetric}>
+                <div className={styles.usageMetricRow}>
+                  <span>Storage</span>
+                  {/* Storage usage isn't exposed by the backend yet — same placeholder value
+                      already used in the sidebar's storage widget. */}
+                  <span className={styles.usageMetricValue}>1.4 GB of 5 GB</span>
+                </div>
+                <div className={styles.usageBarBg}>
+                  <div className={styles.usageBarFill} style={{ width: '28%' }} />
+                </div>
+              </div>
+            </div>
+          </div>
+          <div className={styles.usageFooter}>
+            <span>Need extra quota?</span>
+            <button className={styles.manageLink} onClick={() => setActivePage('billing')}>
+              Add-on options
             </button>
           </div>
-          <div className={styles.gridOverlayBackground} />
-        </motion.div>
+        </div>
       </div>
     </div>
-    </Tooltip.Provider>
   );
 };

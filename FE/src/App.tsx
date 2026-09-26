@@ -269,7 +269,12 @@ function App() {
           />
         )}
         {activePage === 'billing' && <Billing />}
-        {activePage === 'settings' && <Settings activeTab={activeSettingTab} />}
+        {activePage === 'settings' && (
+          <Settings
+            activeTab={activeSettingTab}
+            onTabChange={(tab) => navigate(`/settings?tab=${tab}`)}
+          />
+        )}
         {activePage === 'feedback' && <Feedback />}
         {projectsError && isPortalView && (
           <div role="alert" style={{ margin: '24px', color: '#ef4444' }}>
