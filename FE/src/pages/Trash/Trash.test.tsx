@@ -42,6 +42,7 @@ function makeTrashedProject(overrides: Partial<TrashedProject> = {}): TrashedPro
     verticesCount: '1,000',
     colorCode: '#FF5A36',
     description: '',
+    canonicalModelAssetId: null,
     deletedAt: '2026-09-20T00:00:00Z',
     purgeAt: inFiveDays,
     ...overrides,
@@ -107,6 +108,7 @@ describe('Trash', () => {
       verticesCount: trashed.verticesCount,
       colorCode: trashed.colorCode,
       description: trashed.description,
+      canonicalModelAssetId: trashed.canonicalModelAssetId,
     };
     m(api.restoreProject).mockResolvedValue(restoredProject);
     const setProjects = vi.fn();
