@@ -79,19 +79,29 @@ Response fields: `access_token`: string; `token_type?`: string
 
 ### `GET /api/v1/auth/google` — Bắt đầu đăng nhập Google
 
-Chuyển hướng (302) tới màn hình đồng ý của Google (OAuth 2.0, có `state` chống CSRF). Công khai.
+Chuyển hướng (302) tới màn hình đồng ý của Google (OAuth 2.0, có `state` chống CSRF). App mobile truyền `client=mobile` kèm `code_challenge` (PKCE S256, bắt buộc). Công khai.
+
+Parameters: `client` (query), `code_challenge` (query)
 
 Responses: `200` object
 
 ### `GET /api/v1/auth/google/callback` — Callback đăng nhập Google
 
-Google gọi về sau khi đồng ý (`code`, `state`); tạo hoặc nối tài khoản rồi trả access token (`is_new_user`, `linked`) và đặt refresh token vào cookie. Công khai.
+Google gọi về sau khi đồng ý (`code`, `state`); tạo hoặc nối tài khoản rồi trả access token (`is_new_user`, `linked`) và đặt refresh token vào cookie. Phiên mobile thì chuyển về `MOBILE_GOOGLE_REDIRECT_URI?code=` (mã dùng một lần, 60 giây), không kèm token. Công khai.
 
 Parameters: `code` (query, required), `state` (query, required)
 
-Responses: `200` GoogleLoginResponse
+Responses: `200` object
 
-Response fields: `access_token`: string; `token_type?`: string; `is_new_user`: boolean; `linked?`: boolean
+### `POST /api/v1/auth/google/mobile/exchange` — Đổi mã Google mobile lấy phiên
+
+App mobile gửi mã dùng một lần + `code_verifier` PKCE; trả access token và đặt refresh token vào cookie như `/auth/login`. Sai verifier cũng làm hủy mã; mã sai/đã dùng/hết hạn trả `AUTH_GOOGLE_MOBILE_CODE_INVALID`. Công khai.
+
+Request body: `code`: string; `code_verifier`: string
+
+Responses: `200` TokenResponse
+
+Response fields: `access_token`: string; `token_type?`: string
 
 ### `POST /api/v1/auth/refresh` — Đổi refresh token lấy access token
 
@@ -311,7 +321,7 @@ Số dự án, lượt xuất, AI credit trong chu kỳ hiện tại so với h�
 
 Responses: `200` UsageResponse, `401` ErrorResponse, `403` ErrorResponse
 
-Response fields: `tier`: string; `max_projects`: integer | null; `max_exports_per_month`: integer | null; `projects_count`: integer; `exports_count`: integer; `ai_credits_used`: integer; `ai_credits_limit?`: integer | null
+Response fields: `tier`: string; `max_projects`: integer | null; `max_exports_per_month`: integer | null; `projects_count`: integer; `exports_count`: integer; `ai_credits_used`: integer; `ai_credits_limit?`: integer | null; `max_scans_per_cycle?`: integer | null
 
 ### `GET /api/v1/users/me/privacy` — Cài đặt quyền riêng tư
 
@@ -362,6 +372,32 @@ Tạo file zip (hồ sơ, dự án, đồng ý, lịch sử đăng nhập) và t
 Responses: `200` DataExportResponse, `401` ErrorResponse, `403` ErrorResponse
 
 Response fields: `download_url`: string; `expires_in`: integer
+
+### `POST /api/v1/users/me/data-import/upload-url` — Xin link tải tệp sao lưu lên
+
+Trả presigned URL để tải tệp .zip sao lưu do KusShoes xuất lên, kèm `import_id` để xác nhận (BR-20). Bearer.
+
+Responses: `200` DataImportUploadResponse, `401` ErrorResponse, `403` ErrorResponse
+
+Response fields: `import_id`: uuid; `upload_url`: string; `storage_path`: string; `expires_in`: integer; `max_bytes`: integer
+
+### `POST /api/v1/users/me/data-import/{import_id}/confirm` — Xác nhận nhập dữ liệu
+
+Kiểm tra checksum/chữ ký của tệp sao lưu, tạo BẢN SAO MỚI (không ghi đè) và tính vào hạn mức dự án (BR-20, BR-46). Tệp sai hoặc vượt hạn mức trả `DATA_IMPORT_INVALID` (MSG08). Bearer.
+
+Parameters: `import_id` (path, required)
+
+Responses: `200` DataImportResultResponse, `401` ErrorResponse, `403` ErrorResponse, `404` ErrorResponse
+
+Response fields: `import_id`: uuid; `status`: string; `projects_imported`: integer; `skipped_binary_assets`: boolean; `message`: string
+
+### `GET /api/v1/users/me/data-imports` — Lịch sử nhập dữ liệu
+
+Các lần nhập tệp sao lưu: thời điểm, trạng thái, số dự án đã tạo, lý do từ chối. Bearer.
+
+Parameters: `limit` (query)
+
+Responses: `200` list[DataImportHistoryItem], `401` ErrorResponse, `403` ErrorResponse
 
 ### `GET /api/v1/users/me/2fa` — Trạng thái 2FA
 
@@ -527,9 +563,9 @@ Responses: `200` MessageResponse, `404` ErrorResponse
 
 Response fields: `message`: string
 
-### `POST /api/v1/projects/{project_id}/bake` — Bắt đầu bake/export 3D
+### `POST /api/v1/projects/{project_id}/bake` — Tạo bake job cho KusStudio Desktop
 
-Kiểm tra email đã xác thực, không trong ân hạn, hạn mức xuất; ghim phiên bản thiết kế đang gửi. Trả job (202). Đang có job trả `PROJ_BAKE_IN_PROGRESS`. Service token (`X-Service-Token`).
+Cần model gốc `ready` (`EDITOR_MODEL_NOT_READY`), email đã xác thực, không trong ân hạn, còn hạn mức xuất; ghim phiên bản thiết kế. Trả job `awaiting_client` (202). Job chưa được nhận sẽ bị thay thế; job đang chạy trả `PROJ_BAKE_IN_PROGRESS`. Service token (`X-Service-Token`).
 
 Parameters: `project_id` (path, required), `x-service-token` (header, required)
 
@@ -551,7 +587,7 @@ Response fields: `job_id`: uuid; `status`: string; `priority`: string; `error_me
 
 ### `POST /api/v1/projects/{project_id}/bake/{job_id}/retry` — Thử lại bake job lỗi
 
-Chỉ với job `failed`. Bearer.
+Chỉ với job `failed`; job trở về `awaiting_client`. Bearer.
 
 Parameters: `project_id` (path, required), `job_id` (path, required)
 
@@ -561,7 +597,7 @@ Response fields: `job_id`: uuid; `status`: string; `priority`: string
 
 ### `POST /api/v1/projects/{project_id}/bake/{job_id}/cancel` — Hủy bake job
 
-Chỉ với job đang chờ (`queued`). Bearer.
+Với job `awaiting_client` hoặc `claimed`. Bearer.
 
 Parameters: `project_id` (path, required), `job_id` (path, required)
 
@@ -578,6 +614,24 @@ Parameters: `project_id` (path, required)
 Responses: `200` ExportListResponse, `401` ErrorResponse, `403` ErrorResponse, `404` ErrorResponse
 
 Response fields: `items`: list[ExportResponse]
+
+### `GET /api/v1/projects/{project_id}/preview-image` — Ảnh render của dự án
+
+Trả ảnh PNG render của dự án. Tài khoản Free luôn nhận ảnh có watermark và cạnh dài ≤1080px (BR-65, BR-67); gói trả phí nhận ảnh gốc. Bearer.
+
+Parameters: `project_id` (path, required)
+
+Responses: `200` object, `401` ErrorResponse, `403` ErrorResponse, `404` ErrorResponse
+
+### `GET /api/v1/projects/{project_id}/watermark-policy` — Quy tắc watermark của dự án
+
+Cho biết bản render của dự án này có bắt buộc watermark hay không, kèm nội dung và kích thước tối đa, để trình chỉnh sửa áp dụng đúng (BR-65). Bearer.
+
+Parameters: `project_id` (path, required)
+
+Responses: `200` WatermarkPolicyResponse, `401` ErrorResponse, `403` ErrorResponse, `404` ErrorResponse
+
+Response fields: `required`: boolean; `text`: string; `max_edge_px`: integer; `opacity_percent`: integer
 
 ## Assets
 
@@ -647,7 +701,7 @@ Parameters: `project_id` (path, required)
 
 Responses: `200` EditorContextResponse, `401` ErrorResponse, `403` ErrorResponse, `404` ErrorResponse
 
-Response fields: `project`: EditorProjectResponse; `modelAsset?`: EditorModelAssetResponse | null; `latestDesign?`: EditorDesignResponse | null; `permissions`: EditorPermissionsResponse
+Response fields: `project`: EditorProjectResponse; `modelAsset?`: EditorModelAssetResponse | null; `latestDesign?`: EditorDesignResponse | null; `permissions`: EditorPermissionsResponse; `modelStatus?`: string | null; `rawModelAssetId?`: uuid | null
 
 ### `POST /api/v1/editor/projects/{project_id}/designs` — Lưu thiết kế từ editor
 
@@ -671,6 +725,18 @@ Responses: `200` EditorDesignResponse, `401` ErrorResponse, `403` ErrorResponse,
 
 Response fields: `id`: uuid; `userId`: uuid; `projectId`: uuid; `modelAssetId`: uuid; `name`: string; `status`: string; `revision`: integer; `designConfig`: object; `previewGlbUrl?`: string | null; `previewStatus?`: string; `previewErrorMessage?`: string | null; `createdAt`: date-time; `updatedAt`: date-time
 
+### `POST /api/v1/editor/projects/{project_id}/prepare` — Tạo job chuẩn bị model (crop/cleanup)
+
+Tạo prepare job từ model thô (raw) gần nhất. Cần xác nhận đặt lại thiết kế (confirmResetDesign) nếu project đã có thiết kế. Editor session token (Bearer, cấp bởi `/auth/editor/launch/exchange`).
+
+Parameters: `project_id` (path, required)
+
+Request body: `cropBox`: EditorCropBox; `confirmResetDesign?`: boolean
+
+Responses: `202` EditorJobResponse, `401` ErrorResponse, `403` ErrorResponse, `404` ErrorResponse
+
+Response fields: `id`: uuid; `type?`: string; `status`: string; `progress`: integer; `errorMessage?`: string | null; `designId`: uuid; `projectId`: uuid; `leaseExpiresAt?`: date-time | null; `createdAt`: date-time; `updatedAt`: date-time
+
 ### `POST /api/v1/editor/designs/{design_id}/bake` — Bắt đầu bake từ editor
 
 Cần scope `editor:write` và thiết kế đã lưu; dùng cùng quy tắc hạn mức như bake của portal (202). Editor session token (Bearer, cấp bởi `/auth/editor/launch/exchange`).
@@ -679,17 +745,53 @@ Parameters: `design_id` (path, required)
 
 Responses: `202` EditorJobResponse, `401` ErrorResponse, `403` ErrorResponse, `404` ErrorResponse
 
-Response fields: `id`: uuid; `type?`: string; `status`: string; `progress`: integer; `errorMessage?`: string | null; `designId`: uuid; `projectId`: uuid; `createdAt`: date-time; `updatedAt`: date-time
+Response fields: `id`: uuid; `type?`: string; `status`: string; `progress`: integer; `errorMessage?`: string | null; `designId`: uuid; `projectId`: uuid; `leaseExpiresAt?`: date-time | null; `createdAt`: date-time; `updatedAt`: date-time
 
-### `GET /api/v1/editor/jobs/{job_id}` — Trạng thái bake job
+### `GET /api/v1/editor/jobs/{job_id}` — Trạng thái job
 
-Trạng thái xử lý của một bake job do editor tạo. Editor session token (Bearer, cấp bởi `/auth/editor/launch/exchange`).
+Trạng thái job bake/prepare (`awaiting_client`, `claimed`, `completed`, `failed`, `cancelled`) và hạn lease. Editor session token (Bearer, cấp bởi `/auth/editor/launch/exchange`).
 
 Parameters: `job_id` (path, required)
 
 Responses: `200` EditorJobResponse, `401` ErrorResponse, `403` ErrorResponse, `404` ErrorResponse
 
-Response fields: `id`: uuid; `type?`: string; `status`: string; `progress`: integer; `errorMessage?`: string | null; `designId`: uuid; `projectId`: uuid; `createdAt`: date-time; `updatedAt`: date-time
+Response fields: `id`: uuid; `type?`: string; `status`: string; `progress`: integer; `errorMessage?`: string | null; `designId`: uuid; `projectId`: uuid; `leaseExpiresAt?`: date-time | null; `createdAt`: date-time; `updatedAt`: date-time
+
+### `POST /api/v1/editor/jobs/{job_id}/claim` — Nhận job trên KusStudio Desktop
+
+Giao job cho một máy (lease `CLAIM_LEASE_SECONDS`); trả claim token và payload presigned cho sidecar. Máy khác đang giữ trả `JOB_ALREADY_CLAIMED`. Editor session token (Bearer, cấp bởi `/auth/editor/launch/exchange`).
+
+Parameters: `job_id` (path, required)
+
+Request body: 
+
+Responses: `200` EditorJobClaimResponse, `401` ErrorResponse, `403` ErrorResponse, `404` ErrorResponse
+
+Response fields: `job`: EditorJobResponse; `claimId`: uuid; `claimToken`: string; `leaseExpiresAt`: date-time; `payload`: object
+
+### `POST /api/v1/editor/jobs/{job_id}/complete` — Hoàn tất job
+
+Xác thực bằng header `X-Claim-Token`. Kiểm tra file staging trên R2 (tồn tại, dung lượng, chữ ký GLB/ZIP), copy sang key cuối, ghi export và trừ hạn mức đúng một lần. Gọi lại cùng token trả cùng kết quả.
+
+Parameters: `job_id` (path, required), `X-Claim-Token` (header, required)
+
+Request body: `outputs`: list[EditorJobOutput]; `watermarkApplied?`: boolean; `cleanupReport?`: object | null
+
+Responses: `200` EditorJobResponse, `404` ErrorResponse
+
+Response fields: `id`: uuid; `type?`: string; `status`: string; `progress`: integer; `errorMessage?`: string | null; `designId`: uuid; `projectId`: uuid; `leaseExpiresAt?`: date-time | null; `createdAt`: date-time; `updatedAt`: date-time
+
+### `POST /api/v1/editor/jobs/{job_id}/fail` — Báo job lỗi
+
+Xác thực bằng header `X-Claim-Token`; job chuyển `failed`, xoá file staging.
+
+Parameters: `job_id` (path, required), `X-Claim-Token` (header, required)
+
+Request body: `code`: string; `message`: string
+
+Responses: `200` EditorJobResponse, `404` ErrorResponse
+
+Response fields: `id`: uuid; `type?`: string; `status`: string; `progress`: integer; `errorMessage?`: string | null; `designId`: uuid; `projectId`: uuid; `leaseExpiresAt?`: date-time | null; `createdAt`: date-time; `updatedAt`: date-time
 
 ### `POST /api/v1/editor/designs/{design_id}/export` — Lấy gói export
 
@@ -727,7 +829,9 @@ Stream nội dung một tệp của dự án; chỉ tệp thuộc phiên editor.
 
 Parameters: `asset_id` (path, required)
 
-Responses: `200` object, `401` ErrorResponse, `403` ErrorResponse, `404` ErrorResponse
+Responses: `200` EditorContentUrlResponse, `401` ErrorResponse, `403` ErrorResponse, `404` ErrorResponse
+
+Response fields: `url`: string; `expiresIn`: integer; `filename`: string; `contentType`: string
 
 ### `GET /api/v1/editor/exports/{export_id}/content` — Tải nội dung file xuất
 
@@ -735,7 +839,9 @@ Stream nội dung một file đã xuất; chỉ file thuộc phiên editor. Edit
 
 Parameters: `export_id` (path, required)
 
-Responses: `200` object, `401` ErrorResponse, `403` ErrorResponse, `404` ErrorResponse
+Responses: `200` EditorContentUrlResponse, `401` ErrorResponse, `403` ErrorResponse, `404` ErrorResponse
+
+Response fields: `url`: string; `expiresIn`: integer; `filename`: string; `contentType`: string
 
 ## Mobile
 
@@ -953,7 +1059,7 @@ Trạng thái (active/grace/…), ngày hết hạn, ân hạn 3 ngày (BR-90). 
 
 Responses: `200` SubscriptionResponse, `401` ErrorResponse, `403` ErrorResponse
 
-Response fields: `id`: uuid; `tier`: string; `status`: string; `started_at`: date-time; `expires_at`: date-time | null; `cancel_at_period_end`: boolean
+Response fields: `id`: uuid; `tier`: string; `status`: string; `started_at`: date-time; `expires_at`: date-time | null; `cancel_at_period_end`: boolean; `scans_remaining_plan`: integer; `scans_remaining_credit`: integer
 
 ### `GET /api/v1/subscription/invoices` — Lịch sử hóa đơn
 
@@ -989,7 +1095,7 @@ Parameters: `invoice_id` (path, required)
 
 Responses: `200` InvoiceResponse, `401` ErrorResponse, `403` ErrorResponse, `404` ErrorResponse
 
-Response fields: `id`: uuid; `order_code`: integer; `plan_tier`: string; `billing_cycle`: string; `listed_price_vnd`: integer; `discount_vnd`: integer; `amount_vnd`: integer; `payment_method`: string; `status`: string; `receipt_number?`: string | null; `paid_at`: date-time | null; `created_at`: date-time
+Response fields: `id`: uuid; `order_code`: integer; `plan_tier`: string; `billing_cycle`: string; `listed_price_vnd`: integer; `discount_vnd`: integer; `amount_vnd`: integer; `payment_method`: string; `status`: string; `receipt_number?`: string | null; `paid_at`: date-time | null; `created_at`: date-time; `vat`: VatBreakdown
 
 ### `GET /api/v1/subscription/invoices/{invoice_id}/receipt` — Tải biên nhận PDF
 
@@ -1009,7 +1115,35 @@ Request body: `tier`: string; `billing_cycle`: string; `coupon_code`: string
 
 Responses: `200` CouponPreviewResponse, `401` ErrorResponse, `403` ErrorResponse
 
-Response fields: `listed_price_vnd`: integer; `discount_vnd`: integer; `amount_vnd`: integer
+Response fields: `listed_price_vnd`: integer; `discount_vnd`: integer; `amount_vnd`: integer; `vat`: VatBreakdown
+
+### `GET /api/v1/subscription/credits` — Số dư Credit quét
+
+Số Credit còn dùng được, đã dùng, đã hết hạn, số đã mua trong chu kỳ hiện tại, trần 3 Credit/chu kỳ và đơn giá 49.000đ (BR-94). Bearer.
+
+Responses: `200` CreditBalanceResponse, `401` ErrorResponse, `403` ErrorResponse
+
+Response fields: `available`: integer; `used`: integer; `expired`: integer; `purchased_this_cycle`: integer; `max_per_cycle`: integer; `price_vnd`: integer; `next_expires_at`: date-time | null; `can_purchase`: boolean; `cycle_start`: date-time
+
+### `GET /api/v1/subscription/credits/ledger` — Sổ Credit quét
+
+Lịch sử từng Credit: ngày mua, hóa đơn, hạn dùng 12 tháng, trạng thái (còn dùng / đã dùng / hết hạn). Credit đã dùng không hoàn (BR-94). Bearer.
+
+Parameters: `limit` (query), `cursor` (query)
+
+Responses: `200` CreditLedgerResponse, `401` ErrorResponse, `403` ErrorResponse
+
+Response fields: `items`: list[CreditLedgerItem]; `next_cursor`: string | null; `has_next`: boolean
+
+### `POST /api/v1/subscription/credits/checkout` — Mua Credit quét
+
+Tạo hóa đơn PENDING cho 1–3 Credit và trả link thanh toán PayOS/MoMo. Chỉ mua được khi gói Basic/Pro đang ACTIVE; vượt 3 Credit trong chu kỳ trả `CREDIT_CYCLE_LIMIT` (MSG51) (BR-94, UC-27). Bearer.
+
+Request body: `quantity`: integer; `gateway`: string
+
+Responses: `200` CheckoutResponse, `401` ErrorResponse, `403` ErrorResponse
+
+Response fields: `checkout_url`: string
 
 ## Feedback
 
@@ -1253,7 +1387,7 @@ Request body: `user_id`: uuid; `tier`: string; `billing_cycle?`: string; `amount
 
 Responses: `201` AdminInvoiceResponse, `401` ErrorResponse, `403` ErrorResponse
 
-Response fields: `id`: uuid; `order_code`: integer; `plan_tier`: string; `billing_cycle`: string; `listed_price_vnd`: integer; `discount_vnd`: integer; `amount_vnd`: integer; `payment_method`: string; `status`: string; `receipt_number?`: string | null; `paid_at`: date-time | null; `created_at`: date-time; `user_id`: uuid; `user_email`: string | null; `payment_reference`: string | null; `coupon_code?`: string | null; `is_manual?`: boolean; `collected_by?`: string | null; `created_by?`: uuid | null; `approved_by?`: uuid | null
+Response fields: `id`: uuid; `order_code`: integer; `plan_tier`: string; `billing_cycle`: string; `listed_price_vnd`: integer; `discount_vnd`: integer; `amount_vnd`: integer; `payment_method`: string; `status`: string; `receipt_number?`: string | null; `paid_at`: date-time | null; `created_at`: date-time; `vat`: VatBreakdown; `user_id`: uuid; `user_email`: string | null; `payment_reference`: string | null; `coupon_code?`: string | null; `is_manual?`: boolean; `collected_by?`: string | null; `created_by?`: uuid | null; `approved_by?`: uuid | null
 
 ### `POST /api/v1/admin/billing/invoices/{invoice_id}/approve` — Duyệt giao dịch thủ công
 
@@ -1263,7 +1397,7 @@ Parameters: `invoice_id` (path, required)
 
 Responses: `200` AdminInvoiceResponse, `401` ErrorResponse, `403` ErrorResponse, `404` ErrorResponse
 
-Response fields: `id`: uuid; `order_code`: integer; `plan_tier`: string; `billing_cycle`: string; `listed_price_vnd`: integer; `discount_vnd`: integer; `amount_vnd`: integer; `payment_method`: string; `status`: string; `receipt_number?`: string | null; `paid_at`: date-time | null; `created_at`: date-time; `user_id`: uuid; `user_email`: string | null; `payment_reference`: string | null; `coupon_code?`: string | null; `is_manual?`: boolean; `collected_by?`: string | null; `created_by?`: uuid | null; `approved_by?`: uuid | null
+Response fields: `id`: uuid; `order_code`: integer; `plan_tier`: string; `billing_cycle`: string; `listed_price_vnd`: integer; `discount_vnd`: integer; `amount_vnd`: integer; `payment_method`: string; `status`: string; `receipt_number?`: string | null; `paid_at`: date-time | null; `created_at`: date-time; `vat`: VatBreakdown; `user_id`: uuid; `user_email`: string | null; `payment_reference`: string | null; `coupon_code?`: string | null; `is_manual?`: boolean; `collected_by?`: string | null; `created_by?`: uuid | null; `approved_by?`: uuid | null
 
 ### `POST /api/v1/admin/billing/invoices/{invoice_id}/reject` — Từ chối giao dịch thủ công
 
@@ -1275,7 +1409,7 @@ Request body: `reason`: string
 
 Responses: `200` AdminInvoiceResponse, `401` ErrorResponse, `403` ErrorResponse, `404` ErrorResponse
 
-Response fields: `id`: uuid; `order_code`: integer; `plan_tier`: string; `billing_cycle`: string; `listed_price_vnd`: integer; `discount_vnd`: integer; `amount_vnd`: integer; `payment_method`: string; `status`: string; `receipt_number?`: string | null; `paid_at`: date-time | null; `created_at`: date-time; `user_id`: uuid; `user_email`: string | null; `payment_reference`: string | null; `coupon_code?`: string | null; `is_manual?`: boolean; `collected_by?`: string | null; `created_by?`: uuid | null; `approved_by?`: uuid | null
+Response fields: `id`: uuid; `order_code`: integer; `plan_tier`: string; `billing_cycle`: string; `listed_price_vnd`: integer; `discount_vnd`: integer; `amount_vnd`: integer; `payment_method`: string; `status`: string; `receipt_number?`: string | null; `paid_at`: date-time | null; `created_at`: date-time; `vat`: VatBreakdown; `user_id`: uuid; `user_email`: string | null; `payment_reference`: string | null; `coupon_code?`: string | null; `is_manual?`: boolean; `collected_by?`: string | null; `created_by?`: uuid | null; `approved_by?`: uuid | null
 
 ### `GET /api/v1/admin/billing/periods` — Danh sách kỳ báo cáo
 
@@ -1331,6 +1465,14 @@ Responses: `200` CouponResponse, `401` ErrorResponse, `403` ErrorResponse, `404`
 
 Response fields: `id`: uuid; `code`: string; `discount_type`: string; `value`: integer; `plan_tiers`: list[string] | null; `max_uses`: integer | null; `used_count`: integer; `valid_from`: date-time | null; `valid_until`: date-time | null; `is_active`: boolean
 
+### `GET /api/v1/admin/billing/tax-config` — Cấu hình thuế VAT
+
+Trạng thái bật/tắt dòng VAT và thuế suất. Khi bật, VAT được tách ra từ giá niêm yết, không cộng thêm (BR-28). Admin (Bearer).
+
+Responses: `200` TaxConfigResponse, `401` ErrorResponse, `403` ErrorResponse
+
+Response fields: `enabled`: boolean; `rate_percent`: integer
+
 ## Admin Dashboard
 
 Số liệu tổng quan cho trang chủ quản trị.
@@ -1379,7 +1521,7 @@ Parameters: `date_from` (query), `date_to` (query)
 
 Responses: `200` AnalyticsResponse, `401` ErrorResponse, `403` ErrorResponse
 
-Response fields: `date_from`: date; `date_to`: date; `mrr_vnd`: integer; `arr_vnd`: integer; `arpu_vnd`: integer; `paying_customers`: integer; `revenue_vnd`: PeriodValue; `refunds_vnd`: PeriodValue; `new_paying_customers`: PeriodValue; `churn`: ChurnMetric; `retention`: RetentionMetric; `free_to_paid`: RateMetric; `repeat`: RepeatMetric; `failed_payments`: FailedPayments; `revenue_by_plan`: list[PlanRevenue]; `revenue_series`: list[RevenuePoint]; `mrr_movement`: MrrMovement; `top_customers`: list[TopCustomer]
+Response fields: `date_from`: date; `date_to`: date; `mrr_vnd`: integer; `arr_vnd`: integer; `arpu_vnd`: integer; `paying_customers`: integer; `revenue_vnd`: PeriodValue; `refunds_vnd`: PeriodValue; `new_paying_customers`: PeriodValue; `churn`: ChurnMetric; `retention`: RetentionMetric; `free_to_paid`: RateMetric; `repeat`: RepeatMetric; `failed_payments`: FailedPayments; `revenue_by_plan`: list[PlanRevenue]; `revenue_series`: list[RevenuePoint]; `mrr_movement`: MrrMovement; `top_customers`: list[TopCustomer]; `payment_methods`: list[PaymentMethodRevenue]; `outstanding`: AccountsReceivable; `discounts_vnd`: integer; `vat_collected_vnd`: integer; `credit_revenue_vnd`: integer; `refund_rate`: number | null; `api_cost_vnd`: integer; `gross_margin_vnd`: integer
 
 ### `GET /api/v1/admin/reports/{report_type}` — Tải báo cáo
 
@@ -1563,15 +1705,15 @@ Response fields: `id`: uuid; `project_id`: uuid; `project_name`: string | null; 
 
 ### `POST /api/v1/admin/bake-jobs/{job_id}/requeue` — Xếp lại bake job lỗi
 
-Chỉ với job `failed`. Admin ghi (Bearer, staff bị 403).
+Chỉ với job `failed`; job trở về `awaiting_client` để KusStudio Desktop nhận lại. Admin ghi (Bearer, staff bị 403).
 
 Parameters: `job_id` (path, required)
 
 Responses: `200` object, `401` ErrorResponse, `403` ErrorResponse, `404` ErrorResponse
 
-### `POST /api/v1/admin/bake-jobs/{job_id}/cancel` — Hủy bake job đang chờ
+### `POST /api/v1/admin/bake-jobs/{job_id}/cancel` — Hủy bake job đang hoạt động
 
-Chỉ với job `queued`. Admin ghi (Bearer, staff bị 403).
+Với job `awaiting_client` hoặc `claimed`; xoá file staging. Admin ghi (Bearer, staff bị 403).
 
 Parameters: `job_id` (path, required)
 
@@ -1604,6 +1746,168 @@ Parameters: `actor_id` (query), `action` (query), `target_type` (query), `target
 Responses: `200` CursorPage_AuditLogResponse_, `401` ErrorResponse, `403` ErrorResponse
 
 Response fields: `items`: list[AuditLogResponse]; `next_cursor`: string | null
+
+## Quota Internal
+
+Endpoint nội bộ cho dịch vụ quét: trừ lượt quét theo thứ tự gói → Credit (BR-23); xác thực bằng token dịch vụ.
+
+### `POST /api/v1/internal/scan-quota/consume` — Trừ một lượt quét
+
+Trừ theo thứ tự: lượt của gói trước, Credit sau (BR-23). Hết cả hai trả `SCAN_QUOTA_EXHAUSTED` (MSG28). Service token (`X-Service-Token`).
+
+Parameters: `x-service-token` (header, required)
+
+Request body: `user_id`: uuid; `reference`: string
+
+Responses: `200` ScanConsumeResponse
+
+Response fields: `source`: string; `plan_remaining`: integer; `credit_available`: integer
+
+### `GET /api/v1/internal/scan-quota/{user_id}` — Số lượt quét còn lại
+
+Lượt quét còn lại của gói trong chu kỳ và số Credit còn hiệu lực. Service token (`X-Service-Token`).
+
+Parameters: `user_id` (path, required), `x-service-token` (header, required)
+
+Responses: `200` ScanBalanceResponse, `404` ErrorResponse
+
+Response fields: `plan_remaining`: integer; `credit_available`: integer; `cycle_start`: date-time; `resets_at`: date-time | null; `can_scan`: boolean; `blocked_code`: string | null
+
+## Moderation
+
+Báo cáo vi phạm nội dung/bản quyền (công khai) và tình trạng xử lý vi phạm của tài khoản (BR-77).
+
+### `POST /api/v1/public/content-reports` — Báo cáo vi phạm nội dung
+
+Chủ sở hữu quyền gửi khiếu nại bản quyền/nhãn hiệu về một thiết kế hoặc template, không cần đăng nhập. Giới hạn tần suất theo IP (BR-77, UC-24). Công khai.
+
+Request body: `project_id?`: uuid | null; `template_id?`: uuid | null; `reason`: string; `details`: string; `reporter_email?`: email | null; `reporter_name?`: string | null; `evidence_url?`: string | null
+
+Responses: `202` ContentReportAccepted
+
+Response fields: `report_id`: uuid; `status`: string
+
+### `GET /api/v1/moderation/me` — Tình trạng vi phạm của tôi
+
+Mức xử lý hiện tại (cảnh cáo / hạn chế chia sẻ công khai / khoá) và thời điểm hết hạn chế (BR-77). Bearer.
+
+Responses: `200` MyModerationStatus, `401` ErrorResponse, `403` ErrorResponse
+
+Response fields: `level`: integer; `is_restricted`: boolean; `restricted_until`: date-time | null; `is_banned`: boolean
+
+## Admin Moderation
+
+Xử lý báo cáo vi phạm bản quyền: cảnh cáo → hạn chế chia sẻ 30 ngày → khoá tài khoản (BR-77, UC-24).
+
+### `GET /api/v1/admin/content-reports` — Danh sách báo cáo vi phạm
+
+Hàng đợi khiếu nại bản quyền, lọc theo trạng thái, phân trang bằng con trỏ (UC-24). Admin (Bearer).
+
+Parameters: `status` (query), `limit` (query), `cursor` (query)
+
+Responses: `200` CursorPage_ContentReportListItem_, `401` ErrorResponse, `403` ErrorResponse
+
+Response fields: `items`: list[ContentReportListItem]; `next_cursor`: string | null
+
+### `GET /api/v1/admin/content-reports/{report_id}` — Chi tiết báo cáo vi phạm
+
+Nội dung khiếu nại, đối tượng bị báo cáo và lịch sử xử lý của tài khoản đó (UC-24, BR-78). Admin (Bearer).
+
+Parameters: `report_id` (path, required)
+
+Responses: `200` ContentReportDetail, `401` ErrorResponse, `403` ErrorResponse, `404` ErrorResponse
+
+Response fields: `id`: uuid; `project_id`: uuid | null; `template_id`: uuid | null; `reported_user_id`: uuid; `reason`: string; `status`: string; `created_at`: date-time; `details`: string; `reporter_email`: string | null; `reporter_name`: string | null; `evidence_url`: string | null; `resolution_note`: string | null; `reviewed_by`: uuid | null; `reviewed_at`: date-time | null; `user_actions`: list[ModerationActionResponse]
+
+### `POST /api/v1/admin/content-reports/{report_id}/uphold` — Chấp nhận báo cáo vi phạm
+
+Áp mức xử lý kế tiếp theo BR-77: lần 1 cảnh cáo, lần 2 hạn chế chia sẻ công khai 30 ngày, lần 3 khoá tài khoản. Ghi AUDIT_LOG. Admin ghi (Bearer, staff bị 403).
+
+Parameters: `report_id` (path, required)
+
+Request body: `resolution_note`: string
+
+Responses: `200` ModerationActionResponse, `401` ErrorResponse, `403` ErrorResponse, `404` ErrorResponse
+
+Response fields: `level`: integer; `action`: string; `restricted_until`: date-time | null; `report_status`: string | null; `id`: uuid; `report_id`: uuid | null; `reason`: string; `created_by`: uuid | null; `created_at`: date-time
+
+### `POST /api/v1/admin/content-reports/{report_id}/dismiss` — Từ chối báo cáo vi phạm
+
+Đóng khiếu nại, không áp mức xử lý nào và không tăng bậc vi phạm. Ghi AUDIT_LOG. Admin ghi (Bearer, staff bị 403).
+
+Parameters: `report_id` (path, required)
+
+Request body: `resolution_note`: string
+
+Responses: `200` ContentReportDetail, `401` ErrorResponse, `403` ErrorResponse, `404` ErrorResponse
+
+Response fields: `id`: uuid; `project_id`: uuid | null; `template_id`: uuid | null; `reported_user_id`: uuid; `reason`: string; `status`: string; `created_at`: date-time; `details`: string; `reporter_email`: string | null; `reporter_name`: string | null; `evidence_url`: string | null; `resolution_note`: string | null; `reviewed_by`: uuid | null; `reviewed_at`: date-time | null; `user_actions`: list[ModerationActionResponse]
+
+### `GET /api/v1/admin/users/{user_id}/moderation-actions` — Lịch sử xử lý vi phạm
+
+Các mức xử lý đã áp cho tài khoản theo BR-77, kèm lý do và người thực hiện. Admin (Bearer).
+
+Parameters: `user_id` (path, required)
+
+Responses: `200` list[ModerationActionResponse], `401` ErrorResponse, `403` ErrorResponse, `404` ErrorResponse
+
+## API Cost Internal
+
+Ghi chi phí mỗi lần gọi API 3D/AI và kiểm tra trạng thái nhận Scan Job (SF-14); xác thực bằng token dịch vụ.
+
+### `POST /api/v1/internal/api-cost/calls` — Ghi chi phí một lần gọi API
+
+Ghi chi phí mọi lần gọi API 3D/AI theo user và theo ngày, kể cả lần thất bại (SF-14). Vượt 80% ngân sách tháng sẽ cảnh báo Admin, vượt 100% sẽ tạm ngưng nhận Scan Job. Service token (`X-Service-Token`).
+
+Parameters: `x-service-token` (header, required)
+
+Request body: `user_id?`: uuid | null; `provider`: string; `operation`: string; `status`: string; `cost_vnd`: integer; `reference?`: string | null; `occurred_at?`: date-time | null
+
+Responses: `201` ApiCostEntryResponse
+
+Response fields: `id`: uuid; `user_id`: uuid | null; `provider`: string; `operation`: string; `status`: string; `cost_vnd`: integer; `reference`: string | null; `occurred_on`: date; `occurred_at`: date-time; `created_at`: date-time
+
+### `GET /api/v1/internal/api-cost/scan-intake` — Kiểm tra có nhận Scan Job không
+
+Trả `accepted=false` kèm MSG43 khi ngân sách tháng đã dùng hết 100%, hoặc khi tài khoản nội bộ đã dùng hết trần 10 lượt quét của kỳ (SF-14, BR-79, BR-83). Service token (`X-Service-Token`).
+
+Parameters: `user_id` (query), `x-service-token` (header, required)
+
+Responses: `200` ScanIntakeResponse
+
+Response fields: `accepted`: boolean; `reason`: string | null; `message`: string | null
+
+## Admin API Cost
+
+Chi phí API theo ngày, ngân sách tháng và ngưỡng cảnh báo 80% / tạm ngưng 100% (SF-14, BR-108).
+
+### `GET /api/v1/admin/api-cost/daily` — Chi phí API theo ngày
+
+Tổng chi phí, số lần gọi thành công/thất bại theo từng ngày (GMT+7) trong khoảng thời gian chọn (SF-14, BR-108). Admin (Bearer).
+
+Parameters: `date_from` (query), `date_to` (query)
+
+Responses: `200` list[ApiCostDailyRow], `401` ErrorResponse, `403` ErrorResponse
+
+### `GET /api/v1/admin/api-cost/budget` — Ngân sách API tháng
+
+Ngân sách đã đặt, số đã chi, phần trăm và trạng thái (`unconfigured` / `ok` / `warning` / `suspended`) (SF-14). Admin (Bearer).
+
+Parameters: `month` (query)
+
+Responses: `200` ApiBudgetStatus, `401` ErrorResponse, `403` ErrorResponse
+
+Response fields: `period_month`: date; `budget_vnd`: integer | null; `spent_vnd`: integer; `percent`: number | null; `state`: string; `warned_at`: date-time | null; `suspended_at`: date-time | null
+
+### `PUT /api/v1/admin/api-cost/budget` — Đặt ngân sách API tháng
+
+Đặt hoặc cập nhật ngân sách của một tháng; ngưỡng cảnh báo 80% và tạm ngưng 100% tính trên số này. Ghi AUDIT_LOG (SF-14). Admin ghi (Bearer, staff bị 403).
+
+Request body: `month`: date; `budget_vnd`: integer
+
+Responses: `200` ApiBudgetStatus, `401` ErrorResponse, `403` ErrorResponse
+
+Response fields: `period_month`: date; `budget_vnd`: integer | null; `spent_vnd`: integer; `percent`: number | null; `state`: string; `warned_at`: date-time | null; `suspended_at`: date-time | null
 
 ## Health
 
