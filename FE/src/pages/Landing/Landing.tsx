@@ -27,11 +27,9 @@ import { InteractiveParticleGrid } from '../../components/InteractiveParticleGri
 import { EdgeArt } from '../../components/EdgeArt/EdgeArt';
 import dashboardShowcase from '../../assets/showcase/dashboard-screenshot.png';
 import projectsShowcase from '../../assets/showcase/projects-screenshot.png';
-import mobileOnboarding from '../../assets/showcase/mobile-onboarding.png';
 import mobileScan from '../../assets/showcase/mobile-scan.png';
-import mobileExplore from '../../assets/showcase/mobile-explore.png';
-import mobileProfile from '../../assets/showcase/mobile-profile.png';
 import mobileAppIcon from '../../assets/kusshoes-mobile-app-icon.jpeg';
+import mobileMockup from '../../assets/kusshoes-mobile-mockup.jpg';
 import sneakerHero from '../../assets/sneaker-hero.png';
 import galleryClassicOrange from '../../assets/gallery/classic-orange-studio.png';
 import galleryInvertedBlock from '../../assets/gallery/inverted-block-studio.png';
@@ -57,15 +55,6 @@ const showcaseTabs = [
 ] as const;
 
 type ShowcaseTabKey = (typeof showcaseTabs)[number]['key'];
-
-const mobileShowcaseScreens = [
-  { key: 'onboarding', label: 'Đăng nhập', img: mobileOnboarding },
-  { key: 'scan', label: 'Quét AI', img: mobileScan },
-  { key: 'explore', label: 'Khám phá', img: mobileExplore },
-  { key: 'profile', label: 'Cá nhân', img: mobileProfile },
-] as const;
-
-type MobileScreenKey = (typeof mobileShowcaseScreens)[number]['key'];
 
 // Placeholder avatar photos (pravatar.cc — a stock placeholder-avatar service) standing in
 // for real creator/reviewer photos until there's a public reviews endpoint.
@@ -291,50 +280,6 @@ const WebsiteShowcase: React.FC = () => {
   );
 };
 
-const MobileAppShowcase: React.FC = () => {
-  const [activeScreen, setActiveScreen] = useState<MobileScreenKey>('scan');
-  const active = mobileShowcaseScreens.find((s) => s.key === activeScreen)!;
-
-  return (
-    <div className={styles.mobileShowcaseWrap}>
-      <div className={styles.phoneMockup}>
-        <span className={styles.phoneButtonMute} />
-        <span className={styles.phoneButtonVolUp} />
-        <span className={styles.phoneButtonVolDown} />
-        <span className={styles.phoneButtonPower} />
-        <div className={styles.phoneScreenWindow}>
-          <div className={styles.phoneDynamicIsland} />
-          <AnimatePresence mode="wait">
-            <motion.img
-              key={active.key}
-              src={active.img}
-              alt={`KusShoes mobile app — ${active.label}`}
-              className={styles.phoneScreenshot}
-              initial={{ opacity: 0 }}
-              animate={{ opacity: 1 }}
-              exit={{ opacity: 0 }}
-              transition={{ duration: 0.3, ease: 'easeInOut' }}
-            />
-          </AnimatePresence>
-          <div className={styles.phoneHomeIndicator} />
-        </div>
-      </div>
-      <div className={styles.phoneShadow} aria-hidden="true" />
-      <div className={styles.phoneTabs}>
-        {mobileShowcaseScreens.map((screen) => (
-          <button
-            key={screen.key}
-            type="button"
-            className={`${styles.phoneTabBtn} ${activeScreen === screen.key ? styles.phoneTabBtnActive : ''}`}
-            onClick={() => setActiveScreen(screen.key)}
-          >
-            {screen.label}
-          </button>
-        ))}
-      </div>
-    </div>
-  );
-};
 
 interface StatCounterProps {
   target: number;
@@ -679,18 +624,27 @@ export const Landing: React.FC<LandingProps> = ({ navigate }) => {
             transition={{ duration: 0.6 }}
           >
             <div className={styles.productBadge}>MOBILE APP</div>
-            <div className={styles.productLogoFrame}>
-              <img
-                src={mobileAppIcon}
-                alt="KusShoes Mobile app icon"
-                className={styles.productLogoImage}
-              />
+            <div className={styles.productTitleRow}>
+              <div className={styles.productLogoFrame}>
+                <img
+                  src={mobileAppIcon}
+                  alt="KusShoes Mobile app icon"
+                  className={styles.productLogoImage}
+                />
+              </div>
+              <h3 className={styles.productTitle}>KusShoes Mobile</h3>
             </div>
             <p className={styles.productDesc}>
               Our mobile scanning companion. Aim, shoot, and capture 360° photos of your footwear.
               Uploads images directly to the Kiri Engine API server for cloud 3D modeling.
             </p>
-            <MobileAppShowcase />
+            <div className={styles.screenshotFrame}>
+              <img
+                src={mobileMockup}
+                alt="KusShoes Mobile 3D scanning app"
+                className={styles.mobileProductImage}
+              />
+            </div>
           </motion.div>
 
           {/* KusStudio Desktop */}
