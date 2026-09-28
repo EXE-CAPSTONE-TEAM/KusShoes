@@ -1,6 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { Mail, Lock, ArrowLeft, CheckCircle2, UserPlus, LogIn, Eye, EyeOff, CheckSquare, Square, UserRound, KeyRound, ShieldCheck, AlertCircle, Info } from 'lucide-react';
 import { motion } from 'framer-motion';
+import { useTranslation } from 'react-i18next';
 import { api, ApiError } from '../../api/client';
 import { useTheme } from '../../context/ThemeContext';
 import {
@@ -22,6 +23,7 @@ interface LoginProps {
 }
 
 export const Login: React.FC<LoginProps> = ({ setPage }) => {
+  const { t } = useTranslation('auth');
   const { theme } = useTheme();
   const [isLoginTab, setIsLoginTab] = useState(true);
   const [email, setEmail] = useState('');
@@ -52,12 +54,12 @@ export const Login: React.FC<LoginProps> = ({ setPage }) => {
 
   // Password strength state
   const [strengthScore, setStrengthScore] = useState(0); // 0 to 3
-  const [strengthLabel, setStrengthLabel] = useState('Too Weak');
+  const [strengthLabelKey, setStrengthLabelKey] = useState<'tooWeak' | 'weak' | 'medium' | 'strong'>('tooWeak');
 
   useEffect(() => {
     if (!password) {
       setStrengthScore(0);
-      setStrengthLabel('Too Weak');
+      setStrengthLabelKey('tooWeak');
       return;
     }
 
@@ -74,16 +76,16 @@ export const Login: React.FC<LoginProps> = ({ setPage }) => {
 
     switch (score) {
       case 1:
-        setStrengthLabel('Weak');
+        setStrengthLabelKey('weak');
         break;
       case 2:
-        setStrengthLabel('Medium');
+        setStrengthLabelKey('medium');
         break;
       case 3:
-        setStrengthLabel('Strong');
+        setStrengthLabelKey('strong');
         break;
       default:
-        setStrengthLabel('Too Weak');
+        setStrengthLabelKey('tooWeak');
         break;
     }
   }, [password]);
@@ -126,7 +128,7 @@ export const Login: React.FC<LoginProps> = ({ setPage }) => {
         return;
       }
       if (!agreeTerms) {
-        setError('You must agree to the Terms of Service & Privacy Policy.');
+        setError(t('login.agreeTermsRequired'));
         return;
       }
     }
@@ -139,8 +141,8 @@ export const Login: React.FC<LoginProps> = ({ setPage }) => {
           setMfaChallenge({ token: outcome.challengeToken, method: outcome.method });
           setNotice(
             outcome.method === 'email'
-              ? 'We sent a verification code to your email.'
-              : 'Enter the 6-digit code from your authenticator app.',
+              ? t('login.mfaSentEmail')
+              : t('login.mfaSentTotp'),
           );
           return;
         }
@@ -155,7 +157,7 @@ export const Login: React.FC<LoginProps> = ({ setPage }) => {
           ageConfirmed: agreeTerms,
         });
         setPendingUserId(result.userId);
-        setNotice(result.message || `A verification code was sent to ${result.email}.`);
+        setNotice(result.message || t('login.enterCodeSentTo', { email: result.email }));
       }
     } catch (caught) {
       if (caught instanceof ApiError) {
@@ -163,7 +165,7 @@ export const Login: React.FC<LoginProps> = ({ setPage }) => {
           const userId = caught.data.user_id;
           if (typeof userId === 'string') {
             setPendingUserId(userId);
-            setNotice('Your account is not verified. Enter the OTP sent to your email.');
+            setNotice(t('login.accountNotVerified'));
             return;
           }
         }
@@ -175,7 +177,7 @@ export const Login: React.FC<LoginProps> = ({ setPage }) => {
         }
         return;
       }
-      setError(caught instanceof Error ? caught.message : 'Authentication failed. Please try again.');
+      setError(caught instanceof Error ? caught.message : t('login.authFailed'));
     } finally {
       setLoading(false);
     }
@@ -192,7 +194,7 @@ export const Login: React.FC<LoginProps> = ({ setPage }) => {
       await api.verifyOtp(pendingUserId, otpCode, rememberMe);
       finishAuthentication();
     } catch (caught) {
-      setError(caught instanceof Error ? caught.message : 'OTP verification failed.');
+      setError(caught instanceof Error ? caught.message : t('login.otpVerifyFailed'));
     } finally {
       setLoading(false);
     }
@@ -216,9 +218,9 @@ export const Login: React.FC<LoginProps> = ({ setPage }) => {
         // The challenge expired or was consumed: start over from the password step.
         setMfaChallenge(null);
         setMfaCode('');
-        setError('Your verification session expired. Please sign in again.');
+        setError(t('login.mfaSessionExpired'));
       } else {
-        setError(caught instanceof Error ? caught.message : 'Verification failed.');
+        setError(caught instanceof Error ? caught.message : t('login.mfaVerifyFailed'));
       }
     } finally {
       setLoading(false);
@@ -241,9 +243,9 @@ export const Login: React.FC<LoginProps> = ({ setPage }) => {
     setResending(true);
     try {
       const result = await api.resendOtp(pendingUserId);
-      setNotice(`${result.message} (${result.resendRemaining} resend attempts remaining)`);
+      setNotice(t('login.resendRemaining', { message: result.message, count: result.resendRemaining }));
     } catch (caught) {
-      setError(caught instanceof Error ? caught.message : 'Unable to resend OTP.');
+      setError(caught instanceof Error ? caught.message : t('login.resendFailed'));
     } finally {
       setResending(false);
     }
@@ -256,7 +258,7 @@ export const Login: React.FC<LoginProps> = ({ setPage }) => {
       {/* Back to landing */}
       <button className={styles.backBtn} onClick={() => setPage('landing')}>
         <ArrowLeft size={16} />
-        <span>Back to Home</span>
+        <span>{t('backToHome')}</span>
       </button>
 
       {/* Auth Panel */}
@@ -286,8 +288,8 @@ export const Login: React.FC<LoginProps> = ({ setPage }) => {
             >
               <CheckCircle2 size={48} className={styles.successIcon} />
             </motion.div>
-            <h3>Access Granted</h3>
-            <p>Redirecting to KusShoes Portal...</p>
+            <h3>{t('login.accessGranted')}</h3>
+            <p>{t('login.redirecting')}</p>
           </div>
         ) : recoveryMode ? (
           <AccountRecovery
@@ -302,13 +304,13 @@ export const Login: React.FC<LoginProps> = ({ setPage }) => {
         ) : mfaChallenge ? (
           <div className={styles.otpSection}>
             <ShieldCheck size={42} className={styles.otpIcon} />
-            <h3>Two-step verification</h3>
+            <h3>{t('login.twoStepVerification')}</h3>
             <p>
               {useRecoveryCode
-                ? 'Enter one of your one-time recovery codes.'
+                ? t('login.enterRecoveryCode')
                 : mfaChallenge.method === 'email'
-                  ? 'Enter the 6-digit code we emailed you.'
-                  : 'Enter the 6-digit code from your authenticator app.'}
+                  ? t('login.enterEmailCode')
+                  : t('login.enterAuthenticatorCode')}
             </p>
 
             {notice && (
@@ -326,14 +328,14 @@ export const Login: React.FC<LoginProps> = ({ setPage }) => {
 
             <form onSubmit={handleVerifyMfa} className={styles.form} noValidate>
               <div className={styles.inputGroup}>
-                <label htmlFor="mfa-code">{useRecoveryCode ? 'Recovery code' : 'Verification code'}</label>
+                <label htmlFor="mfa-code">{useRecoveryCode ? t('login.recoveryCodeLabel') : t('verificationCodeLabel')}</label>
                 <input
                   id="mfa-code"
                   type="text"
                   inputMode={useRecoveryCode ? 'text' : 'numeric'}
                   autoComplete="one-time-code"
                   maxLength={useRecoveryCode ? 32 : 6}
-                  placeholder={useRecoveryCode ? 'xxxx-xxxx' : '123456'}
+                  placeholder={useRecoveryCode ? t('login.recoveryCodePlaceholder') : t('otpPlaceholder')}
                   value={mfaCode}
                   onChange={(event) =>
                     setMfaCode(useRecoveryCode ? event.target.value : event.target.value.replace(/\D/g, ''))
@@ -350,7 +352,7 @@ export const Login: React.FC<LoginProps> = ({ setPage }) => {
                 disabled={loading || (useRecoveryCode ? mfaCode.trim().length < 6 : mfaCode.length !== 6)}
               >
                 <CheckCircle2 size={18} />
-                <span>{loading ? 'Verifying...' : 'Verify & Continue'}</span>
+                <span>{loading ? t('verifying') : t('verifyAndContinue')}</span>
               </button>
             </form>
 
@@ -365,18 +367,18 @@ export const Login: React.FC<LoginProps> = ({ setPage }) => {
                 }}
                 disabled={loading}
               >
-                {useRecoveryCode ? 'Use verification code' : 'Use a recovery code'}
+                {useRecoveryCode ? t('login.useVerificationCode') : t('login.useRecoveryCode')}
               </button>
               <button type="button" className={styles.textButton} onClick={leaveMfa} disabled={loading}>
-                Back to sign in
+                {t('backToSignIn')}
               </button>
             </div>
           </div>
         ) : pendingUserId ? (
           <div className={styles.otpSection}>
             <KeyRound size={42} className={styles.otpIcon} />
-            <h3>Verify your email</h3>
-            <p>Enter the 6-digit code sent to {email || 'your email'}.</p>
+            <h3>{t('login.verifyYourEmail')}</h3>
+            <p>{t('login.enterCodeSentTo', { email: email || t('login.yourEmail') })}</p>
 
             {notice && (
               <div className={styles.noticeMessage} role="status">
@@ -393,7 +395,7 @@ export const Login: React.FC<LoginProps> = ({ setPage }) => {
 
             <form onSubmit={handleVerifyOtp} className={styles.form} noValidate>
               <div className={styles.inputGroup}>
-                <label htmlFor="otp-code">Verification code</label>
+                <label htmlFor="otp-code">{t('verificationCodeLabel')}</label>
                 <input
                   id="otp-code"
                   type="text"
@@ -401,7 +403,7 @@ export const Login: React.FC<LoginProps> = ({ setPage }) => {
                   autoComplete="one-time-code"
                   pattern="[0-9]{6}"
                   maxLength={6}
-                  placeholder="123456"
+                  placeholder={t('otpPlaceholder')}
                   value={otpCode}
                   onChange={(event) => setOtpCode(event.target.value.replace(/\D/g, ''))}
                   className={`${styles.input} ${styles.otpInput}`}
@@ -415,13 +417,13 @@ export const Login: React.FC<LoginProps> = ({ setPage }) => {
                 disabled={loading || otpCode.length !== 6}
               >
                 <CheckCircle2 size={18} />
-                <span>{loading ? 'Verifying...' : 'Verify & Continue'}</span>
+                <span>{loading ? t('verifying') : t('verifyAndContinue')}</span>
               </button>
             </form>
 
             <div className={styles.otpActions}>
               <button type="button" className={styles.textButton} onClick={handleResendOtp} disabled={resending || loading}>
-                {resending ? 'Sending...' : 'Resend code'}
+                {resending ? t('sending') : t('login.resendCode')}
               </button>
               <button
                 type="button"
@@ -435,7 +437,7 @@ export const Login: React.FC<LoginProps> = ({ setPage }) => {
                 }}
                 disabled={loading || resending}
               >
-                Back to sign in
+                {t('backToSignIn')}
               </button>
             </div>
           </div>
@@ -453,7 +455,7 @@ export const Login: React.FC<LoginProps> = ({ setPage }) => {
                   setFieldErrors({});
                 }}
               >
-                Sign In
+                {t('login.signInTab')}
               </button>
               <button
                 type="button"
@@ -465,7 +467,7 @@ export const Login: React.FC<LoginProps> = ({ setPage }) => {
                   setFieldErrors({});
                 }}
               >
-                Register
+                {t('login.registerTab')}
               </button>
             </div>
 
@@ -474,12 +476,12 @@ export const Login: React.FC<LoginProps> = ({ setPage }) => {
               {!isLoginTab && (
                 <>
                   <div className={styles.inputGroup}>
-                    <label>Full Name</label>
+                    <label>{t('login.fullNameLabel')}</label>
                     <div className={styles.inputWrapper}>
                       <UserRound size={18} className={styles.inputIcon} />
                       <input
                         type="text"
-                        placeholder="Your full name"
+                        placeholder={t('login.fullNamePlaceholder')}
                         value={name}
                         onChange={(e) => {
                           setName(e.target.value);
@@ -495,12 +497,12 @@ export const Login: React.FC<LoginProps> = ({ setPage }) => {
                     {renderFieldError(fieldErrors.fullName)}
                   </div>
                   <div className={styles.inputGroup}>
-                    <label>Username</label>
+                    <label>{t('login.usernameLabel')}</label>
                     <div className={styles.inputWrapper}>
                       <UserRound size={18} className={styles.inputIcon} />
                       <input
                         type="text"
-                        placeholder="your_username"
+                        placeholder={t('login.usernamePlaceholder')}
                         value={username}
                         onChange={(e) => {
                           setUsername(e.target.value);
@@ -510,7 +512,7 @@ export const Login: React.FC<LoginProps> = ({ setPage }) => {
                         minLength={3}
                         maxLength={30}
                         pattern="[a-zA-Z0-9_]{3,30}"
-                        title="Use 3-30 letters, numbers, or underscores"
+                        title={t('login.usernamePatternTitle')}
                         autoComplete="username"
                         required
                       />
@@ -521,12 +523,12 @@ export const Login: React.FC<LoginProps> = ({ setPage }) => {
               )}
 
               <div className={styles.inputGroup}>
-                <label>Email Address</label>
+                <label>{t('login.emailAddressLabel')}</label>
                 <div className={styles.inputWrapper}>
                   <Mail size={18} className={styles.inputIcon} />
                   <input
                     type="email"
-                    placeholder="you@example.com"
+                    placeholder={t('emailPlaceholder')}
                     value={email}
                     onChange={(e) => {
                       setEmail(e.target.value);
@@ -542,7 +544,7 @@ export const Login: React.FC<LoginProps> = ({ setPage }) => {
 
               {/* Password field */}
               <div className={styles.inputGroup}>
-                <label>Password</label>
+                <label>{t('login.passwordLabel')}</label>
                 <div className={styles.inputWrapper}>
                   <Lock size={18} className={styles.inputIcon} />
                   <input
@@ -581,14 +583,14 @@ export const Login: React.FC<LoginProps> = ({ setPage }) => {
                     </div>
                     <div className={styles.strengthLabels}>
                       <span className={styles.strengthCriteria}>
-                        Min 8 chars, 1 uppercase, 1 number
+                        {t('login.strengthCriteria')}
                       </span>
                       <span className={`${styles.strengthText} ${
-                        strengthScore === 1 ? styles.weakText : 
-                        strengthScore === 2 ? styles.mediumText : 
+                        strengthScore === 1 ? styles.weakText :
+                        strengthScore === 2 ? styles.mediumText :
                         strengthScore === 3 ? styles.strongText : ''
                       }`}>
-                        {strengthLabel}
+                        {t(`strength.${strengthLabelKey}`)}
                       </span>
                     </div>
                   </div>
@@ -599,7 +601,7 @@ export const Login: React.FC<LoginProps> = ({ setPage }) => {
               {/* Confirm Password field (Register tab only) */}
               {!isLoginTab && (
                 <div className={styles.inputGroup}>
-                  <label>Confirm Password</label>
+                  <label>{t('login.confirmPasswordLabel')}</label>
                   <div className={styles.inputWrapper}>
                     <Lock size={18} className={styles.inputIcon} />
                     <input
@@ -635,21 +637,21 @@ export const Login: React.FC<LoginProps> = ({ setPage }) => {
                       checked={rememberMe}
                       onChange={(event) => setRememberMe(event.target.checked)}
                     />
-                    <span>Remember me</span>
+                    <span>{t('login.rememberMe')}</span>
                   </label>
                   <a href="#forgot" onClick={(e) => { e.preventDefault(); setRecoveryMode('reset'); }} className={styles.forgotLink}>
-                    Forgot password?
+                    {t('login.forgotPassword')}
                   </a>
                 </div>
                 <div className={styles.forgotRow} style={{ marginTop: '4px', justifyContent: 'flex-end' }}>
                   <a href="#restore" onClick={(e) => { e.preventDefault(); setRecoveryMode('restore'); }} className={styles.forgotLink}>
-                    Restore a deleted account
+                    {t('login.restoreDeletedAccount')}
                   </a>
                 </div>
                 </>
               ) : (
                 <div className={styles.forgotRow} style={{ marginTop: '4px' }}>
-                  <label 
+                  <label
                     className={styles.rememberMe}
                     onClick={() => setAgreeTerms(!agreeTerms)}
                   >
@@ -658,7 +660,7 @@ export const Login: React.FC<LoginProps> = ({ setPage }) => {
                     ) : (
                       <Square size={16} className={styles.checkboxIcon} />
                     )}
-                    <span>I confirm I'm 16 or older and agree to the Terms of Service & Privacy</span>
+                    <span>{t('login.agreeTermsCheckbox')}</span>
                   </label>
                 </div>
               )}
@@ -684,7 +686,7 @@ export const Login: React.FC<LoginProps> = ({ setPage }) => {
                 disabled={loading}
               >
                 {isLoginTab ? <LogIn size={18} /> : <UserPlus size={18} />}
-                <span>{loading ? 'Authenticating...' : isLoginTab ? 'Sign In' : 'Create Account'}</span>
+                <span>{loading ? t('login.authenticating') : isLoginTab ? t('login.signInTab') : t('login.createAccount')}</span>
               </button>
             </form>
 
@@ -700,7 +702,7 @@ export const Login: React.FC<LoginProps> = ({ setPage }) => {
                 <path fill="#FBBC05" d="M10.53 28.59c-.48-1.45-.76-2.99-.76-4.59s.27-3.14.76-4.59l-7.98-6.19C.92 16.46 0 20.12 0 24c0 3.88.92 7.54 2.56 10.78l7.97-6.19z"/>
                 <path fill="#34A853" d="M24 48c6.48 0 11.93-2.13 15.89-5.81l-7.73-6c-2.15 1.45-4.92 2.3-8.16 2.3-6.26 0-11.57-4.22-13.47-9.91l-7.98 6.19C6.51 42.62 14.62 48 24 48z"/>
               </svg>
-              <span>Sign in with Google</span>
+              <span>{t('login.signInWithGoogle')}</span>
             </button>
           </>
         )}

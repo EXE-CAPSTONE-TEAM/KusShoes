@@ -1,0 +1,45 @@
+{
+  "osOptions": {
+    "windows": "Windows 10/11 (.EXE)",
+    "macSilicon": "macOS Apple Silicon (M1/M2/M3 .DMG)",
+    "macIntel": "macOS Intel Core (.DMG)"
+  },
+  "selectDesktopOsAria": "Chọn hệ điều hành desktop",
+  "downloadToast": "Đang bắt đầu tải {{appName}} ({{platform}}). Cảm ơn bạn đã tham gia bản beta!",
+  "badge": "HỆ SINH THÁI HAI ỨNG DỤNG",
+  "heroTitleLine1Prefix": "QUÉT VỚI",
+  "heroTitleLine2Prefix": "THIẾT KẾ TRÊN",
+  "heroSubtitle": "Hai công cụ chuyên biệt phối hợp hoàn hảo. Ghi lại hình học vật lý ngoài đời thực bằng ứng dụng di động, rồi áp dụng chất liệu, màu sắc và thiết kế chuyên nghiệp trên desktop.",
+  "mobile": {
+    "tag": "ỨNG DỤNG QUÉT DI ĐỘNG",
+    "description": "Biến bộ sưu tập giày thật của bạn thành bản sao số 3D độ chi tiết cao. Chỉ cần chụp một loạt ảnh đôi giày bằng điện thoại, phần còn lại để engine photogrammetry của chúng tôi xử lý.",
+    "spec1": "Dựng hình bằng Kiri Engine photogrammetry API",
+    "spec2": "Tích hợp quét LiDAR để đo chiều sâu",
+    "spec3": "Tự động tách mesh phần upper và viền đế",
+    "spec4": "Tải lên và đồng bộ tức thì với Cloud Vault bảo mật",
+    "selectPlatform": "Chọn nền tảng",
+    "iosMeta": "Phiên bản 1.4.2 (Beta) • iOS 16.0 trở lên",
+    "androidMeta": "Phiên bản 1.4.0 (Beta) • Android 11.0 trở lên",
+    "downloadIos": "Tải IPA qua TestFlight",
+    "downloadAndroid": "Tải trình cài đặt APK"
+  },
+  "desktop": {
+    "tag": "BỘ CÔNG CỤ THIẾT KẾ DESKTOP",
+    "description": "Giao diện tuỳ chỉnh giày 3D toàn diện. Tải ngay các bản quét đã đồng bộ từ di động, phối màu, chỉnh chất liệu, thêm hình ảnh tuỳ chỉnh và xuất file sẵn sàng in.",
+    "spec1": "Bộ dựng hình WebGL thời gian thực, tăng tốc phần cứng",
+    "spec2": "Vẽ canvas nhiều lớp và chèn sticker tuỳ chỉnh",
+    "spec3": "Xuất mô hình 3D định dạng GLTF, OBJ, FBX, Apple USDZ",
+    "spec4": "Máy chủ biên dịch cục bộ lắng nghe ở cổng 8421",
+    "selectOs": "Chọn hệ điều hành",
+    "windowsMeta": "Dung lượng: 142 MB • Tối thiểu: GTX 1060 / 8GB RAM",
+    "macSiliconMeta": "Dung lượng: 128 MB • Native hoàn toàn cho Apple M-series",
+    "macIntelMeta": "Dung lượng: 135 MB • Yêu cầu macOS 12.0 trở lên",
+    "downloadInstaller": "Tải trình cài đặt Desktop"
+  },
+  "workflow": {
+    "title": "Cách chúng đồng bộ",
+    "desc": "Khi bạn quét một đôi giày bằng ứng dụng di động <b1>KusShoes App</b1>, dữ liệu photogrammetry được tổng hợp trực tiếp trong Cloud Vault. Khi khởi chạy <b2>KusStudio Desktop</b2>, ứng dụng sẽ nhận diện workspace đám mây đang hoạt động và đồng bộ toàn bộ bản quét trong chưa đầy 3 giây. Bộ desktop còn chạy một tiến trình lắng nghe cục bộ, giao tiếp trực tiếp với trình duyệt web portal của bạn.",
+    "cta": "Vào Portal Console",
+    "cloudSync": "Đồng bộ đám mây"
+  }
+}

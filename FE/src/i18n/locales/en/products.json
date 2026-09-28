@@ -1,0 +1,45 @@
+{
+  "osOptions": {
+    "windows": "Windows 10/11 (.EXE)",
+    "macSilicon": "macOS Apple Silicon (M1/M2/M3 .DMG)",
+    "macIntel": "macOS Intel Core (.DMG)"
+  },
+  "selectDesktopOsAria": "Select desktop operating system",
+  "downloadToast": "Starting download for {{appName}} ({{platform}}). Thank you for participating in our beta test!",
+  "badge": "THE DUAL-APP ECOSYSTEM",
+  "heroTitleLine1Prefix": "SCAN WITH",
+  "heroTitleLine2Prefix": "DESIGN IN",
+  "heroSubtitle": "Two dedicated tools working in perfect unison. Capture physical geometry in real-world spaces with our mobile app, and apply pro-grade textures, colors, and designs on your desktop device.",
+  "mobile": {
+    "tag": "MOBILE CAPTURE APP",
+    "description": "Transform your physical sneaker collection into high-fidelity 3D digital twins. Just take a series of photos of any shoe using your mobile phone, and let our photogrammetry engine do the rest.",
+    "spec1": "Kiri Engine photogrammetry API reconstruction",
+    "spec2": "LiDAR scanning integration for depth mapping",
+    "spec3": "Auto-extraction of upper mesh and sole boundaries",
+    "spec4": "Instant upload & sync to secure Cloud Vault",
+    "selectPlatform": "Select Platform",
+    "iosMeta": "Version 1.4.2 (Beta) • iOS 16.0 or higher",
+    "androidMeta": "Version 1.4.0 (Beta) • Android 11.0 or higher",
+    "downloadIos": "Download TestFlight IPA",
+    "downloadAndroid": "Download APK Installer"
+  },
+  "desktop": {
+    "tag": "DESKTOP DESIGN SUITE",
+    "description": "The ultimate 3D shoe customizer interface. Load your synced mobile scans instantly, map colors, modify materials, apply custom graphics, and export print-ready assets.",
+    "spec1": "Hardware-accelerated real-time WebGL renderer",
+    "spec2": "Multi-layer canvas painting and custom stickers overlay",
+    "spec3": "GLTF, OBJ, FBX, and Apple USDZ 3D model exports",
+    "spec4": "Local daemon compiler server listening on port 8421",
+    "selectOs": "Select Operating System",
+    "windowsMeta": "File size: 142 MB • Minimum: GTX 1060 / 8GB RAM",
+    "macSiliconMeta": "File size: 128 MB • Fully native for Apple M-series",
+    "macIntelMeta": "File size: 135 MB • Requires macOS 12.0 or higher",
+    "downloadInstaller": "Download Desktop Installer"
+  },
+  "workflow": {
+    "title": "How They Sync",
+    "desc": "When you scan a sneaker using the mobile <b1>KusShoes App</b1>, the photogrammetry scans compile directly in our Cloud Vault. Upon launching <b2>KusStudio Desktop</b2>, the application detects your active cloud workspace and syncs all scans in less than 3 seconds. The desktop suite also hosts a local listener that communicates directly with your portal web browser.",
+    "cta": "Go to Portal Console",
+    "cloudSync": "Cloud Sync"
+  }
+}

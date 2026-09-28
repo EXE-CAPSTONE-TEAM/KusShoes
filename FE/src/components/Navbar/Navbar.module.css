@@ -37,6 +37,14 @@
 }
 
 .navLinks {
+  /* Absolutely centered on .navbar (a fixed-position containing block) so its position
+     never depends on the width of .navBrand/.navActions — those widths change with the
+     active language (EN vs VI link/button labels differ in length), which would otherwise
+     shift this middle block since a 3-item `justify-content: space-between` only guarantees
+     equal gaps, not a true center when the flanking items aren't equal width. */
+  position: absolute;
+  left: 50%;
+  transform: translateX(-50%);
   display: flex;
   gap: 32px;
 }
@@ -227,6 +235,9 @@
   align-items: center;
   justify-content: center;
   cursor: pointer;
+  font-size: 0.7rem;
+  font-weight: 700;
+  letter-spacing: 0.02em;
   transition: all var(--transition-fast);
 }
 

@@ -1,5 +1,6 @@
 import React, { useState } from 'react';
 import { AlertCircle, CheckCircle2, Info, KeyRound, RotateCcw } from 'lucide-react';
+import { useTranslation } from 'react-i18next';
 import { accountApi } from '../../api/account';
 import { normalizeEmail, validateEmail, validatePassword, validateConfirmPassword } from '../../utils/authValidation';
 import styles from './Login.module.css';
@@ -12,24 +13,22 @@ interface AccountRecoveryProps {
   onBack: () => void;
 }
 
-const COPY: Record<RecoveryMode, { title: string; intro: string; done: string; button: string }> = {
-  reset: {
-    title: 'Reset your password',
-    intro: 'Enter your account email and we will send you a 6-digit recovery code.',
-    done: 'Password updated. Please sign in with your new password.',
-    button: 'Reset password',
-  },
-  restore: {
-    title: 'Restore your account',
-    intro: 'Deleted your account by mistake? Within 30 days you can bring it back. Enter your email to get a code.',
-    done: 'Your account has been restored. Please sign in.',
-    button: 'Restore account',
-  },
-};
-
 /** Two-step recovery: request a code by email, then confirm with the code (and a new password when resetting). */
 export const AccountRecovery: React.FC<AccountRecoveryProps> = ({ mode, initialEmail = '', onBack }) => {
-  const copy = COPY[mode];
+  const { t } = useTranslation('auth');
+  const copy = mode === 'reset'
+    ? {
+        title: t('recovery.resetTitle'),
+        intro: t('recovery.resetIntro'),
+        done: t('recovery.resetDone'),
+        button: t('recovery.resetButton'),
+      }
+    : {
+        title: t('recovery.restoreTitle'),
+        intro: t('recovery.restoreIntro'),
+        done: t('recovery.restoreDone'),
+        button: t('recovery.restoreButton'),
+      };
   const [step, setStep] = useState<'email' | 'code' | 'done'>('email');
   const [email, setEmail] = useState(initialEmail);
   const [code, setCode] = useState('');
@@ -58,7 +57,7 @@ export const AccountRecovery: React.FC<AccountRecoveryProps> = ({ mode, initialE
       setNotice(result.message);
       setStep('code');
     } catch (caught) {
-      setError(caught instanceof Error ? caught.message : 'Unable to send the code.');
+      setError(caught instanceof Error ? caught.message : t('recovery.sendCodeError'));
     } finally {
       setLoading(false);
     }
@@ -84,7 +83,7 @@ export const AccountRecovery: React.FC<AccountRecoveryProps> = ({ mode, initialE
       setNotice('');
       setStep('done');
     } catch (caught) {
-      setError(caught instanceof Error ? caught.message : 'That code did not work.');
+      setError(caught instanceof Error ? caught.message : t('recovery.confirmCodeError'));
     } finally {
       setLoading(false);
     }
@@ -104,12 +103,12 @@ export const AccountRecovery: React.FC<AccountRecoveryProps> = ({ mode, initialE
             <span>{copy.done}</span>
           </div>
           <button type="button" className="btn-neon-orange" style={{ width: '100%', justifyContent: 'center' }} onClick={onBack}>
-            Back to sign in
+            {t('backToSignIn')}
           </button>
         </>
       ) : (
         <>
-          <p>{step === 'email' ? copy.intro : `Enter the 6-digit code sent to ${email}.`}</p>
+          <p>{step === 'email' ? copy.intro : t('login.enterCodeSentTo', { email })}</p>
           {notice && (
             <div className={styles.noticeMessage} role="status">
               <Info size={16} />
@@ -126,32 +125,32 @@ export const AccountRecovery: React.FC<AccountRecoveryProps> = ({ mode, initialE
           {step === 'email' ? (
             <form onSubmit={requestCode} className={styles.form} noValidate>
               <div className={styles.inputGroup}>
-                <label htmlFor="recovery-email">Email</label>
+                <label htmlFor="recovery-email">{t('emailLabel')}</label>
                 <input
                   id="recovery-email"
                   type="email"
                   autoComplete="email"
                   className={styles.input}
-                  placeholder="you@example.com"
+                  placeholder={t('emailPlaceholder')}
                   value={email}
                   onChange={(event) => setEmail(event.target.value)}
                   autoFocus
                 />
               </div>
               <button type="submit" className="btn-neon-orange" style={{ width: '100%', justifyContent: 'center' }} disabled={loading}>
-                <span>{loading ? 'Sending...' : 'Send code'}</span>
+                <span>{loading ? t('sending') : t('recovery.sendCode')}</span>
               </button>
             </form>
           ) : (
             <form onSubmit={confirm} className={styles.form} noValidate>
               <div className={styles.inputGroup}>
-                <label htmlFor="recovery-code">Verification code</label>
+                <label htmlFor="recovery-code">{t('verificationCodeLabel')}</label>
                 <input
                   id="recovery-code"
                   inputMode="numeric"
                   autoComplete="one-time-code"
                   maxLength={6}
-                  placeholder="123456"
+                  placeholder={t('otpPlaceholder')}
                   className={`${styles.input} ${styles.otpInput}`}
                   value={code}
                   onChange={(event) => setCode(event.target.value.replace(/\D/g, ''))}
@@ -161,7 +160,7 @@ export const AccountRecovery: React.FC<AccountRecoveryProps> = ({ mode, initialE
               {mode === 'reset' && (
                 <>
                   <div className={styles.inputGroup}>
-                    <label htmlFor="recovery-new-password">New password</label>
+                    <label htmlFor="recovery-new-password">{t('recovery.newPasswordLabel')}</label>
                     <input
                       id="recovery-new-password"
                       type="password"
@@ -172,7 +171,7 @@ export const AccountRecovery: React.FC<AccountRecoveryProps> = ({ mode, initialE
                     />
                   </div>
                   <div className={styles.inputGroup}>
-                    <label htmlFor="recovery-confirm-password">Confirm new password</label>
+                    <label htmlFor="recovery-confirm-password">{t('recovery.confirmNewPasswordLabel')}</label>
                     <input
                       id="recovery-confirm-password"
                       type="password"
@@ -190,14 +189,14 @@ export const AccountRecovery: React.FC<AccountRecoveryProps> = ({ mode, initialE
                 style={{ width: '100%', justifyContent: 'center' }}
                 disabled={loading || code.length !== 6}
               >
-                <span>{loading ? 'Working...' : copy.button}</span>
+                <span>{loading ? t('recovery.working') : copy.button}</span>
               </button>
             </form>
           )}
 
           <div className={styles.otpActions}>
             <button type="button" className={styles.textButton} onClick={onBack} disabled={loading}>
-              Back to sign in
+              {t('backToSignIn')}
             </button>
           </div>
         </>

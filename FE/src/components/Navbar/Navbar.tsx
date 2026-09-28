@@ -2,7 +2,9 @@ import React, { useState, useEffect, useRef } from 'react';
 import { Sun, Moon, Menu, X } from 'lucide-react';
 import { AnimatePresence, motion } from 'framer-motion';
 import { createPortal } from 'react-dom';
+import { useTranslation } from 'react-i18next';
 import { useTheme } from '../../context/ThemeContext';
+import { LanguageSwitcher } from '../LanguageSwitcher/LanguageSwitcher';
 import styles from './Navbar.module.css';
 
 interface NavbarProps {
@@ -11,6 +13,7 @@ interface NavbarProps {
 }
 
 export const Navbar: React.FC<NavbarProps> = ({ navigate, currentPage }) => {
+  const { t } = useTranslation('common');
   const { theme, toggleTheme } = useTheme();
   const [hidden, setHidden] = useState(false);
   const [menuOpen, setMenuOpen] = useState(false);
@@ -118,16 +121,16 @@ export const Navbar: React.FC<NavbarProps> = ({ navigate, currentPage }) => {
             }}
             className={currentPage === 'products' ? styles.activeLink : ''}
           >
-            Products
+            {t('nav.products')}
           </a>
           <div className={`${styles.dropdownMenu} glass-panel`}>
             <a href="/products" onClick={(e) => handleSubItemClick(e, '/products')}>
-              <div className={styles.subItemTitle}>KusShoes Mobile</div>
-              <div className={styles.subItemDesc}>iOS / Android photogrammetry capture app</div>
+              <div className={styles.subItemTitle}>{t('nav.productsMobileTitle')}</div>
+              <div className={styles.subItemDesc}>{t('nav.productsMobileDesc')}</div>
             </a>
             <a href="/products" onClick={(e) => handleSubItemClick(e, '/products')}>
-              <div className={styles.subItemTitle}>KusStudio Desktop</div>
-              <div className={styles.subItemDesc}>Windows / macOS 3D sneaker designer</div>
+              <div className={styles.subItemTitle}>{t('nav.productsDesktopTitle')}</div>
+              <div className={styles.subItemDesc}>{t('nav.productsDesktopDesc')}</div>
             </a>
           </div>
         </div>
@@ -135,20 +138,20 @@ export const Navbar: React.FC<NavbarProps> = ({ navigate, currentPage }) => {
         {/* Workflow Dropdown */}
         <div className={styles.navItem}>
           <a href="#workflow" onClick={(e) => handleScrollLink(e, 'workflow')}>
-            Workflow
+            {t('nav.workflow')}
           </a>
           <div className={`${styles.dropdownMenu} glass-panel`}>
             <a href="#workflow" onClick={(e) => handleSubItemClick(e, '#workflow')}>
-              <div className={styles.subItemTitle}>01. Scan Sneaker</div>
-              <div className={styles.subItemDesc}>Capture photos on iOS/Android device</div>
+              <div className={styles.subItemTitle}>{t('nav.workflowStep1Title')}</div>
+              <div className={styles.subItemDesc}>{t('nav.workflowStep1Desc')}</div>
             </a>
             <a href="#workflow" onClick={(e) => handleSubItemClick(e, '#workflow')}>
-              <div className={styles.subItemTitle}>02. Cloud Sync</div>
-              <div className={styles.subItemDesc}>Process mesh details in our Cloud Vault</div>
+              <div className={styles.subItemTitle}>{t('nav.workflowStep2Title')}</div>
+              <div className={styles.subItemDesc}>{t('nav.workflowStep2Desc')}</div>
             </a>
             <a href="#workflow" onClick={(e) => handleSubItemClick(e, '#workflow')}>
-              <div className={styles.subItemTitle}>03. Customize</div>
-              <div className={styles.subItemDesc}>Load synced model into desktop studio</div>
+              <div className={styles.subItemTitle}>{t('nav.workflowStep3Title')}</div>
+              <div className={styles.subItemDesc}>{t('nav.workflowStep3Desc')}</div>
             </a>
           </div>
         </div>
@@ -156,79 +159,80 @@ export const Navbar: React.FC<NavbarProps> = ({ navigate, currentPage }) => {
         {/* Community / Social Proof Dropdown */}
         <div className={styles.navItem}>
           <a href="#social-proof" onClick={(e) => handleScrollLink(e, 'social-proof')}>
-            Community
+            {t('nav.community')}
           </a>
           <div className={`${styles.dropdownMenu} glass-panel`}>
             <a href="#social-proof" onClick={(e) => handleSubItemClick(e, '#social-proof')}>
-              <div className={styles.subItemTitle}>Designs Created</div>
-              <div className={styles.subItemDesc}>Custom sneaker projects built with KusShoes</div>
+              <div className={styles.subItemTitle}>{t('nav.communityDesignsTitle')}</div>
+              <div className={styles.subItemDesc}>{t('nav.communityDesignsDesc')}</div>
             </a>
             <a href="#social-proof" onClick={(e) => handleSubItemClick(e, '#social-proof')}>
-              <div className={styles.subItemTitle}>Sneakers Scanned</div>
-              <div className={styles.subItemDesc}>Real pairs turned into 3D models</div>
+              <div className={styles.subItemTitle}>{t('nav.communityScannedTitle')}</div>
+              <div className={styles.subItemDesc}>{t('nav.communityScannedDesc')}</div>
             </a>
             <a href="#social-proof" onClick={(e) => handleSubItemClick(e, '#social-proof')}>
-              <div className={styles.subItemTitle}>Active Creators</div>
-              <div className={styles.subItemDesc}>Sneakerheads designing on KusShoes today</div>
+              <div className={styles.subItemTitle}>{t('nav.communityCreatorsTitle')}</div>
+              <div className={styles.subItemDesc}>{t('nav.communityCreatorsDesc')}</div>
             </a>
           </div>
         </div>
 
         {/* Pricing Link */}
         <div className={styles.navItem}>
-          <a 
-            href="/pricing" 
-            onClick={(e) => { 
-              e.preventDefault(); 
-              navigate('/pricing'); 
+          <a
+            href="/pricing"
+            onClick={(e) => {
+              e.preventDefault();
+              navigate('/pricing');
             }}
             className={currentPage === 'pricing' ? styles.activeLink : ''}
           >
-            Pricing
+            {t('nav.pricing')}
           </a>
         </div>
 
         {/* Resources Dropdown */}
         <div className={styles.navItem}>
           <a href="/pricing" onClick={(e) => { e.preventDefault(); navigate('/pricing'); }}>
-            Resources
+            {t('nav.resources')}
           </a>
           <div className={`${styles.dropdownMenu} glass-panel`}>
             <a href="/pricing" onClick={(e) => handleSubItemClick(e, '/pricing')}>
-              <div className={styles.subItemTitle}>Help Center</div>
-              <div className={styles.subItemDesc}>Documentation, tutorials & user guides</div>
+              <div className={styles.subItemTitle}>{t('nav.resourcesHelpTitle')}</div>
+              <div className={styles.subItemDesc}>{t('nav.resourcesHelpDesc')}</div>
             </a>
             <a href="/pricing" onClick={(e) => handleSubItemClick(e, '/pricing')}>
-              <div className={styles.subItemTitle}>Community</div>
-              <div className={styles.subItemDesc}>Review customized models shared by creators</div>
+              <div className={styles.subItemTitle}>{t('nav.resourcesCommunityTitle')}</div>
+              <div className={styles.subItemDesc}>{t('nav.resourcesCommunityDesc')}</div>
             </a>
             <a href="/pricing" onClick={(e) => handleSubItemClick(e, '/pricing')}>
-              <div className={styles.subItemTitle}>Developer API</div>
-              <div className={styles.subItemDesc}>Integrate scanning algorithms into your platform</div>
+              <div className={styles.subItemTitle}>{t('nav.resourcesApiTitle')}</div>
+              <div className={styles.subItemDesc}>{t('nav.resourcesApiDesc')}</div>
             </a>
           </div>
         </div>
       </nav>
       <div className={styles.navActions}>
-        <button 
-          className={styles.themeToggleBtn} 
+        <LanguageSwitcher className={styles.themeToggleBtn} />
+        <button
+          className={styles.themeToggleBtn}
           onClick={toggleTheme}
-          title={theme === 'dark' ? 'Switch to Light Mode' : 'Switch to Dark Mode'}
-          aria-label="Toggle theme mode"
+          title={theme === 'dark' ? t('nav.toggleThemeLight') : t('nav.toggleThemeDark')}
+          aria-label={t('nav.toggleThemeAria')}
         >
           {theme === 'dark' ? <Sun className={styles.themeIcon} size={18} /> : <Moon className={styles.themeIcon} size={18} />}
         </button>
         <button className={styles.loginLink} onClick={() => navigate('/login')}>
-          Sign In
+          {t('nav.signIn')}
         </button>
         <button className={`btn-neon-orange ${styles.registerBtn}`} onClick={() => navigate('/login')}>
-          Register
+          {t('nav.register')}
         </button>
         <button
           type="button"
           className={styles.menuBtn}
           onClick={() => setMenuOpen((open) => !open)}
-          aria-label={menuOpen ? 'Close menu' : 'Open menu'}
+          aria-label={menuOpen ? t('nav.closeMenu') : t('nav.openMenu')}
           aria-expanded={menuOpen}
           aria-controls="mobile-menu"
         >
@@ -253,19 +257,20 @@ export const Navbar: React.FC<NavbarProps> = ({ navigate, currentPage }) => {
             <motion.nav
               id="mobile-menu"
               className={`${styles.mobileMenu} glass-panel`}
-              aria-label="Main menu"
+              aria-label={t('nav.mainMenu')}
               initial={{ opacity: 0, y: -12 }}
               animate={{ opacity: 1, y: 0 }}
               exit={{ opacity: 0, y: -12 }}
               transition={{ duration: 0.22 }}
             >
-              <a href="/products" className={currentPage === 'products' ? styles.mobileActive : ''} onClick={(e) => { e.preventDefault(); goFromMenu('/products'); }}>Products</a>
-              <a href="#workflow" onClick={(e) => { e.preventDefault(); goFromMenu('#workflow'); }}>Workflow</a>
-              <a href="#features" onClick={(e) => { e.preventDefault(); goFromMenu('#features'); }}>Features</a>
-              <a href="/pricing" className={currentPage === 'pricing' ? styles.mobileActive : ''} onClick={(e) => { e.preventDefault(); goFromMenu('/pricing'); }}>Pricing</a>
+              <a href="/products" className={currentPage === 'products' ? styles.mobileActive : ''} onClick={(e) => { e.preventDefault(); goFromMenu('/products'); }}>{t('nav.products')}</a>
+              <a href="#workflow" onClick={(e) => { e.preventDefault(); goFromMenu('#workflow'); }}>{t('nav.workflow')}</a>
+              <a href="#features" onClick={(e) => { e.preventDefault(); goFromMenu('#features'); }}>{t('nav.features')}</a>
+              <a href="/pricing" className={currentPage === 'pricing' ? styles.mobileActive : ''} onClick={(e) => { e.preventDefault(); goFromMenu('/pricing'); }}>{t('nav.pricing')}</a>
               <div className={styles.mobileActions}>
-                <button type="button" className="btn-outline" onClick={() => goFromMenu('/login')}>Sign In</button>
-                <button type="button" className="btn-neon-orange" onClick={() => goFromMenu('/login')}>Register</button>
+                <LanguageSwitcher className="btn-outline" />
+                <button type="button" className="btn-outline" onClick={() => goFromMenu('/login')}>{t('nav.signIn')}</button>
+                <button type="button" className="btn-neon-orange" onClick={() => goFromMenu('/login')}>{t('nav.register')}</button>
               </div>
             </motion.nav>
           </>

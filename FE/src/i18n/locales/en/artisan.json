@@ -1,0 +1,13 @@
+{
+  "missingToken": "This link is missing its token.",
+  "loadError": "Unable to load this link.",
+  "downloadError": "Unable to start the download.",
+  "loading": "Loading shared file…",
+  "expiredHint": "Ask whoever sent you this link for a fresh one — links expire and have a limited number of downloads.",
+  "subtitle": "Shared for production — one KusShoes 3D export.",
+  "format": "Format",
+  "downloadsLeft": "Downloads left",
+  "expires": "Expires",
+  "noDownloadsLeft": "No downloads left",
+  "downloadFile": "Download file"
+}

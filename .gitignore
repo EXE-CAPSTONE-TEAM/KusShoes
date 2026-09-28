@@ -45,3 +45,11 @@ logs
 
 # --- Generated code index ---
 .codegraph/
+
+# --- Local-only scratch / never push ---
+# Real credentials for the shared production DB (see docs/TEST_ACCOUNTS.md) — local reference only.
+/docs/TEST_ACCOUNTS.md
+# Agent handoff bundles (prompts + duplicated assets) — staging scratch, not project source.
+/docs/handoff/
+# Ad-hoc reference images dropped at the repo root, not part of the app.
+/kusshosesImages/

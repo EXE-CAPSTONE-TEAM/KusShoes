@@ -20,6 +20,7 @@ import {
   ChevronRight,
 } from 'lucide-react';
 import { motion, AnimatePresence, useInView } from 'framer-motion';
+import { Trans, useTranslation } from 'react-i18next';
 import { Navbar } from '../../components/Navbar/Navbar';
 import { Footer } from '../../components/Footer/Footer';
 import { AnimatedPrice } from '../../components/AnimatedPrice/AnimatedPrice';
@@ -49,12 +50,52 @@ import galleryDetailFocus from '../../assets/gallery/detail-focus-single.png';
 import galleryTagDetail from '../../assets/gallery/tag-detail-pair.png';
 import styles from './Landing.module.css';
 
-const showcaseTabs = [
-  { key: 'dashboard', label: 'Dashboard', path: '/dashboard', img: dashboardShowcase },
-  { key: 'projects', label: 'Projects', path: '/projects', img: projectsShowcase },
+// Scroll-triggered reveal: headings stay hidden (blurred, offset, transparent) until they
+// scroll into view, then ease into place — nothing on the page is fully drawn before the
+// visitor scrolls to it.
+const REVEAL_EASE = [0.16, 1, 0.3, 1] as const;
+
+const revealUp = {
+  initial: { opacity: 0, y: 24, filter: 'blur(6px)' },
+  whileInView: { opacity: 1, y: 0, filter: 'blur(0px)' },
+  viewport: { once: true, amount: 0.4 },
+  transition: { duration: 0.7, ease: REVEAL_EASE },
+} as const;
+
+/** Headline reveal where each word eases in on its own beat — a standout moment, used once. */
+const RevealWords: React.FC<{ text: string; className?: string }> = ({ text, className }) => (
+  <motion.h2
+    className={className}
+    initial="hidden"
+    whileInView="visible"
+    viewport={{ once: true, amount: 0.4 }}
+  >
+    {text.split(' ').map((word, i) => (
+      <motion.span
+        key={i}
+        style={{ display: 'inline-block', marginRight: '0.28em' }}
+        variants={{
+          hidden: { opacity: 0, y: 16, filter: 'blur(4px)' },
+          visible: {
+            opacity: 1,
+            y: 0,
+            filter: 'blur(0px)',
+            transition: { duration: 0.5, ease: REVEAL_EASE, delay: i * 0.06 },
+          },
+        }}
+      >
+        {word}
+      </motion.span>
+    ))}
+  </motion.h2>
+);
+
+const SHOWCASE_TAB_META = [
+  { key: 'dashboard', path: '/dashboard', img: dashboardShowcase },
+  { key: 'projects', path: '/projects', img: projectsShowcase },
 ] as const;
 
-type ShowcaseTabKey = (typeof showcaseTabs)[number]['key'];
+type ShowcaseTabKey = (typeof SHOWCASE_TAB_META)[number]['key'];
 
 // Placeholder avatar photos (pravatar.cc — a stock placeholder-avatar service) standing in
 // for real creator/reviewer photos until there's a public reviews endpoint.
@@ -96,56 +137,48 @@ const testimonials = [
 // Each tile cycles through its own small set so the section keeps feeling alive.
 const galleryTiles = [
   {
-    size: 'tall',
     frames: [
       { tag: 'Classic Orange', img: galleryClassicOrange },
       { tag: 'Inverted Block', img: galleryInvertedBlock },
     ],
   },
   {
-    size: 'wide',
     frames: [
       { tag: 'Street Graffiti', img: galleryStreetGraffiti },
       { tag: 'Neon Alley', img: galleryNeonAlley },
     ],
   },
   {
-    size: 'square',
     frames: [
       { tag: 'Web Crimson', img: galleryWebCrimson },
       { tag: 'Court Navy', img: galleryCourtNavy },
     ],
   },
   {
-    size: 'square',
     frames: [
       { tag: 'Coquette Pink', img: galleryCoquettePink },
       { tag: 'Sweetheart Bow', img: gallerySweetheartBow },
     ],
   },
   {
-    size: 'wide',
     frames: [
       { tag: 'Sky Dreamer', img: gallerySkyDreamer },
       { tag: 'Flame Navy', img: galleryFlameNavy },
     ],
   },
   {
-    size: 'square',
     frames: [
       { tag: 'Signature Duo', img: gallerySignatureDuo },
       { tag: 'Splash Street', img: gallerySplashStreet },
     ],
   },
   {
-    size: 'tall',
     frames: [
       { tag: 'Studio Classic', img: galleryStudioClassic },
       { tag: 'Block Edition', img: galleryBlockEdition },
     ],
   },
   {
-    size: 'square',
     frames: [
       { tag: 'Detail Focus', img: galleryDetailFocus },
       { tag: 'Tag Detail', img: galleryTagDetail },
@@ -156,10 +189,9 @@ const galleryTiles = [
 const GALLERY_CYCLE_BASE_MS = 3200;
 
 const GalleryTile: React.FC<{
-  size: string;
   frames: readonly { tag: string; img: string }[];
   index: number;
-}> = ({ size, frames, index }) => {
+}> = ({ frames, index }) => {
   const [frameIndex, setFrameIndex] = useState(0);
 
   useEffect(() => {
@@ -178,7 +210,7 @@ const GalleryTile: React.FC<{
 
   return (
     <motion.div
-      className={`${styles.galleryItem} ${styles[size]}`}
+      className={styles.galleryItem}
       initial={{ opacity: 0, y: 20 }}
       whileInView={{ opacity: 1, y: 0 }}
       viewport={{ once: true }}
@@ -216,17 +248,25 @@ const GalleryTile: React.FC<{
 };
 
 const WebsiteShowcase: React.FC = () => {
+  const { t } = useTranslation('landing');
   const [activeTab, setActiveTab] = useState<ShowcaseTabKey>('dashboard');
-  const active = showcaseTabs.find((t) => t.key === activeTab)!;
+  const showcaseTabs = SHOWCASE_TAB_META.map((tab) => ({
+    ...tab,
+    label: tab.key === 'dashboard' ? t('showcase.dashboardTab') : t('showcase.projectsTab'),
+  }));
+  const active = showcaseTabs.find((tab) => tab.key === activeTab)!;
 
   return (
     <section id="showcase" className={styles.showcaseSection}>
       <div className={styles.sectionHeader}>
-        <h2 className={styles.sectionTitle}>See It In Action</h2>
-        <p className={styles.sectionSubtitle}>
-          A real look at the KusShoes web portal — track your projects and manage your creations
-          from any browser.
-        </p>
+        <motion.h2 className={styles.sectionTitle} {...revealUp}>{t('showcase.title')}</motion.h2>
+        <motion.p
+          className={styles.sectionSubtitle}
+          {...revealUp}
+          transition={{ ...revealUp.transition, delay: 0.12 }}
+        >
+          {t('showcase.subtitle')}
+        </motion.p>
       </div>
 
       <div className={styles.showcaseTabs}>
@@ -265,7 +305,7 @@ const WebsiteShowcase: React.FC = () => {
               <motion.img
                 key={active.key}
                 src={active.img}
-                alt={`KusShoes ${active.label} screenshot`}
+                alt={t('showcase.screenshotAlt', { label: active.label })}
                 className={styles.browserScreenshot}
                 initial={{ opacity: 0 }}
                 animate={{ opacity: 1 }}
@@ -412,6 +452,7 @@ interface LandingProps {
 }
 
 export const Landing: React.FC<LandingProps> = ({ navigate }) => {
+  const { t } = useTranslation('landing');
   const [emailInput, setEmailInput] = useState('');
   const [submittedEmail, setSubmittedEmail] = useState(false);
   const [isAnnual, setIsAnnual] = useState(false);
@@ -430,71 +471,71 @@ export const Landing: React.FC<LandingProps> = ({ navigate }) => {
   const steps = [
     {
       num: '01',
-      title: 'Scan with your phone',
-      description: 'Walk around your sneaker and snap photos. No special gear needed.',
+      title: t('workflow.step1.title'),
+      description: t('workflow.step1.description'),
       image: mobileScan,
-      imageAlt: 'Scanning a sneaker with AI 3D capture in the KusShoes mobile app',
-      cornerBadge: '4 angles captured',
+      imageAlt: t('workflow.step1.imageAlt'),
+      cornerBadge: t('workflow.step1.cornerBadge'),
       MetaIcon: Clock,
-      metaText: 'About 3 minutes',
+      metaText: t('workflow.step1.metaText'),
     },
     {
       num: '02',
-      title: 'We build the 3D model',
-      description: 'Your photos turn into a detailed 3D model in the cloud, automatically.',
+      title: t('workflow.step2.title'),
+      description: t('workflow.step2.description'),
       image: dashboardShowcase,
-      imageAlt: 'Cloud dashboard syncing and processing a scan',
-      cornerBadge: 'Cloud sync active',
+      imageAlt: t('workflow.step2.imageAlt'),
+      cornerBadge: t('workflow.step2.cornerBadge'),
       tagText: 'cloud pipeline',
       dashed: true,
       MetaIcon: Sparkles,
-      metaText: 'Automatic · no action needed',
+      metaText: t('workflow.step2.metaText'),
     },
     {
       num: '03',
-      title: 'Make it yours in KusStudio',
-      description: 'Recolor, swap materials, and export for 3D printing.',
+      title: t('workflow.step3.title'),
+      description: t('workflow.step3.description'),
       image: sneakerHero,
-      imageAlt: 'Finished 3D sneaker customized in KusStudio',
-      cornerBadge: 'KusStudio',
+      imageAlt: t('workflow.step3.imageAlt'),
+      cornerBadge: t('workflow.step3.cornerBadge'),
       swatches: true,
       MetaIcon: Monitor,
-      metaText: 'Desktop app · Windows & macOS',
+      metaText: t('workflow.step3.metaText'),
     },
   ];
 
   const communityTicker: Array<{ icon?: typeof Flame; label: string }> = [
-    { icon: Flame, label: 'KUSSHOES COMMUNITY' },
-    { label: 'DROP AFTER DROP' },
-    { label: '12.4K+ CUSTOM BUILDS' },
-    { label: 'STREET CRED VERIFIED' },
-    { label: '3D KICKS REVOLUTION' },
-    { label: 'LIDAR ACCURATE' },
+    { icon: Flame, label: t('socialProof.tickerCommunity') },
+    { label: t('socialProof.tickerDrop') },
+    { label: t('socialProof.tickerBuilds') },
+    { label: t('socialProof.tickerStreetCred') },
+    { label: t('socialProof.tickerRevolution') },
+    { label: t('socialProof.tickerLidar') },
   ];
 
   const plans = [
     {
-      name: 'Free Starter',
+      name: t('pricingSection.plans.free.name'),
       priceMonthly: 0,
       priceAnnual: 0,
-      desc: 'Test the mobile photogrammetry pipeline.',
-      features: ['3 active projects', 'Standard scan resolution', 'Local client saves only'],
+      desc: t('pricingSection.plans.free.desc'),
+      features: [t('pricingSection.plans.free.f1'), t('pricingSection.plans.free.f2'), t('pricingSection.plans.free.f3')],
       popular: false,
     },
     {
-      name: 'Basic Creator',
+      name: t('pricingSection.plans.basic.name'),
       priceMonthly: 259000,
       priceAnnual: 259000 * 12,
-      desc: 'Perfect for custom sneaker designers.',
-      features: ['10 active projects', 'High-definition 3D meshes', '5GB Cloud scan storage'],
+      desc: t('pricingSection.plans.basic.desc'),
+      features: [t('pricingSection.plans.basic.f1'), t('pricingSection.plans.basic.f2'), t('pricingSection.plans.basic.f3')],
       popular: true,
     },
     {
-      name: 'Pro Designer',
+      name: t('pricingSection.plans.pro.name'),
       priceMonthly: 649000,
       priceAnnual: 649000 * 12,
-      desc: 'For professional sneaker workshops.',
-      features: ['50 active projects', 'Ultra-HD scan resolution', '50GB Cloud storage quota'],
+      desc: t('pricingSection.plans.pro.desc'),
+      features: [t('pricingSection.plans.pro.f1'), t('pricingSection.plans.pro.f2'), t('pricingSection.plans.pro.f3')],
       popular: false,
     },
   ];
@@ -504,59 +545,11 @@ export const Landing: React.FC<LandingProps> = ({ navigate }) => {
     return val.toLocaleString('vi-VN') + ' VNĐ';
   };
 
-  const faqs = [
-    {
-      q: 'What is KusShoes and how does it work?',
-      a: 'Scan a real sneaker with your phone camera, let AI turn it into a 3D model, then customize it in KusStudio (web/desktop) and export a 3D file plus a reference pack to bring to an artisan for physical production. KusShoes doesn’t run manufacturing or take custom orders itself.',
-    },
-    {
-      q: 'Do I need a powerful computer to use KusShoes?',
-      a: 'The web app runs directly in your browser (Chrome, Safari, Edge) and offloads most processing to the cloud, so you don’t need a powerful machine to start designing. If you want KusStudio Desktop for full high-fidelity 3D rendering, paint mapping, and offline sync, your computer will need a reasonably capable graphics card to run it smoothly.',
-    },
-    {
-      q: 'How does the AI background removal feature work?',
-      a: 'Upload any image — a logo, a pattern, artwork — and our AI automatically detects and removes the background in seconds. Drop the transparent result straight onto the 3D shoe surface right away.',
-    },
-    {
-      q: 'I don’t have a sneaker to scan — can I still design one?',
-      a: 'Yes. Start right away with a preset shoe from our library — Free includes 3 base models, Basic/Pro unlock the entire library.',
-    },
-    {
-      q: 'What do I need to scan a sneaker?',
-      a: 'Use the KusShoes mobile app, record a video at 720p or higher, place the shoe inside the guide frame and rotate it a full 360°, up to 30 photos or a 60-second video (200MB total). Scanning is a Basic/Pro plan benefit — Free designs on preset models only.',
-    },
-    {
-      q: 'What’s the difference between the plans?',
-      a: 'Free is 0đ (3 preset shoes, no scanning, PNG export with watermark) · Basic is 259,000đ/month (1 scan per cycle, GLB export at 2K texture, 100 exports) · Pro is 649,000đ/month (more scans, GLB+OBJ export at 4K texture, no watermark). You can also buy extra scan credits for 49,000đ each while on Basic/Pro.',
-    },
-    {
-      q: 'Do plans auto-renew or auto-charge?',
-      a: 'No. We only remind you before your plan expires and give you a 3-day grace period where you can still view and edit designs (scanning and exporting are paused), after which your account moves to Free — your saved designs are never lost.',
-    },
-    {
-      q: 'What do I get once my design is finished?',
-      a: 'A 3D file (GLB, plus OBJ on Pro), high-quality render images, and a reference PDF pack with color codes, sizing, and sticker/text placement — ready to hand to an artisan for physical production.',
-    },
-    {
-      q: 'What payment methods are supported, and are they safe?',
-      a: 'We support VietQR (PayOS), MoMo, and VNPay. Card details are entered directly on the payment gateway’s page — KusShoes never stores your card or wallet info, and you’ll get a PDF receipt after every successful payment.',
-    },
-    {
-      q: 'Is my data and account secure?',
-      a: 'Passwords are encrypted, two-factor authentication (2FA) is supported, and you can view and revoke individual login devices anytime. You can also download all your data or permanently delete your account whenever you want.',
-    },
-  ];
+  const faqs = t('faqSection.items', { returnObjects: true }) as Array<{ q: string; a: string }>;
   const [openFaqIndex, setOpenFaqIndex] = useState<number | null>(0);
 
   return (
     <div className={styles.container}>
-      {/* Aurora gradient mesh — slow-drifting ambient background blobs */}
-      <div className={styles.aurora} aria-hidden="true">
-        <div className={`${styles.auroraBlob} ${styles.auroraBlob1}`} />
-        <div className={`${styles.auroraBlob} ${styles.auroraBlob2}`} />
-        <div className={`${styles.auroraBlob} ${styles.auroraBlob3}`} />
-      </div>
-
       {/* Interactive mouse particle grid */}
       <InteractiveParticleGrid />
 
@@ -575,27 +568,23 @@ export const Landing: React.FC<LandingProps> = ({ navigate }) => {
           animate={{ opacity: 1, y: 0 }}
           transition={{ duration: 0.8 }}
         >
-          <span className={styles.heroBadge}>THE FUTURE OF SNEAKER CUSTOMIZATION</span>
+          <span className={styles.heroBadge}>{t('hero.badge')}</span>
           <TypewriterHeadline />
-          <p className={styles.heroDesc}>
-            A unified design ecosystem. Turn physical sneakers into interactive 3D models via
-            photogrammetry, save them to the cloud, and build unique customs inside a responsive 3D
-            design studio.
-          </p>
+          <p className={styles.heroDesc}>{t('hero.desc')}</p>
           <div className={styles.heroActions}>
             <button
               className="btn-neon-orange"
               onClick={() => navigate('/login')}
               style={{ padding: '16px 36px', fontSize: '1.05rem' }}
             >
-              Launch App Portal
+              {t('hero.launchApp')}
             </button>
             <a
               href="#products"
               className="btn-outline"
               style={{ padding: '16px 36px', fontSize: '1.05rem', textDecoration: 'none' }}
             >
-              Explore Products
+              {t('hero.exploreProducts')}
             </a>
           </div>
         </motion.div>
@@ -608,10 +597,14 @@ export const Landing: React.FC<LandingProps> = ({ navigate }) => {
       <section id="products" className={styles.productsSection}>
         <EdgeArt variant="products" />
         <div className={styles.sectionHeader}>
-          <h2 className={styles.sectionTitle}>KusShoes Products</h2>
-          <p className={styles.sectionSubtitle}>
-            Seamlessly transition from mobile capture to full-fledged desktop design workspace.
-          </p>
+          <motion.h2 className={styles.sectionTitle} {...revealUp}>{t('products.title')}</motion.h2>
+          <motion.p
+            className={styles.sectionSubtitle}
+            {...revealUp}
+            transition={{ ...revealUp.transition, delay: 0.12 }}
+          >
+            {t('products.subtitle')}
+          </motion.p>
         </div>
 
         <div className={styles.productsGrid}>
@@ -623,25 +616,22 @@ export const Landing: React.FC<LandingProps> = ({ navigate }) => {
             viewport={{ once: true }}
             transition={{ duration: 0.6 }}
           >
-            <div className={styles.productBadge}>MOBILE APP</div>
+            <div className={styles.productBadge}>{t('products.mobileBadge')}</div>
             <div className={styles.productTitleRow}>
               <div className={styles.productLogoFrame}>
                 <img
                   src={mobileAppIcon}
-                  alt="KusShoes Mobile app icon"
+                  alt={t('products.mobileIconAlt')}
                   className={styles.productLogoImage}
                 />
               </div>
-              <h3 className={styles.productTitle}>KusShoes Mobile</h3>
+              <h3 className={styles.productTitle}>{t('products.mobileTitle')}</h3>
             </div>
-            <p className={styles.productDesc}>
-              Our mobile scanning companion. Aim, shoot, and capture 360° photos of your footwear.
-              Uploads images directly to the Kiri Engine API server for cloud 3D modeling.
-            </p>
+            <p className={styles.productDesc}>{t('products.mobileDesc')}</p>
             <div className={styles.screenshotFrame}>
               <img
                 src={mobileMockup}
-                alt="KusShoes Mobile 3D scanning app"
+                alt={t('products.mobileScreenshotAlt')}
                 className={styles.mobileProductImage}
               />
             </div>
@@ -663,14 +653,10 @@ export const Landing: React.FC<LandingProps> = ({ navigate }) => {
                 borderColor: 'rgba(230, 30, 67, 0.2)',
               }}
             >
-              DESKTOP ENGINE
+              {t('products.desktopBadge')}
             </div>
-            <h3 className={styles.productTitle}>KusStudio</h3>
-            <p className={styles.productDesc}>
-              The creative workshop client. Downloads your reconstructed 3D shoe models from the
-              Cloud Vault. Features advanced colorway editing, painting, and texture selection
-              tools.
-            </p>
+            <h3 className={styles.productTitle}>{t('products.desktopTitle')}</h3>
+            <p className={styles.productDesc}>{t('products.desktopDesc')}</p>
             {/* MVP screenshot placeholder */}
             <div className={styles.screenshotFrame}>
               <div className={styles.desktopMockup}>
@@ -680,7 +666,7 @@ export const Landing: React.FC<LandingProps> = ({ navigate }) => {
                     <span />
                     <span />
                   </div>
-                  <span className={styles.desktopWindowTitle}>KusStudio Workspace</span>
+                  <span className={styles.desktopWindowTitle}>{t('products.desktopWorkspaceTitle')}</span>
                 </div>
                 <div className={styles.desktopContent}>
                   <div className={styles.desktopLayoutSidebar}>
@@ -690,7 +676,7 @@ export const Landing: React.FC<LandingProps> = ({ navigate }) => {
                   </div>
                   <div className={styles.desktopCanvas}>
                     <Monitor size={36} className={styles.desktopIcon} />
-                    <span>3D Sneaker Canvas Grid</span>
+                    <span>{t('products.desktopCanvasLabel')}</span>
                   </div>
                   <div className={styles.desktopToolPanel}>
                     <span className={styles.toolColorDot} style={{ background: '#FF5A36' }} />
@@ -708,16 +694,19 @@ export const Landing: React.FC<LandingProps> = ({ navigate }) => {
       <section id="gallery" className={styles.gallerySection}>
         <EdgeArt variant="gallery" />
         <div className={styles.sectionHeader}>
-          <h2 className={styles.sectionTitle}>One Base Shoe, Infinite Styles</h2>
-          <p className={styles.sectionSubtitle}>
-            Scan a sneaker once, then remix colorways, materials and graphics as many times as you
-            want. Here&apos;s a taste of what customization looks like.
-          </p>
+          <motion.h2 className={styles.sectionTitle} {...revealUp}>{t('gallery.title')}</motion.h2>
+          <motion.p
+            className={styles.sectionSubtitle}
+            {...revealUp}
+            transition={{ ...revealUp.transition, delay: 0.12 }}
+          >
+            {t('gallery.subtitle')}
+          </motion.p>
         </div>
 
         <div className={styles.galleryGrid}>
           {galleryTiles.map((tile, index) => (
-            <GalleryTile key={index} size={tile.size} frames={tile.frames} index={index} />
+            <GalleryTile key={index} frames={tile.frames} index={index} />
           ))}
         </div>
       </section>
@@ -729,11 +718,15 @@ export const Landing: React.FC<LandingProps> = ({ navigate }) => {
       <section id="workflow" className={styles.workflowSection}>
         <EdgeArt variant="workflow" />
         <div className={styles.sectionHeader}>
-          <span className={styles.sectionEyebrow}>How it works</span>
-          <h2 className={styles.sectionTitle}>From your shelf to your screen in minutes</h2>
-          <p className={styles.sectionSubtitle}>
-            Scan a real sneaker with your phone. We handle the 3D. You make it yours.
-          </p>
+          <motion.span className={styles.sectionEyebrow} {...revealUp}>{t('workflow.eyebrow')}</motion.span>
+          <RevealWords className={styles.sectionTitle} text={t('workflow.title')} />
+          <motion.p
+            className={styles.sectionSubtitle}
+            {...revealUp}
+            transition={{ ...revealUp.transition, delay: 0.3 }}
+          >
+            {t('workflow.subtitle')}
+          </motion.p>
         </div>
 
         <div className={styles.stepsGridWrapper}>
@@ -771,32 +764,32 @@ export const Landing: React.FC<LandingProps> = ({ navigate }) => {
                         <div className={styles.stepSwatches}>
                           <span
                             className={`${styles.swatchDot} ${styles.swatchWhite}`}
-                            title="White"
+                            title={t('workflow.swatchWhite')}
                           />
                           <span
                             className={`${styles.swatchDot} ${styles.swatchFog}`}
-                            title="Light Fog"
+                            title={t('workflow.swatchFog')}
                           />
                           <span
                             className={`${styles.swatchDot} ${styles.swatchAccent}`}
-                            title="Sole Amber Glow"
+                            title={t('workflow.swatchAccent')}
                           />
                           <span
                             className={`${styles.swatchDot} ${styles.swatchDark}`}
-                            title="Obsidian"
+                            title={t('workflow.swatchDark')}
                           />
                           <span
                             className={`${styles.swatchDot} ${styles.swatchGum}`}
-                            title="Gum Rubber"
+                            title={t('workflow.swatchGum')}
                           />
-                          <span className={styles.swatchLabel}>Colorway</span>
+                          <span className={styles.swatchLabel}>{t('workflow.colorway')}</span>
                         </div>
                       )}
                     </div>
 
                     <div className={styles.stepBody}>
                       <div className={styles.stepMetaRow}>
-                        <span className={styles.stepEyebrowLabel}>Step {index + 1}</span>
+                        <span className={styles.stepEyebrowLabel}>{t('workflow.stepLabel', { number: index + 1 })}</span>
                         {step.tagText && <span className={styles.stepTagText}>{step.tagText}</span>}
                       </div>
                       <h3 className={styles.stepTitle}>{step.title}</h3>
@@ -821,11 +814,9 @@ export const Landing: React.FC<LandingProps> = ({ navigate }) => {
         </div>
 
         <div className={styles.workflowQuietRow}>
-          <p className={styles.workflowQuietText}>
-            Secure cloud storage · Print-ready exports · Real-time material preview
-          </p>
+          <p className={styles.workflowQuietText}>{t('workflow.footerText')}</p>
           <button className={styles.workflowQuietBtn} onClick={() => navigate('/login')}>
-            Start Free Scan
+            {t('workflow.startFreeScan')}
           </button>
         </div>
       </section>
@@ -836,10 +827,10 @@ export const Landing: React.FC<LandingProps> = ({ navigate }) => {
 
         <div className={styles.proofInner}>
           <header className={styles.proofHeader}>
-            <h2 className={styles.proofHeadline}>
-              Loved by a{' '}
+            <motion.h2 className={styles.proofHeadline} {...revealUp}>
+              {t('socialProof.headlinePrefix')}{' '}
               <span className={styles.proofHeadlineAccent}>
-                Growing
+                {t('socialProof.headlineAccent')}
                 <svg
                   className={styles.proofUnderline}
                   viewBox="0 0 200 12"
@@ -854,12 +845,19 @@ export const Landing: React.FC<LandingProps> = ({ navigate }) => {
                   />
                 </svg>
               </span>{' '}
-              Community
-            </h2>
-            <p className={styles.proofSubtitle}>
-              Real numbers from sneakerheads, streetwear creators, and 3D customizers already
-              cooking heat on <span className={styles.proofSubtitleBrand}>KusShoes</span>.
-            </p>
+              {t('socialProof.headlineSuffix')}
+            </motion.h2>
+            <motion.p
+              className={styles.proofSubtitle}
+              {...revealUp}
+              transition={{ ...revealUp.transition, delay: 0.12 }}
+            >
+              <Trans
+                i18nKey="socialProof.subtitle"
+                t={t}
+                components={{ brand: <span className={styles.proofSubtitleBrand} /> }}
+              />
+            </motion.p>
           </header>
 
           {/* Trust bar — real avatar photos + rating, one compact line */}
@@ -886,7 +884,7 @@ export const Landing: React.FC<LandingProps> = ({ navigate }) => {
               </span>
               <span className={styles.trustRatingValue}>4.8</span>
               <span className={styles.trustRatingCount}>
-                <BadgeCheck size={13} /> 2,400+ verified reviews
+                <BadgeCheck size={13} /> {t('socialProof.reviewsCount')}
               </span>
             </div>
           </motion.div>
@@ -904,7 +902,7 @@ export const Landing: React.FC<LandingProps> = ({ navigate }) => {
               <span className={styles.statTileValue}>
                 <StatCounter target={12400} suffix="+" />
               </span>
-              <span className={styles.statTileLabel}>Designs Created</span>
+              <span className={styles.statTileLabel}>{t('socialProof.statDesigns')}</span>
             </motion.div>
             <motion.div
               className={styles.statTile}
@@ -917,7 +915,7 @@ export const Landing: React.FC<LandingProps> = ({ navigate }) => {
               <span className={styles.statTileValue}>
                 <StatCounter target={3150} suffix="+" />
               </span>
-              <span className={styles.statTileLabel}>Sneakers Scanned</span>
+              <span className={styles.statTileLabel}>{t('socialProof.statScanned')}</span>
             </motion.div>
             <motion.div
               className={styles.statTile}
@@ -930,7 +928,7 @@ export const Landing: React.FC<LandingProps> = ({ navigate }) => {
               <span className={styles.statTileValue}>
                 <StatCounter target={980} suffix="+" />
               </span>
-              <span className={styles.statTileLabel}>Active Creators</span>
+              <span className={styles.statTileLabel}>{t('socialProof.statCreators')}</span>
             </motion.div>
             <motion.div
               className={styles.statTile}
@@ -941,7 +939,7 @@ export const Landing: React.FC<LandingProps> = ({ navigate }) => {
             >
               <TrendingUp size={18} className={styles.statTileIcon} />
               <span className={styles.statTileValue}>+24%</span>
-              <span className={styles.statTileLabel}>Output This Week</span>
+              <span className={styles.statTileLabel}>{t('socialProof.statOutput')}</span>
             </motion.div>
           </div>
 
@@ -991,10 +989,10 @@ export const Landing: React.FC<LandingProps> = ({ navigate }) => {
           <div className={styles.proofFootnote}>
             <div className={styles.proofFootnoteLeft}>
               <span className={styles.proofFootnoteDot} />
-              <span>Open creator cloud sync · Free tier available for solo sneakerheads</span>
+              <span>{t('socialProof.footnoteText')}</span>
             </div>
             <a href="#showcase" className={styles.proofFootnoteLink}>
-              <span>Explore The App</span>
+              <span>{t('socialProof.exploreApp')}</span>
               <ArrowRight size={14} />
             </a>
           </div>
@@ -1004,35 +1002,43 @@ export const Landing: React.FC<LandingProps> = ({ navigate }) => {
       {/* Pricing Section (NEW) */}
       <section id="pricing" className={styles.pricingSection}>
         <div className={styles.sectionHeader}>
-          <h2 className={styles.sectionTitle}>KusShoes Pricing</h2>
-          <p className={styles.sectionSubtitle}>
-            Choose a plan to power your shoe scans. Annual plans are billed in full.
-          </p>
+          <motion.h2 className={styles.sectionTitle} {...revealUp}>{t('pricingSection.title')}</motion.h2>
+          <motion.p
+            className={styles.sectionSubtitle}
+            {...revealUp}
+            transition={{ ...revealUp.transition, delay: 0.12 }}
+          >
+            {t('pricingSection.subtitle')}
+          </motion.p>
 
           {/* Toggle billing */}
           <div className={styles.toggleContainer}>
-            <span className={!isAnnual ? styles.activePeriod : ''}>Monthly</span>
+            <span className={!isAnnual ? styles.activePeriod : ''}>{t('pricingSection.monthly')}</span>
             <button
               className={`${styles.toggleSwitch} ${isAnnual ? styles.switchActive : ''}`}
               onClick={() => setIsAnnual(!isAnnual)}
             >
               <div className={styles.switchKnob} />
             </button>
-            <span className={isAnnual ? styles.activePeriod : ''}>Annually</span>
+            <span className={isAnnual ? styles.activePeriod : ''}>{t('pricingSection.annually')}</span>
           </div>
         </div>
 
         <div className={styles.pricingGrid}>
-          {plans.map((plan) => {
+          {plans.map((plan, planIndex) => {
             const displayPrice = isAnnual ? plan.priceAnnual : plan.priceMonthly;
-            const cycleText = isAnnual ? '/ năm' : '/ tháng';
+            const cycleText = isAnnual ? t('pricingSection.perYear') : t('pricingSection.perMonth');
 
             return (
-              <div
+              <motion.div
                 key={plan.name}
                 className={`${styles.priceCard} ${plan.popular ? styles.popularCard : ''} glass-panel`}
+                initial={{ opacity: 0, y: 24 }}
+                whileInView={{ opacity: 1, y: 0 }}
+                viewport={{ once: true, amount: 0.3 }}
+                transition={{ duration: 0.5, ease: REVEAL_EASE, delay: planIndex * 0.1 }}
               >
-                {plan.popular && <span className={styles.popularBadge}>POPULAR</span>}
+                {plan.popular && <span className={styles.popularBadge}>{t('pricingSection.popularBadge')}</span>}
                 <h3 className={styles.planName}>{plan.name}</h3>
                 <p className={styles.planDescText}>{plan.desc}</p>
 
@@ -1056,9 +1062,9 @@ export const Landing: React.FC<LandingProps> = ({ navigate }) => {
                   className={`${plan.popular ? 'btn-neon-orange' : 'btn-outline'} ${styles.cardCta}`}
                   onClick={() => navigate('/login')}
                 >
-                  Get Started
+                  {t('pricingSection.getStarted')}
                 </button>
-              </div>
+              </motion.div>
             );
           })}
         </div>
@@ -1069,7 +1075,7 @@ export const Landing: React.FC<LandingProps> = ({ navigate }) => {
             onClick={() => navigate('/pricing')}
             style={{ display: 'inline-flex', alignItems: 'center', gap: '8px' }}
           >
-            <span>View Full Feature Comparison</span>
+            <span>{t('pricingSection.viewComparison')}</span>
             <ArrowRight size={16} />
           </button>
         </div>
@@ -1078,10 +1084,14 @@ export const Landing: React.FC<LandingProps> = ({ navigate }) => {
       {/* FAQ Section */}
       <section id="faq" className={styles.faqSection}>
         <div className={styles.sectionHeader}>
-          <h2 className={styles.sectionTitle}>Frequently Asked Questions</h2>
-          <p className={styles.sectionSubtitle}>
-            Everything you need to know before you start scanning.
-          </p>
+          <motion.h2 className={styles.sectionTitle} {...revealUp}>{t('faqSection.title')}</motion.h2>
+          <motion.p
+            className={styles.sectionSubtitle}
+            {...revealUp}
+            transition={{ ...revealUp.transition, delay: 0.12 }}
+          >
+            {t('faqSection.subtitle')}
+          </motion.p>
         </div>
 
         <div className={styles.faqList}>
@@ -1135,30 +1145,27 @@ export const Landing: React.FC<LandingProps> = ({ navigate }) => {
           viewport={{ once: true }}
           transition={{ duration: 0.6 }}
         >
-          <h2 className={styles.newsTitle}>Join the KusShoes Beta</h2>
-          <p className={styles.newsDesc}>
-            Register your email today to receive download links for KusShoes & KusStudio once public
-            testing starts. Get 50 free cloud scans upon launch!
-          </p>
+          <h2 className={styles.newsTitle}>{t('newsletter.title')}</h2>
+          <p className={styles.newsDesc}>{t('newsletter.desc')}</p>
 
           <form onSubmit={handleNewsletterSubmit} className={styles.newsForm}>
             {submittedEmail ? (
               <div className={styles.successMessage}>
                 <CheckCircle2 size={24} className={styles.successIcon} />
-                <span>Thank you! We will email you beta credentials soon.</span>
+                <span>{t('newsletter.successMessage')}</span>
               </div>
             ) : (
               <div className={styles.inputContainer}>
                 <input
                   type="email"
-                  placeholder="Enter your email address..."
+                  placeholder={t('newsletter.emailPlaceholder')}
                   value={emailInput}
                   onChange={(e) => setEmailInput(e.target.value)}
                   className={styles.newsInput}
                   required
                 />
                 <button type="submit" className="btn-neon-orange">
-                  <span>Subscribe</span>
+                  <span>{t('newsletter.subscribe')}</span>
                   <Send size={14} />
                 </button>
               </div>
