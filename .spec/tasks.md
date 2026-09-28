@@ -32,7 +32,7 @@ BE+FE = needs backend work · DECISION = blocked on a product decision from T AK
   `api.listPlans()` like `PricingPage.tsx`; yearly price is the real yearly plan; loading/error
   state rendered; plan names/features keep the i18n copy.
 
-- [ ] **T04 — Delete dead `FE/src/components/site/*`**
+- [x] **T04 — Delete dead `FE/src/components/site/*`**
   Lane: FE. Nothing imports this folder; it contains a fake "Try Demo" auth and stale prices
   (199k / 499k). Acceptance: folder removed, `npm run build` and tests pass.
 
