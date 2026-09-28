@@ -947,6 +947,14 @@ Gói đang bán, hạn mức và giá. Công khai.
 
 Responses: `200` list[PlanResponse]
 
+### `GET /api/v1/subscription/gateways` — Cổng thanh toán đang mở
+
+PayOS luôn mở; MoMo theo cờ `MOMO_ENABLED`. Client dùng để bật/tắt nút MoMo thay vì gọi checkout rồi nhận lỗi. Công khai.
+
+Responses: `200` PaymentGatewaysResponse
+
+Response fields: `payos`: boolean; `momo`: boolean
+
 ### `GET /api/v1/subscription` — Gói hiện tại
 
 Trạng thái (active/grace/…), ngày hết hạn, ân hạn 3 ngày (BR-90). Bearer.

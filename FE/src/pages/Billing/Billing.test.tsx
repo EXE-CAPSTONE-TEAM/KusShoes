@@ -1,5 +1,5 @@
 import React from 'react';
-import { render, screen, fireEvent } from '@testing-library/react';
+import { render, screen, fireEvent, waitFor } from '@testing-library/react';
 import { afterEach, describe, expect, it, vi } from 'vitest';
 import { ToastProvider } from '../../context/ToastContext';
 
@@ -26,6 +26,7 @@ vi.mock('../../api/billing', () => ({
     getCreditBalance: vi.fn(),
     getCreditLedger: vi.fn(),
     createCreditCheckout: vi.fn(),
+    getPaymentGateways: vi.fn().mockResolvedValue({ payos: true, momo: false }),
   },
 }));
 
@@ -42,7 +43,7 @@ describe('Billing - MoMo credit purchase (SUB_GATEWAY_COMING_SOON)', () => {
     vi.clearAllMocks();
   });
 
-  it('disables the "Pay via MoMo" credit button with a Coming Soon label', async () => {
+  const seedActiveBasic = () => {
     m(api.listPlans).mockResolvedValue([]);
     m(api.subscription).mockResolvedValue({
       id: 'sub-1',
@@ -90,7 +91,11 @@ describe('Billing - MoMo credit purchase (SUB_GATEWAY_COMING_SOON)', () => {
       cycle_start: new Date().toISOString(),
     });
     m(billingApi.getCreditLedger).mockResolvedValue({ items: [], next_cursor: null, has_next: false });
+  };
 
+  it('disables the "Pay via MoMo" credit button with a Coming Soon label', async () => {
+    seedActiveBasic();
+    m(billingApi.getPaymentGateways).mockResolvedValue({ payos: true, momo: false });
     wrap(<Billing />);
 
     const buyCreditBtn = await screen.findByRole('button', { name: /buy credit/i });
@@ -102,5 +107,18 @@ describe('Billing - MoMo credit purchase (SUB_GATEWAY_COMING_SOON)', () => {
 
     fireEvent.click(momoBtn);
     expect(billingApi.createCreditCheckout).not.toHaveBeenCalled();
+  });
+
+  it('pays credits through MoMo once the server reports the gateway enabled', async () => {
+    seedActiveBasic();
+    m(billingApi.getPaymentGateways).mockResolvedValue({ payos: true, momo: true });
+    m(billingApi.createCreditCheckout).mockRejectedValue(new Error('stop before redirect'));
+    wrap(<Billing />);
+
+    fireEvent.click(await screen.findByRole('button', { name: /buy credit/i }));
+    fireEvent.click(await screen.findByRole('button', { name: /pay via momo/i }));
+
+    await waitFor(() => expect(billingApi.createCreditCheckout).toHaveBeenCalledWith(expect.any(Number), 'momo'));
+    expect(screen.queryByRole('button', { name: /coming soon/i })).not.toBeInTheDocument();
   });
 });

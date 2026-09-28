@@ -49,6 +49,18 @@ def _momo_ipn_signature(data: dict) -> str:
 
 
 @pytest.mark.asyncio
+async def test_payment_gateways_follow_momo_flag(client):
+    with patch.object(settings, "MOMO_ENABLED", False):
+        response = await client.get("/api/v1/subscription/gateways")
+    assert response.status_code == 200
+    assert response.json() == {"payos": True, "momo": False}
+
+    with patch.object(settings, "MOMO_ENABLED", True):
+        response = await client.get("/api/v1/subscription/gateways")
+    assert response.json() == {"payos": True, "momo": True}
+
+
+@pytest.mark.asyncio
 async def test_list_plans_public(client):
     response = await client.get("/api/v1/plans")
     assert response.status_code == 200

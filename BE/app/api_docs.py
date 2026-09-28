@@ -251,6 +251,7 @@ DOCS: dict[str, tuple[str, str]] = {
     "POST /api/v1/exports/{export_id}/download-url": ("Lấy link tải file đã xuất", "URL có chữ ký 1 giờ, tăng bộ đếm lượt tải. " + _B),
     # ---- Subscription ----
     "GET /api/v1/plans": ("Bảng giá công khai", "Gói đang bán, hạn mức và giá. " + _P),
+    "GET /api/v1/subscription/gateways": ("Cổng thanh toán đang mở", "PayOS luôn mở; MoMo theo cờ `MOMO_ENABLED`. Client dùng để bật/tắt nút MoMo thay vì gọi checkout rồi nhận lỗi. " + _P),
     "GET /api/v1/subscription": ("Gói hiện tại", "Trạng thái (active/grace/…), ngày hết hạn, ân hạn 3 ngày (BR-90). " + _B),
     "GET /api/v1/subscription/invoices": ("Lịch sử hóa đơn", "Hóa đơn của người dùng kèm số biên nhận. " + _B),
     "POST /api/v1/subscription/checkout": ("Tạo thanh toán", "Tạo hóa đơn chờ và trả link PayOS hoặc MoMo. Nâng cấp giữa chu kỳ tính pro-rata (BR-24); có thể kèm `coupon_code` (không cộng dồn với pro-rata). Chỉ kích hoạt gói khi webhook hợp lệ. Bị chặn trong phiên đăng nhập thay. " + _B),

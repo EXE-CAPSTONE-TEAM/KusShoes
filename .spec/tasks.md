@@ -73,7 +73,7 @@ BE+FE = needs backend work · DECISION = blocked on a product decision from T AK
   creates an empty project named "… Remix". Decision: add a user-facing scans endpoint, turn it
   into a real "duplicate project", or remove the tab.
 
-- [ ] **T13 — MoMo button**
+- [x] **T13 — MoMo button**
   Lane: BE+FE. BE has MoMo behind `MOMO_ENABLED`; FE hardcodes "Coming Soon". Acceptance: BE
   exposes enabled gateways (e.g. on `/plans` or a config endpoint), FE enables MoMo from that.
 

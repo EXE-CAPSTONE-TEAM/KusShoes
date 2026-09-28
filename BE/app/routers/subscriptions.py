@@ -4,6 +4,7 @@ from datetime import datetime
 from fastapi import APIRouter, Depends, Query
 from sqlalchemy.ext.asyncio import AsyncSession
 
+from app.config import settings
 from app.database import get_db
 from app.dependencies import forbid_impersonation, get_current_user
 from app.schemas.credit import (
@@ -18,6 +19,7 @@ from app.schemas.subscription import (
     CouponPreviewRequest,
     CouponPreviewResponse,
     InvoiceResponse,
+    PaymentGatewaysResponse,
     PlanResponse,
     ReceiptResponse,
     SubscriptionResponse,
@@ -30,6 +32,12 @@ router = APIRouter()
 @router.get("/plans", response_model=list[PlanResponse])
 async def list_plans(db: AsyncSession = Depends(get_db)):
     return await billing_service.list_plans(db)
+
+
+@router.get("/subscription/gateways", response_model=PaymentGatewaysResponse)
+async def list_payment_gateways():
+    # Mirrors the gate in billing_service.create_checkout_session / create_credit_checkout.
+    return PaymentGatewaysResponse(payos=True, momo=settings.MOMO_ENABLED)
 
 
 @router.get("/subscription", response_model=SubscriptionResponse)
