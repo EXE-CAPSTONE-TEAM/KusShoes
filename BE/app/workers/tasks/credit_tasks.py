@@ -2,16 +2,16 @@
 
 Flips lapsed `available` Credits to `expired`. Reads already treat a past expires_at as
 unavailable, so a missed run never lets an expired Credit be spent."""
-import asyncio
 
 from app.database import AsyncSessionLocal
 from app.services import credit_service
+from app.workers.async_runner import run_async
 from app.workers.celery_app import celery_app
 
 
 @celery_app.task(name="app.workers.tasks.credit_tasks.expire_scan_credits")
 def expire_scan_credits() -> dict:
-    return asyncio.run(_expire_scan_credits())
+    return run_async(_expire_scan_credits())
 
 
 async def _expire_scan_credits() -> dict:
