@@ -25,7 +25,7 @@ import * as Avatar from '@radix-ui/react-avatar';
 import * as DropdownMenu from '@radix-ui/react-dropdown-menu';
 import * as ScrollArea from '@radix-ui/react-scroll-area';
 import { useTheme } from '../../context/ThemeContext';
-import type { PortalProject } from '../../api/client';
+import { api, type PortalProject, type UserProfile } from '../../api/client';
 import type { SettingTab } from '../../pages/Settings/settingsNavigation';
 import styles from './Sidebar.module.css';
 
@@ -87,6 +87,33 @@ export const Sidebar: React.FC<SidebarProps> = ({
   // Storage usage isn't exposed by the backend yet; this mirrors the placeholder that was
   // already hardcoded in the widget below (1.4 GB of 5.0 GB).
   const storagePercent = 28;
+
+  // Signed-in user for the footer card — fetched here (rather than lifted to App) because
+  // the Sidebar is the only consumer; mirrors the same api.profile() call Settings.tsx makes.
+  const [profile, setProfile] = React.useState<UserProfile | null>(null);
+  React.useEffect(() => {
+    let cancelled = false;
+    api
+      .profile()
+      .then((data) => {
+        if (!cancelled) setProfile(data);
+      })
+      .catch(() => {
+        // Non-critical chrome element: fall back to initials/blank rather than surface a toast.
+      });
+    return () => {
+      cancelled = true;
+    };
+  }, []);
+  const displayName = profile ? `${profile.first_name} ${profile.last_name}`.trim() : '';
+  const initials = displayName
+    .split(/\s+/)
+    .filter(Boolean)
+    .map((part) => part[0])
+    .join('')
+    .slice(0, 2)
+    .toUpperCase();
+  const avatarSrc = profile ? api.avatarUrl(profile.avatar_path) : undefined;
 
   // Get top 3 projects by the server's updated timestamp.
   const recentProjects = React.useMemo(() => {
@@ -326,17 +353,17 @@ export const Sidebar: React.FC<SidebarProps> = ({
                 <Avatar.Root className={styles.avatarRoot}>
                   <Avatar.Image
                     className={styles.avatar}
-                    src="https://images.unsplash.com/photo-1534528741775-53994a69daeb?auto=format&fit=crop&w=100&q=80"
-                    alt="Duy Nguyen"
+                    src={avatarSrc}
+                    alt={displayName || 'User avatar'}
                   />
                   <Avatar.Fallback className={styles.avatarFallback} delayMs={300}>
-                    DN
+                    {initials}
                   </Avatar.Fallback>
                 </Avatar.Root>
                 {!collapsed && (
                   <div className={styles.userDetails}>
-                    <p className={styles.userName}>Duy Nguyen</p>
-                    <p className={styles.userRole}>Sneaker Creator</p>
+                    <p className={styles.userName}>{displayName}</p>
+                    <p className={styles.userRole}>{profile?.email}</p>
                   </div>
                 )}
                 {!collapsed && <ChevronsUpDown size={14} className={styles.userChevron} />}
