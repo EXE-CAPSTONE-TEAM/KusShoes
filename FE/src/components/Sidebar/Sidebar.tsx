@@ -362,8 +362,8 @@ export const Sidebar: React.FC<SidebarProps> = ({
                 </Avatar.Root>
                 {!collapsed && (
                   <div className={styles.userDetails}>
-                    <p className={styles.userName}>{displayName}</p>
-                    <p className={styles.userRole}>{profile?.email}</p>
+                    <p className={styles.userName} title={displayName}>{displayName}</p>
+                    <p className={styles.userRole} title={profile?.email}>{profile?.email}</p>
                   </div>
                 )}
                 {!collapsed && <ChevronsUpDown size={14} className={styles.userChevron} />}

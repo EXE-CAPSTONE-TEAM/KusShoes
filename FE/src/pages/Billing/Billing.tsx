@@ -90,8 +90,10 @@ function StatusIndicator({ status, label }: { status: 'success' | 'warning' | 'd
 
 /** Usage meter adhering to docs/DESIGN.md Section 5.13 */
 function UsageMeter({ label, used, limit }: { label: string; used: number; limit: number | null | undefined }) {
-  const hasLimit = typeof limit === 'number' && limit > 0;
-  const percent = hasLimit ? Math.min(100, Math.round((used / limit) * 100)) : 0;
+  // null/undefined = the plan sets no cap ("unlimited"). A real 0 is a cap of zero, not "no cap" —
+  // treating it as unlimited (the old `limit > 0` check did) inverted the meaning for the Free tier.
+  const hasLimit = typeof limit === 'number';
+  const percent = hasLimit ? (limit > 0 ? Math.min(100, Math.round((used / limit) * 100)) : 100) : 0;
   const displayValue = hasLimit ? `${used} of ${limit}` : `${used} (unlimited)`;
 
   let fillColor = 'var(--text-primary)';
@@ -424,7 +426,7 @@ export const Billing: React.FC = () => {
                   {loading ? <LoadingDots inline size="sm" /> : formatTierName(currentPlan?.tier ?? subscription?.tier ?? 'free')}
                 </div>
                 <p className={styles.planDescription}>
-                  {currentPlan ? `${currentPlan.bake_priority} bake priority · High quality 3D generation` : 'Standard shoe design capabilities'}
+                  {currentPlan ? `${formatTierName(currentPlan.bake_priority)} bake priority` : 'Standard shoe design capabilities'}
                 </p>
               </div>
 
@@ -443,7 +445,11 @@ export const Billing: React.FC = () => {
               </div>
               <div className={styles.metaItem}>
                 <span className={styles.metaKey}>Payment provider</span>
-                <span className={styles.metaVal}>PayOS / MoMo (pay-per-cycle, no card stored)</span>
+                <span className={styles.metaVal}>
+                  {currentPlan && currentPlan.tier !== 'free'
+                    ? 'PayOS / MoMo (pay-per-cycle, no card stored)'
+                    : 'None — Free plan, nothing to charge'}
+                </span>
               </div>
               <div className={styles.metaItem}>
                 <span className={styles.metaKey}>Included exports</span>
