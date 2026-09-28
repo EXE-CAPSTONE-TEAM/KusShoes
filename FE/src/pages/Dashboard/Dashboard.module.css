@@ -286,6 +286,20 @@
   margin-bottom: 20px;
 }
 
+.dialogSteps {
+  color: var(--text-secondary);
+  font-size: 0.875rem;
+  line-height: 1.55;
+  margin: 0 0 20px;
+  padding-left: 1.25rem;
+  display: grid;
+  gap: 6px;
+}
+
+.dialogSteps strong {
+  color: var(--text-primary);
+}
+
 .dialogActions {
   display: flex;
   justify-content: flex-end;
@@ -653,4 +667,8 @@
   .heroActions {
     flex-wrap: wrap;
   }
+}
+
+a.primaryBtn {
+  text-decoration: none;
 }

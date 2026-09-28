@@ -978,3 +978,15 @@
   margin: 4px 0 0 0;
   line-height: 1.5;
 }
+
+.desktopInstallHint {
+  margin: 0;
+  font-size: 0.8rem;
+  line-height: 1.45;
+  color: var(--text-secondary);
+}
+
+.desktopInstallHint a {
+  color: var(--accent, #ff5a36);
+  font-weight: 600;
+}

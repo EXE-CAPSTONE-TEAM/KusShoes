@@ -31,10 +31,13 @@
     "spec3": "Xuất mô hình 3D định dạng GLTF, OBJ, FBX, Apple USDZ",
     "spec4": "Máy chủ biên dịch cục bộ lắng nghe ở cổng 8421",
     "selectOs": "Chọn hệ điều hành",
-    "windowsMeta": "Dung lượng: 142 MB • Tối thiểu: GTX 1060 / 8GB RAM",
-    "macSiliconMeta": "Dung lượng: 128 MB • Native hoàn toàn cho Apple M-series",
-    "macIntelMeta": "Dung lượng: 135 MB • Yêu cầu macOS 12.0 trở lên",
-    "downloadInstaller": "Tải trình cài đặt Desktop"
+    "windowsMeta": "Windows 10/11 (64-bit) • Lần đầu mở app sẽ tải thêm bộ dựng hình 3D (khoảng 400 MB)",
+    "macSiliconMeta": "Phiên bản macOS sắp ra mắt",
+    "macIntelMeta": "Phiên bản macOS sắp ra mắt",
+    "downloadInstaller": "Tải trình cài đặt Desktop",
+    "macComingSoon": "KusShoes Editor cho macOS sắp ra mắt. Hiện tại bạn vui lòng dùng máy Windows.",
+    "noInstallerYet": "Trình cài đặt Windows đầu tiên đang được chuẩn bị. Bạn quay lại sau ít phút nhé.",
+    "smartScreenHint": "Nếu Windows hiện “Windows protected your PC”, bấm More info → Run anyway."
   },
   "workflow": {
     "title": "Cách chúng đồng bộ",
