@@ -4,7 +4,7 @@ from typing import Literal
 
 from pydantic import BaseModel, Field
 
-AssetType = Literal["source_model", "sticker", "texture", "reference_image"]
+AssetType = Literal["source_model", "sticker", "texture", "reference_image", "thumbnail"]
 
 
 class AssetUploadURLRequest(BaseModel):
