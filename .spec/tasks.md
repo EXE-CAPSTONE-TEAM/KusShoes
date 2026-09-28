@@ -26,7 +26,7 @@ BE+FE = needs backend work · DECISION = blocked on a product decision from T AK
   exist (`ArtisanSharePanel`). Acceptance: Share navigates to `/project-details?id=…&tab=share`
   and ProjectDetails opens on that tab.
 
-- [ ] **T03 — Landing pricing reads plans from the API**
+- [x] **T03 — Landing pricing reads plans from the API**
   Lane: FE. File: `FE/src/pages/Landing/Landing.tsx`.
   Today prices are hardcoded (259k / 649k, yearly = monthly × 12). Acceptance: uses
   `api.listPlans()` like `PricingPage.tsx`; yearly price is the real yearly plan; loading/error
