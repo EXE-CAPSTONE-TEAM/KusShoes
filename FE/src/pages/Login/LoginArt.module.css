@@ -1,0 +1,60 @@
+/* Spray-can graffiti sneaker art flanking the auth card — see LoginArt.tsx.
+   Unlike components/EdgeArt (faint monochrome line strokes), this is bold color art meant
+   to be seen, so it renders at full opacity. Its flat background is pre-matched to
+   --bg-primary in the source asset (see LoginArt.tsx); any opacity < 1 here would put a soft
+   alpha-blended edge around that otherwise-seamless rectangle, which reads as a faint seam. */
+
+.layer {
+  position: absolute;
+  inset: 0;
+  z-index: 1; /* above the neon streak backdrop, below the auth card (z-index: 10) */
+  overflow: hidden;
+  pointer-events: none;
+  user-select: none;
+}
+
+.edge {
+  position: absolute;
+  top: 0;
+  bottom: 0;
+  display: flex;
+  align-items: center;
+  width: clamp(200px, 22vw, 360px);
+}
+
+.left {
+  left: -20px;
+  justify-content: flex-start;
+}
+
+.right {
+  right: -20px;
+  justify-content: flex-end;
+}
+
+.img {
+  display: block;
+  width: auto;
+  height: auto;
+  max-width: 100%;
+  max-height: min(88vh, 640px);
+}
+
+.dark {
+  display: none;
+}
+
+:global([data-theme='dark']) .light {
+  display: none;
+}
+
+:global([data-theme='dark']) .dark {
+  display: block;
+}
+
+/* Below this width the flanking art would overlap the 440px-wide auth card. */
+@media (max-width: 1240px) {
+  .layer {
+    display: none;
+  }
+}
