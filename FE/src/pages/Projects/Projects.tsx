@@ -861,7 +861,7 @@ export const Projects: React.FC<ProjectsProps> = ({
       {editingProject && (
         <div className={styles.modalBackdrop}>
           <motion.div
-            className={`${styles.modal} glass-panel`}
+            className={styles.modal}
             initial={{ opacity: 0, scale: 0.95 }}
             animate={{ opacity: 1, scale: 1 }}
           >
@@ -895,7 +895,7 @@ export const Projects: React.FC<ProjectsProps> = ({
       {sharingProject && (
         <div className={styles.modalBackdrop}>
           <motion.div
-            className={`${styles.modal} glass-panel`}
+            className={styles.modal}
             initial={{ opacity: 0, scale: 0.95 }}
             animate={{ opacity: 1, scale: 1 }}
           >
@@ -917,7 +917,7 @@ export const Projects: React.FC<ProjectsProps> = ({
       {isCreateWizardOpen && (
         <div className={styles.modalBackdrop}>
           <motion.div
-            className={`${styles.wizardModal} glass-panel`}
+            className={styles.wizardModal}
             initial={{ opacity: 0, scale: 0.95, y: 20 }}
             animate={{ opacity: 1, scale: 1, y: 0 }}
           >
