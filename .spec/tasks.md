@@ -65,7 +65,7 @@ BE+FE = needs backend work · DECISION = blocked on a product decision from T AK
   Behance, TikTok but never saves them. **Decided 2026-09-29: add DB columns and save them**
   (migration + `UpdateProfileRequest` + `UserDetailResponse`). Preset avatars stay preview-only.
 
-- [ ] **T11 — Project visibility (Private / Link / Public)**
+- [x] **T11 — Project visibility (Private / Link / Public)**
   Lane: BE+FE + DECISION. The wizard's visibility choice and the card menu do nothing
   ("not exposed by the backend yet"). **Decided 2026-09-29: hide the visibility controls** —
   sharing goes through artisan links (T02).
@@ -80,11 +80,13 @@ BE+FE = needs backend work · DECISION = blocked on a product decision from T AK
   exposes enabled gateways (e.g. on `/plans` or a config endpoint), FE enables MoMo from that.
 
 - [ ] **T14 — Landing newsletter form**
-  Lane: DECISION. The form fakes success for 3 s; there is no BE endpoint. Build one or remove it.
+  The form fakes success for 3 s; there is no BE endpoint.
+  **Decided 2026-09-29: newsletters are posted by admin only for now** (scope being clarified).
 
-- [ ] **T15 — Landing stat counters (12 400+, 3 150+, …)**
-  Lane: DECISION. Fixed marketing numbers. Keep, or back them with a public stats endpoint.
+- [x] **T15 — Landing stat counters (12 400+, 3 150+, …)**
+  **Decided 2026-09-29: keep the marketing numbers for now.** No change.
 
 - [ ] **T16 — Trigger a bake/export from the web**
   Lane: DECISION. `POST /projects/{id}/bake` (+ status/retry/cancel) is unused by the web.
-  Decide whether web users may start exports or it stays desktop-only.
+  **Decided 2026-09-29: no web bake; web may only export — and only if an export does not
+  push server RAM/CPU into overload.** Needs a resource check of the export path first.

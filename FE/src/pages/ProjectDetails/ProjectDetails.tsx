@@ -1,7 +1,7 @@
 import React, { useState, useEffect, useRef, useCallback } from 'react';
 import {
   ArrowLeft, Laptop, RefreshCw, Check, Download, FileText,
-  Globe, Link, EyeOff, Terminal, Share2, History, Lock, Droplets, Box
+  Terminal, Share2, History, Lock, Droplets, Box
 } from 'lucide-react';
 import { ConfirmDialog } from '../../components/ConfirmDialog/ConfirmDialog';
 import { useToast } from '../../context/ToastContext';
@@ -260,15 +260,6 @@ export const ProjectDetails: React.FC<ProjectDetailsProps> = ({
                   <div className={styles.metaRow}>
                     <span>Updated timestamp</span>
                     <span>{project.updatedAt}</span>
-                  </div>
-                  <div className={styles.metaRow}>
-                    <span>Visibility Level</span>
-                    <span className={styles.visibilityValue}>
-                      {project.visibility === 'Public' && <Globe size={13} />}
-                      {project.visibility === 'Link' && <Link size={13} />}
-                      {project.visibility === 'Private' && <EyeOff size={13} />}
-                      {project.visibility}
-                    </span>
                   </div>
                 </div>
               </div>

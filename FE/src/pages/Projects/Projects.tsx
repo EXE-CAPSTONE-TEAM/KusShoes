@@ -6,9 +6,6 @@ import {
   Trash2,
   Edit3,
   Share2,
-  Globe,
-  EyeOff,
-  Link,
   Grid,
   List,
   Check,
@@ -46,7 +43,6 @@ const SORT_OPTIONS = [
 ];
 
 const BASE_MODEL_ALL = 'All';
-type VisibilityFilter = 'All' | 'Private' | 'Shared';
 
 type ProjectStatusFilter = 'All' | 'Scanned' | 'Designing' | 'Completed';
 type ProjectSortBy = 'name' | 'date' | 'size';
@@ -56,17 +52,6 @@ type WizardStep = 1 | 2 | 3;
 type WizardSource = 'blank' | 'upload';
 // Real steps of the final wizard action; 'uploading' only runs for the .GLB source.
 type WizardLaunchStep = 'idle' | 'creating' | 'uploading' | 'launching' | 'launched' | 'error';
-type ProjectVisibility = PortalProject['visibility'];
-
-const WIZARD_VISIBILITY_OPTIONS: Array<{
-  value: ProjectVisibility;
-  label: string;
-  desc: string;
-}> = [
-  { value: 'Private', label: 'Private', desc: 'Only you can view' },
-  { value: 'Link', label: 'Link Share', desc: 'Anyone with URL' },
-  { value: 'Public', label: 'Public Showcase', desc: 'Show to community' },
-];
 
 interface ProjectsProps {
   projects: PortalProject[];
@@ -95,9 +80,6 @@ export const Projects: React.FC<ProjectsProps> = ({
   const [searchTerm, setSearchTerm] = useState('');
   const [statusFilter, setStatusFilter] = useState<ProjectStatusFilter>(initialFilter || 'All');
   const [sortBy, setSortBy] = useState<ProjectSortBy>('date');
-  // Real, persisted fields (set at creation) — "Shared" groups Link + Public since both mean
-  // "not private"; there's no cross-account collaboration in this app to filter by instead.
-  const [visibilityFilter, setVisibilityFilter] = useState<VisibilityFilter>('All');
   const [baseModelFilter, setBaseModelFilter] = useState<string>(BASE_MODEL_ALL);
 
   // Selection states
@@ -138,7 +120,6 @@ export const Projects: React.FC<ProjectsProps> = ({
   // Step 2 inputs
   const [wizardName, setWizardName] = useState('');
   const [wizardBaseModel, setWizardBaseModel] = useState('');
-  const [wizardVisibility, setWizardVisibility] = useState<ProjectVisibility>('Private');
 
   // Step 3: create the project, import the uploaded model, then open KusStudio
   const [wizardLaunchStep, setWizardLaunchStep] = useState<WizardLaunchStep>('idle');
@@ -176,14 +157,9 @@ export const Projects: React.FC<ProjectsProps> = ({
         proj.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
         proj.baseModel.toLowerCase().includes(searchTerm.toLowerCase());
       const matchesStatus = statusFilter === 'All' || proj.status === statusFilter;
-      const matchesVisibility =
-        visibilityFilter === 'All' ||
-        (visibilityFilter === 'Private'
-          ? proj.visibility === 'Private'
-          : proj.visibility !== 'Private');
       const matchesBaseModel =
         baseModelFilter === BASE_MODEL_ALL || proj.baseModel === baseModelFilter;
-      return matchesSearch && matchesStatus && matchesVisibility && matchesBaseModel;
+      return matchesSearch && matchesStatus && matchesBaseModel;
     });
 
     // Sorting
@@ -198,7 +174,7 @@ export const Projects: React.FC<ProjectsProps> = ({
     });
 
     return result;
-  }, [projects, searchTerm, statusFilter, visibilityFilter, baseModelFilter, sortBy]);
+  }, [projects, searchTerm, statusFilter, baseModelFilter, sortBy]);
 
   // Bulk delete
   const handleBulkDelete = () => {
@@ -479,35 +455,16 @@ export const Projects: React.FC<ProjectsProps> = ({
           </div>
         </div>
 
-        {/* Row 2: visibility tabs (+ Trash), base-model filter, sort, view toggle */}
+        {/* Row 2: All (+ Trash), base-model filter, sort, view toggle */}
         <div className={styles.toolbar}>
           <nav className={styles.tabs} role="tablist" aria-label="Project filters">
             <button
               type="button"
               role="tab"
-              aria-selected={visibilityFilter === 'All'}
+              aria-selected
               className={styles.tab}
-              onClick={() => setVisibilityFilter('All')}
             >
               All
-            </button>
-            <button
-              type="button"
-              role="tab"
-              aria-selected={visibilityFilter === 'Private'}
-              className={styles.tab}
-              onClick={() => setVisibilityFilter('Private')}
-            >
-              Private
-            </button>
-            <button
-              type="button"
-              role="tab"
-              aria-selected={visibilityFilter === 'Shared'}
-              className={styles.tab}
-              onClick={() => setVisibilityFilter('Shared')}
-            >
-              Shared
             </button>
             <span className={styles.tabsDivider} aria-hidden="true" />
             <button
@@ -605,7 +562,7 @@ export const Projects: React.FC<ProjectsProps> = ({
                       <span className={styles.thumbBadge}>{proj.fileSize}</span>
                     </div>
 
-                    {/* Info: name + menu, model/edited meta, palette + visibility */}
+                    {/* Info: name + menu, model/edited meta, palette */}
                     <div className={styles.cardInfo}>
                       <div className={styles.cardHeader}>
                         <h3 className={styles.cardName} title={proj.name}>
@@ -658,45 +615,7 @@ export const Projects: React.FC<ProjectsProps> = ({
 
                               <div className={styles.dropdownDivider} />
 
-                              <div className={styles.dropdownSectionTitle}>Visibility</div>
-                              <button
-                                className={`${styles.dropdownItem} ${proj.visibility === 'Private' ? styles.dropdownActiveItem : ''}`}
-                                onClick={() => {
-                                  toast(
-                                    'Project visibility is not exposed by the backend yet.',
-                                    'info',
-                                  );
-                                  setActiveMenuId(null);
-                                }}
-                              >
-                                <EyeOff size={14} /> Private
-                              </button>
-                              <button
-                                className={`${styles.dropdownItem} ${proj.visibility === 'Link' ? styles.dropdownActiveItem : ''}`}
-                                onClick={() => {
-                                  toast(
-                                    'Project visibility is not exposed by the backend yet.',
-                                    'info',
-                                  );
-                                  setActiveMenuId(null);
-                                }}
-                              >
-                                <Link size={14} /> Link Share
-                              </button>
-                              <button
-                                className={`${styles.dropdownItem} ${proj.visibility === 'Public' ? styles.dropdownActiveItem : ''}`}
-                                onClick={() => {
-                                  toast(
-                                    'Project visibility is not exposed by the backend yet.',
-                                    'info',
-                                  );
-                                  setActiveMenuId(null);
-                                }}
-                              >
-                                <Globe size={14} /> Public Showcase
-                              </button>
 
-                              <div className={styles.dropdownDivider} />
 
                               <button
                                 className={styles.dropdownDeleteBtn}
@@ -733,14 +652,6 @@ export const Projects: React.FC<ProjectsProps> = ({
                             />
                           )}
                         </div>
-                        <span
-                          className={`${styles.visibilityTag} ${styles[`visibility${proj.visibility}`]}`}
-                        >
-                          {proj.visibility === 'Public' && <Globe size={11} />}
-                          {proj.visibility === 'Link' && <Link size={11} />}
-                          {proj.visibility === 'Private' && <EyeOff size={11} />}
-                          {proj.visibility}
-                        </span>
                       </div>
                     </div>
                   </div>
@@ -768,7 +679,6 @@ export const Projects: React.FC<ProjectsProps> = ({
                 <th>Base Sneaker</th>
                 <th>Source Device</th>
                 <th>File Size</th>
-                <th>Visibility</th>
                 <th>Actions</th>
               </tr>
             </thead>
@@ -826,16 +736,6 @@ export const Projects: React.FC<ProjectsProps> = ({
                         </div>
                       </td>
                       <td className={styles.tableSizeCell}>{proj.fileSize}</td>
-                      <td>
-                        <span
-                          className={`${styles.badge} ${styles.visibilityBadge} ${styles.listVisibility}`}
-                        >
-                          {proj.visibility === 'Public' && <Globe size={11} />}
-                          {proj.visibility === 'Link' && <Link size={11} />}
-                          {proj.visibility === 'Private' && <EyeOff size={11} />}
-                          {proj.visibility}
-                        </span>
-                      </td>
                       <td onClick={(e) => e.stopPropagation()}>
                         <div className={styles.rowActions}>
                           <button
@@ -890,14 +790,12 @@ export const Projects: React.FC<ProjectsProps> = ({
           activeFilters={[
             ...(searchTerm.trim() ? [`\u201c${searchTerm.trim()}\u201d`] : []),
             ...(statusFilter !== 'All' ? [statusFilter] : []),
-            ...(visibilityFilter !== 'All' ? [visibilityFilter] : []),
             ...(baseModelFilter !== BASE_MODEL_ALL ? [baseModelFilter] : []),
           ]}
           onCreate={() => setIsCreateWizardOpen(true)}
           onClearFilters={() => {
             setSearchTerm('');
             setStatusFilter('All');
-            setVisibilityFilter('All');
             setBaseModelFilter(BASE_MODEL_ALL);
           }}
         />
@@ -1063,22 +961,6 @@ export const Projects: React.FC<ProjectsProps> = ({
                         className={styles.modalInput}
                         placeholder="Nike Air Force 1"
                       />
-                    </div>
-
-                    <div className={styles.wizardInputGroup}>
-                      <label>Project Privacy Visibility</label>
-                      <div className={styles.visibilityOptionsRow}>
-                        {WIZARD_VISIBILITY_OPTIONS.map((opt) => (
-                          <div
-                            key={opt.value}
-                            className={`${styles.visOptionCard} ${wizardVisibility === opt.value ? styles.visOptionCardActive : ''}`}
-                            onClick={() => setWizardVisibility(opt.value)}
-                          >
-                            <span className={styles.visOptionLabel}>{opt.label}</span>
-                            <span className={styles.visOptionDesc}>{opt.desc}</span>
-                          </div>
-                        ))}
-                      </div>
                     </div>
                   </div>
                 </div>

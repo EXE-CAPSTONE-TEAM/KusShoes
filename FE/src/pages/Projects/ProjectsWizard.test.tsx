@@ -23,7 +23,6 @@ const created = {
   status: 'Designing',
   rawStatus: 'draft',
   isLocked: false,
-  visibility: 'Private',
   updatedAt: '2026-09-01T00:00:00Z',
   createdAt: '2026-09-01T00:00:00Z',
   imageUrl: '',

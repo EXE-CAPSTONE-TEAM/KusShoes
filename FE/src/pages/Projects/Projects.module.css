@@ -393,16 +393,6 @@
   letter-spacing: 0.5px;
 }
 
-.visibilityBadge {
-  background-color: rgba(11, 11, 12, 0.7);
-  border: 1px solid var(--glass-border);
-  color: #ffffff; /* High contrast pure white text and icons */
-  display: flex;
-  align-items: center;
-  gap: 6px;
-  backdrop-filter: blur(4px);
-}
-
 .cardHeaderMenu {
   position: relative;
   flex-shrink: 0;
@@ -552,27 +542,6 @@
   box-shadow: inset 0 0 0 1px rgba(255, 255, 255, 0.16);
 }
 
-.visibilityTag {
-  display: inline-flex;
-  align-items: center;
-  gap: 4px;
-  font-size: 0.68rem;
-  font-weight: 500;
-  color: var(--text-secondary);
-}
-
-.visibilityPublic {
-  color: var(--status-scanned);
-}
-
-.visibilityLink {
-  color: var(--status-designing);
-}
-
-.visibilityPrivate {
-  color: var(--text-secondary);
-}
-
 /* List view (Table Layout) — same flat 1px-border language as the grid card, no glass/glow */
 .tableContainer {
   border-radius: var(--border-radius-md);
@@ -703,10 +672,6 @@
   font-family: var(--font-mono);
   font-size: 0.85rem;
   color: var(--text-muted);
-}
-
-.listVisibility {
-  padding: 4px 8px;
 }
 
 .rowActions {
@@ -1068,45 +1033,6 @@
   color: var(--text-secondary);
 }
 
-.visibilityOptionsRow {
-  display: grid;
-  grid-template-columns: 1fr 1fr 1fr;
-  gap: 10px;
-}
-
-.visOptionCard {
-  border: 1px solid var(--glass-border);
-  border-radius: var(--border-radius-md);
-  padding: 12px;
-  cursor: pointer;
-  transition: all var(--transition-fast);
-  text-align: center;
-  background-color: rgba(255, 255, 255, 0.005);
-}
-
-.visOptionCard:hover {
-  border-color: rgba(255, 90, 54, 0.3);
-}
-
-.visOptionCardActive {
-  border-color: var(--color-orange);
-  background-color: rgba(255, 90, 54, 0.05);
-}
-
-.visOptionLabel {
-  display: block;
-  font-weight: 700;
-  font-size: 0.85rem;
-  color: var(--text-primary);
-}
-
-.visOptionDesc {
-  display: block;
-  font-size: 0.7rem;
-  color: var(--text-muted);
-  margin-top: 4px;
-}
-
 /* Desktop connection simulation graphics */
 .desktopConnectionWrapper {
   display: flex;
@@ -1237,9 +1163,7 @@
     width: 95vw;
     padding: 20px;
   }
-  .visibilityOptionsRow {
-    grid-template-columns: 1fr;
-  }
+  
 }
 
 /* Floating Action Bar (FAB) for Bulk Actions - Clean Light Mode Aesthetic */
@@ -1391,17 +1315,6 @@
   color: var(--text-primary);
   border-color: var(--color-orange);
   background: rgba(255, 90, 54, 0.1);
-}
-
-/* Dropdown visibility configuration styles */
-.dropdownSectionTitle {
-  font-size: 0.7rem;
-  color: var(--text-muted);
-  text-transform: uppercase;
-  font-weight: 700;
-  padding: 6px 12px 2px;
-  font-family: var(--font-mono);
-  letter-spacing: 0.5px;
 }
 
 .dropdownActiveItem {

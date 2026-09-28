@@ -106,7 +106,6 @@ export type PortalProject = {
   status: 'Scanned' | 'Designing' | 'Completed';
   rawStatus: string;
   isLocked: boolean;
-  visibility: 'Private' | 'Link' | 'Public';
   updatedAt: string;
   createdAt: string;
   imageUrl: string;
@@ -278,17 +277,6 @@ function normalizeProjectStatus(status: string): PortalProject['status'] {
   return 'Scanned';
 }
 
-function normalizeProjectVisibility(value: unknown): PortalProject['visibility'] {
-  if (value === 'Private' || value === 'Link' || value === 'Public') return value;
-  if (typeof value === 'string') {
-    const normalized = value.toLowerCase();
-    if (normalized === 'private') return 'Private';
-    if (normalized === 'link') return 'Link';
-    if (normalized === 'public') return 'Public';
-  }
-  return 'Private';
-}
-
 function toPortalProject(project: ProjectResponse): PortalProject {
   const config = asRecord(project.design_config);
   const scan = asRecord(config.scan);
@@ -301,7 +289,6 @@ function toPortalProject(project: ProjectResponse): PortalProject {
     status: normalizeProjectStatus(project.status),
     rawStatus: project.status,
     isLocked: Boolean(project.is_locked),
-    visibility: normalizeProjectVisibility(config.visibility),
     updatedAt: project.updated_at,
     createdAt: project.created_at,
     imageUrl: projectImageUrl(project.thumbnail_path),
