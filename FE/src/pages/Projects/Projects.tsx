@@ -71,7 +71,8 @@ const WIZARD_VISIBILITY_OPTIONS: Array<{
 interface ProjectsProps {
   projects: PortalProject[];
   setProjects: React.Dispatch<React.SetStateAction<PortalProject[]>>;
-  onViewDetails: (id: string) => void;
+  /** `tab` opens the details page on that tab (e.g. 'share' for the artisan share links). */
+  onViewDetails: (id: string, tab?: 'share') => void;
   initialFilter?: ProjectStatusFilter;
   /** True while the project list is being fetched. */
   loading?: boolean;
@@ -106,7 +107,6 @@ export const Projects: React.FC<ProjectsProps> = ({
   const [activeMenuId, setActiveMenuId] = useState<string | null>(null);
 
   // Modals
-  const [sharingProject, setSharingProject] = useState<PortalProject | null>(null);
   const [editingProject, setEditingProject] = useState<PortalProject | null>(null);
   const [renameValue, setRenameValue] = useState('');
 
@@ -682,8 +682,8 @@ export const Projects: React.FC<ProjectsProps> = ({
                               </button>
                               <button
                                 onClick={() => {
-                                  setSharingProject(proj);
                                   setActiveMenuId(null);
+                                  onViewDetails(proj.id, 'share');
                                 }}
                               >
                                 <Share2 size={14} /> Share Link
@@ -872,9 +872,7 @@ export const Projects: React.FC<ProjectsProps> = ({
                       <td onClick={(e) => e.stopPropagation()}>
                         <div className={styles.rowActions}>
                           <button
-                            onClick={() => {
-                              setSharingProject(proj);
-                            }}
+                            onClick={() => onViewDetails(proj.id, 'share')}
                             title="Share link"
                           >
                             <Share2 size={14} />
@@ -968,28 +966,6 @@ export const Projects: React.FC<ProjectsProps> = ({
                 </button>
               </div>
             </form>
-          </motion.div>
-        </div>
-      )}
-
-      {/* Share Modal */}
-      {sharingProject && (
-        <div className={styles.modalBackdrop}>
-          <motion.div
-            className={styles.modal}
-            initial={{ opacity: 0, scale: 0.95 }}
-            animate={{ opacity: 1, scale: 1 }}
-          >
-            <h3 className={styles.modalTitle}>Share Shoe Model</h3>
-            <p className={styles.modalDesc}>
-              Share links are not exposed by the backend yet, so the web app will not generate a
-              placeholder URL.
-            </p>
-            <div className={styles.modalActions} style={{ marginTop: '24px' }}>
-              <button className="btn-outline" onClick={() => setSharingProject(null)}>
-                Close
-              </button>
-            </div>
           </motion.div>
         </div>
       )}

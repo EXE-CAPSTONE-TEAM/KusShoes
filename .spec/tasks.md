@@ -20,7 +20,7 @@ BE+FE = needs backend work · DECISION = blocked on a product decision from T AK
   - If upload or launch fails after the project was created, the project stays in the list and
     the error names which step failed.
 
-- [ ] **T02 — Project-card "Share" opens the real share panel**
+- [x] **T02 — Project-card "Share" opens the real share panel**
   Lane: FE. Files: `Projects.tsx`, `ProjectDetails.tsx`, `App.tsx`.
   Today the Share modal says "Share links are not exposed by the backend yet", but artisan links
   exist (`ArtisanSharePanel`). Acceptance: Share navigates to `/project-details?id=…&tab=share`

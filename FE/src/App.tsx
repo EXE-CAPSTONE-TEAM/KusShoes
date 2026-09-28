@@ -262,7 +262,9 @@ function App() {
           <Projects
             projects={projects}
             setProjects={setProjects}
-            onViewDetails={(id) => navigate(`/project-details?id=${id}`)}
+            onViewDetails={(id, tab) =>
+              navigate(`/project-details?id=${id}${tab ? `&tab=${tab}` : ''}`)
+            }
             loading={projectsLoading}
           />
         )}
@@ -270,7 +272,9 @@ function App() {
           <Projects
             projects={projects}
             setProjects={setProjects}
-            onViewDetails={(id) => navigate(`/project-details?id=${id}`)}
+            onViewDetails={(id, tab) =>
+              navigate(`/project-details?id=${id}${tab ? `&tab=${tab}` : ''}`)
+            }
             initialFilter="Completed"
           />
         )}
