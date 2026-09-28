@@ -1,5 +1,17 @@
 import React, { useEffect, useMemo, useState } from 'react';
-import { CreditCard, HardDrive, Check, Calendar, ArrowUpRight, HelpCircle, X, Building, FileText, AlertTriangle, Tag, Loader2, Gem, Plus } from 'lucide-react';
+import {
+  CreditCard,
+  HardDrive,
+  Check,
+  X,
+  Building,
+  FileText,
+  AlertTriangle,
+  Tag,
+  Loader2,
+  Gem,
+  Plus,
+} from 'lucide-react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { ConfirmDialog } from '../../components/ConfirmDialog/ConfirmDialog';
 import { useToast } from '../../context/ToastContext';
@@ -13,6 +25,8 @@ import {
   type UserProfile,
 } from '../../api/client';
 import { billingApi, type CouponPreview, type CreditBalance, type CreditLedgerItem } from '../../api/billing';
+import { formatVnd, formatDate } from '../../utils/format';
+import { LoadingDots } from '../../components/LoadingDots/LoadingDots';
 import styles from './Billing.module.css';
 
 type InvoiceStatus = 'Paid' | 'Pending' | 'Failed' | 'Cancelled' | 'Refunded';
@@ -26,10 +40,6 @@ interface Invoice {
   vatNote: string | null;
   status: InvoiceStatus;
   receiptNumber: string | null;
-}
-
-function formatVnd(amount: number): string {
-  return `${amount.toLocaleString('vi-VN')} VNĐ`;
 }
 
 function formatTierName(tier: string): string {
@@ -48,7 +58,7 @@ function normalizeInvoiceStatus(status: string): InvoiceStatus {
 function toInvoiceRow(invoice: ApiInvoice): Invoice {
   return {
     id: invoice.id,
-    date: new Date(invoice.created_at).toLocaleDateString(),
+    date: formatDate(invoice.created_at),
     amount: formatVnd(invoice.amount_vnd),
     vatNote: invoice.vat.enabled ? `incl. ${invoice.vat.rate_percent}% VAT` : null,
     status: normalizeInvoiceStatus(invoice.status),
@@ -56,14 +66,57 @@ function toInvoiceRow(invoice: ApiInvoice): Invoice {
   };
 }
 
-function quotaPercent(used: number | undefined, limit: number | null | undefined): number {
-  if (!limit) return 0;
-  return Math.min(100, ((used ?? 0) / limit) * 100);
+function profileDisplayName(profile: UserProfile | null): string {
+  if (!profile) return '—';
+  return `${profile.first_name} ${profile.last_name}`.trim() || profile.username;
 }
 
-function profileDisplayName(profile: UserProfile | null): string {
-  if (!profile) return 'Loading...';
-  return `${profile.first_name} ${profile.last_name}`.trim() || profile.username;
+/** Status indicator adhering to docs/DESIGN.md Section 5.7 (6px dot + 12px label) */
+function StatusIndicator({ status, label }: { status: 'success' | 'warning' | 'danger' | 'neutral'; label: string }) {
+  const colorMap = {
+    success: 'var(--success)',
+    warning: 'var(--warning)',
+    danger: 'var(--danger)',
+    neutral: 'var(--neutral)',
+  };
+
+  return (
+    <span className={styles.statusIndicator}>
+      <span className={styles.statusDot} style={{ backgroundColor: colorMap[status] }} />
+      <span>{label}</span>
+    </span>
+  );
+}
+
+/** Usage meter adhering to docs/DESIGN.md Section 5.13 */
+function UsageMeter({ label, used, limit }: { label: string; used: number; limit: number | null | undefined }) {
+  const hasLimit = typeof limit === 'number' && limit > 0;
+  const percent = hasLimit ? Math.min(100, Math.round((used / limit) * 100)) : 0;
+  const displayValue = hasLimit ? `${used} of ${limit}` : `${used} (unlimited)`;
+
+  let fillColor = 'var(--text-primary)';
+  if (hasLimit) {
+    if (percent > 95) fillColor = 'var(--danger)';
+    else if (percent >= 80) fillColor = 'var(--accent)';
+  }
+
+  return (
+    <div className={styles.meterContainer}>
+      <div className={styles.meterLabels}>
+        <span className={styles.meterLabel}>{label}</span>
+        <span className={styles.meterValue}>{displayValue}</span>
+      </div>
+      <div className={styles.meterTrack}>
+        <div
+          className={styles.meterFill}
+          style={{
+            width: hasLimit ? `${percent}%` : '0%',
+            backgroundColor: fillColor,
+          }}
+        />
+      </div>
+    </div>
+  );
 }
 
 export const Billing: React.FC = () => {
@@ -86,6 +139,7 @@ export const Billing: React.FC = () => {
   const [showBuyCreditModal, setShowBuyCreditModal] = useState(false);
   const [buyQuantity, setBuyQuantity] = useState(1);
   const [buyingCredit, setBuyingCredit] = useState(false);
+
   // Landing here from PayOS/MoMo (/billing/success): poll until the webhook has settled the invoice (MSG29).
   const returnedFromGateway = window.location.pathname === '/billing/success';
   const cancelledAtGateway = window.location.pathname === '/billing/cancel';
@@ -142,9 +196,18 @@ export const Billing: React.FC = () => {
       if (caught instanceof ApiError && caught.status === 404) return null;
       throw caught;
     });
-    const creditRequest = billingApi.getCreditBalance().catch(() => null); // 402/403 when not on Basic/Pro
+    const creditRequest = billingApi.getCreditBalance().catch(() => null);
     const creditLedgerRequest = billingApi.getCreditLedger().catch(() => null);
-    Promise.all([api.listPlans(), subscriptionRequest, api.listInvoices(), api.usage(), api.profile(), creditRequest, creditLedgerRequest])
+
+    Promise.all([
+      api.listPlans(),
+      subscriptionRequest,
+      api.listInvoices(),
+      api.usage(),
+      api.profile(),
+      creditRequest,
+      creditLedgerRequest,
+    ])
       .then(([nextPlans, nextSubscription, nextInvoices, nextUsage, nextProfile, nextCredit, nextLedger]) => {
         setPlans(nextPlans);
         setSubscription(nextSubscription);
@@ -158,10 +221,15 @@ export const Billing: React.FC = () => {
       .finally(() => setLoading(false));
   }, [toast]);
 
-  const currentPlan = useMemo(() => plans.find((plan) =>
-    subscription?.tier === plan.tier
-    || subscription?.tier === `${plan.tier}_${plan.billing_cycle}`
-  ), [plans, subscription]);
+  const currentPlan = useMemo(
+    () =>
+      plans.find(
+        (plan) =>
+          subscription?.tier === plan.tier ||
+          subscription?.tier === `${plan.tier}_${plan.billing_cycle}`,
+      ),
+    [plans, subscription],
+  );
 
   const pricingTiers = plans.map((plan) => {
     const isCurrent = currentPlan?.id === plan.id;
@@ -227,7 +295,7 @@ export const Billing: React.FC = () => {
       }
       setAppliedCoupon(code);
       setCouponPreviews(previews);
-      toast('Coupon applied. Discounted prices are shown on the eligible plans.');
+      toast('Coupon applied. Discounted prices are shown on eligible plans.');
     } finally {
       setApplyingCoupon(false);
     }
@@ -260,338 +328,382 @@ export const Billing: React.FC = () => {
     }
   };
 
+  // Determine top status badge for subscription
+  const subscriptionStatusInfo = useMemo(() => {
+    if (!subscription || subscription.tier === 'free') {
+      return { status: 'neutral' as const, label: 'Free plan' };
+    }
+    if (subscription.status === 'grace') {
+      return { status: 'warning' as const, label: 'Grace period' };
+    }
+    if (subscription.status === 'active') {
+      return { status: 'success' as const, label: 'Active subscription' };
+    }
+    return { status: 'neutral' as const, label: subscription.status };
+  }, [subscription]);
+
   return (
     <div className={styles.container}>
-      {/* Header */}
-      <div className={styles.header}>
-        <div>
-          <h1 className={styles.title}>Billing & Subscription</h1>
-          <p className={styles.subtitle}>Check your current quotas, subscription tiers, and view past invoices.</p>
+      {/* Page Header - docs/DESIGN.md Section 6.1 (Row 1: 56px, max 1 primary button) */}
+      <div className={styles.pageHeader}>
+        <div className={styles.headerTitleGroup}>
+          <h1 className={styles.title}>Billing & Subscriptions</h1>
+          <StatusIndicator status={subscriptionStatusInfo.status} label={subscriptionStatusInfo.label} />
         </div>
+        <button
+          className={styles.btnPrimary}
+          onClick={() => setShowUpgradeModal(true)}
+        >
+          {subscription && subscription.tier !== 'free' ? 'Change plan' : 'Upgrade plan'}
+        </button>
       </div>
 
+      {/* Notification Banners */}
       {cancelledAtGateway && (
-        <div className={styles.paymentBanner}>
-          <AlertTriangle size={16} /> <span>The payment was cancelled. You have not been charged.</span>
+        <div className={`${styles.banner} ${styles.bannerWarning}`}>
+          <AlertTriangle size={16} className={styles.bannerIcon} />
+          <span>The payment was cancelled. You have not been charged.</span>
         </div>
       )}
       {paymentCheck === 'checking' && (
-        <div className={styles.paymentBanner}>
-          <Loader2 size={16} className={styles.spin} /> <span>Confirming your payment with the provider…</span>
+        <div className={styles.banner}>
+          <Loader2 size={16} className={`${styles.bannerIcon} ${styles.spin}`} />
+          <span>Confirming your payment with the provider…</span>
         </div>
       )}
       {paymentCheck === 'paid' && (
-        <div className={`${styles.paymentBanner} ${styles.paymentOk}`}>
-          <Check size={16} /> <span>Payment confirmed. Your plan is active and the receipt is ready below.</span>
+        <div className={`${styles.banner} ${styles.bannerSuccess}`}>
+          <Check size={16} className={styles.bannerIcon} />
+          <span>Payment confirmed. Your plan is active and your receipt is available below.</span>
         </div>
       )}
       {paymentCheck === 'failed' && (
-        <div className={styles.paymentBanner}>
-          <AlertTriangle size={16} /> <span>The payment did not go through. You have not been charged.</span>
+        <div className={`${styles.banner} ${styles.bannerDanger}`}>
+          <AlertTriangle size={16} className={styles.bannerIcon} />
+          <span>The payment did not go through. You have not been charged.</span>
         </div>
       )}
       {paymentCheck === 'timeout' && (
-        <div className={styles.paymentBanner}>
-          <AlertTriangle size={16} />
-          <span>We have not received the confirmation yet. It can take a few minutes; refresh this page shortly.</span>
+        <div className={`${styles.banner} ${styles.bannerWarning}`}>
+          <AlertTriangle size={16} className={styles.bannerIcon} />
+          <span>Payment confirmation is taking longer than usual. Please refresh in a moment.</span>
         </div>
       )}
       {subscription?.status === 'grace' && subscription.expires_at && (
-        <div className={styles.paymentBanner}>
-          <AlertTriangle size={16} />
+        <div className={`${styles.banner} ${styles.bannerWarning}`}>
+          <AlertTriangle size={16} className={styles.bannerIcon} />
           <span>
-            Your plan has expired. Editing stays open until{' '}
-            {new Date(new Date(subscription.expires_at).getTime() + GRACE_DAYS * 86_400_000).toLocaleDateString()},
-            but exports are paused. Renew to keep your plan.
+            Your plan has expired. Editing remains active until{' '}
+            {formatDate(new Date(new Date(subscription.expires_at).getTime() + GRACE_DAYS * 86_400_000))},
+            but exports are paused. Renew to keep full access.
           </span>
         </div>
       )}
 
-      {/* Main Grid */}
+      {/* Main Grid Layout - Section 4.3 (2/3 + 1/3 Two-Column Layout) */}
       <div className={styles.mainGrid}>
-        {/* Top-Left Card: Active Plan */}
-        <motion.div 
-          className={`${styles.planCard} glass-panel`}
-          initial={{ opacity: 0, y: 15 }}
-          animate={{ opacity: 1, y: 0 }}
-        >
-          <div className={styles.planHeader}>
-            <div>
-              <span className={styles.planBadge}>ACTIVE PLAN</span>
-              <h2 className={styles.planName}>
-                {loading ? 'Loading...' : formatTierName(currentPlan?.tier ?? subscription?.tier ?? 'free')}
+        {/* Left Column (2/3) */}
+        <div className={styles.column}>
+          {/* Active Subscription Card */}
+          <div className={styles.card}>
+            <div className={styles.cardHeader}>
+              <h2 className={styles.cardTitle}>
+                <CreditCard size={16} className={styles.cardIcon} /> Active Subscription
+              </h2>
+              {subscription && (
+                <StatusIndicator
+                  status={subscription.status === 'active' ? 'success' : subscription.status === 'grace' ? 'warning' : 'neutral'}
+                  label={subscription.status.toUpperCase()}
+                />
+              )}
+            </div>
+
+            <div className={styles.planOverview}>
+              <div>
+                <div className={styles.planTierLabel}>
+                  {loading ? <LoadingDots inline size="sm" /> : formatTierName(currentPlan?.tier ?? subscription?.tier ?? 'free')}
+                </div>
+                <p className={styles.planDescription}>
+                  {currentPlan ? `${currentPlan.bake_priority} bake priority · High quality 3D generation` : 'Standard shoe design capabilities'}
+                </p>
+              </div>
+
+              <div className={styles.planPriceWrapper}>
+                <span className={styles.planPrice}>{formatVnd(currentPlan?.price_vnd ?? 0)}</span>
+                <span className={styles.planCycle}>/ {currentPlan?.billing_cycle ?? 'month'}</span>
+              </div>
+            </div>
+
+            <div className={styles.metaList}>
+              <div className={styles.metaItem}>
+                <span className={styles.metaKey}>Period status</span>
+                <span className={styles.metaVal}>
+                  {subscription?.expires_at ? `Expires ${formatDate(subscription.expires_at)}` : 'Continuous access (Free)'}
+                </span>
+              </div>
+              <div className={styles.metaItem}>
+                <span className={styles.metaKey}>Payment provider</span>
+                <span className={styles.metaVal}>PayOS / MoMo (pay-per-cycle, no card stored)</span>
+              </div>
+              <div className={styles.metaItem}>
+                <span className={styles.metaKey}>Included exports</span>
+                <span className={styles.metaVal}>
+                  {currentPlan?.max_exports_per_month === null ? 'Unlimited exports' : `${currentPlan?.max_exports_per_month ?? 5} / month`}
+                </span>
+              </div>
+            </div>
+
+            <div className={styles.actionRow}>
+              <button className={styles.btnSecondary} onClick={() => setShowUpgradeModal(true)}>
+                Compare & Change Plan
+              </button>
+
+              {subscription && subscription.tier !== 'free' && (
+                <div className={styles.cancelWrap}>
+                  <button className={`${styles.btnText} ${styles.btnTextDanger}`} onClick={() => setShowCancelConfirm(true)}>
+                    Cancel plan
+                  </button>
+                  <span className={styles.microCopy}>Access remains active until billing period ends</span>
+                </div>
+              )}
+            </div>
+          </div>
+
+          {/* Invoices History Table Card - Section 5.12 */}
+          <div className={styles.tableCard}>
+            <div className={styles.tableHeader}>
+              <h2 className={styles.cardTitle}>
+                <FileText size={16} className={styles.cardIcon} /> Invoices & Receipts
+                <span className={styles.cardTitleCount}>({invoices.length})</span>
               </h2>
             </div>
-            <div className={styles.planPriceInfo}>
-              <span className={styles.planPrice}>{formatVnd(currentPlan?.price_vnd ?? 0)}</span>
-              <span className={styles.planPeriod}>/ {currentPlan?.billing_cycle ?? 'month'}</span>
+
+            <div className={styles.tableScroll}>
+              <table className={styles.table}>
+                <thead>
+                  <tr>
+                    <th>Invoice</th>
+                    <th>Date</th>
+                    <th>Amount</th>
+                    <th>Status</th>
+                    <th style={{ textAlign: 'right' }}>Receipt</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {loading && (
+                    <tr>
+                      <td colSpan={5} style={{ padding: '24px 0', textAlign: 'center' }}>
+                        <LoadingDots center label="Loading invoices…" />
+                      </td>
+                    </tr>
+                  )}
+                  {!loading && invoices.length === 0 && (
+                    <tr>
+                      <td colSpan={5} className={styles.tableEmpty}>
+                        No invoices found.
+                      </td>
+                    </tr>
+                  )}
+                  {invoices.map((inv) => (
+                    <tr key={inv.id}>
+                      <td style={{ fontWeight: 500 }}>{inv.receiptNumber ?? inv.id.slice(0, 8)}</td>
+                      <td style={{ color: 'var(--text-secondary)' }}>{inv.date}</td>
+                      <td>
+                        {inv.amount}
+                        {inv.vatNote && <div className={styles.vatNote}>{inv.vatNote}</div>}
+                      </td>
+                      <td>
+                        <StatusIndicator
+                          status={
+                            inv.status === 'Paid'
+                              ? 'success'
+                              : inv.status === 'Pending'
+                                ? 'warning'
+                                : inv.status === 'Failed' || inv.status === 'Cancelled'
+                                  ? 'danger'
+                                  : 'neutral'
+                          }
+                          label={inv.status}
+                        />
+                      </td>
+                      <td style={{ textAlign: 'right' }}>
+                        <button
+                          className={`${styles.btnSecondary} ${styles.btnSm}`}
+                          disabled={!inv.receiptNumber || downloadingReceipt === inv.id}
+                          title={inv.receiptNumber ? 'Download receipt PDF' : 'Receipt issued upon successful payment'}
+                          onClick={() => downloadReceipt(inv.id)}
+                        >
+                          <FileText size={12} />
+                          <span>{downloadingReceipt === inv.id ? 'Opening…' : 'Receipt'}</span>
+                        </button>
+                      </td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
             </div>
           </div>
-          
-          <p className={styles.planDesc}>
-            Subscription data and quota limits are loaded directly from the KusShoes API.
-          </p>
 
-          <div className={styles.planMeta}>
-            <div className={styles.metaItem}>
-              <Calendar size={16} className={styles.metaIcon} />
-              <span>Expires: <strong>{subscription?.expires_at ? new Date(subscription.expires_at).toLocaleDateString() : 'No expiry'}</strong></span>
-            </div>
-            <div className={styles.metaItem}>
-              <CreditCard size={16} className={styles.metaIcon} />
-              <div className={styles.paymentMethodWrapper}>
-                <span>Payment: <strong>PayOS / MoMo</strong> (no card stored — pay-per-cycle)</span>
+          {/* Credit Ledger Table (if user has scan credit history) */}
+          {creditLedger.length > 0 && (
+            <div className={styles.tableCard}>
+              <div className={styles.tableHeader}>
+                <h2 className={styles.cardTitle}>
+                  <Gem size={16} className={styles.cardIcon} /> Scan Credit Transactions
+                  <span className={styles.cardTitleCount}>({creditLedger.length})</span>
+                </h2>
               </div>
-            </div>
-          </div>
 
-          <div className={styles.planActions}>
-            <button className="btn-neon-orange" onClick={() => setShowUpgradeModal(true)}>
-              Upgrade / Change Plan
-            </button>
-            <div className={styles.cancelActionWrapper}>
-              <button className="btn-outline" onClick={() => setShowCancelConfirm(true)} disabled={!subscription}>
-                Cancel Plan
-              </button>
-              <span className={styles.cancelMicroCopy}>
-                Access remains active until the next billing date.
-              </span>
-            </div>
-          </div>
-        </motion.div>
-
-        {/* Top-Right Card: Invoice History */}
-        <motion.div 
-          className={`${styles.rightCol} glass-panel`}
-          initial={{ opacity: 0, y: 15 }}
-          animate={{ opacity: 1, y: 0 }}
-          transition={{ delay: 0.15 }}
-        >
-          <div className={styles.invoiceHeader}>
-            <h3 className={styles.invoiceTitle}>Invoice History</h3>
-            <button className={styles.invoiceHelpBtn} onClick={() => toast('Opening support ticket form...', 'info')}>
-              <HelpCircle size={16} />
-              <span>Need help?</span>
-            </button>
-          </div>
-
-          <table className={styles.table}>
-            <thead>
-              <tr>
-                <th>Invoice</th>
-                <th>Billing Date</th>
-                <th>Amount</th>
-                <th>Status</th>
-                <th>Action</th>
-              </tr>
-            </thead>
-            <tbody>
-              {!loading && invoices.length === 0 && (
-                <tr><td colSpan={5}>No invoices found.</td></tr>
-              )}
-              {invoices.map((inv) => (
-                <tr key={inv.id}>
-                  <td className={styles.invId}>{inv.receiptNumber ?? inv.id.slice(0, 8)}</td>
-                  <td>{inv.date}</td>
-                  <td>{inv.amount}{inv.vatNote && <div className={styles.planPeriod}>{inv.vatNote}</div>}</td>
-                  <td>
-                    <span className={`${styles.statusBadge} ${styles[inv.status.toLowerCase()]}`}>
-                      {inv.status}
-                    </span>
-                  </td>
-                  <td>
-                    <div className={styles.actionCell}>
-                      <button
-                        className={styles.downloadBtn}
-                        disabled={!inv.receiptNumber || downloadingReceipt === inv.id}
-                        title={inv.receiptNumber ? 'Download receipt (PDF)' : 'A receipt is issued once the payment succeeds'}
-                        onClick={() => downloadReceipt(inv.id)}
-                      >
-                        <FileText size={14} /> {downloadingReceipt === inv.id ? 'Opening…' : 'Receipt'}
-                      </button>
-                    </div>
-                  </td>
-                </tr>
-              ))}
-            </tbody>
-          </table>
-        </motion.div>
-
-        {/* Bottom-Left Card: Billing Details */}
-        <motion.div 
-          className={`${styles.billingCard} glass-panel`}
-          initial={{ opacity: 0, y: 15 }}
-          animate={{ opacity: 1, y: 0 }}
-          transition={{ delay: 0.05 }}
-        >
-          <div className={styles.billingHeader}>
-            <div className={styles.billingTitleContainer}>
-              <Building size={18} className={styles.billingIcon} />
-              <h3 className={styles.billingTitle}>Account Billing Profile</h3>
-            </div>
-          </div>
-          
-          <div className={styles.billingFields}>
-            <div className={styles.fieldGroup}>
-              <label className={styles.fieldLabel}>ACCOUNT OWNER</label>
-              <p className={styles.fieldValue}>{profileDisplayName(profile)}</p>
-            </div>
-            
-            <div className={styles.fieldGroup}>
-              <label className={styles.fieldLabel}>EMAIL</label>
-              <p className={styles.fieldValue}>{profile?.email ?? 'Loading...'}</p>
-            </div>
-            
-            <div className={styles.fieldGroup}>
-              <label className={styles.fieldLabel}>ACCOUNT CODE</label>
-              <p className={styles.fieldValue}>{profile?.account_code ?? 'Loading...'}</p>
-            </div>
-
-            <div className={styles.fieldGroup}>
-              <label className={styles.fieldLabel}>ACCOUNT STATUS</label>
-              <p className={styles.fieldValue}>{profile?.status ?? 'Loading...'}</p>
-            </div>
-          </div>
-        </motion.div>
-
-        {/* Bottom-Right Card: Cloud Quota Usage */}
-        <motion.div 
-          className={`${styles.quotaCard} glass-panel`}
-          initial={{ opacity: 0, y: 15 }}
-          animate={{ opacity: 1, y: 0 }}
-          transition={{ delay: 0.1 }}
-        >
-          <div className={styles.quotaHeader}>
-            <h3 className={styles.quotaTitle}>Cloud Quota Usage</h3>
-            <HardDrive size={18} className={styles.quotaIcon} />
-          </div>
-          
-          <div className={styles.progressContainer}>
-            <div className={styles.progressLabels}>
-              <span>Active Projects</span>
-              <span>{usage?.projects_count ?? 0} / {usage?.max_projects ?? '∞'} used</span>
-            </div>
-            <div className={styles.progressBarBg}>
-              <div
-                className={styles.progressBarFill}
-                style={{ width: `${quotaPercent(usage?.projects_count, usage?.max_projects)}%` }}
-              />
-            </div>
-          </div>
-
-          <div className={styles.progressContainer}>
-            <div className={styles.progressLabels}>
-              <span>Monthly Exports</span>
-              <span>{usage?.exports_count ?? 0} / {usage?.max_exports_per_month ?? '∞'} used</span>
-            </div>
-            <div className={styles.progressBarBg}>
-              <div
-                className={styles.progressBarFill}
-                style={{ width: `${quotaPercent(usage?.exports_count, usage?.max_exports_per_month)}%` }}
-              />
-            </div>
-          </div>
-
-          <div className={styles.progressContainer}>
-            <div className={styles.progressLabels}>
-              <span>AI Credits</span>
-              <span>{usage?.ai_credits_used ?? 0} / {usage?.ai_credits_limit ?? '∞'} used</span>
-            </div>
-            <div className={styles.progressBarBg}>
-              <div
-                className={styles.progressBarFill}
-                style={{ width: `${quotaPercent(usage?.ai_credits_used, usage?.ai_credits_limit)}%` }}
-              />
-            </div>
-          </div>
-
-          <div className={styles.quotaInfoList}>
-            <div className={styles.quotaInfoItem}>
-              <span>Current tier</span>
-              <span>{usage?.tier ?? 'free'}</span>
-            </div>
-            <div className={styles.quotaInfoItem}>
-              <span>Subscription status</span>
-              <span>{subscription?.status ?? 'none'}</span>
-            </div>
-          </div>
-        </motion.div>
-
-        {/* Scan Credits (BR-94 / UC-27) */}
-        <motion.div
-          className={`${styles.quotaCard} glass-panel`}
-          initial={{ opacity: 0, y: 15 }}
-          animate={{ opacity: 1, y: 0 }}
-          transition={{ delay: 0.2 }}
-        >
-          <div className={styles.quotaHeader}>
-            <h3 className={styles.quotaTitle}>Scan Credits</h3>
-            <Gem size={18} className={styles.quotaIcon} />
-          </div>
-
-          {creditBalance ? (
-            <>
-              <div className={styles.quotaInfoList}>
-                <div className={styles.quotaInfoItem}>
-                  <span>Available</span>
-                  <span>{creditBalance.available}</span>
-                </div>
-                <div className={styles.quotaInfoItem}>
-                  <span>Used</span>
-                  <span>{creditBalance.used}</span>
-                </div>
-                <div className={styles.quotaInfoItem}>
-                  <span>Expired</span>
-                  <span>{creditBalance.expired}</span>
-                </div>
-                <div className={styles.quotaInfoItem}>
-                  <span>Bought this cycle</span>
-                  <span>{creditBalance.purchased_this_cycle} / {creditBalance.max_per_cycle}</span>
-                </div>
-                {creditBalance.next_expires_at && (
-                  <div className={styles.quotaInfoItem}>
-                    <span>Next expiry</span>
-                    <span>{new Date(creditBalance.next_expires_at).toLocaleDateString()}</span>
-                  </div>
-                )}
-              </div>
-              <p className={styles.planDesc}>
-                {formatVnd(creditBalance.price_vnd)} per extra scan, on top of your plan&apos;s quota.
-              </p>
-              <button
-                className="btn-outline"
-                onClick={() => setShowBuyCreditModal(true)}
-                disabled={!creditBalance.can_purchase}
-                title={creditBalance.can_purchase ? undefined : 'Available on an active Basic/Pro plan, up to the per-cycle cap'}
-              >
-                <Plus size={16} /> Buy Credit
-              </button>
-
-              {creditLedger.length > 0 && (
-                <table className={styles.table} style={{ marginTop: 12 }}>
+              <div className={styles.tableScroll}>
+                <table className={styles.table}>
                   <thead>
-                    <tr><th>Purchased</th><th>Expires</th><th>Status</th></tr>
+                    <tr>
+                      <th>Purchased</th>
+                      <th>Expires</th>
+                      <th>Status</th>
+                    </tr>
                   </thead>
                   <tbody>
-                    {creditLedger.slice(0, 5).map((item) => (
+                    {creditLedger.map((item) => (
                       <tr key={item.id}>
-                        <td>{new Date(item.purchased_at).toLocaleDateString()}</td>
-                        <td>{new Date(item.expires_at).toLocaleDateString()}</td>
+                        <td>{formatDate(item.purchased_at)}</td>
+                        <td style={{ color: 'var(--text-secondary)' }}>{formatDate(item.expires_at)}</td>
                         <td>
-                          <span className={`${styles.statusBadge} ${styles[item.status.toLowerCase()] ?? ''}`}>
-                            {item.status}
-                          </span>
+                          <StatusIndicator
+                            status={item.status.toLowerCase() === 'available' ? 'success' : item.status.toLowerCase() === 'used' ? 'neutral' : 'danger'}
+                            label={item.status}
+                          />
                         </td>
                       </tr>
                     ))}
                   </tbody>
                 </table>
-              )}
-            </>
-          ) : (
-            <p className={styles.planDesc}>Loading…</p>
+              </div>
+            </div>
           )}
-        </motion.div>
+        </div>
+
+        {/* Right Column (1/3) */}
+        <div className={styles.column}>
+          {/* Cloud Quotas Card - docs/DESIGN.md Section 5.13 */}
+          <div className={styles.card}>
+            <div className={styles.cardHeader}>
+              <h2 className={styles.cardTitle}>
+                <HardDrive size={16} className={styles.cardIcon} /> Cloud Quotas
+              </h2>
+            </div>
+
+            {loading ? (
+              <LoadingDots center label="Loading quotas…" />
+            ) : (
+              <div className={styles.meterList}>
+                <UsageMeter
+                  label="Active projects"
+                  used={usage?.projects_count ?? 0}
+                  limit={usage?.max_projects}
+                />
+                <UsageMeter
+                  label="Monthly exports"
+                  used={usage?.exports_count ?? 0}
+                  limit={usage?.max_exports_per_month}
+                />
+                <UsageMeter
+                  label="AI generation credits"
+                  used={usage?.ai_credits_used ?? 0}
+                  limit={usage?.ai_credits_limit}
+                />
+              </div>
+            )}
+
+            <div className={styles.cardFooterMeta}>
+              <span>Current plan: <strong>{formatTierName(usage?.tier ?? 'free')}</strong></span>
+              <span>Status: <strong>{subscription?.status ?? 'active'}</strong></span>
+            </div>
+          </div>
+
+          {/* Scan Credits Card (BR-94 / UC-27) */}
+          <div className={styles.card}>
+            <div className={styles.cardHeader}>
+              <h2 className={styles.cardTitle}>
+                <Gem size={16} className={styles.cardIcon} /> Scan Credits
+              </h2>
+            </div>
+
+            {creditBalance ? (
+              <>
+                <div className={styles.metaList} style={{ borderTop: 'none', paddingTop: 0 }}>
+                  <div className={styles.metaItem}>
+                    <span className={styles.metaKey}>Available</span>
+                    <span className={styles.metaVal}>{creditBalance.available}</span>
+                  </div>
+                  <div className={styles.metaItem}>
+                    <span className={styles.metaKey}>Used</span>
+                    <span className={styles.metaVal}>{creditBalance.used}</span>
+                  </div>
+                  <div className={styles.metaItem}>
+                    <span className={styles.metaKey}>Expired</span>
+                    <span className={styles.metaVal}>{creditBalance.expired}</span>
+                  </div>
+                  <div className={styles.metaItem}>
+                    <span className={styles.metaKey}>Purchased this cycle</span>
+                    <span className={styles.metaVal}>
+                      {creditBalance.purchased_this_cycle} of {creditBalance.max_per_cycle}
+                    </span>
+                  </div>
+                  {creditBalance.next_expires_at && (
+                    <div className={styles.metaItem}>
+                      <span className={styles.metaKey}>Next expiry</span>
+                      <span className={styles.metaVal}>{formatDate(creditBalance.next_expires_at)}</span>
+                    </div>
+                  )}
+                </div>
+
+                <p className={styles.planDescription}>
+                  {formatVnd(creditBalance.price_vnd)} per extra scan. Credits remain valid for 12 months.
+                </p>
+
+                <button
+                  className={styles.btnSecondary}
+                  onClick={() => setShowBuyCreditModal(true)}
+                  disabled={!creditBalance.can_purchase}
+                  title={creditBalance.can_purchase ? undefined : 'Available on active Basic/Pro plans, up to per-cycle limit'}
+                >
+                  <Plus size={14} /> Buy Credit
+                </button>
+              </>
+            ) : (
+              <LoadingDots center label="Loading scan credits…" />
+            )}
+          </div>
+
+          {/* Billing Profile Card */}
+          <div className={styles.card}>
+            <div className={styles.cardHeader}>
+              <h2 className={styles.cardTitle}>
+                <Building size={16} className={styles.cardIcon} /> Billing Profile
+              </h2>
+            </div>
+
+            <div className={styles.metaList} style={{ borderTop: 'none', borderBottom: 'none', padding: 0 }}>
+              <div className={styles.metaItem}>
+                <span className={styles.metaKey}>Owner</span>
+                <span className={styles.metaVal}>{profileDisplayName(profile)}</span>
+              </div>
+              <div className={styles.metaItem}>
+                <span className={styles.metaKey}>Email</span>
+                <span className={styles.metaVal}>{profile?.email ?? '—'}</span>
+              </div>
+              <div className={styles.metaItem}>
+                <span className={styles.metaKey}>Account code</span>
+                <span className={styles.metaVal}>{profile?.account_code ?? '—'}</span>
+              </div>
+              <div className={styles.metaItem}>
+                <span className={styles.metaKey}>Account status</span>
+                <span className={styles.metaVal}>{profile?.status ?? '—'}</span>
+              </div>
+            </div>
+          </div>
+        </div>
       </div>
 
       {/* Buy Credit Modal */}
@@ -599,43 +711,59 @@ export const Billing: React.FC = () => {
         {showBuyCreditModal && creditBalance && (
           <div className={styles.modalBackdrop}>
             <motion.div
-              className={`${styles.upgradeModal} glass-panel`}
-              initial={{ opacity: 0, y: 30, scale: 0.95 }}
-              animate={{ opacity: 1, y: 0, scale: 1 }}
-              exit={{ opacity: 0, y: 30, scale: 0.95 }}
+              className={styles.modalDialog}
+              initial={{ opacity: 0, scale: 0.98 }}
+              animate={{ opacity: 1, scale: 1 }}
+              exit={{ opacity: 0, scale: 0.98 }}
+              transition={{ duration: 0.15 }}
             >
-              <div className={styles.modalCloseHeader}>
-                <h2 className={styles.compareTitle}>Buy Scan Credit</h2>
-                <button className={styles.closeBtn} onClick={() => setShowBuyCreditModal(false)}>
-                  <X size={20} />
+              <div className={styles.modalHeader}>
+                <h3 className={styles.modalTitle}>Buy Scan Credits</h3>
+                <button
+                  className={styles.modalCloseBtn}
+                  onClick={() => setShowBuyCreditModal(false)}
+                  aria-label="Close"
+                >
+                  <X size={16} />
                 </button>
               </div>
-              <p className={styles.planDesc}>
-                {formatVnd(creditBalance.price_vnd)} each, up to {creditBalance.max_per_cycle - creditBalance.purchased_this_cycle}{' '}
-                more this cycle. Credits expire 12 months after purchase and are non-refundable once used.
-              </p>
-              <div className={styles.couponForm}>
-                <label htmlFor="credit-qty">Quantity</label>
-                <input
-                  id="credit-qty"
-                  type="number"
-                  min={1}
-                  max={creditBalance.max_per_cycle - creditBalance.purchased_this_cycle}
-                  value={buyQuantity}
-                  onChange={(event) => setBuyQuantity(Math.max(1, Number(event.target.value) || 1))}
-                  className={styles.couponInput}
-                  style={{ maxWidth: 100 }}
-                />
-                <span>= {formatVnd(buyQuantity * creditBalance.price_vnd)}</span>
+
+              <div className={styles.modalBody}>
+                <p className={styles.planDescription}>
+                  {formatVnd(creditBalance.price_vnd)} per scan, up to {creditBalance.max_per_cycle - creditBalance.purchased_this_cycle} more this cycle.
+                  Credits expire in 12 months and are non-refundable once used.
+                </p>
+
+                <div className={styles.creditQtyRow}>
+                  <label htmlFor="credit-qty">Quantity</label>
+                  <input
+                    id="credit-qty"
+                    type="number"
+                    min={1}
+                    max={creditBalance.max_per_cycle - creditBalance.purchased_this_cycle}
+                    value={buyQuantity}
+                    onChange={(event) => setBuyQuantity(Math.max(1, Number(event.target.value) || 1))}
+                    className={styles.creditQtyInput}
+                  />
+                  <span>× {formatVnd(creditBalance.price_vnd)}</span>
+                </div>
+
+                <div className={styles.creditTotalRow}>
+                  Total: {formatVnd(buyQuantity * creditBalance.price_vnd)}
+                </div>
               </div>
-              <div style={{ display: 'flex', gap: 8, marginTop: 16 }}>
-                <button className="btn-neon-orange" disabled={buyingCredit} onClick={() => handleBuyCredit('payos')}>
-                  Pay via PayOS
+
+              <div className={styles.modalFooter}>
+                <button
+                  className={styles.btnPrimary}
+                  disabled={buyingCredit}
+                  onClick={() => handleBuyCredit('payos')}
+                >
+                  {buyingCredit ? 'Connecting…' : 'Pay via PayOS'}
                 </button>
                 <button
-                  className="btn-outline"
+                  className={styles.btnSecondary}
                   disabled
-                  style={{ opacity: 0.6, cursor: 'not-allowed' }}
                   title="Cổng thanh toán MoMo sắp ra mắt (Coming Soon)"
                 >
                   MoMo (Coming Soon)
@@ -646,122 +774,136 @@ export const Billing: React.FC = () => {
         )}
       </AnimatePresence>
 
-      {/* Upgrade / Compare Pricing Modal */}
+      {/* Upgrade / Compare Plans Modal */}
       <AnimatePresence>
         {showUpgradeModal && (
           <div className={styles.modalBackdrop}>
-            <motion.div 
-              className={`${styles.upgradeModal} glass-panel`}
-              initial={{ opacity: 0, y: 30, scale: 0.95 }}
-              animate={{ opacity: 1, y: 0, scale: 1 }}
-              exit={{ opacity: 0, y: 30, scale: 0.95 }}
+            <motion.div
+              className={`${styles.modalDialog} ${styles.modalDialogWide}`}
+              initial={{ opacity: 0, scale: 0.98 }}
+              animate={{ opacity: 1, scale: 1 }}
+              exit={{ opacity: 0, scale: 0.98 }}
+              transition={{ duration: 0.15 }}
             >
-              {/* Close Header */}
-              <div className={styles.modalCloseHeader}>
-                <h2 className={styles.compareTitle}>Compare Cloud Plans</h2>
-                <button className={styles.closeBtn} onClick={() => setShowUpgradeModal(false)}>
-                  <X size={20} />
+              <div className={styles.modalHeader}>
+                <h3 className={styles.modalTitle}>Compare Cloud Plans</h3>
+                <button
+                  className={styles.modalCloseBtn}
+                  onClick={() => setShowUpgradeModal(false)}
+                  aria-label="Close"
+                >
+                  <X size={16} />
                 </button>
               </div>
 
-              {/* Promo code (BR-26) */}
-              <form onSubmit={applyCoupon} className={styles.couponForm}>
-                <Tag size={16} className={styles.metaIcon} />
-                <input
-                  className={styles.couponInput}
-                  placeholder="Promo code"
-                  value={couponInput}
-                  onChange={(event) => setCouponInput(event.target.value.toUpperCase())}
-                  maxLength={40}
-                  aria-label="Promo code"
-                />
-                <button type="submit" className="btn-outline" disabled={applyingCoupon || !couponInput.trim()}>
-                  {applyingCoupon ? 'Checking…' : 'Apply'}
-                </button>
-                {appliedCoupon && (
-                  <button type="button" className={styles.couponClear} onClick={clearCoupon}>
-                    Remove {appliedCoupon}
-                  </button>
-                )}
-              </form>
-
-              {/* Pricing Cards Grid */}
-              <div className={styles.pricingGrid}>
-                {pricingTiers.map((tier) => (
-                  <div 
-                    key={tier.plan.id}
-                    className={`${styles.priceCard} ${tier.popular ? styles.popularCard : ''} glass-panel`}
+              <div className={styles.modalBody}>
+                {/* Promo Code Form */}
+                <form onSubmit={applyCoupon} className={styles.couponForm}>
+                  <Tag size={14} className={styles.cardIcon} />
+                  <input
+                    className={styles.couponInput}
+                    placeholder="Enter promo code"
+                    value={couponInput}
+                    onChange={(event) => setCouponInput(event.target.value.toUpperCase())}
+                    maxLength={40}
+                    aria-label="Promo code"
+                  />
+                  <button
+                    type="submit"
+                    className={styles.btnSecondary}
+                    disabled={applyingCoupon || !couponInput.trim()}
                   >
-                    {tier.popular && <span className={styles.popularBadge}>RECOMMENDED</span>}
-                    <h3 className={styles.tierName}>{tier.name}</h3>
-                    <div className={styles.priceContainer}>
-                      {couponPreviews[tier.plan.id] ? (
-                        <>
-                          <span className={styles.tierPriceOld}>{tier.price}</span>
-                          <span className={styles.tierPrice}>{formatVnd(couponPreviews[tier.plan.id].amount_vnd)}</span>
-                        </>
-                      ) : (
-                        <span className={styles.tierPrice}>{tier.price}</span>
-                      )}
-                      <span className={styles.tierPeriod}>{tier.price !== 'Custom' && `/ ${tier.period}`}</span>
-                    </div>
-                    {couponPreviews[tier.plan.id]?.vat.enabled && (
-                      <p className={styles.tierDesc}>
-                        Includes {couponPreviews[tier.plan.id].vat.rate_percent}% VAT ({formatVnd(couponPreviews[tier.plan.id].vat.vat_vnd)})
-                      </p>
-                    )}
-                    <p className={styles.tierDesc}>{tier.description}</p>
-                    
-                    <div className={styles.divider} />
+                    {applyingCoupon ? 'Checking…' : 'Apply code'}
+                  </button>
+                  {appliedCoupon && (
+                    <button type="button" className={styles.couponClearBtn} onClick={clearCoupon}>
+                      Remove {appliedCoupon}
+                    </button>
+                  )}
+                </form>
 
-                    <ul className={styles.featureList}>
-                      {tier.features.map((feat) => (
-                        <li key={feat} className={styles.featureItem}>
-                          <Check size={14} className={styles.checkIcon} />
-                          <span>{feat}</span>
-                        </li>
-                      ))}
-                    </ul>
+                {/* Pricing Grid */}
+                <div className={styles.pricingGrid}>
+                  {pricingTiers.map((tier) => (
+                    <div
+                      key={tier.plan.id}
+                      className={`${styles.planCardOption} ${tier.popular ? styles.planCardRecommended : ''} ${
+                        tier.isCurrent ? styles.planCardCurrent : ''
+                      }`}
+                    >
+                      {tier.popular && <span className={styles.recommendedBadge}>RECOMMENDED</span>}
 
-                    {tier.isCurrent || tier.plan.tier === 'free' ? (
-                      <button
-                        className={`${tier.popular ? 'btn-neon-orange' : 'btn-outline'} ${styles.pricingCta}`}
-                        disabled
-                      >
-                        <span>{tier.cta}</span>
-                        <ArrowUpRight size={16} />
-                      </button>
-                    ) : (
-                      <div style={{ display: 'flex', gap: 8 }}>
-                        <button
-                          className={`${tier.popular ? 'btn-neon-orange' : 'btn-outline'} ${styles.pricingCta}`}
-                          onClick={() => handleChoosePlan(tier.plan, 'payos')}
-                        >
-                          <span>Pay via PayOS</span>
-                        </button>
-                        <button
-                          className={`btn-outline ${styles.pricingCta}`}
-                          disabled
-                          style={{ opacity: 0.6, cursor: 'not-allowed' }}
-                          title="Cổng thanh toán MoMo sắp ra mắt (Coming Soon)"
-                        >
-                          <span>MoMo (Coming Soon)</span>
-                        </button>
+                      <div className={styles.tierHeading}>
+                        <h4 className={styles.tierTitle}>{tier.name}</h4>
+                        <div className={styles.tierPriceContainer}>
+                          {couponPreviews[tier.plan.id] ? (
+                            <>
+                              <span className={styles.tierPriceOld}>{tier.price}</span>
+                              <span className={styles.tierPriceAmount}>
+                                {formatVnd(couponPreviews[tier.plan.id].amount_vnd)}
+                              </span>
+                            </>
+                          ) : (
+                            <span className={styles.tierPriceAmount}>{tier.price}</span>
+                          )}
+                          <span className={styles.tierPriceCycle}>
+                            {tier.price !== 'Custom' && `/ ${tier.period}`}
+                          </span>
+                        </div>
+                        {couponPreviews[tier.plan.id]?.vat.enabled && (
+                          <div className={styles.vatNote}>
+                            Incl. {couponPreviews[tier.plan.id].vat.rate_percent}% VAT
+                          </div>
+                        )}
                       </div>
-                    )}
-                  </div>
-                ))}
+
+                      <ul className={styles.tierFeatureList}>
+                        {tier.features.map((feat) => (
+                          <li key={feat} className={styles.tierFeatureItem}>
+                            <Check size={14} className={styles.tierCheckIcon} />
+                            <span>{feat}</span>
+                          </li>
+                        ))}
+                      </ul>
+
+                      <div className={styles.tierButtonGroup}>
+                        {tier.isCurrent || tier.plan.tier === 'free' ? (
+                          <button className={styles.btnSecondary} disabled>
+                            {tier.isCurrent ? 'Current Plan' : 'Free tier'}
+                          </button>
+                        ) : (
+                          <>
+                            <button
+                              className={tier.popular ? styles.btnPrimary : styles.btnSecondary}
+                              onClick={() => handleChoosePlan(tier.plan, 'payos')}
+                            >
+                              Pay via PayOS
+                            </button>
+                            <button
+                              className={styles.btnSecondary}
+                              disabled
+                              title="Cổng thanh toán MoMo sắp ra mắt (Coming Soon)"
+                            >
+                              MoMo (Coming Soon)
+                            </button>
+                          </>
+                        )}
+                      </div>
+                    </div>
+                  ))}
+                </div>
               </div>
             </motion.div>
           </div>
         )}
       </AnimatePresence>
 
+      {/* Cancel Confirmation Dialog */}
       <ConfirmDialog
         open={showCancelConfirm}
         onOpenChange={setShowCancelConfirm}
-        title="Cancel your subscription?"
-        description="Your access remains active until the billing provider confirms the end of the current period."
+        title="Cancel subscription?"
+        description="Your access remains active until the end of the current billing cycle."
         confirmLabel="Cancel Subscription"
         cancelLabel="Keep Plan"
         onConfirm={handleCancelSubscription}
