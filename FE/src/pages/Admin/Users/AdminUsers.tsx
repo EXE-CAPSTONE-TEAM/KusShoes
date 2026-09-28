@@ -48,7 +48,7 @@ export const AdminUsers: React.FC = () => {
     [],
   );
 
-  const { items: users, loading, loadingMore, error, hasMore, reload, loadMore } =
+  const { items: users, setItems: setUsers, loading, loadingMore, error, hasMore, reload, loadMore } =
     useCursorList<AdminUserSummary, UserListQuery>({
       fetcher,
       query,
@@ -192,6 +192,7 @@ export const AdminUsers: React.FC = () => {
                   <td>
                     {u.email}
                     {u.deleted_at && <span className={`${shared.badge} ${shared.badgeDanger}`} style={{ marginLeft: 8 }}>Đã xóa</span>}
+                    {u.is_internal && <span className={`${shared.badge} ${shared.badgeInfo}`} style={{ marginLeft: 8 }}>Nội bộ</span>}
                   </td>
                   <td className={shared.mutedCell}>{u.username}</td>
                   <td className={shared.mutedCell}>{u.account_code}</td>
@@ -205,7 +206,11 @@ export const AdminUsers: React.FC = () => {
                         <Eye size={14} />
                       </button>
                       {u.role === 'user' && u.status === 'active' && (
-                        <UserSupportActions user={u} allowed={isAdmin} />
+                        <UserSupportActions
+                          user={u}
+                          allowed={isAdmin}
+                          onUserChange={(updated) => setUsers((prev) => prev.map((row) => (row.id === updated.id ? updated : row)))}
+                        />
                       )}
                       {u.role === 'user' && u.status === 'active' && (
                         <button

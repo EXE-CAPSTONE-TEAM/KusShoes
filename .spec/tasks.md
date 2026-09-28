@@ -50,7 +50,7 @@ BE+FE = needs backend work · DECISION = blocked on a product decision from T AK
   Lane: FE. `GET /api/v1/exports` (all exports of the user) is unused. Acceptance: a list with
   project, format, date and a download button (`/exports/{id}/download-url`).
 
-- [ ] **T08 — Admin: mark a user as internal**
+- [x] **T08 — Admin: mark a user as internal**
   Lane: FE. `POST /api/v1/admin/users/{id}/internal` has no button in `UserSupportActions`.
 
 ## Batch 2 — needs backend work
