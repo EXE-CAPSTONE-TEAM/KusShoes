@@ -1,5 +1,6 @@
 import React from 'react';
 import { Instagram, Github, Youtube, MessageSquare } from 'lucide-react';
+import { useTranslation } from 'react-i18next';
 import { useTheme } from '../../context/ThemeContext';
 import { useToast } from '../../context/ToastContext';
 import styles from './Footer.module.css';
@@ -9,6 +10,7 @@ interface FooterProps {
 }
 
 export const Footer: React.FC<FooterProps> = ({ navigate }) => {
+  const { t } = useTranslation('common');
   const { theme } = useTheme();
   const { toast } = useToast();
 
@@ -40,37 +42,37 @@ export const Footer: React.FC<FooterProps> = ({ navigate }) => {
               className={styles.logoImage}
             />
           </div>
-          <p className={styles.footerBrandDesc}>"Shape your shoes, show your style."</p>
+          <p className={styles.footerBrandDesc}>{t('footer.tagline')}</p>
         </div>
 
         {/* Col 2: Products */}
         <div className={styles.footerLinkCol}>
-          <h4>Products</h4>
-          <a href="#products" onClick={(e) => handleScrollLink(e, 'products')}>KusShoes Scanner</a>
-          <a href="#products" onClick={(e) => handleScrollLink(e, 'products')}>KusStudio 3D Client</a>
-          <a href="/pricing" onClick={handlePricingClick}>Cloud Packages</a>
+          <h4>{t('footer.productsHeading')}</h4>
+          <a href="#products" onClick={(e) => handleScrollLink(e, 'products')}>{t('footer.scanner')}</a>
+          <a href="#products" onClick={(e) => handleScrollLink(e, 'products')}>{t('footer.studioClient')}</a>
+          <a href="/pricing" onClick={handlePricingClick}>{t('footer.cloudPackages')}</a>
         </div>
 
         {/* Col 3: Resources */}
         <div className={styles.footerLinkCol}>
-          <h4>Resources</h4>
-          <a href="#docs" onClick={(e) => { e.preventDefault(); toast('Documentation page coming soon', 'info'); }}>Documentation</a>
-          <a href="#about" onClick={(e) => { e.preventDefault(); toast('About the team page coming soon', 'info'); }}>Developer Team</a>
-          <a href="#releases" onClick={(e) => { e.preventDefault(); toast('Release notes coming soon', 'info'); }}>Release Notes</a>
+          <h4>{t('footer.resourcesHeading')}</h4>
+          <a href="#docs" onClick={(e) => { e.preventDefault(); toast(t('footer.toastDocsComingSoon'), 'info'); }}>{t('footer.documentation')}</a>
+          <a href="#about" onClick={(e) => { e.preventDefault(); toast(t('footer.toastAboutComingSoon'), 'info'); }}>{t('footer.developerTeam')}</a>
+          <a href="#releases" onClick={(e) => { e.preventDefault(); toast(t('footer.toastReleasesComingSoon'), 'info'); }}>{t('footer.releaseNotes')}</a>
         </div>
 
         {/* Col 4: Support & Security */}
         <div className={styles.footerLinkCol}>
-          <h4>Support & Security</h4>
-          <a href="#terms" onClick={(e) => { e.preventDefault(); toast('Terms of Service page coming soon', 'info'); }}>Terms of Service</a>
-          <a href="#privacy" onClick={(e) => { e.preventDefault(); toast('Privacy Policy page coming soon', 'info'); }}>Privacy Policy</a>
-          <a href="/pricing" onClick={handlePricingClick}>FAQs</a>
+          <h4>{t('footer.supportHeading')}</h4>
+          <a href="#terms" onClick={(e) => { e.preventDefault(); toast(t('footer.toastTermsComingSoon'), 'info'); }}>{t('footer.terms')}</a>
+          <a href="#privacy" onClick={(e) => { e.preventDefault(); toast(t('footer.toastPrivacyComingSoon'), 'info'); }}>{t('footer.privacy')}</a>
+          <a href="/pricing" onClick={handlePricingClick}>{t('footer.faqs')}</a>
         </div>
       </div>
 
       {/* Bottom Footer */}
       <div className={styles.footerBottom}>
-        <span>© 2026 KusShoes Ecosystem. All rights reserved.</span>
+        <span>{t('footer.copyright')}</span>
         
         {/* Social Icons */}
         <div className={styles.socialsList}>

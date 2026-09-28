@@ -1,5 +1,6 @@
 import React, { useEffect, useMemo, useState } from 'react';
 import { Check, X, HelpCircle } from 'lucide-react';
+import { useTranslation } from 'react-i18next';
 import { Navbar } from '../../components/Navbar/Navbar';
 import { Footer } from '../../components/Footer/Footer';
 import { AnimatedPrice } from '../../components/AnimatedPrice/AnimatedPrice';
@@ -12,6 +13,7 @@ interface PricingPageProps {
 }
 
 export const PricingPage: React.FC<PricingPageProps> = ({ navigate }) => {
+  const { t } = useTranslation('pricing');
   const [isAnnual, setIsAnnual] = useState(false);
   const [plans, setPlans] = useState<Plan[]>([]);
   const [plansError, setPlansError] = useState('');
@@ -19,7 +21,8 @@ export const PricingPage: React.FC<PricingPageProps> = ({ navigate }) => {
   useEffect(() => {
     api.listPlans()
       .then(setPlans)
-      .catch((caught) => setPlansError(caught instanceof Error ? caught.message : 'Unable to load plans.'));
+      .catch((caught) => setPlansError(caught instanceof Error ? caught.message : t('loadPlansError')));
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
   const visiblePlans = useMemo(() => {
@@ -31,31 +34,32 @@ export const PricingPage: React.FC<PricingPageProps> = ({ navigate }) => {
 
   const comparisons = useMemo(() => [
     {
-      name: 'Active Project Limit',
-      values: visiblePlans.map((plan) => plan.max_projects === null ? 'Unlimited' : `${plan.max_projects} projects`),
+      name: t('comparison.activeProjectLimit'),
+      values: visiblePlans.map((plan) => plan.max_projects === null ? t('comparison.unlimited') : t('comparison.projectsSuffix', { count: plan.max_projects })),
     },
     {
-      name: 'Monthly Export Limit',
-      values: visiblePlans.map((plan) => plan.max_exports_per_month === null ? 'Unlimited' : `${plan.max_exports_per_month} exports`),
+      name: t('comparison.monthlyExportLimit'),
+      values: visiblePlans.map((plan) => plan.max_exports_per_month === null ? t('comparison.unlimitedExports') : t('comparison.exportsSuffix', { count: plan.max_exports_per_month })),
     },
     {
-      name: 'File Export Formats',
+      name: t('comparison.fileExportFormats'),
       values: visiblePlans.map((plan) => plan.allowed_export_formats.map((item) => item.toUpperCase()).join(', ')),
     },
     {
-      name: 'Bake Priority',
+      name: t('comparison.bakePriority'),
       values: visiblePlans.map((plan) => plan.bake_priority),
     },
     {
-      name: 'Desktop Client Sync',
+      name: t('comparison.desktopClientSync'),
       values: visiblePlans.map(() => true),
     },
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   ], [visiblePlans]);
 
   const faqs = [
-    { q: 'How does the mobile scanning work?', a: 'You download our KusShoes app on iOS or Android, take 360° pictures of your sneaker, and the app uses the Kiri Engine API to stitch them into a high-poly 3D mesh automatically.' },
-    { q: 'What is KusStudio?', a: 'KusStudio is our desktop customizer software. It syncs with your Cloud storage so you can easily paint, modify texture properties, and edit shoe layouts on a powerful PC environment.' },
-    { q: 'Can I downgrade or cancel anytime?', a: 'Yes. You can manage your subscription directly inside your User Portal account. Cancelations take effect at the end of the current billing cycle.' },
+    { q: t('faqs.q1'), a: t('faqs.a1') },
+    { q: t('faqs.q2'), a: t('faqs.a2') },
+    { q: t('faqs.q3'), a: t('faqs.a3') },
   ];
 
   const formatPrice = (val: number) => {
@@ -65,21 +69,21 @@ export const PricingPage: React.FC<PricingPageProps> = ({ navigate }) => {
 
   const planName = (plan: Plan) => {
     const tier = plan.tier.replace(/_/g, ' ').replace(/\b\w/g, (char) => char.toUpperCase());
-    if (!plan.billing_cycle) return `${tier} Starter`;
-    return `${tier} ${plan.billing_cycle === 'yearly' ? 'Annual' : 'Monthly'}`;
+    if (!plan.billing_cycle) return t('tierStarterSuffix', { tier });
+    return plan.billing_cycle === 'yearly' ? t('tierAnnual', { tier }) : t('tierMonthly', { tier });
   };
 
   const planDescription = (plan: Plan) => (
     plan.tier === 'free'
-      ? 'Start with the default cloud workspace limits.'
-      : `${plan.bake_priority} queue priority with database-backed billing limits.`
+      ? t('freePlanDesc')
+      : t('paidPlanDesc', { priority: plan.bake_priority })
   );
 
   const planFeatures = (plan: Plan) => [
-    plan.max_projects === null ? 'Unlimited active projects' : `${plan.max_projects} active projects`,
-    plan.max_exports_per_month === null ? 'Unlimited monthly exports' : `${plan.max_exports_per_month} exports per month`,
-    `Formats: ${plan.allowed_export_formats.map((item) => item.toUpperCase()).join(', ')}`,
-    `${plan.bake_priority} bake priority`,
+    plan.max_projects === null ? t('unlimitedActiveProjects') : t('activeProjectsCount', { count: plan.max_projects }),
+    plan.max_exports_per_month === null ? t('unlimitedMonthlyExports') : t('monthlyExportsCount', { count: plan.max_exports_per_month }),
+    t('formatsLabel', { formats: plan.allowed_export_formats.map((item) => item.toUpperCase()).join(', ') }),
+    t('bakePriorityLabel', { priority: plan.bake_priority }),
   ];
 
   return (
@@ -117,22 +121,20 @@ export const PricingPage: React.FC<PricingPageProps> = ({ navigate }) => {
 
       {/* Main Header */}
       <section className={styles.pricingHeader}>
-        <span className={styles.badge}>TRANSPARENT PRICING</span>
-        <h1 className={styles.title}>Flexible Plans for Every Creator</h1>
-        <p className={styles.desc}>
-          Start scanning for free, and upgrade as your shoe library grows. Sync seamlessly between KusShoes and KusStudio.
-        </p>
+        <span className={styles.badge}>{t('badge')}</span>
+        <h1 className={styles.title}>{t('title')}</h1>
+        <p className={styles.desc}>{t('desc')}</p>
 
         {/* Toggle billing */}
         <div className={styles.toggleContainer}>
-          <span className={!isAnnual ? styles.activePeriod : ''}>Bill Monthly</span>
-          <button 
+          <span className={!isAnnual ? styles.activePeriod : ''}>{t('billMonthly')}</span>
+          <button
             className={`${styles.toggleSwitch} ${isAnnual ? styles.switchActive : ''}`}
             onClick={() => setIsAnnual(!isAnnual)}
           >
             <div className={styles.switchKnob} />
           </button>
-          <span className={isAnnual ? styles.activePeriod : ''}>Bill Annually</span>
+          <span className={isAnnual ? styles.activePeriod : ''}>{t('billAnnually')}</span>
         </div>
       </section>
 
@@ -140,18 +142,18 @@ export const PricingPage: React.FC<PricingPageProps> = ({ navigate }) => {
       <section className={styles.pricingSection}>
         <div className={styles.pricingGrid}>
           {plansError && <p className={styles.desc}>{plansError}</p>}
-          {!plansError && visiblePlans.length === 0 && <p className={styles.desc}>Loading plans from server...</p>}
+          {!plansError && visiblePlans.length === 0 && <p className={styles.desc}>{t('loadingPlans')}</p>}
           {visiblePlans.map((plan) => {
             const displayPrice = plan.price_vnd;
             const popular = plan.tier === 'basic';
-            const cycleText = isAnnual ? '/ năm' : '/ tháng';
-            
+            const cycleText = isAnnual ? t('perYear') : t('perMonth');
+
             return (
-              <div 
+              <div
                 key={plan.id}
                 className={`${styles.priceCard} ${popular ? styles.popularCard : ''} glass-panel`}
               >
-                {popular && <span className={styles.popularBadge}>POPULAR</span>}
+                {popular && <span className={styles.popularBadge}>{t('popularBadge')}</span>}
                 <h3 className={styles.planName}>{planName(plan)}</h3>
                 <p className={styles.planDescText}>{planDescription(plan)}</p>
 
@@ -171,11 +173,11 @@ export const PricingPage: React.FC<PricingPageProps> = ({ navigate }) => {
                   ))}
                 </ul>
 
-                <button 
+                <button
                   className={`${popular ? 'btn-neon-orange' : 'btn-outline'} ${styles.cardCta}`}
                   onClick={() => navigate('/login')}
                 >
-                  Get Started
+                  {t('getStarted')}
                 </button>
               </div>
             );
@@ -185,12 +187,12 @@ export const PricingPage: React.FC<PricingPageProps> = ({ navigate }) => {
 
       {/* Detailed Feature Comparison */}
       <section className={styles.comparisonSection}>
-        <h2 className={styles.compTitle}>Feature Comparison</h2>
+        <h2 className={styles.compTitle}>{t('featureComparison')}</h2>
         <div className={`${styles.tableWrapper} glass-panel`}>
           <table className={styles.compTable}>
             <thead>
               <tr>
-                <th>Features</th>
+                <th>{t('features')}</th>
                 {visiblePlans.map((plan) => <th key={plan.id}>{planName(plan)}</th>)}
               </tr>
             </thead>
@@ -216,7 +218,7 @@ export const PricingPage: React.FC<PricingPageProps> = ({ navigate }) => {
 
       {/* FAQ Section */}
       <section className={styles.faqSection}>
-        <h2 className={styles.compTitle}>Frequently Asked Questions</h2>
+        <h2 className={styles.compTitle}>{t('faqTitle')}</h2>
         <div className={styles.faqGrid}>
           {faqs.map((faq) => (
             <div key={faq.q} className={`${styles.faqCard} glass-panel`}>

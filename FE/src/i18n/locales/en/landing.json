@@ -1,0 +1,174 @@
+{
+  "showcase": {
+    "title": "See It In Action",
+    "subtitle": "A real look at the KusShoes web portal — track your projects and manage your creations from any browser.",
+    "dashboardTab": "Dashboard",
+    "projectsTab": "Projects",
+    "screenshotAlt": "KusShoes {{label}} screenshot"
+  },
+  "hero": {
+    "badge": "THE FUTURE OF SNEAKER CUSTOMIZATION",
+    "desc": "A unified design ecosystem. Turn physical sneakers into interactive 3D models via photogrammetry, save them to the cloud, and build unique customs inside a responsive 3D design studio.",
+    "launchApp": "Launch App Portal",
+    "exploreProducts": "Explore Products"
+  },
+  "products": {
+    "title": "KusShoes Products",
+    "subtitle": "Seamlessly transition from mobile capture to full-fledged desktop design workspace.",
+    "mobileBadge": "MOBILE APP",
+    "mobileIconAlt": "KusShoes Mobile app icon",
+    "mobileTitle": "KusShoes Mobile",
+    "mobileDesc": "Our mobile scanning companion. Aim, shoot, and capture 360° photos of your footwear. Uploads images directly to the Kiri Engine API server for cloud 3D modeling.",
+    "mobileScreenshotAlt": "KusShoes Mobile 3D scanning app",
+    "desktopBadge": "DESKTOP ENGINE",
+    "desktopTitle": "KusStudio",
+    "desktopDesc": "The creative workshop client. Downloads your reconstructed 3D shoe models from the Cloud Vault. Features advanced colorway editing, painting, and texture selection tools.",
+    "desktopWorkspaceTitle": "KusStudio Workspace",
+    "desktopCanvasLabel": "3D Sneaker Canvas Grid"
+  },
+  "gallery": {
+    "title": "One Base Shoe, Infinite Styles",
+    "subtitle": "Scan a sneaker once, then remix colorways, materials and graphics as many times as you want. Here's a taste of what customization looks like."
+  },
+  "workflow": {
+    "eyebrow": "How it works",
+    "title": "From your shelf to your screen in minutes",
+    "subtitle": "Scan a real sneaker with your phone. We handle the 3D. You make it yours.",
+    "stepLabel": "Step {{number}}",
+    "colorway": "Colorway",
+    "swatchWhite": "White",
+    "swatchFog": "Light Fog",
+    "swatchAccent": "Sole Amber Glow",
+    "swatchDark": "Obsidian",
+    "swatchGum": "Gum Rubber",
+    "footerText": "Secure cloud storage · Print-ready exports · Real-time material preview",
+    "startFreeScan": "Start Free Scan",
+    "step1": {
+      "title": "Scan with your phone",
+      "description": "Walk around your sneaker and snap photos. No special gear needed.",
+      "imageAlt": "Scanning a sneaker with AI 3D capture in the KusShoes mobile app",
+      "cornerBadge": "4 angles captured",
+      "metaText": "About 3 minutes"
+    },
+    "step2": {
+      "title": "We build the 3D model",
+      "description": "Your photos turn into a detailed 3D model in the cloud, automatically.",
+      "imageAlt": "Cloud dashboard syncing and processing a scan",
+      "cornerBadge": "Cloud sync active",
+      "metaText": "Automatic · no action needed"
+    },
+    "step3": {
+      "title": "Make it yours in KusStudio",
+      "description": "Recolor, swap materials, and export for 3D printing.",
+      "imageAlt": "Finished 3D sneaker customized in KusStudio",
+      "cornerBadge": "KusStudio",
+      "metaText": "Desktop app · Windows & macOS"
+    }
+  },
+  "socialProof": {
+    "headlinePrefix": "Loved by a",
+    "headlineAccent": "Growing",
+    "headlineSuffix": "Community",
+    "subtitle": "Real numbers from sneakerheads, streetwear creators, and 3D customizers already cooking heat on <brand>KusShoes</brand>.",
+    "reviewsCount": "2,400+ verified reviews",
+    "statDesigns": "Designs Created",
+    "statScanned": "Sneakers Scanned",
+    "statCreators": "Active Creators",
+    "statOutput": "Output This Week",
+    "footnoteText": "Open creator cloud sync · Free tier available for solo sneakerheads",
+    "exploreApp": "Explore The App",
+    "tickerCommunity": "KUSSHOES COMMUNITY",
+    "tickerDrop": "DROP AFTER DROP",
+    "tickerBuilds": "12.4K+ CUSTOM BUILDS",
+    "tickerStreetCred": "STREET CRED VERIFIED",
+    "tickerRevolution": "3D KICKS REVOLUTION",
+    "tickerLidar": "LIDAR ACCURATE"
+  },
+  "pricingSection": {
+    "title": "KusShoes Pricing",
+    "subtitle": "Choose a plan to power your shoe scans. Annual plans are billed in full.",
+    "monthly": "Monthly",
+    "annually": "Annually",
+    "popularBadge": "POPULAR",
+    "perMonth": "/ month",
+    "perYear": "/ year",
+    "getStarted": "Get Started",
+    "viewComparison": "View Full Feature Comparison",
+    "plans": {
+      "free": {
+        "name": "Free Starter",
+        "desc": "Test the mobile photogrammetry pipeline.",
+        "f1": "3 active projects",
+        "f2": "Standard scan resolution",
+        "f3": "Local client saves only"
+      },
+      "basic": {
+        "name": "Basic Creator",
+        "desc": "Perfect for custom sneaker designers.",
+        "f1": "10 active projects",
+        "f2": "High-definition 3D meshes",
+        "f3": "5GB Cloud scan storage"
+      },
+      "pro": {
+        "name": "Pro Designer",
+        "desc": "For professional sneaker workshops.",
+        "f1": "50 active projects",
+        "f2": "Ultra-HD scan resolution",
+        "f3": "50GB Cloud storage quota"
+      }
+    }
+  },
+  "faqSection": {
+    "title": "Frequently Asked Questions",
+    "subtitle": "Everything you need to know before you start scanning.",
+    "items": [
+      {
+        "q": "What is KusShoes and how does it work?",
+        "a": "Scan a real sneaker with your phone camera, let AI turn it into a 3D model, then customize it in KusStudio (web/desktop) and export a 3D file plus a reference pack to bring to an artisan for physical production. KusShoes doesn’t run manufacturing or take custom orders itself."
+      },
+      {
+        "q": "Do I need a powerful computer to use KusShoes?",
+        "a": "The web app runs directly in your browser (Chrome, Safari, Edge) and offloads most processing to the cloud, so you don’t need a powerful machine to start designing. If you want KusStudio Desktop for full high-fidelity 3D rendering, paint mapping, and offline sync, your computer will need a reasonably capable graphics card to run it smoothly."
+      },
+      {
+        "q": "How does the AI background removal feature work?",
+        "a": "Upload any image — a logo, a pattern, artwork — and our AI automatically detects and removes the background in seconds. Drop the transparent result straight onto the 3D shoe surface right away."
+      },
+      {
+        "q": "I don’t have a sneaker to scan — can I still design one?",
+        "a": "Yes. Start right away with a preset shoe from our library — Free includes 3 base models, Basic/Pro unlock the entire library."
+      },
+      {
+        "q": "What do I need to scan a sneaker?",
+        "a": "Use the KusShoes mobile app, record a video at 720p or higher, place the shoe inside the guide frame and rotate it a full 360°, up to 30 photos or a 60-second video (200MB total). Scanning is a Basic/Pro plan benefit — Free designs on preset models only."
+      },
+      {
+        "q": "What’s the difference between the plans?",
+        "a": "Free is 0đ (3 preset shoes, no scanning, PNG export with watermark) · Basic is 259,000đ/month (1 scan per cycle, GLB export at 2K texture, 100 exports) · Pro is 649,000đ/month (more scans, GLB+OBJ export at 4K texture, no watermark). You can also buy extra scan credits for 49,000đ each while on Basic/Pro."
+      },
+      {
+        "q": "Do plans auto-renew or auto-charge?",
+        "a": "No. We only remind you before your plan expires and give you a 3-day grace period where you can still view and edit designs (scanning and exporting are paused), after which your account moves to Free — your saved designs are never lost."
+      },
+      {
+        "q": "What do I get once my design is finished?",
+        "a": "A 3D file (GLB, plus OBJ on Pro), high-quality render images, and a reference PDF pack with color codes, sizing, and sticker/text placement — ready to hand to an artisan for physical production."
+      },
+      {
+        "q": "What payment methods are supported, and are they safe?",
+        "a": "We support VietQR (PayOS), MoMo, and VNPay. Card details are entered directly on the payment gateway’s page — KusShoes never stores your card or wallet info, and you’ll get a PDF receipt after every successful payment."
+      },
+      {
+        "q": "Is my data and account secure?",
+        "a": "Passwords are encrypted, two-factor authentication (2FA) is supported, and you can view and revoke individual login devices anytime. You can also download all your data or permanently delete your account whenever you want."
+      }
+    ]
+  },
+  "newsletter": {
+    "title": "Join the KusShoes Beta",
+    "desc": "Register your email today to receive download links for KusShoes & KusStudio once public testing starts. Get 50 free cloud scans upon launch!",
+    "successMessage": "Thank you! We will email you beta credentials soon.",
+    "emailPlaceholder": "Enter your email address...",
+    "subscribe": "Subscribe"
+  }
+}

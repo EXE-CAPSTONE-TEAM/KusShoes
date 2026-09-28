@@ -1,0 +1,13 @@
+{
+  "missingToken": "Liên kết này thiếu mã token.",
+  "loadError": "Không thể tải liên kết này.",
+  "downloadError": "Không thể bắt đầu tải xuống.",
+  "loading": "Đang tải tệp được chia sẻ…",
+  "expiredHint": "Hãy hỏi người gửi liên kết này để lấy liên kết mới — liên kết có thời hạn và giới hạn số lần tải xuống.",
+  "subtitle": "Được chia sẻ để sản xuất — một bản xuất 3D từ KusShoes.",
+  "format": "Định dạng",
+  "downloadsLeft": "Lượt tải còn lại",
+  "expires": "Hết hạn",
+  "noDownloadsLeft": "Đã hết lượt tải",
+  "downloadFile": "Tải xuống tệp"
+}

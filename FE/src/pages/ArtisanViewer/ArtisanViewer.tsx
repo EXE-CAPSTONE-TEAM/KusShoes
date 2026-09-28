@@ -1,5 +1,6 @@
 import React, { useEffect, useState } from 'react';
 import { Download, AlertTriangle, Loader2, Box } from 'lucide-react';
+import { useTranslation } from 'react-i18next';
 import { studioApi, type ArtisanPublicView } from '../../api/studio';
 import { LoginBackdrop } from '../Login/LoginBackdrop';
 import loginStyles from '../Login/Login.module.css';
@@ -12,6 +13,7 @@ import styles from './ArtisanViewer.module.css';
  * of times before it expires.
  */
 export const ArtisanViewer: React.FC = () => {
+  const { t } = useTranslation('artisan');
   const token = window.location.pathname.replace(/^\/artisan\//, '').replace(/\/$/, '');
 
   const [view, setView] = useState<ArtisanPublicView | null>(null);
@@ -21,7 +23,7 @@ export const ArtisanViewer: React.FC = () => {
 
   useEffect(() => {
     if (!token) {
-      setError('This link is missing its token.');
+      setError(t('missingToken'));
       setLoading(false);
       return;
     }
@@ -29,9 +31,10 @@ export const ArtisanViewer: React.FC = () => {
       .getPublicArtisanLink(token)
       .then(setView)
       .catch((caught) => {
-        setError(caught instanceof Error ? caught.message : 'Unable to load this link.');
+        setError(caught instanceof Error ? caught.message : t('loadError'));
       })
       .finally(() => setLoading(false));
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [token]);
 
   const handleDownload = async () => {
@@ -44,7 +47,7 @@ export const ArtisanViewer: React.FC = () => {
         prev ? { ...prev, downloads_remaining: prev.downloads_remaining - 1 } : prev,
       );
     } catch (caught) {
-      setError(caught instanceof Error ? caught.message : 'Unable to start the download.');
+      setError(caught instanceof Error ? caught.message : t('downloadError'));
     } finally {
       setDownloading(false);
     }
@@ -62,33 +65,30 @@ export const ArtisanViewer: React.FC = () => {
         {loading ? (
           <div className={styles.state}>
             <Loader2 size={26} className={loginStyles.spin} />
-            <p>Loading shared file…</p>
+            <p>{t('loading')}</p>
           </div>
         ) : error ? (
           <div className={styles.state}>
             <AlertTriangle size={26} className={styles.errorIcon} />
             <p className={styles.errorText}>{error}</p>
-            <p className={styles.hint}>
-              Ask whoever sent you this link for a fresh one — links expire and have a limited
-              number of downloads.
-            </p>
+            <p className={styles.hint}>{t('expiredHint')}</p>
           </div>
         ) : view ? (
           <>
             <h1 className={styles.title}>{view.project_name}</h1>
-            <p className={styles.subtitle}>Shared for production — one KusShoes 3D export.</p>
+            <p className={styles.subtitle}>{t('subtitle')}</p>
 
             <div className={styles.metaGrid}>
               <div className={styles.metaItem}>
-                <span className={styles.metaLabel}>Format</span>
+                <span className={styles.metaLabel}>{t('format')}</span>
                 <span className={styles.metaValue}>{view.format.toUpperCase()}</span>
               </div>
               <div className={styles.metaItem}>
-                <span className={styles.metaLabel}>Downloads left</span>
+                <span className={styles.metaLabel}>{t('downloadsLeft')}</span>
                 <span className={styles.metaValue}>{view.downloads_remaining}</span>
               </div>
               <div className={styles.metaItem}>
-                <span className={styles.metaLabel}>Expires</span>
+                <span className={styles.metaLabel}>{t('expires')}</span>
                 <span className={styles.metaValue}>
                   {new Date(view.expires_at).toLocaleString()}
                 </span>
@@ -107,7 +107,7 @@ export const ArtisanViewer: React.FC = () => {
               ) : (
                 <Download size={18} />
               )}
-              {view.downloads_remaining <= 0 ? 'No downloads left' : 'Download file'}
+              {view.downloads_remaining <= 0 ? t('noDownloadsLeft') : t('downloadFile')}
             </button>
           </>
         ) : null}

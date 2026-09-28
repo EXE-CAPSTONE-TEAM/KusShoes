@@ -1,10 +1,11 @@
 import React, { useState } from 'react';
 import { motion, type Variants } from 'framer-motion';
-import { 
-  Smartphone, Monitor, Download, Apple, Play, Cpu, 
+import {
+  Smartphone, Monitor, Download, Apple, Play, Cpu,
   Layers, Zap, Shield, CheckCircle2, ChevronRight,
   AppWindow, HardDrive, Sparkles
 } from 'lucide-react';
+import { Trans, useTranslation } from 'react-i18next';
 import { Navbar } from '../../components/Navbar/Navbar';
 import { Footer } from '../../components/Footer/Footer';
 import { InteractiveParticleGrid } from '../../components/InteractiveParticleGrid/InteractiveParticleGrid';
@@ -18,20 +19,21 @@ interface ProductsPageProps {
 
 type DesktopOS = 'windows' | 'mac-silicon' | 'mac-intel';
 
-const DESKTOP_OS_OPTIONS: Array<{ value: DesktopOS; label: string }> = [
-  { value: 'windows', label: 'Windows 10/11 (.EXE)' },
-  { value: 'mac-silicon', label: 'macOS Apple Silicon (M1/M2/M3 .DMG)' },
-  { value: 'mac-intel', label: 'macOS Intel Core (.DMG)' },
-];
-
 function isDesktopOS(value: string): value is DesktopOS {
-  return DESKTOP_OS_OPTIONS.some((option) => option.value === value);
+  return value === 'windows' || value === 'mac-silicon' || value === 'mac-intel';
 }
 
 export const ProductsPage: React.FC<ProductsPageProps> = ({ navigate }) => {
+  const { t } = useTranslation('products');
   const { toast } = useToast();
   const [activeTab, setActiveTab] = useState<'ios' | 'android'>('ios');
   const [desktopOS, setDesktopOS] = useState<DesktopOS>('windows');
+
+  const DESKTOP_OS_OPTIONS: Array<{ value: DesktopOS; label: string }> = [
+    { value: 'windows', label: t('osOptions.windows') },
+    { value: 'mac-silicon', label: t('osOptions.macSilicon') },
+    { value: 'mac-intel', label: t('osOptions.macIntel') },
+  ];
 
   const containerVariants = {
     hidden: { opacity: 0 },
@@ -51,7 +53,7 @@ export const ProductsPage: React.FC<ProductsPageProps> = ({ navigate }) => {
   };
 
   const handleDownload = (appName: string, platform: string) => {
-    toast(`Starting download for ${appName} (${platform}). Thank you for participating in our beta test!`);
+    toast(t('downloadToast', { appName, platform }));
   };
 
   return (
@@ -72,14 +74,12 @@ export const ProductsPage: React.FC<ProductsPageProps> = ({ navigate }) => {
             transition={{ duration: 0.6 }}
             className={styles.heroHeader}
           >
-            <span className={styles.badge}>THE DUAL-APP ECOSYSTEM</span>
+            <span className={styles.badge}>{t('badge')}</span>
             <h1 className={styles.mainTitle}>
-              SCAN WITH <span className="text-gradient-orange">KUSSHOES</span>.<br />
-              DESIGN IN <span className="text-gradient-orange">KUSSTUDIO</span>.
+              {t('heroTitleLine1Prefix')} <span className="text-gradient-orange">KUSSHOES</span>.<br />
+              {t('heroTitleLine2Prefix')} <span className="text-gradient-orange">KUSSTUDIO</span>.
             </h1>
-            <p className={styles.heroSubtitle}>
-              Two dedicated tools working in perfect unison. Capture physical geometry in real-world spaces with our mobile app, and apply pro-grade textures, colors, and designs on your desktop device.
-            </p>
+            <p className={styles.heroSubtitle}>{t('heroSubtitle')}</p>
           </motion.div>
         </section>
 
@@ -97,45 +97,43 @@ export const ProductsPage: React.FC<ProductsPageProps> = ({ navigate }) => {
                 <Smartphone size={28} />
               </div>
               <div>
-                <span className={styles.productTag}>MOBILE CAPTURE APP</span>
+                <span className={styles.productTag}>{t('mobile.tag')}</span>
                 <h2 className={styles.cardTitle}>KusShoes App</h2>
               </div>
             </div>
 
-            <p className={styles.cardDescription}>
-              Transform your physical sneaker collection into high-fidelity 3D digital twins. Just take a series of photos of any shoe using your mobile phone, and let our photogrammetry engine do the rest.
-            </p>
+            <p className={styles.cardDescription}>{t('mobile.description')}</p>
 
             <div className={styles.specList}>
               <div className={styles.specItem}>
                 <Sparkles size={16} className={styles.specIcon} />
-                <span>Kiri Engine photogrammetry API reconstruction</span>
+                <span>{t('mobile.spec1')}</span>
               </div>
               <div className={styles.specItem}>
                 <Cpu size={16} className={styles.specIcon} />
-                <span>LiDAR scanning integration for depth mapping</span>
+                <span>{t('mobile.spec2')}</span>
               </div>
               <div className={styles.specItem}>
                 <Layers size={16} className={styles.specIcon} />
-                <span>Auto-extraction of upper mesh and sole boundaries</span>
+                <span>{t('mobile.spec3')}</span>
               </div>
               <div className={styles.specItem}>
                 <CheckCircle2 size={16} className={styles.specIcon} />
-                <span>Instant upload & sync to secure Cloud Vault</span>
+                <span>{t('mobile.spec4')}</span>
               </div>
             </div>
 
             {/* Mobile Download Interface */}
             <div className={styles.downloadBox}>
-              <h3 className={styles.downloadTitle}>Select Platform</h3>
+              <h3 className={styles.downloadTitle}>{t('mobile.selectPlatform')}</h3>
               <div className={styles.tabButtons}>
-                <button 
+                <button
                   onClick={() => setActiveTab('ios')}
                   className={`${styles.tabBtn} ${activeTab === 'ios' ? styles.tabBtnActive : ''}`}
                 >
                   <Apple size={16} /> iOS
                 </button>
-                <button 
+                <button
                   onClick={() => setActiveTab('android')}
                   className={`${styles.tabBtn} ${activeTab === 'android' ? styles.tabBtnActive : ''}`}
                 >
@@ -146,24 +144,24 @@ export const ProductsPage: React.FC<ProductsPageProps> = ({ navigate }) => {
               <div className={styles.downloadDetails}>
                 {activeTab === 'ios' ? (
                   <div className={styles.platformMeta}>
-                    <span>Version 1.4.2 (Beta) • iOS 16.0 or higher</span>
-                    <button 
-                      className="btn-neon-orange" 
+                    <span>{t('mobile.iosMeta')}</span>
+                    <button
+                      className="btn-neon-orange"
                       style={{ width: '100%', marginTop: '12px' }}
                       onClick={() => handleDownload('KusShoes', 'iOS (.IPA)')}
                     >
-                      <Download size={18} /> Download TestFlight IPA
+                      <Download size={18} /> {t('mobile.downloadIos')}
                     </button>
                   </div>
                 ) : (
                   <div className={styles.platformMeta}>
-                    <span>Version 1.4.0 (Beta) • Android 11.0 or higher</span>
-                    <button 
-                      className="btn-neon-orange" 
+                    <span>{t('mobile.androidMeta')}</span>
+                    <button
+                      className="btn-neon-orange"
                       style={{ width: '100%', marginTop: '12px' }}
                       onClick={() => handleDownload('KusShoes', 'Android (.APK)')}
                     >
-                      <Download size={18} /> Download APK Installer
+                      <Download size={18} /> {t('mobile.downloadAndroid')}
                     </button>
                   </div>
                 )}
@@ -178,37 +176,35 @@ export const ProductsPage: React.FC<ProductsPageProps> = ({ navigate }) => {
                 <Monitor size={28} />
               </div>
               <div>
-                <span className={styles.productTag}>DESKTOP DESIGN SUITE</span>
+                <span className={styles.productTag}>{t('desktop.tag')}</span>
                 <h2 className={styles.cardTitle}>KusStudio Desktop</h2>
               </div>
             </div>
 
-            <p className={styles.cardDescription}>
-              The ultimate 3D shoe customizer interface. Load your synced mobile scans instantly, map colors, modify materials, apply custom graphics, and export print-ready assets.
-            </p>
+            <p className={styles.cardDescription}>{t('desktop.description')}</p>
 
             <div className={styles.specList}>
               <div className={styles.specItem}>
                 <Zap size={16} className={styles.specIcon} />
-                <span>Hardware-accelerated real-time WebGL renderer</span>
+                <span>{t('desktop.spec1')}</span>
               </div>
               <div className={styles.specItem}>
                 <AppWindow size={16} className={styles.specIcon} />
-                <span>Multi-layer canvas painting and custom stickers overlay</span>
+                <span>{t('desktop.spec2')}</span>
               </div>
               <div className={styles.specItem}>
                 <HardDrive size={16} className={styles.specIcon} />
-                <span>GLTF, OBJ, FBX, and Apple USDZ 3D model exports</span>
+                <span>{t('desktop.spec3')}</span>
               </div>
               <div className={styles.specItem}>
                 <Shield size={16} className={styles.specIcon} />
-                <span>Local daemon compiler server listening on port 8421</span>
+                <span>{t('desktop.spec4')}</span>
               </div>
             </div>
 
             {/* Desktop Download Interface */}
             <div className={styles.downloadBox}>
-              <h3 className={styles.downloadTitle}>Select Operating System</h3>
+              <h3 className={styles.downloadTitle}>{t('desktop.selectOs')}</h3>
               <div className={styles.selectDropdownWrapper}>
                 <Select
                   value={desktopOS}
@@ -216,22 +212,22 @@ export const ProductsPage: React.FC<ProductsPageProps> = ({ navigate }) => {
                     if (isDesktopOS(value)) setDesktopOS(value);
                   }}
                   options={DESKTOP_OS_OPTIONS}
-                  ariaLabel="Select desktop operating system"
+                  ariaLabel={t('selectDesktopOsAria')}
                 />
               </div>
 
               <div className={styles.downloadDetails}>
                 <div className={styles.platformMeta}>
-                  {desktopOS === 'windows' && <span>File size: 142 MB • Minimum: GTX 1060 / 8GB RAM</span>}
-                  {desktopOS === 'mac-silicon' && <span>File size: 128 MB • Fully native for Apple M-series</span>}
-                  {desktopOS === 'mac-intel' && <span>File size: 135 MB • Requires macOS 12.0 or higher</span>}
-                  
-                  <button 
-                    className="btn-neon-orange" 
+                  {desktopOS === 'windows' && <span>{t('desktop.windowsMeta')}</span>}
+                  {desktopOS === 'mac-silicon' && <span>{t('desktop.macSiliconMeta')}</span>}
+                  {desktopOS === 'mac-intel' && <span>{t('desktop.macIntelMeta')}</span>}
+
+                  <button
+                    className="btn-neon-orange"
                     style={{ width: '100%', marginTop: '12px' }}
                     onClick={() => handleDownload('KusStudio', desktopOS)}
                   >
-                    <Download size={18} /> Download Desktop Installer
+                    <Download size={18} /> {t('desktop.downloadInstaller')}
                   </button>
                 </div>
               </div>
@@ -249,12 +245,12 @@ export const ProductsPage: React.FC<ProductsPageProps> = ({ navigate }) => {
         >
           <div className={styles.calloutGrid}>
             <div className={styles.calloutText}>
-              <h3 className={styles.calloutTitle}>How They Sync</h3>
+              <h3 className={styles.calloutTitle}>{t('workflow.title')}</h3>
               <p>
-                When you scan a sneaker using the mobile <strong>KusShoes App</strong>, the photogrammetry scans compile directly in our Cloud Vault. Upon launching <strong>KusStudio Desktop</strong>, the application detects your active cloud workspace and syncs all scans in less than 3 seconds. The desktop suite also hosts a local listener that communicates directly with your portal web browser.
+                <Trans i18nKey="workflow.desc" t={t} components={{ b1: <strong />, b2: <strong /> }} />
               </p>
               <button className="btn-outline" onClick={() => navigate('/login')} style={{ marginTop: '16px' }}>
-                Go to Portal Console <ChevronRight size={16} />
+                {t('workflow.cta')} <ChevronRight size={16} />
               </button>
             </div>
             <div className={styles.syncGraphic}>
@@ -264,7 +260,7 @@ export const ProductsPage: React.FC<ProductsPageProps> = ({ navigate }) => {
               </div>
               <div className={styles.graphicArrow}>
                 <Zap size={20} className={styles.zapIconAnim} />
-                <span className={styles.syncSpeedText}>Cloud Sync</span>
+                <span className={styles.syncSpeedText}>{t('workflow.cloudSync')}</span>
               </div>
               <div className={styles.graphicDesktop}>
                 <Monitor size={32} />

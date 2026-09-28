@@ -1,0 +1,174 @@
+{
+  "showcase": {
+    "title": "Xem trực tiếp",
+    "subtitle": "Cái nhìn thực tế về portal web của KusShoes — theo dõi dự án và quản lý sản phẩm sáng tạo từ bất kỳ trình duyệt nào.",
+    "dashboardTab": "Dashboard",
+    "projectsTab": "Dự án",
+    "screenshotAlt": "Ảnh chụp màn hình {{label}} của KusShoes"
+  },
+  "hero": {
+    "badge": "TƯƠNG LAI CỦA TUỲ CHỈNH SNEAKER",
+    "desc": "Một hệ sinh thái thiết kế thống nhất. Biến giày thật thành mô hình 3D tương tác bằng photogrammetry, lưu lên đám mây và tạo ra các mẫu độc bản trong studio thiết kế 3D mượt mà.",
+    "launchApp": "Vào App Portal",
+    "exploreProducts": "Khám phá sản phẩm"
+  },
+  "products": {
+    "title": "Sản phẩm KusShoes",
+    "subtitle": "Chuyển đổi liền mạch từ chụp ảnh di động sang không gian thiết kế desktop toàn diện.",
+    "mobileBadge": "ỨNG DỤNG DI ĐỘNG",
+    "mobileIconAlt": "Biểu tượng ứng dụng KusShoes Mobile",
+    "mobileTitle": "KusShoes Mobile",
+    "mobileDesc": "Người bạn đồng hành quét di động. Ngắm, chụp và ghi lại ảnh 360° đôi giày của bạn. Ảnh được tải trực tiếp lên máy chủ Kiri Engine API để dựng mô hình 3D trên đám mây.",
+    "mobileScreenshotAlt": "Ứng dụng quét 3D KusShoes Mobile",
+    "desktopBadge": "ENGINE DESKTOP",
+    "desktopTitle": "KusStudio",
+    "desktopDesc": "Ứng dụng xưởng sáng tạo. Tải về các mô hình giày 3D đã dựng lại từ Cloud Vault. Có đầy đủ công cụ phối màu, vẽ và chọn chất liệu nâng cao.",
+    "desktopWorkspaceTitle": "Không gian làm việc KusStudio",
+    "desktopCanvasLabel": "Lưới canvas giày 3D"
+  },
+  "gallery": {
+    "title": "Một đôi giày gốc, vô số phong cách",
+    "subtitle": "Quét một đôi giày một lần, sau đó phối lại màu sắc, chất liệu và hoạ tiết bao nhiêu lần tuỳ thích. Đây là một chút hương vị của việc tuỳ chỉnh."
+  },
+  "workflow": {
+    "eyebrow": "Cách hoạt động",
+    "title": "Từ kệ giày đến màn hình chỉ trong vài phút",
+    "subtitle": "Quét một đôi giày thật bằng điện thoại. Chúng tôi lo phần 3D. Bạn biến nó thành của riêng mình.",
+    "stepLabel": "Bước {{number}}",
+    "colorway": "Phối màu",
+    "swatchWhite": "Trắng",
+    "swatchFog": "Sương mờ nhạt",
+    "swatchAccent": "Ánh hổ phách đế giày",
+    "swatchDark": "Đen huyền",
+    "swatchGum": "Cao su Gum",
+    "footerText": "Lưu trữ đám mây bảo mật · Xuất file sẵn sàng in · Xem trước chất liệu thời gian thực",
+    "startFreeScan": "Quét miễn phí ngay",
+    "step1": {
+      "title": "Quét bằng điện thoại",
+      "description": "Đi vòng quanh đôi giày và chụp ảnh. Không cần thiết bị đặc biệt.",
+      "imageAlt": "Quét giày bằng công nghệ chụp AI 3D trong ứng dụng di động KusShoes",
+      "cornerBadge": "Đã chụp 4 góc",
+      "metaText": "Khoảng 3 phút"
+    },
+    "step2": {
+      "title": "Chúng tôi dựng mô hình 3D",
+      "description": "Ảnh của bạn tự động trở thành mô hình 3D chi tiết trên đám mây.",
+      "imageAlt": "Dashboard đám mây đang đồng bộ và xử lý bản quét",
+      "cornerBadge": "Đang đồng bộ đám mây",
+      "metaText": "Tự động · không cần thao tác"
+    },
+    "step3": {
+      "title": "Biến nó thành của bạn trong KusStudio",
+      "description": "Đổi màu, thay chất liệu và xuất file để in 3D.",
+      "imageAlt": "Giày 3D hoàn chỉnh được tuỳ chỉnh trong KusStudio",
+      "cornerBadge": "KusStudio",
+      "metaText": "Ứng dụng desktop · Windows & macOS"
+    }
+  },
+  "socialProof": {
+    "headlinePrefix": "Được yêu thích bởi",
+    "headlineAccent": "cộng đồng",
+    "headlineSuffix": "đang lớn mạnh",
+    "subtitle": "Những con số thực tế từ những người mê sneaker, nhà sáng tạo streetwear và nhà tuỳ chỉnh 3D đang tạo trend trên <brand>KusShoes</brand>.",
+    "reviewsCount": "Hơn 2.400 đánh giá đã xác minh",
+    "statDesigns": "Thiết kế đã tạo",
+    "statScanned": "Giày đã quét",
+    "statCreators": "Nhà sáng tạo đang hoạt động",
+    "statOutput": "Sản lượng tuần này",
+    "footnoteText": "Đồng bộ đám mây mở cho nhà sáng tạo · Có gói miễn phí cho người dùng cá nhân",
+    "exploreApp": "Khám phá ứng dụng",
+    "tickerCommunity": "CỘNG ĐỒNG KUSSHOES",
+    "tickerDrop": "DROP NỐI TIẾP DROP",
+    "tickerBuilds": "HƠN 12,4K MẪU TUỲ CHỈNH",
+    "tickerStreetCred": "ĐÃ XÁC MINH STREET CRED",
+    "tickerRevolution": "CUỘC CÁCH MẠNG GIÀY 3D",
+    "tickerLidar": "CHÍNH XÁC BẰNG LIDAR"
+  },
+  "pricingSection": {
+    "title": "Bảng giá KusShoes",
+    "subtitle": "Chọn một gói để hỗ trợ các bản quét giày của bạn. Gói năm được thanh toán trọn gói.",
+    "monthly": "Theo tháng",
+    "annually": "Theo năm",
+    "popularBadge": "PHỔ BIẾN",
+    "perMonth": "/ tháng",
+    "perYear": "/ năm",
+    "getStarted": "Bắt đầu ngay",
+    "viewComparison": "Xem so sánh đầy đủ tính năng",
+    "plans": {
+      "free": {
+        "name": "Free Starter",
+        "desc": "Thử nghiệm quy trình photogrammetry di động.",
+        "f1": "3 dự án hoạt động",
+        "f2": "Độ phân giải quét tiêu chuẩn",
+        "f3": "Chỉ lưu cục bộ trên client"
+      },
+      "basic": {
+        "name": "Basic Creator",
+        "desc": "Hoàn hảo cho nhà thiết kế giày tuỳ chỉnh.",
+        "f1": "10 dự án hoạt động",
+        "f2": "Mesh 3D độ nét cao",
+        "f3": "5GB lưu trữ bản quét trên đám mây"
+      },
+      "pro": {
+        "name": "Pro Designer",
+        "desc": "Dành cho xưởng thiết kế giày chuyên nghiệp.",
+        "f1": "50 dự án hoạt động",
+        "f2": "Độ phân giải quét siêu nét",
+        "f3": "Hạn mức lưu trữ đám mây 50GB"
+      }
+    }
+  },
+  "faqSection": {
+    "title": "Câu hỏi thường gặp",
+    "subtitle": "Mọi thứ bạn cần biết trước khi bắt đầu quét.",
+    "items": [
+      {
+        "q": "KusShoes là gì và hoạt động thế nào?",
+        "a": "Quét một đôi giày thật bằng camera điện thoại, để AI biến nó thành mô hình 3D, sau đó tuỳ chỉnh trong KusStudio (web/desktop) và xuất file 3D kèm gói tham khảo để mang đến nghệ nhân gia công thực tế. KusShoes không tự sản xuất hay nhận đặt hàng gia công."
+      },
+      {
+        "q": "Tôi có cần máy tính mạnh để dùng KusShoes không?",
+        "a": "Ứng dụng web chạy trực tiếp trên trình duyệt (Chrome, Safari, Edge) và đẩy phần lớn xử lý lên đám mây, nên bạn không cần máy mạnh để bắt đầu thiết kế. Nếu muốn dùng KusStudio Desktop để dựng hình 3D độ trung thực cao, paint mapping và đồng bộ ngoại tuyến, máy của bạn cần card đồ hoạ đủ khoẻ để chạy mượt."
+      },
+      {
+        "q": "Tính năng AI tách nền hoạt động thế nào?",
+        "a": "Tải lên bất kỳ hình ảnh nào — logo, hoạ tiết, tranh vẽ — AI của chúng tôi sẽ tự động nhận diện và xoá nền chỉ trong vài giây. Kéo thả kết quả trong suốt thẳng lên bề mặt giày 3D ngay lập tức."
+      },
+      {
+        "q": "Tôi không có giày để quét — vẫn thiết kế được không?",
+        "a": "Có. Bắt đầu ngay với một mẫu giày có sẵn từ thư viện — gói Free có 3 mẫu cơ bản, Basic/Pro mở khoá toàn bộ thư viện."
+      },
+      {
+        "q": "Tôi cần chuẩn bị gì để quét một đôi giày?",
+        "a": "Dùng ứng dụng di động KusShoes, quay video ở độ phân giải 720p trở lên, đặt giày vào khung hướng dẫn và xoay đủ 360°, tối đa 30 ảnh hoặc video 60 giây (tổng 200MB). Quét là quyền lợi của gói Basic/Pro — gói Free chỉ thiết kế trên mẫu có sẵn."
+      },
+      {
+        "q": "Các gói dịch vụ khác nhau thế nào?",
+        "a": "Free 0đ (3 mẫu giày có sẵn, không quét, xuất PNG có watermark) · Basic 259.000đ/tháng (1 lượt quét mỗi chu kỳ, xuất GLB texture 2K, 100 lượt xuất) · Pro 649.000đ/tháng (nhiều lượt quét hơn, xuất GLB+OBJ texture 4K, không watermark). Bạn cũng có thể mua thêm credit quét lẻ 49.000đ/lượt khi đang dùng Basic/Pro."
+      },
+      {
+        "q": "Gói có tự động gia hạn hay tự động trừ tiền không?",
+        "a": "Không. Chúng tôi chỉ nhắc bạn trước khi gói hết hạn và cho 3 ngày ân hạn để bạn vẫn xem/sửa thiết kế (tạm khoá quét và xuất file), sau đó tài khoản mới chuyển về Free — thiết kế đã lưu không bao giờ bị mất."
+      },
+      {
+        "q": "Sau khi thiết kế xong tôi nhận được gì?",
+        "a": "Một file 3D (GLB, thêm OBJ với gói Pro), ảnh render chất lượng cao và một gói tham khảo PDF ghi mã màu, kích thước, vị trí sticker/chữ — sẵn sàng mang cho nghệ nhân gia công thực tế."
+      },
+      {
+        "q": "Hỗ trợ phương thức thanh toán nào, có an toàn không?",
+        "a": "Chúng tôi hỗ trợ VietQR (PayOS), MoMo và VNPay. Thông tin thẻ được nhập trực tiếp trên trang cổng thanh toán — KusShoes không bao giờ lưu thông tin thẻ hay ví của bạn, và bạn sẽ nhận biên nhận PDF sau mỗi giao dịch thành công."
+      },
+      {
+        "q": "Dữ liệu và tài khoản của tôi có an toàn không?",
+        "a": "Mật khẩu được mã hoá, hỗ trợ xác thực hai lớp (2FA), và bạn có thể xem, thu hồi từng thiết bị đăng nhập bất cứ lúc nào. Bạn cũng có thể tải toàn bộ dữ liệu hoặc xoá tài khoản vĩnh viễn khi cần."
+      }
+    ]
+  },
+  "newsletter": {
+    "title": "Tham gia bản Beta KusShoes",
+    "desc": "Đăng ký email ngay hôm nay để nhận liên kết tải KusShoes & KusStudio khi mở thử nghiệm công khai. Nhận 50 lượt quét đám mây miễn phí khi ra mắt!",
+    "successMessage": "Cảm ơn bạn! Chúng tôi sẽ gửi thông tin đăng nhập bản beta sớm nhất.",
+    "emailPlaceholder": "Nhập địa chỉ email của bạn...",
+    "subscribe": "Đăng ký"
+  }
+}
