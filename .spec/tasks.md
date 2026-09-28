@@ -36,7 +36,7 @@ BE+FE = needs backend work · DECISION = blocked on a product decision from T AK
   Lane: FE. Nothing imports this folder; it contains a fake "Try Demo" auth and stale prices
   (199k / 499k). Acceptance: folder removed, `npm run build` and tests pass.
 
-- [ ] **T05 — Project list follows the cursor**
+- [x] **T05 — Project list follows the cursor**
   Lane: FE. File: `FE/src/api/client.ts` (`listProjects`), `App.tsx`.
   Today only the first 100 projects are loaded. Acceptance: all pages are fetched.
 

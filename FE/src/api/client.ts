@@ -664,6 +664,18 @@ export const api = {
     };
   },
 
+  /** Every project of the user: follows next_cursor, since one page holds at most 100 (BE limit). */
+  async listAllProjects(): Promise<PortalProject[]> {
+    const items: PortalProject[] = [];
+    let cursor: string | null = null;
+    do {
+      const page = await this.listProjects(cursor);
+      items.push(...page.items);
+      cursor = page.hasNext ? page.nextCursor : null;
+    } while (cursor);
+    return items;
+  },
+
   async getProject(projectId: string): Promise<PortalProject> {
     const project = await request<ProjectResponse>(`/api/v1/projects/${projectId}`);
     return toPortalProject(project);

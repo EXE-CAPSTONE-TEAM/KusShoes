@@ -151,8 +151,8 @@ function App() {
     setProjectsLoading(true);
     setProjectsError('');
     api
-      .listProjects()
-      .then((page) => setProjects(page.items))
+      .listAllProjects()
+      .then(setProjects)
       .catch((caught) => {
         if (caught instanceof ApiError && caught.status === 401) {
           if (window.location.pathname !== '/login') {
