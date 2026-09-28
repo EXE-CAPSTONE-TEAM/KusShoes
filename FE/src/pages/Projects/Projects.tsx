@@ -29,6 +29,12 @@ import { Select } from '../../components/Select/Select';
 import { ConfirmDialog } from '../../components/ConfirmDialog/ConfirmDialog';
 import { useToast } from '../../context/ToastContext';
 import { api, type PortalProject } from '../../api/client';
+import {
+  SOURCE_MODEL_ACCEPT,
+  SOURCE_MODEL_MAX_BYTES,
+  importSourceModel,
+  inferSourceModelContentType,
+} from '../../api/sourceModel';
 import { formatDateTime, formatRelativeTime } from '../../utils/format';
 import { ProjectsEmptyState } from './ProjectsEmptyState';
 import { ProjectTrashPanel } from './ProjectTrashPanel';
@@ -48,7 +54,8 @@ type ProjectSortBy = 'name' | 'date' | 'size';
 type ProjectViewMode = 'grid' | 'list';
 type WizardStep = 1 | 2 | 3;
 type WizardSource = 'cloud' | 'upload';
-type WizardDesktopStatus = 'idle' | 'packaging' | 'launched';
+// Real steps of the final wizard action; 'uploading' only runs for the .GLB source.
+type WizardLaunchStep = 'idle' | 'creating' | 'uploading' | 'launching' | 'launched' | 'error';
 type ProjectVisibility = PortalProject['visibility'];
 
 const WIZARD_VISIBILITY_OPTIONS: Array<{
@@ -148,8 +155,17 @@ export const Projects: React.FC<ProjectsProps> = ({
   const [wizardBaseModel, setWizardBaseModel] = useState('');
   const [wizardVisibility, setWizardVisibility] = useState<ProjectVisibility>('Private');
 
-  // Step 3 Desktop simulation state
-  const [wizardDesktopStatus, setWizardDesktopStatus] = useState<WizardDesktopStatus>('idle');
+  // Step 3: create the project, import the uploaded model, then open KusStudio
+  const [wizardLaunchStep, setWizardLaunchStep] = useState<WizardLaunchStep>('idle');
+  const [wizardFailedStep, setWizardFailedStep] = useState<WizardLaunchStep | null>(null);
+  const [wizardError, setWizardError] = useState<string | null>(null);
+  // Kept across a retry so a failed upload/launch never creates a second project.
+  const [wizardCreatedProject, setWizardCreatedProject] = useState<PortalProject | null>(null);
+  const [wizardModelImported, setWizardModelImported] = useState(false);
+  const wizardBusy =
+    wizardLaunchStep === 'creating' ||
+    wizardLaunchStep === 'uploading' ||
+    wizardLaunchStep === 'launching';
 
   useEffect(() => {
     if (cloudScans.length === 0) {
@@ -291,6 +307,15 @@ export const Projects: React.FC<ProjectsProps> = ({
   const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     if (e.target.files && e.target.files[0]) {
       const file = e.target.files[0];
+      e.target.value = '';
+      if (!inferSourceModelContentType(file.name)) {
+        toast('Only .glb and .gltf files are supported for the 3D model.', 'error');
+        return;
+      }
+      if (file.size > SOURCE_MODEL_MAX_BYTES) {
+        toast('This file is larger than the 500 MB limit for a 3D model.', 'error');
+        return;
+      }
       setUploadedFile(file);
       // Pre-fill Step 2 project details based on filename
       const cleanName = file.name.replace(/\.[^/.]+$/, '').replace(/[_-]/g, ' ');
@@ -310,6 +335,9 @@ export const Projects: React.FC<ProjectsProps> = ({
         }
         setWizardName(`${selectedScan.name} Remix`);
         setWizardBaseModel(selectedScan.baseModel || 'Custom Base');
+      } else if (!uploadedFile) {
+        toast('Choose a .glb or .gltf file to upload.', 'error');
+        return;
       }
       setWizardStep(2);
     } else if (wizardStep === 2) {
@@ -321,41 +349,94 @@ export const Projects: React.FC<ProjectsProps> = ({
     }
   };
 
-  // Finalize Wizard & Create project
-  const handleCreateProjectFinal = () => {
-    setWizardDesktopStatus('packaging');
-    setTimeout(async () => {
-      setWizardDesktopStatus('launched');
-      try {
-        const newProject = await api.createProject({
+  const resetWizard = () => {
+    setIsCreateWizardOpen(false);
+    setWizardStep(1);
+    setWizardName('');
+    setWizardBaseModel('');
+    setUploadedFile(null);
+    setWizardLaunchStep('idle');
+    setWizardFailedStep(null);
+    setWizardError(null);
+    setWizardCreatedProject(null);
+    setWizardModelImported(false);
+  };
+
+  // Finalize Wizard: create the project, import the uploaded model, then open KusStudio.
+  // Re-running after a failure resumes from the step that failed.
+  const handleCreateProjectFinal = async () => {
+    if (wizardBusy) return;
+    setWizardError(null);
+    setWizardFailedStep(null);
+    let step: WizardLaunchStep = 'creating';
+    try {
+      let project = wizardCreatedProject;
+      if (!project) {
+        setWizardLaunchStep(step);
+        const created = await api.createProject({
           name: wizardName.trim(),
           description: wizardBaseModel
             ? `Base model: ${wizardBaseModel}`
             : 'Created from the KusShoes web portal.',
         });
-        setProjects((prev) => [newProject, ...prev]);
-        // Reset and close modal
-        setIsCreateWizardOpen(false);
-        setWizardStep(1);
-        setWizardName('');
-        setWizardBaseModel('');
-        setWizardDesktopStatus('idle');
-        setUploadedFile(null);
-        toast(`Project "${wizardName}" was created on the server.`);
-      } catch (caught) {
-        setWizardDesktopStatus('idle');
-        toast(caught instanceof Error ? caught.message : 'Unable to create project.', 'error');
+        project = created;
+        setWizardCreatedProject(created);
+        setProjects((prev) => [created, ...prev]);
       }
-    }, 2000);
+
+      if (wizardSource === 'upload' && uploadedFile && !wizardModelImported) {
+        step = 'uploading';
+        setWizardLaunchStep(step);
+        await importSourceModel(project.id, uploadedFile);
+        setWizardModelImported(true);
+      }
+
+      step = 'launching';
+      setWizardLaunchStep(step);
+      const launch = await api.createEditorLaunch(project.id);
+      setWizardLaunchStep('launched');
+      window.location.assign(launch.desktopUrl);
+      toast(`Project "${project.name}" was created. Opening KusStudio...`);
+    } catch (caught) {
+      const message = caught instanceof Error ? caught.message : 'Something went wrong.';
+      setWizardLaunchStep('error');
+      setWizardFailedStep(step);
+      setWizardError(message);
+      toast(message, 'error');
+    }
   };
 
   // Reset Wizard
   const handleCloseWizard = () => {
-    setIsCreateWizardOpen(false);
-    setWizardStep(1);
-    setUploadedFile(null);
-    setWizardDesktopStatus('idle');
+    if (wizardBusy) return;
+    resetWizard();
   };
+
+  const wizardLaunchOrder: WizardLaunchStep[] =
+    wizardSource === 'upload' ? ['creating', 'uploading', 'launching'] : ['creating', 'launching'];
+  const wizardLaunchLabels: Partial<Record<WizardLaunchStep, string>> = {
+    creating: `Create project "${wizardName.trim() || 'Untitled'}"`,
+    uploading: `Upload ${uploadedFile?.name ?? 'the 3D model'}`,
+    launching: 'Open KusStudio Desktop',
+  };
+  const wizardCurrentIndex =
+    wizardLaunchStep === 'launched'
+      ? wizardLaunchOrder.length
+      : wizardLaunchOrder.indexOf(
+          wizardLaunchStep === 'error' && wizardFailedStep ? wizardFailedStep : wizardLaunchStep,
+        );
+  const wizardLaunchItems = wizardLaunchOrder.map((step, index) => ({
+    step,
+    label: wizardLaunchLabels[step] ?? step,
+    state:
+      wizardCurrentIndex < 0 || index > wizardCurrentIndex
+        ? 'pending'
+        : index < wizardCurrentIndex
+          ? 'done'
+          : wizardLaunchStep === 'error'
+            ? 'failed'
+            : 'active',
+  }));
 
   const handleWizardBack = () => {
     setWizardStep(wizardStep === 3 ? 2 : 1);
@@ -1017,8 +1098,9 @@ export const Projects: React.FC<ProjectsProps> = ({
                         type="file"
                         ref={fileInputRef}
                         onChange={handleFileChange}
-                        accept=".glb"
+                        accept={SOURCE_MODEL_ACCEPT}
                         style={{ display: 'none' }}
+                        aria-label="Upload 3D model file"
                       />
                       <Laptop size={32} className={styles.uploadZoneIcon} />
                       {uploadedFile ? (
@@ -1033,7 +1115,7 @@ export const Projects: React.FC<ProjectsProps> = ({
                         <div>
                           <span className={styles.uploadZoneTitle}>Drag & Drop or browse file</span>
                           <span className={styles.uploadZoneTip}>
-                            Supports 3D mesh GLB files. Max 50MB.
+                            Supports .glb and .gltf models. Max 500 MB.
                           </span>
                         </div>
                       )}
@@ -1092,68 +1174,63 @@ export const Projects: React.FC<ProjectsProps> = ({
                 </div>
               )}
 
-              {/* STEP 3: Sync & Desktop launch */}
+              {/* STEP 3: Create the project and open it in KusStudio */}
               {wizardStep === 3 && (
                 <div className={styles.wizardStepContent}>
                   <h4 className={styles.wizardStepSubTitle}>Launch Design Studio</h4>
                   <p className={styles.wizardStepDesc}>
-                    KusShoes is preparing to bridge this asset model into KusStudio Desktop Client.
-                    Click below to begin customizer.
+                    The project is created on the server
+                    {wizardSource === 'upload' ? ', your 3D model is uploaded to it,' : ''} and
+                    KusStudio Desktop opens with a one-time launch ticket.
                   </p>
 
                   <div className={styles.desktopConnectionWrapper}>
-                    {/* Visual Interface mockup */}
                     <div className={styles.mockupConnectionBox}>
                       <div className={`${styles.mockNode} ${styles.mockNodeActive}`}>
-                        <Smartphone size={20} />
-                        <span>Cloud Scan</span>
+                        {wizardSource === 'upload' ? <Laptop size={20} /> : <Smartphone size={20} />}
+                        <span>{wizardSource === 'upload' ? 'Your model' : 'Web project'}</span>
                       </div>
 
                       <div className={styles.mockLineConnection}>
-                        <div className={styles.mockProgressLinePulse} />
+                        {wizardBusy && <div className={styles.mockProgressLinePulse} />}
                       </div>
 
                       <div
-                        className={`${styles.mockNode} ${wizardDesktopStatus === 'launched' ? styles.mockNodeActive : styles.mockNodeIdle}`}
+                        className={`${styles.mockNode} ${wizardLaunchStep === 'launched' ? styles.mockNodeActive : styles.mockNodeIdle}`}
                       >
                         <Laptop size={20} />
                         <span>KusStudio</span>
                       </div>
                     </div>
 
-                    {/* Status logs */}
-                    <div className={styles.desktopConnectionLogs}>
-                      <div className={styles.connLogItem}>
-                        <Check size={14} className={styles.connCheck} />
-                        <span>
-                          Asset buffers packaged successfully. (
-                          {wizardSource === 'cloud' ? 'Cloud Vault' : 'Local upload'})
-                        </span>
-                      </div>
-                      <div className={styles.connLogItem}>
-                        {wizardDesktopStatus !== 'idle' ? (
-                          <Check size={14} className={styles.connCheck} />
-                        ) : (
-                          <div className={styles.connLogCircleDot} />
-                        )}
-                        <span>Local daemon ping active (Port 8421).</span>
-                      </div>
-                      <div className={styles.connLogItem}>
-                        {wizardDesktopStatus === 'launched' ? (
-                          <Check size={14} className={styles.connCheck} />
-                        ) : wizardDesktopStatus === 'packaging' ? (
-                          <RefreshCw className={styles.spinIcon} size={14} />
-                        ) : (
-                          <div className={styles.connLogCircleDot} />
-                        )}
-                        <span>
-                          {wizardDesktopStatus === 'launched'
-                            ? 'App launched! Design session locked.'
-                            : wizardDesktopStatus === 'packaging'
-                              ? 'Launching desktop executable...'
-                              : 'Waiting to call desktop launcher deep link...'}
-                        </span>
-                      </div>
+                    <div className={styles.desktopConnectionLogs} role="status" aria-live="polite">
+                      {wizardLaunchItems.map((item) => (
+                        <div key={item.step} className={styles.connLogItem}>
+                          {item.state === 'done' ? (
+                            <Check size={14} className={styles.connCheck} />
+                          ) : item.state === 'active' ? (
+                            <RefreshCw className={styles.spinIcon} size={14} />
+                          ) : item.state === 'failed' ? (
+                            <X size={14} color="#ef4444" />
+                          ) : (
+                            <div className={styles.connLogCircleDot} />
+                          )}
+                          <span>{item.label}</span>
+                        </div>
+                      ))}
+                      {wizardError && (
+                        <div className={styles.connLogItem} role="alert" style={{ color: '#ef4444' }}>
+                          <span>{wizardError}</span>
+                        </div>
+                      )}
+                      {wizardLaunchStep === 'launched' && (
+                        <div className={styles.connLogItem}>
+                          <span>
+                            KusStudio did not open? Install the desktop app, then use "Launch
+                            KusStudio" on the project page.
+                          </span>
+                        </div>
+                      )}
                     </div>
                   </div>
                 </div>
@@ -1162,18 +1239,14 @@ export const Projects: React.FC<ProjectsProps> = ({
 
             {/* Footer Buttons */}
             <div className={styles.wizardFooter}>
-              {wizardStep > 1 ? (
-                <button
-                  className="btn-outline"
-                  onClick={handleWizardBack}
-                  disabled={wizardDesktopStatus === 'packaging'}
-                >
+              {wizardStep > 1 && !wizardCreatedProject ? (
+                <button className="btn-outline" onClick={handleWizardBack} disabled={wizardBusy}>
                   <ArrowLeft size={16} />
                   <span>Back</span>
                 </button>
               ) : (
-                <button className="btn-outline" onClick={handleCloseWizard}>
-                  Cancel
+                <button className="btn-outline" onClick={handleCloseWizard} disabled={wizardBusy}>
+                  {wizardCreatedProject ? 'Close' : 'Cancel'}
                 </button>
               )}
 
@@ -1182,24 +1255,33 @@ export const Projects: React.FC<ProjectsProps> = ({
                   <span>Next Step</span>
                   <ArrowRight size={16} />
                 </button>
+              ) : wizardLaunchStep === 'launched' ? (
+                <button className="btn-neon-orange" onClick={resetWizard}>
+                  <Check size={18} />
+                  <span>Done</span>
+                </button>
               ) : (
                 <button
                   className="btn-neon-orange"
-                  onClick={handleCreateProjectFinal}
-                  disabled={
-                    wizardDesktopStatus === 'packaging' || wizardDesktopStatus === 'launched'
-                  }
+                  onClick={() => void handleCreateProjectFinal()}
+                  disabled={wizardBusy}
                   style={{ gap: '10px' }}
                 >
-                  {wizardDesktopStatus === 'packaging' ? (
+                  {wizardBusy ? (
                     <>
                       <RefreshCw className={styles.spinIcon} size={18} />
-                      <span>Launching KusStudio...</span>
+                      <span>
+                        {wizardLaunchStep === 'creating'
+                          ? 'Creating project...'
+                          : wizardLaunchStep === 'uploading'
+                            ? 'Uploading model...'
+                            : 'Opening KusStudio...'}
+                      </span>
                     </>
                   ) : (
                     <>
                       <Laptop size={18} />
-                      <span>Launch Desktop Client</span>
+                      <span>{wizardLaunchStep === 'error' ? 'Retry' : 'Create & Launch KusStudio'}</span>
                     </>
                   )}
                 </button>
