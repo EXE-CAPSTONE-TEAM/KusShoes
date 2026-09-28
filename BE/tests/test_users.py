@@ -31,6 +31,50 @@ async def test_profile_usage(client, auth_headers):
     assert body["tier"] == "free"
     assert body["projects_count"] == 0
     assert body["exports_count"] == 0
+    assert body["storage_used_bytes"] == 0
+
+
+@pytest.mark.asyncio
+async def test_usage_reports_stored_bytes(client, auth_headers, authenticated_user, db):
+    from app.repositories import bake_job_repo, export_record_repo, project_asset_repo
+
+    project = (
+        await client.post("/api/v1/projects", headers=auth_headers, json={"name": "Storage"})
+    ).json()
+    project_id = project["id"]
+
+    async def add_asset(status: str, size: int):
+        asset = await project_asset_repo.create_upload(
+            db,
+            project_id=project_id,
+            user_id=authenticated_user.id,
+            asset_type="source_model",
+            filename="m.glb",
+            file_path=f"source_models/{project_id}/{status}.glb",
+            content_type="model/gltf-binary",
+        )
+        asset.status = status
+        asset.file_size_bytes = size
+
+    await add_asset("ready", 1_000)
+    await add_asset("raw", 200)
+    await add_asset("uploading", 50_000)  # presigned URL only, nothing stored yet
+    await add_asset("failed", 70_000)
+    job = await bake_job_repo.create(db, project_id=project_id, design_config={}, priority="low")
+    await export_record_repo.create_many(
+        db,
+        project_id=project_id,
+        bake_job_id=job.id,
+        user_id=authenticated_user.id,
+        exports=[
+            {"format": "glb", "file_path": "exports/a.glb", "file_size_bytes": 30},
+            {"format": "obj", "file_path": "exports/a.obj"},  # size unknown counts as 0
+        ],
+    )
+    await db.commit()
+
+    body = (await client.get("/api/v1/users/me/usage", headers=auth_headers)).json()
+    assert body["storage_used_bytes"] == 1_000 + 200 + 30
 
 
 @pytest.mark.asyncio

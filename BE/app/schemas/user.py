@@ -98,6 +98,9 @@ class UsageResponse(BaseModel):
     # "scans used" counter yet, so clients can show the allowance but not a
     # used/total ratio.
     max_scans_per_cycle: int | None = None
+    # Bytes currently held in storage for the user: confirmed project assets + exported files.
+    # There is no per-plan storage limit, so no max is reported.
+    storage_used_bytes: int = 0
 
 
 class MessageResponse(BaseModel):

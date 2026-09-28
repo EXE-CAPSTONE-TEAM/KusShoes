@@ -509,39 +509,6 @@
   font-variant-numeric: tabular-nums;
 }
 
-.storageBarBg {
-  position: relative;
-  height: 4px;
-  width: 100%;
-  background-color: #e5e5e5;
-  border-radius: 2px;
-  overflow: hidden;
-}
-
-[data-theme='dark'] .storageBarBg {
-  background-color: #2a2a2a;
-}
-
-.storageBarFill {
-  height: 100%;
-  width: 100%;
-  background: #1a1a1a;
-  border-radius: 2px;
-  transition: transform var(--transition-normal);
-}
-
-[data-theme='dark'] .storageBarFill {
-  background: #ededed;
-}
-
-.storageBarFill.storageWarning {
-  background: var(--color-orange);
-}
-
-.storageBarFill.storageCritical {
-  background: var(--color-crimson);
-}
-
 /* Radix Tooltip */
 .tooltipContent {
   background-color: var(--dropdown-bg);

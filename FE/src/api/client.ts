@@ -97,6 +97,8 @@ export type Usage = {
   exports_count: number;
   ai_credits_used: number;
   ai_credits_limit: number | null;
+  /** Confirmed project assets + exported files; there is no per-plan storage limit. */
+  storage_used_bytes: number;
 };
 
 export type PortalProject = {

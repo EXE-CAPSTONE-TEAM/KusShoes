@@ -4,6 +4,19 @@ export function formatVnd(amount: number): string {
   return `${amount.toLocaleString('vi-VN')} VNĐ`;
 }
 
+/** Binary units (1 KB = 1024 B), one decimal from KB up: "0 B", "812 B", "1.4 MB", "2.0 GB". */
+export function formatBytes(bytes: number): string {
+  if (bytes < 1024) return `${bytes} B`;
+  const units = ['KB', 'MB', 'GB', 'TB'];
+  let value = bytes / 1024;
+  let unit = 0;
+  while (value >= 1024 && unit < units.length - 1) {
+    value /= 1024;
+    unit += 1;
+  }
+  return `${value.toFixed(1)} ${units[unit]}`;
+}
+
 export function formatDate(value: string | Date | null | undefined): string {
   if (!value) return '—';
   return new Date(value).toLocaleDateString();

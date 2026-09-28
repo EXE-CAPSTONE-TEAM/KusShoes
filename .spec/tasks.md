@@ -55,7 +55,7 @@ BE+FE = needs backend work · DECISION = blocked on a product decision from T AK
 
 ## Batch 2 — needs backend work
 
-- [ ] **T09 — Real storage usage** (Sidebar + Dashboard show a fixed "1.4 GB of 5 GB")
+- [x] **T09 — Real storage usage** (Sidebar + Dashboard show a fixed "1.4 GB of 5 GB")
   Lane: BE+FE + DECISION. BE `UsageResponse` has no storage fields.
   **Decided 2026-09-29: show used storage only** (sum of the user's project assets + exports), no
   per-plan limit, no upload enforcement. Widget shows "X used" without a bar denominator.
