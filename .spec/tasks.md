@@ -86,7 +86,26 @@ BE+FE = needs backend work · DECISION = blocked on a product decision from T AK
 - [x] **T15 — Landing stat counters (12 400+, 3 150+, …)**
   **Decided 2026-09-29: keep the marketing numbers for now.** No change.
 
-- [ ] **T16 — Trigger a bake/export from the web**
+- [x] **T16 — Trigger a bake/export from the web**
   Lane: DECISION. `POST /projects/{id}/bake` (+ status/retry/cancel) is unused by the web.
   **Decided 2026-09-29: no web bake; web may only export — and only if an export does not
-  push server RAM/CPU into overload.** Needs a resource check of the export path first.
+  push server RAM/CPU into overload.**
+  Findings (code): bake *is* the export. Since migration 028 the 3D work runs on KusStudio
+  Desktop; the file goes desktop → R2 via a presigned URL and never passes through the API. Per
+  output the API only does DB writes + HEAD + a 512-byte ranged GET + an R2-side CopyObject.
+  Downloads are presigned R2 URLs too. The web already downloads exports (T07, project page) and
+  cannot start a bake (service/editor token only) — i.e. the decision is already the current
+  behaviour; no code change.
+  Measurement (`BE/scripts/bench/export_path_*.py`, commit c0cf3f1, AMD Ryzen 7 7735HS, single
+  uvicorn worker like prod, APP_ENV=production, local Postgres 16, storage stubbed because prod
+  storage is R2 off the VM; 2 runs × 284 export flows = trigger + claim + complete, glb+obj):
+  | phase | server CPU per op (run 1 / run 2) | p95 latency | server RSS after |
+  |---|---|---|---|
+  | GET /users/me (baseline) | 6.3 / 6.0 ms | 31 ms | 163 / 169 MiB |
+  | export, sequential | 55.3 / 31.0 ms | 111 / 104 ms | 163 / 169 MiB |
+  | export, 10 parallel | 56.5 / 46.3 ms | 1.3 s / 0.8 s | 166 / 169 MiB |
+  | export, 20 parallel | 63.1 / 59.6 ms | 2.5 s / 2.4 s | 169 / 170 MiB |
+  RAM stayed flat (156 MiB idle → 170 MiB after 568 exports; peak = final). CPU is the only
+  cost: ~5–10× an ordinary GET, and parallel exports queue (latency grows) rather than use more
+  memory. Not measured on the prod VM (GCP e2-small, 2 vCPU / 2 GB; SSH not available here), whose
+  shared vCPUs are slower than this machine, so absolute ms there will be higher.
