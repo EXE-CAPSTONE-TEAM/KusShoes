@@ -1,4 +1,5 @@
 import React, { useCallback, useEffect, useState } from 'react';
+import { QRCodeSVG } from 'qrcode.react';
 import { Smartphone, Mail, Copy, Download, ShieldCheck, ShieldOff, AlertTriangle } from 'lucide-react';
 import { accountApi, type TwoFactorMethod, type TwoFactorSetup, type TwoFactorStatus } from '../../api/account';
 import { useToast } from '../../context/ToastContext';
@@ -201,13 +202,23 @@ export const TwoFactorPanel: React.FC = () => {
           {setup.method === 'totp' ? (
             <>
               <p className={panel.panelDesc}>
-                In your authenticator app add a new account, choose &ldquo;enter a setup key&rdquo;, and paste this key:
+                Scan this QR code with your authenticator app (Google Authenticator, 1Password, Authy…).
               </p>
-              <div className={panel.codeBlock}>{setup.totp_secret}</div>
+              {setup.provisioning_uri && (
+                <div className={panel.qrWrap}>
+                  <QRCodeSVG value={setup.provisioning_uri} size={176} marginSize={2} />
+                </div>
+              )}
               {setup.provisioning_uri && (
                 <a className={panel.muted} href={setup.provisioning_uri}>
-                  Open in an authenticator app on this device
+                  On this device? Open directly in an authenticator app
                 </a>
+              )}
+              {setup.totp_secret && (
+                <details className={panel.manualEntry}>
+                  <summary>Can&rsquo;t scan? Enter the code manually</summary>
+                  <div className={panel.codeBlock}>{setup.totp_secret}</div>
+                </details>
               )}
             </>
           ) : (

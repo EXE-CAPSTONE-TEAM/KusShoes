@@ -298,6 +298,35 @@
   font-size: 0.75rem; /* 12px */
 }
 
+.qrWrap {
+  display: flex;
+  justify-content: center;
+  padding: 16px;
+  /* Fixed white background regardless of theme: QR scanners need strong
+     black/white contrast, which var(--bg-subtle) doesn't guarantee in dark mode. */
+  background: #ffffff;
+  border: 1px solid var(--border);
+  border-radius: var(--radius-sm, 4px);
+}
+
+.manualEntry {
+  font-size: 0.8125rem;
+}
+
+.manualEntry summary {
+  cursor: pointer;
+  color: var(--text-secondary);
+  font-size: 0.75rem;
+}
+
+.manualEntry summary:hover {
+  color: var(--text-primary);
+}
+
+.manualEntry .codeBlock {
+  margin-top: 8px;
+}
+
 /* Two columns on wide screens */
 .grid2 {
   display: grid;
