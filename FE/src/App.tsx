@@ -7,6 +7,7 @@ import { Sidebar } from './components/Sidebar/Sidebar';
 import { Dashboard } from './pages/Dashboard/Dashboard';
 import { Projects } from './pages/Projects/Projects';
 import { Trash } from './pages/Trash/Trash';
+import { Exports } from './pages/Exports/Exports';
 import { Billing } from './pages/Billing/Billing';
 import { Settings } from './pages/Settings/Settings';
 import { Feedback } from './pages/Feedback/Feedback';
@@ -47,6 +48,8 @@ const getPageFromPath = (path: string): string => {
       return 'archives';
     case '/trash':
       return 'trash';
+    case '/exports':
+      return 'exports';
     case '/billing':
     case '/billing/success': // PayOS / MoMo return URLs
     case '/billing/cancel':
@@ -81,6 +84,8 @@ const getPathFromPage = (page: string): string => {
       return '/archives' + query;
     case 'trash':
       return '/trash' + query;
+    case 'exports':
+      return '/exports' + query;
     case 'billing':
       return '/billing' + query;
     case 'settings':
@@ -143,6 +148,7 @@ function App() {
       'dashboard',
       'projects',
       'archives',
+      'exports',
       'billing',
       'settings',
       'project-details',
@@ -208,6 +214,7 @@ function App() {
     'projects',
     'archives',
     'trash',
+    'exports',
     'billing',
     'settings',
     'feedback',
@@ -279,6 +286,9 @@ function App() {
           />
         )}
         {activePage === 'trash' && <Trash setProjects={setProjects} />}
+        {activePage === 'exports' && (
+          <Exports onOpenProject={(id) => navigate(`/project-details?id=${id}`)} />
+        )}
         {activePage === 'billing' && <Billing />}
         {activePage === 'settings' && (
           <Settings

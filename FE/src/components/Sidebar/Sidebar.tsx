@@ -4,6 +4,7 @@ import {
   FolderKanban,
   Archive,
   Trash2,
+  Download,
   CreditCard,
   Settings,
   LogOut,
@@ -70,6 +71,7 @@ export const Sidebar: React.FC<SidebarProps> = ({
     { id: 'projects', label: 'Projects', icon: FolderKanban },
     { id: 'archives', label: 'Archives', icon: Archive },
     { id: 'trash', label: 'Trash', icon: Trash2 },
+    { id: 'exports', label: 'Exports', icon: Download },
     { id: 'billing', label: 'Billing', icon: CreditCard },
     { id: 'feedback', label: 'Feedback', icon: MessageSquare },
   ];

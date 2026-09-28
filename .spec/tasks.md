@@ -46,7 +46,7 @@ BE+FE = needs backend work · DECISION = blocked on a product decision from T AK
   and the language switcher only saves locally. Acceptance: username + phone editable and saved;
   language switch is persisted to the profile when signed in; BE validation errors surface.
 
-- [ ] **T07 — "My exports" list**
+- [x] **T07 — "My exports" list**
   Lane: FE. `GET /api/v1/exports` (all exports of the user) is unused. Acceptance: a list with
   project, format, date and a download button (`/exports/{id}/download-url`).
 

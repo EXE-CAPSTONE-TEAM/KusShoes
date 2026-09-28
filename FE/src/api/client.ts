@@ -220,6 +220,22 @@ export type ProjectExport = {
   created_at: string;
 };
 
+/** One row of GET /api/v1/exports: every export of the signed-in user, newest first. */
+export type ExportHistoryItem = ProjectExport & {
+  project_id: string;
+  project_name: string;
+  /** BR-65: produced under the Free-tier watermark policy. */
+  is_watermarked: boolean;
+};
+
+export type ExportFormat = 'glb' | 'obj' | 'zip';
+
+export type ExportHistoryPage = {
+  items: ExportHistoryItem[];
+  nextCursor: string | null;
+  hasNext: boolean;
+};
+
 const FALLBACK_PROJECT_IMAGE = new URL('../assets/sneaker-hero.png', import.meta.url).href;
 const COMPLETED_PROJECT_STATUSES = new Set(['completed', 'ready', 'exported']);
 const DESIGNING_PROJECT_STATUSES = new Set(['in_progress', 'processing', 'queued', 'baking']);
@@ -873,6 +889,20 @@ export const api = {
       `/api/v1/projects/${projectId}/exports`,
     );
     return result.items;
+  },
+
+  async listExportHistory(
+    options: { cursor?: string | null; format?: ExportFormat | null } = {},
+  ): Promise<ExportHistoryPage> {
+    const params = new URLSearchParams({ limit: '50' });
+    if (options.cursor) params.set('cursor', options.cursor);
+    if (options.format) params.set('format', options.format);
+    const page = await request<{
+      items: ExportHistoryItem[];
+      next_cursor: string | null;
+      has_next: boolean;
+    }>(`/api/v1/exports?${params.toString()}`);
+    return { items: page.items, nextCursor: page.next_cursor, hasNext: page.has_next };
   },
 
   async createExportDownloadUrl(exportId: string): Promise<string> {
