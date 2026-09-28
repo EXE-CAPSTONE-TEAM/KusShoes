@@ -40,7 +40,7 @@ BE+FE = needs backend work · DECISION = blocked on a product decision from T AK
   Lane: FE. File: `FE/src/api/client.ts` (`listProjects`), `App.tsx`.
   Today only the first 100 projects are loaded. Acceptance: all pages are fetched.
 
-- [ ] **T06 — Settings exposes the profile fields BE already stores**
+- [x] **T06 — Settings exposes the profile fields BE already stores**
   Lane: FE. File: `FE/src/pages/Settings/Settings.tsx`, `LanguageSwitcher.tsx`.
   `PATCH /users/me` accepts `username`, `phone_number`, `language`; the UI has no input for them
   and the language switcher only saves locally. Acceptance: username + phone editable and saved;

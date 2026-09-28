@@ -1,10 +1,12 @@
 import React, { useEffect, useState } from 'react';
 import { Smartphone, Save, Key, Instagram, Globe, X, Upload, RefreshCw } from 'lucide-react';
 import { motion, AnimatePresence } from 'framer-motion';
+import { useTranslation } from 'react-i18next';
 import styles from './Settings.module.css';
 import { useTheme } from '../../context/ThemeContext';
 import { useToast } from '../../context/ToastContext';
 import { api } from '../../api/client';
+import { Select } from '../../components/Select/Select';
 import { DEFAULT_SETTING_TAB, SETTINGS_TABS, type SettingTab } from './settingsNavigation';
 import { TwoFactorPanel } from './TwoFactorPanel';
 import { SessionsPanel } from './SessionsPanel';
@@ -27,6 +29,7 @@ export const Settings: React.FC<SettingsProps> = ({
 }) => {
   const { theme, setTheme } = useTheme();
   const { toast } = useToast();
+  const { i18n } = useTranslation();
 
   const [localTab, setLocalTab] = useState<SettingTab>(activeTab);
 
@@ -72,6 +75,9 @@ export const Settings: React.FC<SettingsProps> = ({
   const [profileData, setProfileData] = useState({
     name: '',
     email: '',
+    username: '',
+    phone: '',
+    language: 'en' as 'en' | 'vi',
     role: 'Sneaker Designer',
     avatar:
       'https://images.unsplash.com/photo-1534528741775-53994a69daeb?auto=format&fit=crop&w=100&q=80',
@@ -84,16 +90,22 @@ export const Settings: React.FC<SettingsProps> = ({
   });
   const [saving, setSaving] = useState(false);
   const [avatarPath, setAvatarPath] = useState<string | null>(null);
+  // Only send username when it changed: BE rate-limits username changes.
+  const [savedUsername, setSavedUsername] = useState('');
 
   useEffect(() => {
     api
       .profile()
       .then((profile) => {
         setAvatarPath(profile.avatar_path);
+        setSavedUsername(profile.username);
         setProfileData((current) => ({
           ...current,
           name: `${profile.first_name} ${profile.last_name}`.trim(),
           email: profile.email,
+          username: profile.username,
+          phone: profile.phone_number ?? '',
+          language: profile.language === 'vi' ? 'vi' : 'en',
           bio: profile.bio ?? '',
           avatar: api.avatarUrl(profile.avatar_path) ?? current.avatar,
         }));
@@ -119,11 +131,17 @@ export const Settings: React.FC<SettingsProps> = ({
     const [firstName, ...lastNameParts] = profileData.name.trim().split(/\s+/);
     setSaving(true);
     try {
+      const username = profileData.username.trim();
       await api.updateProfile({
         first_name: firstName,
         last_name: lastNameParts.join(' '),
         bio: profileData.bio.trim() || null,
+        phone_number: profileData.phone.trim() || null,
+        language: profileData.language,
+        ...(username && username !== savedUsername ? { username } : {}),
       });
+      if (username) setSavedUsername(username);
+      void i18n.changeLanguage(profileData.language);
       toast('Profile saved to the server.');
     } catch (caught) {
       toast(caught instanceof Error ? caught.message : 'Unable to save profile.', 'error');
@@ -307,6 +325,45 @@ export const Settings: React.FC<SettingsProps> = ({
                       />
                     </div>
                     <div className={styles.inputGroup}>
+                      <label htmlFor="designer-username">Username</label>
+                      <input
+                        id="designer-username"
+                        type="text"
+                        value={profileData.username}
+                        onChange={(e) => setProfileData({ ...profileData, username: e.target.value })}
+                        className={styles.input}
+                        pattern="[a-zA-Z_][a-zA-Z0-9_]{2,29}"
+                        title="3–30 letters, digits or _; cannot start with a digit"
+                        required
+                      />
+                    </div>
+                    <div className={styles.inputGroup}>
+                      <label htmlFor="designer-phone">Phone Number</label>
+                      <input
+                        id="designer-phone"
+                        type="tel"
+                        value={profileData.phone}
+                        onChange={(e) => setProfileData({ ...profileData, phone: e.target.value })}
+                        className={styles.input}
+                        maxLength={20}
+                        placeholder="0901 234 567"
+                      />
+                    </div>
+                    <div className={styles.inputGroup}>
+                      <label>Language</label>
+                      <Select
+                        value={profileData.language}
+                        onValueChange={(value) =>
+                          setProfileData({ ...profileData, language: value === 'vi' ? 'vi' : 'en' })
+                        }
+                        options={[
+                          { value: 'en', label: 'English' },
+                          { value: 'vi', label: 'Tiếng Việt' },
+                        ]}
+                        ariaLabel="Language"
+                      />
+                    </div>
+                    <div className={styles.inputGroup}>
                       <label htmlFor="designer-role">Primary Role</label>
                       <input
                         id="designer-role"
@@ -314,7 +371,6 @@ export const Settings: React.FC<SettingsProps> = ({
                         value={profileData.role}
                         onChange={(e) => setProfileData({ ...profileData, role: e.target.value })}
                         className={styles.input}
-                        required
                       />
                     </div>
                     <div className={styles.inputGroup}>
@@ -327,7 +383,6 @@ export const Settings: React.FC<SettingsProps> = ({
                           setProfileData({ ...profileData, location: e.target.value })
                         }
                         className={styles.input}
-                        required
                       />
                     </div>
                   </div>
