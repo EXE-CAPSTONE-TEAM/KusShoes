@@ -76,7 +76,7 @@ const renderWizard = () => {
 };
 
 const walkToLaunchStep = async (file: File) => {
-  fireEvent.click(await screen.findByText(/upload custom \.glb/i));
+  fireEvent.click(await screen.findByText(/upload a model/i));
   fireEvent.change(screen.getByLabelText('Upload 3D model file'), { target: { files: [file] } });
   fireEvent.click(screen.getByRole('button', { name: /next step/i }));
   fireEvent.click(screen.getByRole('button', { name: /next step/i }));
@@ -127,7 +127,7 @@ describe('Create-project wizard (upload source)', () => {
 
   it('refuses a non-model file before leaving the first step', async () => {
     renderWizard();
-    fireEvent.click(await screen.findByText(/upload custom \.glb/i));
+    fireEvent.click(await screen.findByText(/upload a model/i));
     fireEvent.change(screen.getByLabelText('Upload 3D model file'), {
       target: { files: [new File(['x'], 'notes.txt', { type: 'text/plain' })] },
     });
@@ -136,5 +136,22 @@ describe('Create-project wizard (upload source)', () => {
     expect(await screen.findByText(/only \.glb and \.gltf files/i)).toBeInTheDocument();
     expect(screen.getByText(/step 1 of 3/i)).toBeInTheDocument();
     expect(api.createProject).not.toHaveBeenCalled();
+  });
+});
+
+describe('Create-project wizard (start empty)', () => {
+  it('creates an empty project and opens KusStudio without any upload', async () => {
+    m(api.createEditorLaunch).mockResolvedValue({ desktopUrl: 'kusstudio://launch?t=blank', expiresIn: 60 });
+    renderWizard();
+
+    // "Start empty" is the default source; step 1 has nothing to pick.
+    fireEvent.click(await screen.findByRole('button', { name: /next step/i }));
+    fireEvent.change(screen.getByPlaceholderText('Air Force 1 Custom Classic'), { target: { value: 'Blank shoe' } });
+    fireEvent.click(screen.getByRole('button', { name: /next step/i }));
+    fireEvent.click(screen.getByRole('button', { name: /create & launch kusstudio/i }));
+
+    await waitFor(() => expect(assign).toHaveBeenCalledWith('kusstudio://launch?t=blank'));
+    expect(api.createProject).toHaveBeenCalledWith(expect.objectContaining({ name: 'Blank shoe' }));
+    expect(studioApi.createAssetUploadUrl).not.toHaveBeenCalled();
   });
 });

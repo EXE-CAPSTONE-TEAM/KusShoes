@@ -57,21 +57,23 @@ BE+FE = needs backend work · DECISION = blocked on a product decision from T AK
 
 - [ ] **T09 — Real storage usage** (Sidebar + Dashboard show a fixed "1.4 GB of 5 GB")
   Lane: BE+FE + DECISION. BE `UsageResponse` has no storage fields.
-  Decision needed: what counts toward storage (assets? exports? scans?) and the per-plan limit.
+  **Decided 2026-09-29: show used storage only** (sum of the user's project assets + exports), no
+  per-plan limit, no upload enforcement. Widget shows "X used" without a bar denominator.
 
 - [ ] **T10 — Profile fields with no BE column**
   Lane: BE+FE + DECISION. Settings accepts Primary Role, Studio Name, Studio Location, Instagram,
-  Behance, TikTok but never saves them. Decision: add columns (migration) or remove the inputs.
-  Preset avatars are preview-only for the same reason.
+  Behance, TikTok but never saves them. **Decided 2026-09-29: add DB columns and save them**
+  (migration + `UpdateProfileRequest` + `UserDetailResponse`). Preset avatars stay preview-only.
 
 - [ ] **T11 — Project visibility (Private / Link / Public)**
   Lane: BE+FE + DECISION. The wizard's visibility choice and the card menu do nothing
-  ("not exposed by the backend yet"). Decision: build visibility in BE, or remove the controls.
+  ("not exposed by the backend yet"). **Decided 2026-09-29: hide the visibility controls** —
+  sharing goes through artisan links (T02).
 
-- [ ] **T12 — "Cloud Synced Scans" in the wizard**
+- [x] **T12 — "Cloud Synced Scans" in the wizard**
   Lane: BE+FE + DECISION. The list is the user's existing projects, not mobile scans; picking one
-  creates an empty project named "… Remix". Decision: add a user-facing scans endpoint, turn it
-  into a real "duplicate project", or remove the tab.
+  creates an empty project named "… Remix". **Decided 2026-09-29: remove the tab** — mobile scans
+  already create their own project; the wizard offers "start empty" or "upload a model".
 
 - [x] **T13 — MoMo button**
   Lane: BE+FE. BE has MoMo behind `MOMO_ENABLED`; FE hardcodes "Coming Soon". Acceptance: BE

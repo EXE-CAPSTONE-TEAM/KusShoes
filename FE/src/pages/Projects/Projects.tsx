@@ -18,7 +18,6 @@ import {
   RefreshCw,
   Smartphone,
   Laptop,
-  CheckCircle2,
   CheckSquare,
   Square,
   Lock,
@@ -53,7 +52,8 @@ type ProjectStatusFilter = 'All' | 'Scanned' | 'Designing' | 'Completed';
 type ProjectSortBy = 'name' | 'date' | 'size';
 type ProjectViewMode = 'grid' | 'list';
 type WizardStep = 1 | 2 | 3;
-type WizardSource = 'cloud' | 'upload';
+// 'blank': empty project, the base shoe is picked in KusStudio. Mobile scans create their own project.
+type WizardSource = 'blank' | 'upload';
 // Real steps of the final wizard action; 'uploading' only runs for the .GLB source.
 type WizardLaunchStep = 'idle' | 'creating' | 'uploading' | 'launching' | 'launched' | 'error';
 type ProjectVisibility = PortalProject['visibility'];
@@ -120,7 +120,7 @@ export const Projects: React.FC<ProjectsProps> = ({
   // Step-Wizard (New Project) States
   const [isCreateWizardOpen, setIsCreateWizardOpen] = useState(false);
   const [wizardStep, setWizardStep] = useState<WizardStep>(1);
-  const [wizardSource, setWizardSource] = useState<WizardSource>('cloud');
+  const [wizardSource, setWizardSource] = useState<WizardSource>('blank');
 
   // Trigger wizard if new=true parameter is present in browser query params
   useEffect(() => {
@@ -132,21 +132,6 @@ export const Projects: React.FC<ProjectsProps> = ({
     }
   }, []);
 
-  const cloudScans = useMemo(
-    () =>
-      projects.map((project) => ({
-        id: project.id,
-        name: project.name,
-        baseModel: project.baseModel,
-        date: formatRelativeTime(project.updatedAt),
-        size: project.fileSize,
-        photos: project.photosCount,
-        device: project.device,
-      })),
-    [projects],
-  );
-
-  const [selectedCloudScan, setSelectedCloudScan] = useState<string>('');
   const [uploadedFile, setUploadedFile] = useState<File | null>(null);
   const fileInputRef = useRef<HTMLInputElement>(null);
 
@@ -166,16 +151,6 @@ export const Projects: React.FC<ProjectsProps> = ({
     wizardLaunchStep === 'creating' ||
     wizardLaunchStep === 'uploading' ||
     wizardLaunchStep === 'launching';
-
-  useEffect(() => {
-    if (cloudScans.length === 0) {
-      setSelectedCloudScan('');
-      return;
-    }
-    setSelectedCloudScan((current) =>
-      cloudScans.some((scan) => scan.id === current) ? current : cloudScans[0].id,
-    );
-  }, [cloudScans]);
 
   // File size utility for sorting
   const parseSizeInMb = (sizeStr: string) => {
@@ -327,15 +302,7 @@ export const Projects: React.FC<ProjectsProps> = ({
   // Proceed from Wizard Step 1 to Step 2
   const handleWizardNext = () => {
     if (wizardStep === 1) {
-      if (wizardSource === 'cloud') {
-        const selectedScan = cloudScans.find((s) => s.id === selectedCloudScan);
-        if (!selectedScan) {
-          toast('No cloud scans are available from the database yet.', 'error');
-          return;
-        }
-        setWizardName(`${selectedScan.name} Remix`);
-        setWizardBaseModel(selectedScan.baseModel || 'Custom Base');
-      } else if (!uploadedFile) {
+      if (wizardSource === 'upload' && !uploadedFile) {
         toast('Choose a .glb or .gltf file to upload.', 'error');
         return;
       }
@@ -1004,66 +971,33 @@ export const Projects: React.FC<ProjectsProps> = ({
                 <div className={styles.wizardStepContent}>
                   <h4 className={styles.wizardStepSubTitle}>Select 3D Mesh Source</h4>
                   <p className={styles.wizardStepDesc}>
-                    Choose a shoe scan synced from the mobile vault, or upload a custom GLB file.
+                    Start from an empty project, or upload your own .glb / .gltf model.
                   </p>
 
                   {/* Select sources tab */}
                   <div className={styles.sourceSelectorTabs}>
                     <button
-                      className={`${styles.sourceTab} ${wizardSource === 'cloud' ? styles.sourceTabActive : ''}`}
-                      onClick={() => setWizardSource('cloud')}
+                      className={`${styles.sourceTab} ${wizardSource === 'blank' ? styles.sourceTabActive : ''}`}
+                      onClick={() => setWizardSource('blank')}
                     >
-                      <Smartphone size={16} />
-                      <span>Cloud Synced Scans</span>
+                      <Plus size={16} />
+                      <span>Start empty</span>
                     </button>
                     <button
                       className={`${styles.sourceTab} ${wizardSource === 'upload' ? styles.sourceTabActive : ''}`}
                       onClick={() => setWizardSource('upload')}
                     >
                       <Laptop size={16} />
-                      <span>Upload custom .GLB</span>
+                      <span>Upload a model</span>
                     </button>
                   </div>
 
                   {/* Sources Content */}
-                  {wizardSource === 'cloud' ? (
-                    <div className={styles.cloudScansList}>
-                      {cloudScans.length === 0 && (
-                        <div className={styles.cloudEmpty}>
-                          Seed or create projects first. Cloud source scans are loaded from the
-                          backend project database.
-                        </div>
-                      )}
-                      {cloudScans.map((scan) => (
-                        <div
-                          key={scan.id}
-                          className={`${styles.cloudScanCard} ${selectedCloudScan === scan.id ? styles.cloudScanCardSelected : ''}`}
-                          onClick={() => setSelectedCloudScan(scan.id)}
-                        >
-                          <div className={styles.cloudScanCheck}>
-                            {selectedCloudScan === scan.id ? (
-                              <CheckCircle2
-                                size={20}
-                                color="var(--color-orange)"
-                                strokeWidth={2.5}
-                              />
-                            ) : (
-                              <div className={styles.scanCheckCircle} />
-                            )}
-                          </div>
-                          <div className={styles.cloudScanInfo}>
-                            <span className={styles.scanName}>{scan.name}</span>
-                            <div className={styles.scanMetaRow}>
-                              <span>{scan.device}</span>
-                              <span>•</span>
-                              <span>{scan.photos} photos</span>
-                              <span>•</span>
-                              <span>{scan.size}</span>
-                            </div>
-                          </div>
-                          <span className={styles.scanTime}>{scan.date}</span>
-                        </div>
-                      ))}
+                  {wizardSource === 'blank' ? (
+                    <div className={styles.sourceNote}>
+                      Creates an empty project and opens it in KusStudio, where you pick the base
+                      shoe. Phone scans don&apos;t need this wizard: each scan from the KusShoes app
+                      already shows up in your projects.
                     </div>
                   ) : (
                     <div
@@ -1163,7 +1097,7 @@ export const Projects: React.FC<ProjectsProps> = ({
                   <div className={styles.desktopConnectionWrapper}>
                     <div className={styles.mockupConnectionBox}>
                       <div className={`${styles.mockNode} ${styles.mockNodeActive}`}>
-                        {wizardSource === 'upload' ? <Laptop size={20} /> : <Smartphone size={20} />}
+                        {wizardSource === 'upload' ? <Laptop size={20} /> : <Plus size={20} />}
                         <span>{wizardSource === 'upload' ? 'Your model' : 'Web project'}</span>
                       </div>
 
