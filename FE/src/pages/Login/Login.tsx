@@ -13,7 +13,7 @@ import {
   type RegisterFieldErrors,
   type LoginFieldErrors,
 } from '../../utils/authValidation';
-import { LoginBackdrop } from './LoginBackdrop';
+import { LoginArt } from './LoginArt';
 import { AccountRecovery, type RecoveryMode } from './AccountRecovery';
 import styles from './Login.module.css';
 
@@ -251,7 +251,7 @@ export const Login: React.FC<LoginProps> = ({ setPage }) => {
 
   return (
     <div className={styles.container}>
-      <LoginBackdrop />
+      <LoginArt />
 
       {/* Back to landing */}
       <button className={styles.backBtn} onClick={() => setPage('landing')}>
