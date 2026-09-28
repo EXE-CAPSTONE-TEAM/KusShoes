@@ -84,6 +84,13 @@ export type UserProfile = {
   bio: string | null;
   language: string;
   preferred_styles: string[];
+  // Designer profile (Settings page); optional free text, blank is stored as null.
+  designer_role: string | null;
+  studio_name: string | null;
+  studio_location: string | null;
+  instagram_handle: string | null;
+  behance_username: string | null;
+  tiktok_handle: string | null;
   status: string;
   member_since: string;
   total_designs: number;
@@ -779,6 +786,12 @@ export const api = {
     bio?: string | null;
     language?: 'vi' | 'en';
     preferred_styles?: string[];
+  designer_role?: string | null;
+  studio_name?: string | null;
+  studio_location?: string | null;
+  instagram_handle?: string | null;
+  behance_username?: string | null;
+  tiktok_handle?: string | null;
   }): Promise<UserProfile> {
     return request<UserProfile>('/api/v1/users/me', {
       method: 'PATCH',

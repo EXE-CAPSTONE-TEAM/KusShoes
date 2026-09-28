@@ -5,6 +5,17 @@ from typing import Literal
 
 from pydantic import BaseModel, EmailStr, Field, field_validator, model_validator
 
+# Width of the users.designer_* / studio_* / *_handle columns (migration 030).
+DESIGNER_TEXT_MAX = 100
+DESIGNER_PROFILE_FIELDS = (
+    "designer_role",
+    "studio_name",
+    "studio_location",
+    "instagram_handle",
+    "behance_username",
+    "tiktok_handle",
+)
+
 
 class UpdateProfileRequest(BaseModel):
     first_name: str | None = Field(default=None, min_length=1, max_length=100)
@@ -15,6 +26,19 @@ class UpdateProfileRequest(BaseModel):
     bio: str | None = Field(default=None, max_length=1000)
     language: Literal["vi", "en"] | None = None
     preferred_styles: list[str] | None = Field(default=None, max_length=20)
+    designer_role: str | None = Field(default=None, max_length=DESIGNER_TEXT_MAX)
+    studio_name: str | None = Field(default=None, max_length=DESIGNER_TEXT_MAX)
+    studio_location: str | None = Field(default=None, max_length=DESIGNER_TEXT_MAX)
+    instagram_handle: str | None = Field(default=None, max_length=DESIGNER_TEXT_MAX)
+    behance_username: str | None = Field(default=None, max_length=DESIGNER_TEXT_MAX)
+    tiktok_handle: str | None = Field(default=None, max_length=DESIGNER_TEXT_MAX)
+
+    @field_validator(*DESIGNER_PROFILE_FIELDS)
+    @classmethod
+    def blank_designer_text_is_none(cls, value: str | None) -> str | None:
+        if value is None:
+            return None
+        return value.strip() or None
 
     @field_validator("username")
     @classmethod
@@ -81,6 +105,12 @@ class UserDetailResponse(BaseModel):
     bio: str | None
     language: str
     preferred_styles: list[str]
+    designer_role: str | None = None
+    studio_name: str | None = None
+    studio_location: str | None = None
+    instagram_handle: str | None = None
+    behance_username: str | None = None
+    tiktok_handle: str | None = None
     status: str
     member_since: datetime
     total_designs: int

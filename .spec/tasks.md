@@ -60,7 +60,7 @@ BE+FE = needs backend work · DECISION = blocked on a product decision from T AK
   **Decided 2026-09-29: show used storage only** (sum of the user's project assets + exports), no
   per-plan limit, no upload enforcement. Widget shows "X used" without a bar denominator.
 
-- [ ] **T10 — Profile fields with no BE column**
+- [x] **T10 — Profile fields with no BE column**
   Lane: BE+FE + DECISION. Settings accepts Primary Role, Studio Name, Studio Location, Instagram,
   Behance, TikTok but never saves them. **Decided 2026-09-29: add DB columns and save them**
   (migration + `UpdateProfileRequest` + `UserDetailResponse`). Preset avatars stay preview-only.

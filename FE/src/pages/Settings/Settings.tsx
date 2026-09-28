@@ -78,7 +78,7 @@ export const Settings: React.FC<SettingsProps> = ({
     username: '',
     phone: '',
     language: 'en' as 'en' | 'vi',
-    role: 'Sneaker Designer',
+    role: '',
     avatar:
       'https://images.unsplash.com/photo-1534528741775-53994a69daeb?auto=format&fit=crop&w=100&q=80',
     studioName: '',
@@ -105,6 +105,12 @@ export const Settings: React.FC<SettingsProps> = ({
           email: profile.email,
           username: profile.username,
           phone: profile.phone_number ?? '',
+          role: profile.designer_role ?? '',
+          studioName: profile.studio_name ?? '',
+          location: profile.studio_location ?? '',
+          instagram: profile.instagram_handle ?? '',
+          behance: profile.behance_username ?? '',
+          tiktok: profile.tiktok_handle ?? '',
           language: profile.language === 'vi' ? 'vi' : 'en',
           bio: profile.bio ?? '',
           avatar: api.avatarUrl(profile.avatar_path) ?? current.avatar,
@@ -137,6 +143,12 @@ export const Settings: React.FC<SettingsProps> = ({
         last_name: lastNameParts.join(' '),
         bio: profileData.bio.trim() || null,
         phone_number: profileData.phone.trim() || null,
+        designer_role: profileData.role.trim() || null,
+        studio_name: profileData.studioName.trim() || null,
+        studio_location: profileData.location.trim() || null,
+        instagram_handle: profileData.instagram.trim() || null,
+        behance_username: profileData.behance.trim() || null,
+        tiktok_handle: profileData.tiktok.trim() || null,
         language: profileData.language,
         ...(username && username !== savedUsername ? { username } : {}),
       });
@@ -367,6 +379,7 @@ export const Settings: React.FC<SettingsProps> = ({
                       <label htmlFor="designer-role">Primary Role</label>
                       <input
                         id="designer-role"
+                        maxLength={100}
                         type="text"
                         value={profileData.role}
                         onChange={(e) => setProfileData({ ...profileData, role: e.target.value })}
@@ -374,9 +387,23 @@ export const Settings: React.FC<SettingsProps> = ({
                       />
                     </div>
                     <div className={styles.inputGroup}>
+                      <label htmlFor="designer-studio">Studio Name</label>
+                      <input
+                        id="designer-studio"
+                        type="text"
+                        value={profileData.studioName}
+                        onChange={(e) =>
+                          setProfileData({ ...profileData, studioName: e.target.value })
+                        }
+                        className={styles.input}
+                        maxLength={100}
+                      />
+                    </div>
+                    <div className={styles.inputGroup}>
                       <label htmlFor="designer-location">Studio Location</label>
                       <input
                         id="designer-location"
+                        maxLength={100}
                         type="text"
                         value={profileData.location}
                         onChange={(e) =>
@@ -415,6 +442,7 @@ export const Settings: React.FC<SettingsProps> = ({
                         <Instagram size={14} className={styles.fieldIcon} />
                         <input
                           id="designer-instagram"
+                          maxLength={100}
                           type="text"
                           value={profileData.instagram}
                           onChange={(e) =>
@@ -430,6 +458,7 @@ export const Settings: React.FC<SettingsProps> = ({
                         <Globe size={14} className={styles.fieldIcon} />
                         <input
                           id="designer-behance"
+                          maxLength={100}
                           type="text"
                           value={profileData.behance}
                           onChange={(e) =>
@@ -445,6 +474,7 @@ export const Settings: React.FC<SettingsProps> = ({
                         <Smartphone size={14} className={styles.fieldIcon} />
                         <input
                           id="designer-tiktok"
+                          maxLength={100}
                           type="text"
                           value={profileData.tiktok}
                           onChange={(e) =>

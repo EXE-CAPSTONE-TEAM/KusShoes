@@ -24,6 +24,35 @@ async def test_get_and_update_profile(client, auth_headers):
 
 
 @pytest.mark.asyncio
+async def test_designer_profile_fields_round_trip(client, auth_headers):
+    response = await client.patch(
+        "/api/v1/users/me",
+        headers=auth_headers,
+        json={
+            "designer_role": " Sneaker Designer ",
+            "studio_name": "Kus Lab",
+            "studio_location": "Ho Chi Minh City",
+            "instagram_handle": "@kus.lab",
+            "behance_username": "",
+            "tiktok_handle": "@kuslab",
+        },
+    )
+    assert response.status_code == 200
+    body = (await client.get("/api/v1/users/me", headers=auth_headers)).json()
+    assert body["designer_role"] == "Sneaker Designer"  # trimmed
+    assert body["studio_name"] == "Kus Lab"
+    assert body["studio_location"] == "Ho Chi Minh City"
+    assert body["instagram_handle"] == "@kus.lab"
+    assert body["behance_username"] is None  # blank clears the field
+    assert body["tiktok_handle"] == "@kuslab"
+
+    too_long = await client.patch(
+        "/api/v1/users/me", headers=auth_headers, json={"studio_name": "x" * 101}
+    )
+    assert too_long.status_code == 422
+
+
+@pytest.mark.asyncio
 async def test_profile_usage(client, auth_headers):
     response = await client.get("/api/v1/users/me/usage", headers=auth_headers)
     assert response.status_code == 200
