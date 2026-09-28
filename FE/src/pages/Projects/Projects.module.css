@@ -763,15 +763,85 @@
   }
 }
 
+/* Modals & Dialogs — Section 5.15 (fixed dark scrim + centered surface box) */
+.modalBackdrop {
+  position: fixed;
+  inset: 0;
+  background-color: var(--overlay-scrim, rgba(0, 0, 0, 0.4));
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  z-index: 1000;
+  padding: 16px;
+}
+
+.modal {
+  width: 100%;
+  max-width: 420px;
+  background-color: var(--bg-surface);
+  border: 1px solid var(--border);
+  border-radius: var(--radius-lg, 8px);
+  box-shadow: var(--shadow-overlay);
+  padding: 20px;
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+}
+
+.modalTitle {
+  font-family: inherit;
+  font-size: 14px;
+  font-weight: 600;
+  color: var(--text-primary);
+  margin: 0;
+}
+
+.modalDesc {
+  font-size: 13px;
+  color: var(--text-secondary);
+  line-height: 20px;
+  margin: 0;
+}
+
+.modalForm {
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+}
+
+.modalInput {
+  height: 32px;
+  padding: 0 10px;
+  background-color: var(--bg-surface);
+  border: 1px solid var(--border);
+  border-radius: var(--radius-md, 6px);
+  color: var(--text-primary);
+  font-family: inherit;
+  font-size: 13px;
+}
+
+.modalInput:focus {
+  outline: none;
+  border-color: var(--text-primary);
+}
+
+.modalActions {
+  display: flex;
+  align-items: center;
+  justify-content: flex-end;
+  gap: 8px;
+}
+
 /* Multi-step Wizard Modal */
 .wizardModal {
   width: 580px;
   padding: 32px;
-  border-radius: var(--border-radius-lg);
+  border-radius: var(--radius-lg, 8px);
   display: flex;
   flex-direction: column;
-  background: rgba(18, 18, 21, 0.98);
-  box-shadow: var(--shadow-lg);
+  background-color: var(--bg-surface);
+  border: 1px solid var(--border);
+  box-shadow: var(--shadow-overlay);
   z-index: 1010;
   gap: 20px;
   max-height: 90vh;
