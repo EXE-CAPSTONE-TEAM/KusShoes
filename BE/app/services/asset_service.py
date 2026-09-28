@@ -26,6 +26,8 @@ ALLOWED_UPLOADS = {
         "image/png": {".png"},
         "image/webp": {".webp"},
     },
+    # Card image for the project list; the mobile app renders it from the scanned model.
+    "thumbnail": {"image/jpeg": {".jpg", ".jpeg"}, "image/png": {".png"}, "image/webp": {".webp"}},
 }
 
 MAX_UPLOAD_BYTES = {
@@ -33,6 +35,7 @@ MAX_UPLOAD_BYTES = {
     "sticker": 5 * 1024 * 1024,
     "texture": 25 * 1024 * 1024,
     "reference_image": 25 * 1024 * 1024,
+    "thumbnail": 5 * 1024 * 1024,  # same image class and cap as a sticker
 }
 
 
@@ -142,7 +145,24 @@ async def confirm_upload(
         await project_asset_repo.mark_ready(db, asset, file_size_bytes=verified_size)
     if asset.asset_type == "source_model":
         await project_repo.set_canonical_asset(db, project, asset.id)
+    elif asset.asset_type == "thumbnail":
+        await _replace_thumbnail(db, project, asset)
     return AssetResponse.model_validate(asset)
+
+
+async def _replace_thumbnail(db: AsyncSession, project, asset) -> None:
+    """Point the project at the new thumbnail and drop earlier ones, so re-saves don't pile up."""
+    stale = [
+        other
+        for other in await project_asset_repo.list_for_project(db, project.id)
+        if other.asset_type == "thumbnail" and other.id != asset.id
+    ]
+    await project_repo.set_thumbnail(db, project, asset.file_path)
+    for other in stale:
+        await project_asset_repo.delete(db, other)
+    await db.commit()
+    for other in stale:
+        task_queue.enqueue_storage_delete(other.file_path)
 
 
 async def list_assets(db: AsyncSession, user, project_id: uuid.UUID) -> AssetListResponse:
