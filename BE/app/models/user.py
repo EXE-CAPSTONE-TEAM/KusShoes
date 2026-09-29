@@ -34,6 +34,13 @@ class User(Base, TimestampMixin):
     avatar_path: Mapped[str | None] = mapped_column(Text, nullable=True)  # path in storage, NOT a URL
     phone_number: Mapped[str | None] = mapped_column(String(20), nullable=True)
     bio: Mapped[str | None] = mapped_column(Text, nullable=True)
+    # Designer profile shown on the web Settings page (migration 030). Free text, all optional.
+    designer_role: Mapped[str | None] = mapped_column(String(100), nullable=True)
+    studio_name: Mapped[str | None] = mapped_column(String(100), nullable=True)
+    studio_location: Mapped[str | None] = mapped_column(String(100), nullable=True)
+    instagram_handle: Mapped[str | None] = mapped_column(String(100), nullable=True)
+    behance_username: Mapped[str | None] = mapped_column(String(100), nullable=True)
+    tiktok_handle: Mapped[str | None] = mapped_column(String(100), nullable=True)
     language: Mapped[str] = mapped_column(String(10), nullable=False, default="vi")
     preferred_styles: Mapped[list[str]] = mapped_column(
         ARRAY(String), nullable=False, default=list

@@ -6,9 +6,6 @@ import {
   Trash2,
   Edit3,
   Share2,
-  Globe,
-  EyeOff,
-  Link,
   Grid,
   List,
   Check,
@@ -18,7 +15,6 @@ import {
   RefreshCw,
   Smartphone,
   Laptop,
-  CheckCircle2,
   CheckSquare,
   Square,
   Lock,
@@ -29,6 +25,12 @@ import { Select } from '../../components/Select/Select';
 import { ConfirmDialog } from '../../components/ConfirmDialog/ConfirmDialog';
 import { useToast } from '../../context/ToastContext';
 import { api, type PortalProject } from '../../api/client';
+import {
+  SOURCE_MODEL_ACCEPT,
+  SOURCE_MODEL_MAX_BYTES,
+  importSourceModel,
+  inferSourceModelContentType,
+} from '../../api/sourceModel';
 import { formatDateTime, formatRelativeTime } from '../../utils/format';
 import { ProjectsEmptyState } from './ProjectsEmptyState';
 import { ProjectTrashPanel } from './ProjectTrashPanel';
@@ -41,30 +43,21 @@ const SORT_OPTIONS = [
 ];
 
 const BASE_MODEL_ALL = 'All';
-type VisibilityFilter = 'All' | 'Private' | 'Shared';
 
 type ProjectStatusFilter = 'All' | 'Scanned' | 'Designing' | 'Completed';
 type ProjectSortBy = 'name' | 'date' | 'size';
 type ProjectViewMode = 'grid' | 'list';
 type WizardStep = 1 | 2 | 3;
-type WizardSource = 'cloud' | 'upload';
-type WizardDesktopStatus = 'idle' | 'packaging' | 'launched';
-type ProjectVisibility = PortalProject['visibility'];
-
-const WIZARD_VISIBILITY_OPTIONS: Array<{
-  value: ProjectVisibility;
-  label: string;
-  desc: string;
-}> = [
-  { value: 'Private', label: 'Private', desc: 'Only you can view' },
-  { value: 'Link', label: 'Link Share', desc: 'Anyone with URL' },
-  { value: 'Public', label: 'Public Showcase', desc: 'Show to community' },
-];
+// 'blank': empty project, the base shoe is picked in KusStudio. Mobile scans create their own project.
+type WizardSource = 'blank' | 'upload';
+// Real steps of the final wizard action; 'uploading' only runs for the .GLB source.
+type WizardLaunchStep = 'idle' | 'creating' | 'uploading' | 'launching' | 'launched' | 'error';
 
 interface ProjectsProps {
   projects: PortalProject[];
   setProjects: React.Dispatch<React.SetStateAction<PortalProject[]>>;
-  onViewDetails: (id: string) => void;
+  /** `tab` opens the details page on that tab (e.g. 'share' for the artisan share links). */
+  onViewDetails: (id: string, tab?: 'share') => void;
   initialFilter?: ProjectStatusFilter;
   /** True while the project list is being fetched. */
   loading?: boolean;
@@ -87,9 +80,6 @@ export const Projects: React.FC<ProjectsProps> = ({
   const [searchTerm, setSearchTerm] = useState('');
   const [statusFilter, setStatusFilter] = useState<ProjectStatusFilter>(initialFilter || 'All');
   const [sortBy, setSortBy] = useState<ProjectSortBy>('date');
-  // Real, persisted fields (set at creation) — "Shared" groups Link + Public since both mean
-  // "not private"; there's no cross-account collaboration in this app to filter by instead.
-  const [visibilityFilter, setVisibilityFilter] = useState<VisibilityFilter>('All');
   const [baseModelFilter, setBaseModelFilter] = useState<string>(BASE_MODEL_ALL);
 
   // Selection states
@@ -99,7 +89,6 @@ export const Projects: React.FC<ProjectsProps> = ({
   const [activeMenuId, setActiveMenuId] = useState<string | null>(null);
 
   // Modals
-  const [sharingProject, setSharingProject] = useState<PortalProject | null>(null);
   const [editingProject, setEditingProject] = useState<PortalProject | null>(null);
   const [renameValue, setRenameValue] = useState('');
 
@@ -113,7 +102,7 @@ export const Projects: React.FC<ProjectsProps> = ({
   // Step-Wizard (New Project) States
   const [isCreateWizardOpen, setIsCreateWizardOpen] = useState(false);
   const [wizardStep, setWizardStep] = useState<WizardStep>(1);
-  const [wizardSource, setWizardSource] = useState<WizardSource>('cloud');
+  const [wizardSource, setWizardSource] = useState<WizardSource>('blank');
 
   // Trigger wizard if new=true parameter is present in browser query params
   useEffect(() => {
@@ -125,41 +114,24 @@ export const Projects: React.FC<ProjectsProps> = ({
     }
   }, []);
 
-  const cloudScans = useMemo(
-    () =>
-      projects.map((project) => ({
-        id: project.id,
-        name: project.name,
-        baseModel: project.baseModel,
-        date: formatRelativeTime(project.updatedAt),
-        size: project.fileSize,
-        photos: project.photosCount,
-        device: project.device,
-      })),
-    [projects],
-  );
-
-  const [selectedCloudScan, setSelectedCloudScan] = useState<string>('');
   const [uploadedFile, setUploadedFile] = useState<File | null>(null);
   const fileInputRef = useRef<HTMLInputElement>(null);
 
   // Step 2 inputs
   const [wizardName, setWizardName] = useState('');
   const [wizardBaseModel, setWizardBaseModel] = useState('');
-  const [wizardVisibility, setWizardVisibility] = useState<ProjectVisibility>('Private');
 
-  // Step 3 Desktop simulation state
-  const [wizardDesktopStatus, setWizardDesktopStatus] = useState<WizardDesktopStatus>('idle');
-
-  useEffect(() => {
-    if (cloudScans.length === 0) {
-      setSelectedCloudScan('');
-      return;
-    }
-    setSelectedCloudScan((current) =>
-      cloudScans.some((scan) => scan.id === current) ? current : cloudScans[0].id,
-    );
-  }, [cloudScans]);
+  // Step 3: create the project, import the uploaded model, then open KusStudio
+  const [wizardLaunchStep, setWizardLaunchStep] = useState<WizardLaunchStep>('idle');
+  const [wizardFailedStep, setWizardFailedStep] = useState<WizardLaunchStep | null>(null);
+  const [wizardError, setWizardError] = useState<string | null>(null);
+  // Kept across a retry so a failed upload/launch never creates a second project.
+  const [wizardCreatedProject, setWizardCreatedProject] = useState<PortalProject | null>(null);
+  const [wizardModelImported, setWizardModelImported] = useState(false);
+  const wizardBusy =
+    wizardLaunchStep === 'creating' ||
+    wizardLaunchStep === 'uploading' ||
+    wizardLaunchStep === 'launching';
 
   // File size utility for sorting
   const parseSizeInMb = (sizeStr: string) => {
@@ -185,14 +157,9 @@ export const Projects: React.FC<ProjectsProps> = ({
         proj.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
         proj.baseModel.toLowerCase().includes(searchTerm.toLowerCase());
       const matchesStatus = statusFilter === 'All' || proj.status === statusFilter;
-      const matchesVisibility =
-        visibilityFilter === 'All' ||
-        (visibilityFilter === 'Private'
-          ? proj.visibility === 'Private'
-          : proj.visibility !== 'Private');
       const matchesBaseModel =
         baseModelFilter === BASE_MODEL_ALL || proj.baseModel === baseModelFilter;
-      return matchesSearch && matchesStatus && matchesVisibility && matchesBaseModel;
+      return matchesSearch && matchesStatus && matchesBaseModel;
     });
 
     // Sorting
@@ -207,7 +174,7 @@ export const Projects: React.FC<ProjectsProps> = ({
     });
 
     return result;
-  }, [projects, searchTerm, statusFilter, visibilityFilter, baseModelFilter, sortBy]);
+  }, [projects, searchTerm, statusFilter, baseModelFilter, sortBy]);
 
   // Bulk delete
   const handleBulkDelete = () => {
@@ -291,6 +258,15 @@ export const Projects: React.FC<ProjectsProps> = ({
   const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     if (e.target.files && e.target.files[0]) {
       const file = e.target.files[0];
+      e.target.value = '';
+      if (!inferSourceModelContentType(file.name)) {
+        toast('Only .glb and .gltf files are supported for the 3D model.', 'error');
+        return;
+      }
+      if (file.size > SOURCE_MODEL_MAX_BYTES) {
+        toast('This file is larger than the 500 MB limit for a 3D model.', 'error');
+        return;
+      }
       setUploadedFile(file);
       // Pre-fill Step 2 project details based on filename
       const cleanName = file.name.replace(/\.[^/.]+$/, '').replace(/[_-]/g, ' ');
@@ -302,14 +278,9 @@ export const Projects: React.FC<ProjectsProps> = ({
   // Proceed from Wizard Step 1 to Step 2
   const handleWizardNext = () => {
     if (wizardStep === 1) {
-      if (wizardSource === 'cloud') {
-        const selectedScan = cloudScans.find((s) => s.id === selectedCloudScan);
-        if (!selectedScan) {
-          toast('No cloud scans are available from the database yet.', 'error');
-          return;
-        }
-        setWizardName(`${selectedScan.name} Remix`);
-        setWizardBaseModel(selectedScan.baseModel || 'Custom Base');
+      if (wizardSource === 'upload' && !uploadedFile) {
+        toast('Choose a .glb or .gltf file to upload.', 'error');
+        return;
       }
       setWizardStep(2);
     } else if (wizardStep === 2) {
@@ -321,41 +292,94 @@ export const Projects: React.FC<ProjectsProps> = ({
     }
   };
 
-  // Finalize Wizard & Create project
-  const handleCreateProjectFinal = () => {
-    setWizardDesktopStatus('packaging');
-    setTimeout(async () => {
-      setWizardDesktopStatus('launched');
-      try {
-        const newProject = await api.createProject({
+  const resetWizard = () => {
+    setIsCreateWizardOpen(false);
+    setWizardStep(1);
+    setWizardName('');
+    setWizardBaseModel('');
+    setUploadedFile(null);
+    setWizardLaunchStep('idle');
+    setWizardFailedStep(null);
+    setWizardError(null);
+    setWizardCreatedProject(null);
+    setWizardModelImported(false);
+  };
+
+  // Finalize Wizard: create the project, import the uploaded model, then open KusStudio.
+  // Re-running after a failure resumes from the step that failed.
+  const handleCreateProjectFinal = async () => {
+    if (wizardBusy) return;
+    setWizardError(null);
+    setWizardFailedStep(null);
+    let step: WizardLaunchStep = 'creating';
+    try {
+      let project = wizardCreatedProject;
+      if (!project) {
+        setWizardLaunchStep(step);
+        const created = await api.createProject({
           name: wizardName.trim(),
           description: wizardBaseModel
             ? `Base model: ${wizardBaseModel}`
             : 'Created from the KusShoes web portal.',
         });
-        setProjects((prev) => [newProject, ...prev]);
-        // Reset and close modal
-        setIsCreateWizardOpen(false);
-        setWizardStep(1);
-        setWizardName('');
-        setWizardBaseModel('');
-        setWizardDesktopStatus('idle');
-        setUploadedFile(null);
-        toast(`Project "${wizardName}" was created on the server.`);
-      } catch (caught) {
-        setWizardDesktopStatus('idle');
-        toast(caught instanceof Error ? caught.message : 'Unable to create project.', 'error');
+        project = created;
+        setWizardCreatedProject(created);
+        setProjects((prev) => [created, ...prev]);
       }
-    }, 2000);
+
+      if (wizardSource === 'upload' && uploadedFile && !wizardModelImported) {
+        step = 'uploading';
+        setWizardLaunchStep(step);
+        await importSourceModel(project.id, uploadedFile);
+        setWizardModelImported(true);
+      }
+
+      step = 'launching';
+      setWizardLaunchStep(step);
+      const launch = await api.createEditorLaunch(project.id);
+      setWizardLaunchStep('launched');
+      window.location.assign(launch.desktopUrl);
+      toast(`Project "${project.name}" was created. Opening KusStudio...`);
+    } catch (caught) {
+      const message = caught instanceof Error ? caught.message : 'Something went wrong.';
+      setWizardLaunchStep('error');
+      setWizardFailedStep(step);
+      setWizardError(message);
+      toast(message, 'error');
+    }
   };
 
   // Reset Wizard
   const handleCloseWizard = () => {
-    setIsCreateWizardOpen(false);
-    setWizardStep(1);
-    setUploadedFile(null);
-    setWizardDesktopStatus('idle');
+    if (wizardBusy) return;
+    resetWizard();
   };
+
+  const wizardLaunchOrder: WizardLaunchStep[] =
+    wizardSource === 'upload' ? ['creating', 'uploading', 'launching'] : ['creating', 'launching'];
+  const wizardLaunchLabels: Partial<Record<WizardLaunchStep, string>> = {
+    creating: `Create project "${wizardName.trim() || 'Untitled'}"`,
+    uploading: `Upload ${uploadedFile?.name ?? 'the 3D model'}`,
+    launching: 'Open KusStudio Desktop',
+  };
+  const wizardCurrentIndex =
+    wizardLaunchStep === 'launched'
+      ? wizardLaunchOrder.length
+      : wizardLaunchOrder.indexOf(
+          wizardLaunchStep === 'error' && wizardFailedStep ? wizardFailedStep : wizardLaunchStep,
+        );
+  const wizardLaunchItems = wizardLaunchOrder.map((step, index) => ({
+    step,
+    label: wizardLaunchLabels[step] ?? step,
+    state:
+      wizardCurrentIndex < 0 || index > wizardCurrentIndex
+        ? 'pending'
+        : index < wizardCurrentIndex
+          ? 'done'
+          : wizardLaunchStep === 'error'
+            ? 'failed'
+            : 'active',
+  }));
 
   const handleWizardBack = () => {
     setWizardStep(wizardStep === 3 ? 2 : 1);
@@ -431,35 +455,16 @@ export const Projects: React.FC<ProjectsProps> = ({
           </div>
         </div>
 
-        {/* Row 2: visibility tabs (+ Trash), base-model filter, sort, view toggle */}
+        {/* Row 2: All (+ Trash), base-model filter, sort, view toggle */}
         <div className={styles.toolbar}>
           <nav className={styles.tabs} role="tablist" aria-label="Project filters">
             <button
               type="button"
               role="tab"
-              aria-selected={visibilityFilter === 'All'}
+              aria-selected
               className={styles.tab}
-              onClick={() => setVisibilityFilter('All')}
             >
               All
-            </button>
-            <button
-              type="button"
-              role="tab"
-              aria-selected={visibilityFilter === 'Private'}
-              className={styles.tab}
-              onClick={() => setVisibilityFilter('Private')}
-            >
-              Private
-            </button>
-            <button
-              type="button"
-              role="tab"
-              aria-selected={visibilityFilter === 'Shared'}
-              className={styles.tab}
-              onClick={() => setVisibilityFilter('Shared')}
-            >
-              Shared
             </button>
             <span className={styles.tabsDivider} aria-hidden="true" />
             <button
@@ -557,7 +562,7 @@ export const Projects: React.FC<ProjectsProps> = ({
                       <span className={styles.thumbBadge}>{proj.fileSize}</span>
                     </div>
 
-                    {/* Info: name + menu, model/edited meta, palette + visibility */}
+                    {/* Info: name + menu, model/edited meta, palette */}
                     <div className={styles.cardInfo}>
                       <div className={styles.cardHeader}>
                         <h3 className={styles.cardName} title={proj.name}>
@@ -601,8 +606,8 @@ export const Projects: React.FC<ProjectsProps> = ({
                               </button>
                               <button
                                 onClick={() => {
-                                  setSharingProject(proj);
                                   setActiveMenuId(null);
+                                  onViewDetails(proj.id, 'share');
                                 }}
                               >
                                 <Share2 size={14} /> Share Link
@@ -610,45 +615,7 @@ export const Projects: React.FC<ProjectsProps> = ({
 
                               <div className={styles.dropdownDivider} />
 
-                              <div className={styles.dropdownSectionTitle}>Visibility</div>
-                              <button
-                                className={`${styles.dropdownItem} ${proj.visibility === 'Private' ? styles.dropdownActiveItem : ''}`}
-                                onClick={() => {
-                                  toast(
-                                    'Project visibility is not exposed by the backend yet.',
-                                    'info',
-                                  );
-                                  setActiveMenuId(null);
-                                }}
-                              >
-                                <EyeOff size={14} /> Private
-                              </button>
-                              <button
-                                className={`${styles.dropdownItem} ${proj.visibility === 'Link' ? styles.dropdownActiveItem : ''}`}
-                                onClick={() => {
-                                  toast(
-                                    'Project visibility is not exposed by the backend yet.',
-                                    'info',
-                                  );
-                                  setActiveMenuId(null);
-                                }}
-                              >
-                                <Link size={14} /> Link Share
-                              </button>
-                              <button
-                                className={`${styles.dropdownItem} ${proj.visibility === 'Public' ? styles.dropdownActiveItem : ''}`}
-                                onClick={() => {
-                                  toast(
-                                    'Project visibility is not exposed by the backend yet.',
-                                    'info',
-                                  );
-                                  setActiveMenuId(null);
-                                }}
-                              >
-                                <Globe size={14} /> Public Showcase
-                              </button>
 
-                              <div className={styles.dropdownDivider} />
 
                               <button
                                 className={styles.dropdownDeleteBtn}
@@ -685,14 +652,6 @@ export const Projects: React.FC<ProjectsProps> = ({
                             />
                           )}
                         </div>
-                        <span
-                          className={`${styles.visibilityTag} ${styles[`visibility${proj.visibility}`]}`}
-                        >
-                          {proj.visibility === 'Public' && <Globe size={11} />}
-                          {proj.visibility === 'Link' && <Link size={11} />}
-                          {proj.visibility === 'Private' && <EyeOff size={11} />}
-                          {proj.visibility}
-                        </span>
                       </div>
                     </div>
                   </div>
@@ -720,7 +679,6 @@ export const Projects: React.FC<ProjectsProps> = ({
                 <th>Base Sneaker</th>
                 <th>Source Device</th>
                 <th>File Size</th>
-                <th>Visibility</th>
                 <th>Actions</th>
               </tr>
             </thead>
@@ -778,22 +736,10 @@ export const Projects: React.FC<ProjectsProps> = ({
                         </div>
                       </td>
                       <td className={styles.tableSizeCell}>{proj.fileSize}</td>
-                      <td>
-                        <span
-                          className={`${styles.badge} ${styles.visibilityBadge} ${styles.listVisibility}`}
-                        >
-                          {proj.visibility === 'Public' && <Globe size={11} />}
-                          {proj.visibility === 'Link' && <Link size={11} />}
-                          {proj.visibility === 'Private' && <EyeOff size={11} />}
-                          {proj.visibility}
-                        </span>
-                      </td>
                       <td onClick={(e) => e.stopPropagation()}>
                         <div className={styles.rowActions}>
                           <button
-                            onClick={() => {
-                              setSharingProject(proj);
-                            }}
+                            onClick={() => onViewDetails(proj.id, 'share')}
                             title="Share link"
                           >
                             <Share2 size={14} />
@@ -844,14 +790,12 @@ export const Projects: React.FC<ProjectsProps> = ({
           activeFilters={[
             ...(searchTerm.trim() ? [`\u201c${searchTerm.trim()}\u201d`] : []),
             ...(statusFilter !== 'All' ? [statusFilter] : []),
-            ...(visibilityFilter !== 'All' ? [visibilityFilter] : []),
             ...(baseModelFilter !== BASE_MODEL_ALL ? [baseModelFilter] : []),
           ]}
           onCreate={() => setIsCreateWizardOpen(true)}
           onClearFilters={() => {
             setSearchTerm('');
             setStatusFilter('All');
-            setVisibilityFilter('All');
             setBaseModelFilter(BASE_MODEL_ALL);
           }}
         />
@@ -891,28 +835,6 @@ export const Projects: React.FC<ProjectsProps> = ({
         </div>
       )}
 
-      {/* Share Modal */}
-      {sharingProject && (
-        <div className={styles.modalBackdrop}>
-          <motion.div
-            className={styles.modal}
-            initial={{ opacity: 0, scale: 0.95 }}
-            animate={{ opacity: 1, scale: 1 }}
-          >
-            <h3 className={styles.modalTitle}>Share Shoe Model</h3>
-            <p className={styles.modalDesc}>
-              Share links are not exposed by the backend yet, so the web app will not generate a
-              placeholder URL.
-            </p>
-            <div className={styles.modalActions} style={{ marginTop: '24px' }}>
-              <button className="btn-outline" onClick={() => setSharingProject(null)}>
-                Close
-              </button>
-            </div>
-          </motion.div>
-        </div>
-      )}
-
       {/* Multi-step Create Project Modal Step-Wizard */}
       {isCreateWizardOpen && (
         <div className={styles.modalBackdrop}>
@@ -947,66 +869,33 @@ export const Projects: React.FC<ProjectsProps> = ({
                 <div className={styles.wizardStepContent}>
                   <h4 className={styles.wizardStepSubTitle}>Select 3D Mesh Source</h4>
                   <p className={styles.wizardStepDesc}>
-                    Choose a shoe scan synced from the mobile vault, or upload a custom GLB file.
+                    Start from an empty project, or upload your own .glb / .gltf model.
                   </p>
 
                   {/* Select sources tab */}
                   <div className={styles.sourceSelectorTabs}>
                     <button
-                      className={`${styles.sourceTab} ${wizardSource === 'cloud' ? styles.sourceTabActive : ''}`}
-                      onClick={() => setWizardSource('cloud')}
+                      className={`${styles.sourceTab} ${wizardSource === 'blank' ? styles.sourceTabActive : ''}`}
+                      onClick={() => setWizardSource('blank')}
                     >
-                      <Smartphone size={16} />
-                      <span>Cloud Synced Scans</span>
+                      <Plus size={16} />
+                      <span>Start empty</span>
                     </button>
                     <button
                       className={`${styles.sourceTab} ${wizardSource === 'upload' ? styles.sourceTabActive : ''}`}
                       onClick={() => setWizardSource('upload')}
                     >
                       <Laptop size={16} />
-                      <span>Upload custom .GLB</span>
+                      <span>Upload a model</span>
                     </button>
                   </div>
 
                   {/* Sources Content */}
-                  {wizardSource === 'cloud' ? (
-                    <div className={styles.cloudScansList}>
-                      {cloudScans.length === 0 && (
-                        <div className={styles.cloudEmpty}>
-                          Seed or create projects first. Cloud source scans are loaded from the
-                          backend project database.
-                        </div>
-                      )}
-                      {cloudScans.map((scan) => (
-                        <div
-                          key={scan.id}
-                          className={`${styles.cloudScanCard} ${selectedCloudScan === scan.id ? styles.cloudScanCardSelected : ''}`}
-                          onClick={() => setSelectedCloudScan(scan.id)}
-                        >
-                          <div className={styles.cloudScanCheck}>
-                            {selectedCloudScan === scan.id ? (
-                              <CheckCircle2
-                                size={20}
-                                color="var(--color-orange)"
-                                strokeWidth={2.5}
-                              />
-                            ) : (
-                              <div className={styles.scanCheckCircle} />
-                            )}
-                          </div>
-                          <div className={styles.cloudScanInfo}>
-                            <span className={styles.scanName}>{scan.name}</span>
-                            <div className={styles.scanMetaRow}>
-                              <span>{scan.device}</span>
-                              <span>•</span>
-                              <span>{scan.photos} photos</span>
-                              <span>•</span>
-                              <span>{scan.size}</span>
-                            </div>
-                          </div>
-                          <span className={styles.scanTime}>{scan.date}</span>
-                        </div>
-                      ))}
+                  {wizardSource === 'blank' ? (
+                    <div className={styles.sourceNote}>
+                      Creates an empty project and opens it in KusStudio, where you pick the base
+                      shoe. Phone scans don&apos;t need this wizard: each scan from the KusShoes app
+                      already shows up in your projects.
                     </div>
                   ) : (
                     <div
@@ -1017,8 +906,9 @@ export const Projects: React.FC<ProjectsProps> = ({
                         type="file"
                         ref={fileInputRef}
                         onChange={handleFileChange}
-                        accept=".glb"
+                        accept={SOURCE_MODEL_ACCEPT}
                         style={{ display: 'none' }}
+                        aria-label="Upload 3D model file"
                       />
                       <Laptop size={32} className={styles.uploadZoneIcon} />
                       {uploadedFile ? (
@@ -1033,7 +923,7 @@ export const Projects: React.FC<ProjectsProps> = ({
                         <div>
                           <span className={styles.uploadZoneTitle}>Drag & Drop or browse file</span>
                           <span className={styles.uploadZoneTip}>
-                            Supports 3D mesh GLB files. Max 50MB.
+                            Supports .glb and .gltf models. Max 500 MB.
                           </span>
                         </div>
                       )}
@@ -1072,88 +962,67 @@ export const Projects: React.FC<ProjectsProps> = ({
                         placeholder="Nike Air Force 1"
                       />
                     </div>
-
-                    <div className={styles.wizardInputGroup}>
-                      <label>Project Privacy Visibility</label>
-                      <div className={styles.visibilityOptionsRow}>
-                        {WIZARD_VISIBILITY_OPTIONS.map((opt) => (
-                          <div
-                            key={opt.value}
-                            className={`${styles.visOptionCard} ${wizardVisibility === opt.value ? styles.visOptionCardActive : ''}`}
-                            onClick={() => setWizardVisibility(opt.value)}
-                          >
-                            <span className={styles.visOptionLabel}>{opt.label}</span>
-                            <span className={styles.visOptionDesc}>{opt.desc}</span>
-                          </div>
-                        ))}
-                      </div>
-                    </div>
                   </div>
                 </div>
               )}
 
-              {/* STEP 3: Sync & Desktop launch */}
+              {/* STEP 3: Create the project and open it in KusStudio */}
               {wizardStep === 3 && (
                 <div className={styles.wizardStepContent}>
                   <h4 className={styles.wizardStepSubTitle}>Launch Design Studio</h4>
                   <p className={styles.wizardStepDesc}>
-                    KusShoes is preparing to bridge this asset model into KusStudio Desktop Client.
-                    Click below to begin customizer.
+                    The project is created on the server
+                    {wizardSource === 'upload' ? ', your 3D model is uploaded to it,' : ''} and
+                    KusStudio Desktop opens with a one-time launch ticket.
                   </p>
 
                   <div className={styles.desktopConnectionWrapper}>
-                    {/* Visual Interface mockup */}
                     <div className={styles.mockupConnectionBox}>
                       <div className={`${styles.mockNode} ${styles.mockNodeActive}`}>
-                        <Smartphone size={20} />
-                        <span>Cloud Scan</span>
+                        {wizardSource === 'upload' ? <Laptop size={20} /> : <Plus size={20} />}
+                        <span>{wizardSource === 'upload' ? 'Your model' : 'Web project'}</span>
                       </div>
 
                       <div className={styles.mockLineConnection}>
-                        <div className={styles.mockProgressLinePulse} />
+                        {wizardBusy && <div className={styles.mockProgressLinePulse} />}
                       </div>
 
                       <div
-                        className={`${styles.mockNode} ${wizardDesktopStatus === 'launched' ? styles.mockNodeActive : styles.mockNodeIdle}`}
+                        className={`${styles.mockNode} ${wizardLaunchStep === 'launched' ? styles.mockNodeActive : styles.mockNodeIdle}`}
                       >
                         <Laptop size={20} />
                         <span>KusStudio</span>
                       </div>
                     </div>
 
-                    {/* Status logs */}
-                    <div className={styles.desktopConnectionLogs}>
-                      <div className={styles.connLogItem}>
-                        <Check size={14} className={styles.connCheck} />
-                        <span>
-                          Asset buffers packaged successfully. (
-                          {wizardSource === 'cloud' ? 'Cloud Vault' : 'Local upload'})
-                        </span>
-                      </div>
-                      <div className={styles.connLogItem}>
-                        {wizardDesktopStatus !== 'idle' ? (
-                          <Check size={14} className={styles.connCheck} />
-                        ) : (
-                          <div className={styles.connLogCircleDot} />
-                        )}
-                        <span>Local daemon ping active (Port 8421).</span>
-                      </div>
-                      <div className={styles.connLogItem}>
-                        {wizardDesktopStatus === 'launched' ? (
-                          <Check size={14} className={styles.connCheck} />
-                        ) : wizardDesktopStatus === 'packaging' ? (
-                          <RefreshCw className={styles.spinIcon} size={14} />
-                        ) : (
-                          <div className={styles.connLogCircleDot} />
-                        )}
-                        <span>
-                          {wizardDesktopStatus === 'launched'
-                            ? 'App launched! Design session locked.'
-                            : wizardDesktopStatus === 'packaging'
-                              ? 'Launching desktop executable...'
-                              : 'Waiting to call desktop launcher deep link...'}
-                        </span>
-                      </div>
+                    <div className={styles.desktopConnectionLogs} role="status" aria-live="polite">
+                      {wizardLaunchItems.map((item) => (
+                        <div key={item.step} className={styles.connLogItem}>
+                          {item.state === 'done' ? (
+                            <Check size={14} className={styles.connCheck} />
+                          ) : item.state === 'active' ? (
+                            <RefreshCw className={styles.spinIcon} size={14} />
+                          ) : item.state === 'failed' ? (
+                            <X size={14} color="#ef4444" />
+                          ) : (
+                            <div className={styles.connLogCircleDot} />
+                          )}
+                          <span>{item.label}</span>
+                        </div>
+                      ))}
+                      {wizardError && (
+                        <div className={styles.connLogItem} role="alert" style={{ color: '#ef4444' }}>
+                          <span>{wizardError}</span>
+                        </div>
+                      )}
+                      {wizardLaunchStep === 'launched' && (
+                        <div className={styles.connLogItem}>
+                          <span>
+                            KusStudio did not open? Install the desktop app, then use "Launch
+                            KusStudio" on the project page.
+                          </span>
+                        </div>
+                      )}
                     </div>
                   </div>
                 </div>
@@ -1162,18 +1031,14 @@ export const Projects: React.FC<ProjectsProps> = ({
 
             {/* Footer Buttons */}
             <div className={styles.wizardFooter}>
-              {wizardStep > 1 ? (
-                <button
-                  className="btn-outline"
-                  onClick={handleWizardBack}
-                  disabled={wizardDesktopStatus === 'packaging'}
-                >
+              {wizardStep > 1 && !wizardCreatedProject ? (
+                <button className="btn-outline" onClick={handleWizardBack} disabled={wizardBusy}>
                   <ArrowLeft size={16} />
                   <span>Back</span>
                 </button>
               ) : (
-                <button className="btn-outline" onClick={handleCloseWizard}>
-                  Cancel
+                <button className="btn-outline" onClick={handleCloseWizard} disabled={wizardBusy}>
+                  {wizardCreatedProject ? 'Close' : 'Cancel'}
                 </button>
               )}
 
@@ -1182,24 +1047,33 @@ export const Projects: React.FC<ProjectsProps> = ({
                   <span>Next Step</span>
                   <ArrowRight size={16} />
                 </button>
+              ) : wizardLaunchStep === 'launched' ? (
+                <button className="btn-neon-orange" onClick={resetWizard}>
+                  <Check size={18} />
+                  <span>Done</span>
+                </button>
               ) : (
                 <button
                   className="btn-neon-orange"
-                  onClick={handleCreateProjectFinal}
-                  disabled={
-                    wizardDesktopStatus === 'packaging' || wizardDesktopStatus === 'launched'
-                  }
+                  onClick={() => void handleCreateProjectFinal()}
+                  disabled={wizardBusy}
                   style={{ gap: '10px' }}
                 >
-                  {wizardDesktopStatus === 'packaging' ? (
+                  {wizardBusy ? (
                     <>
                       <RefreshCw className={styles.spinIcon} size={18} />
-                      <span>Launching KusStudio...</span>
+                      <span>
+                        {wizardLaunchStep === 'creating'
+                          ? 'Creating project...'
+                          : wizardLaunchStep === 'uploading'
+                            ? 'Uploading model...'
+                            : 'Opening KusStudio...'}
+                      </span>
                     </>
                   ) : (
                     <>
                       <Laptop size={18} />
-                      <span>Launch Desktop Client</span>
+                      <span>{wizardLaunchStep === 'error' ? 'Retry' : 'Create & Launch KusStudio'}</span>
                     </>
                   )}
                 </button>

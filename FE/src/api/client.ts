@@ -84,6 +84,13 @@ export type UserProfile = {
   bio: string | null;
   language: string;
   preferred_styles: string[];
+  // Designer profile (Settings page); optional free text, blank is stored as null.
+  designer_role: string | null;
+  studio_name: string | null;
+  studio_location: string | null;
+  instagram_handle: string | null;
+  behance_username: string | null;
+  tiktok_handle: string | null;
   status: string;
   member_since: string;
   total_designs: number;
@@ -97,6 +104,8 @@ export type Usage = {
   exports_count: number;
   ai_credits_used: number;
   ai_credits_limit: number | null;
+  /** Confirmed project assets + exported files; there is no per-plan storage limit. */
+  storage_used_bytes: number;
 };
 
 export type PortalProject = {
@@ -106,7 +115,6 @@ export type PortalProject = {
   status: 'Scanned' | 'Designing' | 'Completed';
   rawStatus: string;
   isLocked: boolean;
-  visibility: 'Private' | 'Link' | 'Public';
   updatedAt: string;
   createdAt: string;
   imageUrl: string;
@@ -220,6 +228,22 @@ export type ProjectExport = {
   created_at: string;
 };
 
+/** One row of GET /api/v1/exports: every export of the signed-in user, newest first. */
+export type ExportHistoryItem = ProjectExport & {
+  project_id: string;
+  project_name: string;
+  /** BR-65: produced under the Free-tier watermark policy. */
+  is_watermarked: boolean;
+};
+
+export type ExportFormat = 'glb' | 'obj' | 'zip';
+
+export type ExportHistoryPage = {
+  items: ExportHistoryItem[];
+  nextCursor: string | null;
+  hasNext: boolean;
+};
+
 const FALLBACK_PROJECT_IMAGE = new URL('../assets/sneaker-hero.png', import.meta.url).href;
 const COMPLETED_PROJECT_STATUSES = new Set(['completed', 'ready', 'exported']);
 const DESIGNING_PROJECT_STATUSES = new Set(['in_progress', 'processing', 'queued', 'baking']);
@@ -262,17 +286,6 @@ function normalizeProjectStatus(status: string): PortalProject['status'] {
   return 'Scanned';
 }
 
-function normalizeProjectVisibility(value: unknown): PortalProject['visibility'] {
-  if (value === 'Private' || value === 'Link' || value === 'Public') return value;
-  if (typeof value === 'string') {
-    const normalized = value.toLowerCase();
-    if (normalized === 'private') return 'Private';
-    if (normalized === 'link') return 'Link';
-    if (normalized === 'public') return 'Public';
-  }
-  return 'Private';
-}
-
 function toPortalProject(project: ProjectResponse): PortalProject {
   const config = asRecord(project.design_config);
   const scan = asRecord(config.scan);
@@ -285,7 +298,6 @@ function toPortalProject(project: ProjectResponse): PortalProject {
     status: normalizeProjectStatus(project.status),
     rawStatus: project.status,
     isLocked: Boolean(project.is_locked),
-    visibility: normalizeProjectVisibility(config.visibility),
     updatedAt: project.updated_at,
     createdAt: project.created_at,
     imageUrl: projectImageUrl(project.thumbnail_path),
@@ -664,6 +676,18 @@ export const api = {
     };
   },
 
+  /** Every project of the user: follows next_cursor, since one page holds at most 100 (BE limit). */
+  async listAllProjects(): Promise<PortalProject[]> {
+    const items: PortalProject[] = [];
+    let cursor: string | null = null;
+    do {
+      const page = await this.listProjects(cursor);
+      items.push(...page.items);
+      cursor = page.hasNext ? page.nextCursor : null;
+    } while (cursor);
+    return items;
+  },
+
   async getProject(projectId: string): Promise<PortalProject> {
     const project = await request<ProjectResponse>(`/api/v1/projects/${projectId}`);
     return toPortalProject(project);
@@ -762,6 +786,12 @@ export const api = {
     bio?: string | null;
     language?: 'vi' | 'en';
     preferred_styles?: string[];
+  designer_role?: string | null;
+  studio_name?: string | null;
+  studio_location?: string | null;
+  instagram_handle?: string | null;
+  behance_username?: string | null;
+  tiktok_handle?: string | null;
   }): Promise<UserProfile> {
     return request<UserProfile>('/api/v1/users/me', {
       method: 'PATCH',
@@ -861,6 +891,20 @@ export const api = {
       `/api/v1/projects/${projectId}/exports`,
     );
     return result.items;
+  },
+
+  async listExportHistory(
+    options: { cursor?: string | null; format?: ExportFormat | null } = {},
+  ): Promise<ExportHistoryPage> {
+    const params = new URLSearchParams({ limit: '50' });
+    if (options.cursor) params.set('cursor', options.cursor);
+    if (options.format) params.set('format', options.format);
+    const page = await request<{
+      items: ExportHistoryItem[];
+      next_cursor: string | null;
+      has_next: boolean;
+    }>(`/api/v1/exports?${params.toString()}`);
+    return { items: page.items, nextCursor: page.next_cursor, hasNext: page.has_next };
   },
 
   async createExportDownloadUrl(exportId: string): Promise<string> {

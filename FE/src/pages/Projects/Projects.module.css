@@ -393,16 +393,6 @@
   letter-spacing: 0.5px;
 }
 
-.visibilityBadge {
-  background-color: rgba(11, 11, 12, 0.7);
-  border: 1px solid var(--glass-border);
-  color: #ffffff; /* High contrast pure white text and icons */
-  display: flex;
-  align-items: center;
-  gap: 6px;
-  backdrop-filter: blur(4px);
-}
-
 .cardHeaderMenu {
   position: relative;
   flex-shrink: 0;
@@ -552,27 +542,6 @@
   box-shadow: inset 0 0 0 1px rgba(255, 255, 255, 0.16);
 }
 
-.visibilityTag {
-  display: inline-flex;
-  align-items: center;
-  gap: 4px;
-  font-size: 0.68rem;
-  font-weight: 500;
-  color: var(--text-secondary);
-}
-
-.visibilityPublic {
-  color: var(--status-scanned);
-}
-
-.visibilityLink {
-  color: var(--status-designing);
-}
-
-.visibilityPrivate {
-  color: var(--text-secondary);
-}
-
 /* List view (Table Layout) — same flat 1px-border language as the grid card, no glass/glow */
 .tableContainer {
   border-radius: var(--border-radius-md);
@@ -703,10 +672,6 @@
   font-family: var(--font-mono);
   font-size: 0.85rem;
   color: var(--text-muted);
-}
-
-.listVisibility {
-  padding: 4px 8px;
 }
 
 .rowActions {
@@ -965,83 +930,14 @@
   color: var(--text-primary);
 }
 
-/* Cloud scans list scroll */
-.cloudScansList {
-  display: flex;
-  flex-direction: column;
-  gap: 10px;
-  max-height: 240px;
-  overflow-y: auto;
-  padding-right: 4px;
-}
-
-.cloudEmpty {
+/* "Start empty" wizard source */
+.sourceNote {
   padding: 14px 16px;
   border: 1px dashed rgba(255, 255, 255, 0.18);
   border-radius: 6px;
   color: var(--text-secondary);
   font-size: 0.88rem;
   line-height: 1.5;
-}
-
-.cloudScanCard {
-  display: flex;
-  align-items: center;
-  gap: 14px;
-  padding: 12px 18px;
-  border-radius: var(--border-radius-md);
-  border: 1px solid var(--glass-border);
-  background-color: rgba(255, 255, 255, 0.01);
-  cursor: pointer;
-  transition: all var(--transition-fast);
-}
-
-.cloudScanCard:hover {
-  border-color: rgba(255, 90, 54, 0.3);
-  background-color: rgba(255, 90, 54, 0.02);
-}
-
-.cloudScanCardSelected {
-  border-color: var(--color-orange);
-  background-color: rgba(255, 90, 54, 0.05);
-}
-
-.cloudScanCheck {
-  display: flex;
-  align-items: center;
-  justify-content: center;
-}
-
-.scanCheckCircle {
-  width: 18px;
-  height: 18px;
-  border-radius: 50%;
-  border: 1.5px solid var(--text-muted);
-}
-
-.cloudScanInfo {
-  display: flex;
-  flex-direction: column;
-  gap: 4px;
-}
-
-.scanName {
-  font-family: 'Space Grotesk', sans-serif;
-  font-weight: 700;
-  font-size: 0.9rem;
-}
-
-.scanMetaRow {
-  display: flex;
-  gap: 6px;
-  font-size: 0.75rem;
-  color: var(--text-muted);
-}
-
-.scanTime {
-  margin-left: auto;
-  font-size: 0.75rem;
-  color: var(--text-muted);
 }
 
 /* GLB Upload Zone */
@@ -1135,45 +1031,6 @@
   font-size: 0.85rem;
   font-weight: 600;
   color: var(--text-secondary);
-}
-
-.visibilityOptionsRow {
-  display: grid;
-  grid-template-columns: 1fr 1fr 1fr;
-  gap: 10px;
-}
-
-.visOptionCard {
-  border: 1px solid var(--glass-border);
-  border-radius: var(--border-radius-md);
-  padding: 12px;
-  cursor: pointer;
-  transition: all var(--transition-fast);
-  text-align: center;
-  background-color: rgba(255, 255, 255, 0.005);
-}
-
-.visOptionCard:hover {
-  border-color: rgba(255, 90, 54, 0.3);
-}
-
-.visOptionCardActive {
-  border-color: var(--color-orange);
-  background-color: rgba(255, 90, 54, 0.05);
-}
-
-.visOptionLabel {
-  display: block;
-  font-weight: 700;
-  font-size: 0.85rem;
-  color: var(--text-primary);
-}
-
-.visOptionDesc {
-  display: block;
-  font-size: 0.7rem;
-  color: var(--text-muted);
-  margin-top: 4px;
 }
 
 /* Desktop connection simulation graphics */
@@ -1306,9 +1163,7 @@
     width: 95vw;
     padding: 20px;
   }
-  .visibilityOptionsRow {
-    grid-template-columns: 1fr;
-  }
+  
 }
 
 /* Floating Action Bar (FAB) for Bulk Actions - Clean Light Mode Aesthetic */
@@ -1460,17 +1315,6 @@
   color: var(--text-primary);
   border-color: var(--color-orange);
   background: rgba(255, 90, 54, 0.1);
-}
-
-/* Dropdown visibility configuration styles */
-.dropdownSectionTitle {
-  font-size: 0.7rem;
-  color: var(--text-muted);
-  text-transform: uppercase;
-  font-weight: 700;
-  padding: 6px 12px 2px;
-  font-family: var(--font-mono);
-  letter-spacing: 0.5px;
 }
 
 .dropdownActiveItem {

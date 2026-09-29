@@ -255,17 +255,17 @@ Thông tin tài khoản và gói hiện tại. Bearer.
 
 Responses: `200` UserDetailResponse, `401` ErrorResponse, `403` ErrorResponse
 
-Response fields: `id`: uuid; `account_code`: string; `email`: string; `first_name`: string; `last_name`: string; `username`: string; `avatar_path`: string | null; `phone_number`: string | null; `bio`: string | null; `language`: string; `preferred_styles`: list[string]; `status`: string; `member_since`: date-time; `total_designs`: integer
+Response fields: `id`: uuid; `account_code`: string; `email`: string; `first_name`: string; `last_name`: string; `username`: string; `avatar_path`: string | null; `phone_number`: string | null; `bio`: string | null; `language`: string; `preferred_styles`: list[string]; `designer_role`: string | null; `studio_name`: string | null; `studio_location`: string | null; `instagram_handle`: string | null; `behance_username`: string | null; `tiktok_handle`: string | null; `status`: string; `member_since`: date-time; `total_designs`: integer
 
 ### `PATCH /api/v1/users/me` — Cập nhật hồ sơ
 
 Đổi tên, username (giới hạn 30 ngày/lần, BR-10, có từ khóa dành riêng). Bearer.
 
-Request body: `first_name?`: string | null; `last_name?`: string | null; `username?`: string | null; `avatar_path?`: string | null; `phone_number?`: string | null; `bio?`: string | null; `language?`: string | null; `preferred_styles?`: list[string] | null
+Request body: `first_name?`: string | null; `last_name?`: string | null; `username?`: string | null; `avatar_path?`: string | null; `phone_number?`: string | null; `bio?`: string | null; `language?`: string | null; `preferred_styles?`: list[string] | null; `designer_role?`: string | null; `studio_name?`: string | null; `studio_location?`: string | null; `instagram_handle?`: string | null; `behance_username?`: string | null; `tiktok_handle?`: string | null
 
 Responses: `200` UserDetailResponse, `401` ErrorResponse, `403` ErrorResponse
 
-Response fields: `id`: uuid; `account_code`: string; `email`: string; `first_name`: string; `last_name`: string; `username`: string; `avatar_path`: string | null; `phone_number`: string | null; `bio`: string | null; `language`: string; `preferred_styles`: list[string]; `status`: string; `member_since`: date-time; `total_designs`: integer
+Response fields: `id`: uuid; `account_code`: string; `email`: string; `first_name`: string; `last_name`: string; `username`: string; `avatar_path`: string | null; `phone_number`: string | null; `bio`: string | null; `language`: string; `preferred_styles`: list[string]; `designer_role`: string | null; `studio_name`: string | null; `studio_location`: string | null; `instagram_handle`: string | null; `behance_username`: string | null; `tiktok_handle`: string | null; `status`: string; `member_since`: date-time; `total_designs`: integer
 
 ### `DELETE /api/v1/users/me` — Xóa tài khoản
 
@@ -311,7 +311,7 @@ Số dự án, lượt xuất, AI credit trong chu kỳ hiện tại so với h�
 
 Responses: `200` UsageResponse, `401` ErrorResponse, `403` ErrorResponse
 
-Response fields: `tier`: string; `max_projects`: integer | null; `max_exports_per_month`: integer | null; `projects_count`: integer; `exports_count`: integer; `ai_credits_used`: integer; `ai_credits_limit?`: integer | null
+Response fields: `tier`: string; `max_projects`: integer | null; `max_exports_per_month`: integer | null; `projects_count`: integer; `exports_count`: integer; `ai_credits_used`: integer; `ai_credits_limit?`: integer | null; `storage_used_bytes?`: integer
 
 ### `GET /api/v1/users/me/privacy` — Cài đặt quyền riêng tư
 
@@ -946,6 +946,14 @@ Gói dịch vụ, thanh toán PayOS/MoMo, mã giảm giá, hóa đơn và biên 
 Gói đang bán, hạn mức và giá. Công khai.
 
 Responses: `200` list[PlanResponse]
+
+### `GET /api/v1/subscription/gateways` — Cổng thanh toán đang mở
+
+PayOS luôn mở; MoMo theo cờ `MOMO_ENABLED`. Client dùng để bật/tắt nút MoMo thay vì gọi checkout rồi nhận lỗi. Công khai.
+
+Responses: `200` PaymentGatewaysResponse
+
+Response fields: `payos`: boolean; `momo`: boolean
 
 ### `GET /api/v1/subscription` — Gói hiện tại
 

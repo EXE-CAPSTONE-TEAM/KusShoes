@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { Gift, KeyRound, ShieldAlert, UserCog } from 'lucide-react';
+import { Building2, Gift, KeyRound, ShieldAlert, UserCog } from 'lucide-react';
 import { api } from '../../../api/client';
 import { adminModeration, adminUserActions, AdminApiError } from '../../../api/adminClient';
 import type { AdminUserSummary, ModerationAction } from '../../../types/admin';
@@ -13,6 +13,8 @@ interface UserSupportActionsProps {
   user: AdminUserSummary;
   /** Only role `admin` may perform these; staff sees them disabled. */
   allowed: boolean;
+  /** Called with the updated row after a change the list should reflect (e.g. the internal flag). */
+  onUserChange?: (user: AdminUserSummary) => void;
 }
 
 const TIERS = [{ value: 'basic', label: 'Basic' }, { value: 'pro', label: 'Pro' }];
@@ -22,10 +24,13 @@ const errorText = (caught: unknown, fallback: string) => (caught instanceof Admi
 const formatDate = (iso: string) => new Date(iso).toLocaleString('vi-VN');
 const ACTION_LABEL: Record<string, string> = { warning: 'Cảnh cáo', share_restriction: 'Hạn chế chia sẻ 30 ngày', ban: 'Khóa tài khoản' };
 
-/** Support tools for one customer: complimentary plan (BR-103), act-as (BR-80), password-reset email. */
-export const UserSupportActions: React.FC<UserSupportActionsProps> = ({ user, allowed }) => {
+/**
+ * Support tools for one customer: complimentary plan (BR-103), act-as (BR-80), password-reset email,
+ * internal-account flag (BR-83).
+ */
+export const UserSupportActions: React.FC<UserSupportActionsProps> = ({ user, allowed, onUserChange }) => {
   const { toast } = useToast();
-  const [dialog, setDialog] = useState<'grant' | 'impersonate' | 'reset' | 'moderation' | null>(null);
+  const [dialog, setDialog] = useState<'grant' | 'impersonate' | 'reset' | 'moderation' | 'internal' | null>(null);
   const [busy, setBusy] = useState(false);
   const [grant, setGrant] = useState({ tier: 'pro', billing_cycle: 'monthly', days: '30', reason: '' });
   const [impersonationReason, setImpersonationReason] = useState('');
@@ -76,6 +81,14 @@ export const UserSupportActions: React.FC<UserSupportActionsProps> = ({ user, al
       close();
     }, 'Không thể gửi mã đặt lại mật khẩu.');
 
+  const toggleInternal = () =>
+    run(async () => {
+      const result = await adminUserActions.setInternal(user.id, !user.is_internal);
+      onUserChange?.({ ...user, is_internal: result.is_internal });
+      toast(result.is_internal ? `Đã đánh dấu ${user.email} là tài khoản nội bộ.` : `Đã bỏ đánh dấu nội bộ cho ${user.email}.`);
+      close();
+    }, 'Không thể cập nhật cờ tài khoản nội bộ.');
+
   const openModerationHistory = () =>
     run(async () => {
       setModerationHistory(await adminModeration.userActions(user.id));
@@ -96,6 +109,29 @@ export const UserSupportActions: React.FC<UserSupportActionsProps> = ({ user, al
       <button className={shared.iconBtn} title="Lịch sử vi phạm (BR-77)" disabled={busy} onClick={() => void openModerationHistory()}>
         <ShieldAlert size={14} />
       </button>
+      <button
+        className={shared.iconBtn}
+        title={title(user.is_internal ? 'Bỏ đánh dấu tài khoản nội bộ' : 'Đánh dấu tài khoản nội bộ (BR-83)')}
+        aria-label={user.is_internal ? 'Bỏ đánh dấu tài khoản nội bộ' : 'Đánh dấu tài khoản nội bộ'}
+        disabled={!allowed || busy}
+        onClick={() => setDialog('internal')}
+      >
+        <Building2 size={14} />
+      </button>
+
+      <ConfirmDialog
+        open={dialog === 'internal'}
+        onOpenChange={(open) => !open && close()}
+        title={user.is_internal ? `Bỏ đánh dấu nội bộ cho ${user.email}?` : `Đánh dấu ${user.email} là tài khoản nội bộ?`}
+        description={
+          user.is_internal
+            ? 'Tài khoản sẽ được tính lại vào KPI khách trả tiền, doanh thu, CAC và tỷ lệ chuyển đổi.'
+            : 'Tài khoản nội bộ (nhân viên, demo, test) bị loại khỏi KPI khách trả tiền, doanh thu, CAC và tỷ lệ chuyển đổi.'
+        }
+        confirmLabel={user.is_internal ? 'Bỏ đánh dấu' : 'Đánh dấu nội bộ'}
+        danger={false}
+        onConfirm={() => void toggleInternal()}
+      />
 
       <AdminDialog
         open={dialog === 'grant'}

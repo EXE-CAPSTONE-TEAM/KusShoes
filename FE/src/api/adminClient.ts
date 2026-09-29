@@ -493,4 +493,6 @@ export const adminUserActions = {
     request(`/api/v1/admin/users/${userId}/impersonate`, jsonBody('POST', { reason })),
   resetPassword: (userId: string): Promise<{ message: string }> =>
     request(`/api/v1/admin/users/${userId}/reset-password`, jsonBody('POST')),
+  setInternal: (userId: string, isInternal: boolean): Promise<{ status: string; is_internal: boolean }> =>
+    request(`/api/v1/admin/users/${encodeURIComponent(userId)}/internal`, jsonBody('POST', { is_internal: isInternal })),
 };

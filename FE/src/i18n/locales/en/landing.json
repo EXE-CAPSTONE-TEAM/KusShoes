@@ -97,24 +97,15 @@
     "plans": {
       "free": {
         "name": "Free Starter",
-        "desc": "Test the mobile photogrammetry pipeline.",
-        "f1": "3 active projects",
-        "f2": "Standard scan resolution",
-        "f3": "Local client saves only"
+        "desc": "Test the mobile photogrammetry pipeline."
       },
       "basic": {
         "name": "Basic Creator",
-        "desc": "Perfect for custom sneaker designers.",
-        "f1": "10 active projects",
-        "f2": "High-definition 3D meshes",
-        "f3": "5GB Cloud scan storage"
+        "desc": "Perfect for custom sneaker designers."
       },
       "pro": {
         "name": "Pro Designer",
-        "desc": "For professional sneaker workshops.",
-        "f1": "50 active projects",
-        "f2": "Ultra-HD scan resolution",
-        "f3": "50GB Cloud storage quota"
+        "desc": "For professional sneaker workshops."
       }
     }
   },
@@ -163,12 +154,5 @@
         "a": "Passwords are encrypted, two-factor authentication (2FA) is supported, and you can view and revoke individual login devices anytime. You can also download all your data or permanently delete your account whenever you want."
       }
     ]
-  },
-  "newsletter": {
-    "title": "Join the KusShoes Beta",
-    "desc": "Register your email today to receive download links for KusShoes & KusStudio once public testing starts. Get 50 free cloud scans upon launch!",
-    "successMessage": "Thank you! We will email you beta credentials soon.",
-    "emailPlaceholder": "Enter your email address...",
-    "subscribe": "Subscribe"
   }
 }

@@ -4,6 +4,12 @@ import { ConfirmDialog } from '../../components/ConfirmDialog/ConfirmDialog';
 import { useToast } from '../../context/ToastContext';
 import { formatDateTime } from '../../utils/format';
 import { studioApi, type ProjectAsset } from '../../api/studio';
+import {
+  SOURCE_MODEL_ACCEPT,
+  importSourceModel,
+  inferSourceModelContentType,
+  type SourceModelImportStep,
+} from '../../api/sourceModel';
 import styles from './ProjectPanels.module.css';
 
 interface ModelPanelProps {
@@ -14,16 +20,11 @@ interface ModelPanelProps {
   onModelChange: () => void | Promise<void>;
 }
 
-// Mirrors BE/app/services/asset_service.py: ALLOWED_UPLOADS["source_model"].
-const SOURCE_MODEL_CONTENT_TYPES: Record<string, string> = {
-  '.glb': 'model/gltf-binary',
-  '.gltf': 'model/gltf+json',
+const IMPORT_STEP_LABELS: Record<SourceModelImportStep, string> = {
+  requesting: 'Requesting an upload URL...',
+  uploading: 'Uploading the file...',
+  confirming: 'Confirming the upload...',
 };
-
-function inferSourceModelContentType(filename: string): string | null {
-  const match = /\.[^.]+$/.exec(filename.toLowerCase());
-  return match ? SOURCE_MODEL_CONTENT_TYPES[match[0]] ?? null : null;
-}
 
 function formatAssetSize(bytes: number | null): string {
   if (bytes === null) return 'Size pending';
@@ -57,40 +58,15 @@ export const ModelPanel: React.FC<ModelPanelProps> = ({ projectId, canonicalMode
 
   const importModel = async (file: File) => {
     if (locked) return;
-    const contentType = inferSourceModelContentType(file.name);
-    if (!contentType) {
+    if (!inferSourceModelContentType(file.name)) {
       toast('Only .glb and .gltf files are supported for the 3D model.', 'error');
       return;
     }
 
-    setUploadStep('Requesting an upload URL...');
-    let upload;
     try {
-      upload = await studioApi.createAssetUploadUrl(projectId, {
-        asset_type: 'source_model',
-        filename: file.name,
-        content_type: contentType,
-      });
+      await importSourceModel(projectId, file, (step) => setUploadStep(IMPORT_STEP_LABELS[step]));
     } catch (caught) {
-      toast(caught instanceof Error ? caught.message : 'Unable to request an upload URL.', 'error');
-      setUploadStep(null);
-      return;
-    }
-
-    setUploadStep('Uploading the file...');
-    try {
-      await studioApi.putAssetFile(upload.upload_url, file, contentType);
-    } catch (caught) {
-      toast(caught instanceof Error ? caught.message : 'Unable to upload the file.', 'error');
-      setUploadStep(null);
-      return;
-    }
-
-    setUploadStep('Confirming the upload...');
-    try {
-      await studioApi.confirmAssetUpload(projectId, { asset_id: upload.asset_id, file_size_bytes: file.size });
-    } catch (caught) {
-      toast(caught instanceof Error ? caught.message : 'Unable to confirm the upload.', 'error');
+      toast(caught instanceof Error ? caught.message : 'Unable to import the 3D model.', 'error');
       setUploadStep(null);
       return;
     }
@@ -154,7 +130,7 @@ export const ModelPanel: React.FC<ModelPanelProps> = ({ projectId, canonicalMode
           <input
             ref={fileInputRef}
             type="file"
-            accept=".glb,.gltf,model/gltf-binary,model/gltf+json"
+            accept={SOURCE_MODEL_ACCEPT}
             style={{ display: 'none' }}
             onChange={handleFileInputChange}
             aria-label="Import 3D model file"

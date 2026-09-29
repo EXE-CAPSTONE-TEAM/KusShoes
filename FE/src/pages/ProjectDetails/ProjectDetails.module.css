@@ -158,8 +158,6 @@
   color: var(--text-secondary);
 }
 
-
-
 /* Right Column: Info blocks */
 .infoColumn {
   display: flex;
@@ -279,12 +277,6 @@
 .metaRow span:last-child {
   color: var(--text-primary);
   font-weight: 500;
-}
-
-.visibilityValue {
-  display: flex;
-  align-items: center;
-  gap: 6px;
 }
 
 /* Download Formats Grid */

@@ -1,7 +1,7 @@
 import React, { useState, useEffect, useRef, useCallback } from 'react';
 import {
   ArrowLeft, Laptop, RefreshCw, Check, Download, FileText,
-  Globe, Link, EyeOff, Terminal, Share2, History, Lock, Droplets, Box
+  Terminal, Share2, History, Lock, Droplets, Box
 } from 'lucide-react';
 import { ConfirmDialog } from '../../components/ConfirmDialog/ConfirmDialog';
 import { useToast } from '../../context/ToastContext';
@@ -21,13 +21,22 @@ interface ProjectDetailsProps {
   setProjects: React.Dispatch<React.SetStateAction<PortalProject[]>>;
 }
 
+type DetailTab = 'overview' | 'model' | 'history' | 'share';
+const DETAIL_TABS: readonly DetailTab[] = ['overview', 'model', 'history', 'share'];
+
+/** `?tab=share` lets other screens (e.g. the project card's Share action) deep-link a tab. */
+function tabFromSearch(search: string): DetailTab {
+  const tab = new URLSearchParams(search).get('tab');
+  return DETAIL_TABS.find((candidate) => candidate === tab) ?? 'overview';
+}
+
 export const ProjectDetails: React.FC<ProjectDetailsProps> = ({
   project,
   onBack,
   setProjects
 }) => {
   const { toast } = useToast();
-  const [activeTab, setActiveTab] = useState<'overview' | 'model' | 'history' | 'share'>('overview');
+  const [activeTab, setActiveTab] = useState<DetailTab>(() => tabFromSearch(window.location.search));
   const [confirmResetOpen, setConfirmResetOpen] = useState(false);
 
   const [exports, setExports] = useState<ProjectExport[]>([]);
@@ -52,6 +61,7 @@ export const ProjectDetails: React.FC<ProjectDetailsProps> = ({
     setSyncStatus('idle');
     setLogs([]);
     setLaunchError(null);
+    setActiveTab(tabFromSearch(window.location.search));
   }, [project.id]);
 
   // The list this page is usually opened from (api.listProjects) never carries
@@ -268,15 +278,6 @@ export const ProjectDetails: React.FC<ProjectDetailsProps> = ({
                   <div className={styles.metaRow}>
                     <span>Updated timestamp</span>
                     <span>{project.updatedAt}</span>
-                  </div>
-                  <div className={styles.metaRow}>
-                    <span>Visibility Level</span>
-                    <span className={styles.visibilityValue}>
-                      {project.visibility === 'Public' && <Globe size={13} />}
-                      {project.visibility === 'Link' && <Link size={13} />}
-                      {project.visibility === 'Private' && <EyeOff size={13} />}
-                      {project.visibility}
-                    </span>
                   </div>
                 </div>
               </div>

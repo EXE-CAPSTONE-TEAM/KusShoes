@@ -1,8 +1,6 @@
-import React, { useState, useRef, useEffect } from 'react';
+import React, { useState, useRef, useEffect, useMemo } from 'react';
 import {
   Monitor,
-  Send,
-  CheckCircle2,
   Check,
   ArrowRight,
   Plus,
@@ -26,6 +24,7 @@ import { Footer } from '../../components/Footer/Footer';
 import { AnimatedPrice } from '../../components/AnimatedPrice/AnimatedPrice';
 import { InteractiveParticleGrid } from '../../components/InteractiveParticleGrid/InteractiveParticleGrid';
 import { EdgeArt } from '../../components/EdgeArt/EdgeArt';
+import { api, type Plan } from '../../api/client';
 import dashboardShowcase from '../../assets/showcase/dashboard-screenshot.png';
 import projectsShowcase from '../../assets/showcase/projects-screenshot.png';
 import mobileScan from '../../assets/showcase/mobile-scan.png';
@@ -453,20 +452,25 @@ interface LandingProps {
 
 export const Landing: React.FC<LandingProps> = ({ navigate }) => {
   const { t } = useTranslation('landing');
-  const [emailInput, setEmailInput] = useState('');
-  const [submittedEmail, setSubmittedEmail] = useState(false);
   const [isAnnual, setIsAnnual] = useState(false);
+  const { t: tPricing } = useTranslation('pricing');
+  const [apiPlans, setApiPlans] = useState<Plan[] | null>(null);
+  const [plansError, setPlansError] = useState('');
 
-  const handleNewsletterSubmit = (e: React.FormEvent) => {
-    e.preventDefault();
-    if (emailInput.trim()) {
-      setSubmittedEmail(true);
-      setTimeout(() => {
-        setSubmittedEmail(false);
-        setEmailInput('');
-      }, 3000);
-    }
-  };
+  useEffect(() => {
+    let cancelled = false;
+    api
+      .listPlans()
+      .then((result) => {
+        if (!cancelled) setApiPlans(result);
+      })
+      .catch((caught) => {
+        if (!cancelled) setPlansError(caught instanceof Error ? caught.message : 'error');
+      });
+    return () => {
+      cancelled = true;
+    };
+  }, []);
 
   const steps = [
     {
@@ -513,32 +517,37 @@ export const Landing: React.FC<LandingProps> = ({ navigate }) => {
     { label: t('socialProof.tickerLidar') },
   ];
 
-  const plans = [
-    {
-      name: t('pricingSection.plans.free.name'),
-      priceMonthly: 0,
-      priceAnnual: 0,
-      desc: t('pricingSection.plans.free.desc'),
-      features: [t('pricingSection.plans.free.f1'), t('pricingSection.plans.free.f2'), t('pricingSection.plans.free.f3')],
-      popular: false,
-    },
-    {
-      name: t('pricingSection.plans.basic.name'),
-      priceMonthly: 259000,
-      priceAnnual: 259000 * 12,
-      desc: t('pricingSection.plans.basic.desc'),
-      features: [t('pricingSection.plans.basic.f1'), t('pricingSection.plans.basic.f2'), t('pricingSection.plans.basic.f3')],
-      popular: true,
-    },
-    {
-      name: t('pricingSection.plans.pro.name'),
-      priceMonthly: 649000,
-      priceAnnual: 649000 * 12,
-      desc: t('pricingSection.plans.pro.desc'),
-      features: [t('pricingSection.plans.pro.f1'), t('pricingSection.plans.pro.f2'), t('pricingSection.plans.pro.f3')],
-      popular: false,
-    },
-  ];
+  // Prices and limits come from /api/v1/plans; only the marketing name/blurb per tier is copy.
+  const plans = useMemo(() => {
+    const cycle = isAnnual ? 'yearly' : 'monthly';
+    const copyTiers = ['free', 'basic', 'pro'];
+    return (apiPlans ?? [])
+      .filter((plan) => plan.billing_cycle === null || plan.billing_cycle === cycle)
+      .sort((a, b) => a.price_vnd - b.price_vnd)
+      .map((plan) => {
+        const hasCopy = copyTiers.includes(plan.tier);
+        return {
+          id: plan.id,
+          name: hasCopy
+            ? t(`pricingSection.plans.${plan.tier}.name`)
+            : plan.tier.replace(/_/g, ' ').replace(/\b\w/g, (char) => char.toUpperCase()),
+          desc: hasCopy ? t(`pricingSection.plans.${plan.tier}.desc`) : '',
+          price: plan.price_vnd,
+          features: [
+            plan.max_projects === null
+              ? tPricing('unlimitedActiveProjects')
+              : tPricing('activeProjectsCount', { count: plan.max_projects }),
+            plan.max_exports_per_month === null
+              ? tPricing('unlimitedMonthlyExports')
+              : tPricing('monthlyExportsCount', { count: plan.max_exports_per_month }),
+            tPricing('formatsLabel', {
+              formats: plan.allowed_export_formats.map((item) => item.toUpperCase()).join(', '),
+            }),
+          ],
+          popular: plan.tier === 'basic',
+        };
+      });
+  }, [apiPlans, isAnnual, t, tPricing]);
 
   const formatPrice = (val: number) => {
     if (val === 0) return '0 VNĐ';
@@ -1025,13 +1034,17 @@ export const Landing: React.FC<LandingProps> = ({ navigate }) => {
         </div>
 
         <div className={styles.pricingGrid}>
+          {plansError && <p className={styles.planDescText}>{tPricing('loadPlansError')}</p>}
+          {!plansError && apiPlans === null && (
+            <p className={styles.planDescText}>{tPricing('loadingPlans')}</p>
+          )}
           {plans.map((plan, planIndex) => {
-            const displayPrice = isAnnual ? plan.priceAnnual : plan.priceMonthly;
+            const displayPrice = plan.price;
             const cycleText = isAnnual ? t('pricingSection.perYear') : t('pricingSection.perMonth');
 
             return (
               <motion.div
-                key={plan.name}
+                key={plan.id}
                 className={`${styles.priceCard} ${plan.popular ? styles.popularCard : ''} glass-panel`}
                 initial={{ opacity: 0, y: 24 }}
                 whileInView={{ opacity: 1, y: 0 }}
@@ -1134,44 +1147,6 @@ export const Landing: React.FC<LandingProps> = ({ navigate }) => {
             );
           })}
         </div>
-      </section>
-
-      {/* Beta Registration Newsletter Section */}
-      <section className={styles.newsletterSection}>
-        <motion.div
-          className={`${styles.newsletterBox} glass-panel`}
-          initial={{ opacity: 0, scale: 0.95 }}
-          whileInView={{ opacity: 1, scale: 1 }}
-          viewport={{ once: true }}
-          transition={{ duration: 0.6 }}
-        >
-          <h2 className={styles.newsTitle}>{t('newsletter.title')}</h2>
-          <p className={styles.newsDesc}>{t('newsletter.desc')}</p>
-
-          <form onSubmit={handleNewsletterSubmit} className={styles.newsForm}>
-            {submittedEmail ? (
-              <div className={styles.successMessage}>
-                <CheckCircle2 size={24} className={styles.successIcon} />
-                <span>{t('newsletter.successMessage')}</span>
-              </div>
-            ) : (
-              <div className={styles.inputContainer}>
-                <input
-                  type="email"
-                  placeholder={t('newsletter.emailPlaceholder')}
-                  value={emailInput}
-                  onChange={(e) => setEmailInput(e.target.value)}
-                  className={styles.newsInput}
-                  required
-                />
-                <button type="submit" className="btn-neon-orange">
-                  <span>{t('newsletter.subscribe')}</span>
-                  <Send size={14} />
-                </button>
-              </div>
-            )}
-          </form>
-        </motion.div>
       </section>
 
       {/* Reusable Footer */}

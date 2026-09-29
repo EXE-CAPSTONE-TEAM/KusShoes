@@ -9,7 +9,7 @@ import {
   type Usage,
   type UserProfile,
 } from '../../api/client';
-import { formatDate, formatRelativeTime } from '../../utils/format';
+import { formatBytes, formatDate, formatRelativeTime } from '../../utils/format';
 import { DESKTOP_INSTALLER_URL } from '../../utils/desktopRelease';
 import { useDesktopRelease } from '../../hooks/useDesktopRelease';
 import styles from './Dashboard.module.css';
@@ -353,12 +353,10 @@ export const Dashboard: React.FC<DashboardProps> = ({ setActivePage, projects })
               <div className={styles.usageMetric}>
                 <div className={styles.usageMetricRow}>
                   <span>Storage</span>
-                  {/* Storage usage isn't exposed by the backend yet — same placeholder value
-                      already used in the sidebar's storage widget. */}
-                  <span className={styles.usageMetricValue}>1.4 GB of 5 GB</span>
-                </div>
-                <div className={styles.usageBarBg}>
-                  <div className={styles.usageBarFill} style={{ width: '28%' }} />
+                  {/* No plan has a storage limit, so this is a used-only figure without a bar. */}
+                  <span className={styles.usageMetricValue}>
+                    {usage ? `${formatBytes(usage.storage_used_bytes)} used` : '—'}
+                  </span>
                 </div>
               </div>
             </div>

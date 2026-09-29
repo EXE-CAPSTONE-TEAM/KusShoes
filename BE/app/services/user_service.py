@@ -20,7 +20,9 @@ from app.exceptions import (
 from app.infrastructure import google_oauth, rate_limiter, storage, task_queue
 from app.repositories import (
     consent_repo,
+    export_record_repo,
     login_history_repo,
+    project_asset_repo,
     project_repo,
     refresh_token_repo,
     subscription_repo,
@@ -152,6 +154,10 @@ async def get_usage(db: AsyncSession, user) -> UsageResponse:
         ai_credits_used=usage.ai_credits_used,
         ai_credits_limit=plan.max_ai_credits_per_cycle if plan else None,
         max_scans_per_cycle=plan.max_scans_per_cycle if plan else None,
+        storage_used_bytes=(
+            await project_asset_repo.total_bytes_for_user(db, user.id)
+            + await export_record_repo.total_bytes_for_user(db, user.id)
+        ),
     )
 
 
@@ -324,6 +330,12 @@ def _export_profile(user) -> dict:
         "bio": user.bio,
         "language": user.language,
         "preferred_styles": user.preferred_styles,
+        "designer_role": user.designer_role,
+        "studio_name": user.studio_name,
+        "studio_location": user.studio_location,
+        "instagram_handle": user.instagram_handle,
+        "behance_username": user.behance_username,
+        "tiktok_handle": user.tiktok_handle,
         "member_since": user.created_at,
     }
 
@@ -361,6 +373,12 @@ def _to_detail(user, total_designs: int) -> UserDetailResponse:
         bio=user.bio,
         language=user.language,
         preferred_styles=user.preferred_styles,
+        designer_role=user.designer_role,
+        studio_name=user.studio_name,
+        studio_location=user.studio_location,
+        instagram_handle=user.instagram_handle,
+        behance_username=user.behance_username,
+        tiktok_handle=user.tiktok_handle,
         status=user.status,
         member_since=user.created_at,
         total_designs=total_designs,
