@@ -1,7 +1,8 @@
 import React, { useEffect, useState } from 'react';
-import { Trans, useTranslation } from 'react-i18next';
-import { CheckSquare, ShieldCheck, Square } from 'lucide-react';
+import { useTranslation } from 'react-i18next';
+import { ShieldCheck } from 'lucide-react';
 import { api } from '../../api/client';
+import { ConsentCheckbox } from './ConsentCheckbox';
 import styles from './LegalConsentGate.module.css';
 
 interface LegalConsentGateProps {
@@ -60,19 +61,7 @@ export const LegalConsentGate: React.FC<LegalConsentGateProps> = ({ activePage, 
         <ShieldCheck size={28} className={styles.icon} aria-hidden="true" />
         <h2 id="legal-consent-title">{t('legalGate.title')}</h2>
         <p>{t('legalGate.body')}</p>
-        <label className={styles.checkRow} onClick={() => setAgreed(!agreed)}>
-          {agreed ? <CheckSquare size={18} className={styles.checked} /> : <Square size={18} />}
-          <span>
-            <Trans
-              t={t}
-              i18nKey="login.agreeTermsCheckbox"
-              components={{
-                terms: <a href="/terms" target="_blank" rel="noopener noreferrer" onClick={(e) => e.stopPropagation()} />,
-                privacy: <a href="/privacy" target="_blank" rel="noopener noreferrer" onClick={(e) => e.stopPropagation()} />,
-              }}
-            />
-          </span>
-        </label>
+        <ConsentCheckbox className={styles.checkRow} checked={agreed} onChange={setAgreed} />
         {error && (
           <p className={styles.error} role="alert">
             {error}

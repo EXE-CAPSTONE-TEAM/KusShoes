@@ -508,8 +508,10 @@ async def handle_google_callback(
     try:
         started = json.loads(raw_state)
     except (TypeError, json.JSONDecodeError):
-        started = {}
-    consented = isinstance(started, dict) and started.get("consent") == "1"
+        started = None
+    if not isinstance(started, dict):
+        started = {}  # legacy "1" states carry no client/consent information
+    consented = started.get("consent") == "1"
 
     try:
         userinfo = await google_oauth.fetch_user_info(code)

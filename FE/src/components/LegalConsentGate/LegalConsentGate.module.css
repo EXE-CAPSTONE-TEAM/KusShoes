@@ -30,8 +30,7 @@
   line-height: 1.55;
 }
 
-.icon,
-.checked {
+.icon {
   color: var(--accent, #ff5a36);
 }
 

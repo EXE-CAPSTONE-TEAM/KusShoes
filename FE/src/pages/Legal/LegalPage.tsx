@@ -50,15 +50,15 @@ export const LegalPage: React.FC<LegalPageProps> = ({ doc, navigate }) => {
           {content.sections.map((section) => (
             <section key={section.id} id={section.id} className={styles.section}>
               <h2>{section.title}</h2>
-              {section.body.map((block, index) =>
+              {section.body.map((block) =>
                 Array.isArray(block) ? (
-                  <ul key={index}>
+                  <ul key={block[0]}>
                     {block.map((item) => (
                       <li key={item}>{item}</li>
                     ))}
                   </ul>
                 ) : (
-                  <p key={index}>{block}</p>
+                  <p key={block}>{block}</p>
                 ),
               )}
             </section>

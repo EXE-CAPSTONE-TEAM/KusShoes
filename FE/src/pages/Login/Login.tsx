@@ -1,7 +1,7 @@
 import React, { useState, useEffect } from 'react';
-import { Mail, Lock, ArrowLeft, CheckCircle2, UserPlus, LogIn, Eye, EyeOff, CheckSquare, Square, UserRound, KeyRound, ShieldCheck, AlertCircle, Info } from 'lucide-react';
+import { Mail, Lock, ArrowLeft, CheckCircle2, UserPlus, LogIn, Eye, EyeOff, UserRound, KeyRound, ShieldCheck, AlertCircle, Info } from 'lucide-react';
 import { motion } from 'framer-motion';
-import { Trans, useTranslation } from 'react-i18next';
+import { useTranslation } from 'react-i18next';
 import { api, ApiError } from '../../api/client';
 import { useTheme } from '../../context/ThemeContext';
 import {
@@ -14,6 +14,7 @@ import {
   type RegisterFieldErrors,
   type LoginFieldErrors,
 } from '../../utils/authValidation';
+import { ConsentCheckbox } from '../../components/LegalConsentGate/ConsentCheckbox';
 import { LoginArt } from './LoginArt';
 import { AccountRecovery, type RecoveryMode } from './AccountRecovery';
 import styles from './Login.module.css';
@@ -658,26 +659,11 @@ export const Login: React.FC<LoginProps> = ({ setPage }) => {
                 </>
               ) : (
                 <div className={styles.forgotRow} style={{ marginTop: '4px' }}>
-                  <label
+                  <ConsentCheckbox
                     className={styles.rememberMe}
-                    onClick={() => setAgreeTerms(!agreeTerms)}
-                  >
-                    {agreeTerms ? (
-                      <CheckSquare size={16} className={styles.checkboxIconActive} />
-                    ) : (
-                      <Square size={16} className={styles.checkboxIcon} />
-                    )}
-                    <span>
-                      <Trans
-                        t={t}
-                        i18nKey="login.agreeTermsCheckbox"
-                        components={{
-                          terms: <a href="/terms" target="_blank" rel="noopener noreferrer" onClick={(e) => e.stopPropagation()} />,
-                          privacy: <a href="/privacy" target="_blank" rel="noopener noreferrer" onClick={(e) => e.stopPropagation()} />,
-                        }}
-                      />
-                    </span>
-                  </label>
+                    checked={agreeTerms}
+                    onChange={setAgreeTerms}
+                  />
                 </div>
               )}
 

@@ -150,3 +150,21 @@ async def test_existing_user_is_asked_once_and_older_versions_are_superseded(
     # Accepting again is a no-op, not a pile of duplicate records.
     await client.post("/api/v1/users/me/legal-consent", headers=auth_headers, json={})
     assert len(await _legal_records(db, authenticated_user.id)) == len(records)
+
+
+@pytest.mark.asyncio
+async def test_legacy_state_value_is_treated_as_no_consent_not_a_crash(
+    client, db, redis, monkeypatch
+):
+    from app.infrastructure import google_oauth
+
+    await redis.set("oauth:state:legacy-state", "1", ex=60)
+
+    async def fake_user_info(_code):
+        return {"sub": "g-sub-legacy", "email": "g-legacy@example.com", "given_name": "L"}
+
+    monkeypatch.setattr(google_oauth, "fetch_user_info", fake_user_info)
+    res = await client.get("/api/v1/auth/google/callback?code=c&state=legacy-state")
+
+    assert res.status_code == 303
+    assert "error=AUTH_CONSENT_REQUIRED" in res.headers["location"]
