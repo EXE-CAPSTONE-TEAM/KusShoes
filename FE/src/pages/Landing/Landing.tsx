@@ -19,6 +19,7 @@ import {
 } from 'lucide-react';
 import { motion, AnimatePresence, useInView } from 'framer-motion';
 import { Trans, useTranslation } from 'react-i18next';
+import { useTheme } from '../../context/ThemeContext';
 import { Navbar } from '../../components/Navbar/Navbar';
 import { Footer } from '../../components/Footer/Footer';
 import { AnimatedPrice } from '../../components/AnimatedPrice/AnimatedPrice';
@@ -28,7 +29,6 @@ import { api, type Plan } from '../../api/client';
 import dashboardShowcase from '../../assets/showcase/dashboard-screenshot.png';
 import projectsShowcase from '../../assets/showcase/projects-screenshot.png';
 import mobileScan from '../../assets/showcase/mobile-scan.png';
-import mobileAppIcon from '../../assets/kusshoes-mobile-app-icon.jpeg';
 import mobileMockup from '../../assets/kusshoes-mobile-mockup.jpg';
 import sneakerHero from '../../assets/sneaker-hero.png';
 import galleryClassicOrange from '../../assets/gallery/classic-orange-studio.png';
@@ -452,6 +452,7 @@ interface LandingProps {
 
 export const Landing: React.FC<LandingProps> = ({ navigate }) => {
   const { t } = useTranslation('landing');
+  const { theme } = useTheme();
   const [isAnnual, setIsAnnual] = useState(false);
   const { t: tPricing } = useTranslation('pricing');
   const [apiPlans, setApiPlans] = useState<Plan[] | null>(null);
@@ -633,7 +634,7 @@ export const Landing: React.FC<LandingProps> = ({ navigate }) => {
             <div className={styles.productTitleRow}>
               <div className={styles.productLogoFrame}>
                 <img
-                  src={mobileAppIcon}
+                  src={theme === 'dark' ? '/KusShoes_Logo_Dark_Mode_cropped.png' : '/KusShoes_Logo_cropped.png'}
                   alt={t('products.mobileIconAlt')}
                   className={styles.productLogoImage}
                 />
