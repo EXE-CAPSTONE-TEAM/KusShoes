@@ -13,9 +13,7 @@ const bar = () => Number(bootEl()?.style.getPropertyValue('--p') || 0);
 beforeEach(() => {
   vi.useFakeTimers();
   document.body.innerHTML = '<div id="boot" aria-valuenow="0"></div>';
-  vi.stubGlobal('requestAnimationFrame', (cb: FrameRequestCallback) =>
-    setTimeout(() => cb(0), 0),
-  );
+  vi.stubGlobal('requestAnimationFrame', (cb: FrameRequestCallback) => setTimeout(() => cb(0), 0));
 });
 
 afterEach(() => {

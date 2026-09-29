@@ -59,10 +59,9 @@ export async function finishBoot(): Promise<void> {
   // `document.fonts.ready` resolves instantly if awaited before anything requested a font, so
   // re-check after the first commit + a frame, when layout has kicked off the font loads.
   if (typeof document !== 'undefined' && document.fonts) {
-    await Promise.race([
-      nextFrame().then(() => document.fonts.ready),
-      wait(MAX_MS),
-    ]).catch(() => undefined);
+    await Promise.race([nextFrame().then(() => document.fonts.ready), wait(MAX_MS)]).catch(
+      () => undefined,
+    );
   }
   const remaining = Math.max(0, MAX_MS - (performance.now() - start));
   await Promise.race([Promise.allSettled([...tasks]), wait(remaining)]);
