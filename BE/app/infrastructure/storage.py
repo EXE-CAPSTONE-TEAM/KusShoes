@@ -60,7 +60,7 @@ def generate_presigned_upload_url(file_path: str, content_type: str, ttl: int = 
 
 
 def generate_presigned_download_url(
-    file_path: str, ttl: int = 3600, *, content_disposition: str | None = None
+    file_path: str, ttl: int = 900, *, content_disposition: str | None = None
 ) -> str:
     params: dict[str, str] = {"Bucket": settings.STORAGE_BUCKET, "Key": file_path}
     if content_disposition:

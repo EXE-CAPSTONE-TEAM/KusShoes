@@ -158,6 +158,26 @@ async def test_coupon_discounts_checkout_and_is_single_use_per_account(
 
 
 @pytest.mark.asyncio
+async def test_coupon_preview_rate_limiting(client, auth_headers):
+    for _ in range(10):
+        res = await client.post(
+            "/api/v1/subscription/coupon/preview",
+            headers=auth_headers,
+            json={"tier": "basic", "billing_cycle": "monthly", "coupon_code": "NONEXISTENT"},
+        )
+        assert res.status_code == 422
+
+    rate_limited = await client.post(
+        "/api/v1/subscription/coupon/preview",
+        headers=auth_headers,
+        json={"tier": "basic", "billing_cycle": "monthly", "coupon_code": "NONEXISTENT"},
+    )
+    assert rate_limited.status_code == 429
+    assert rate_limited.json()["code"] == "AUTH_RATE_LIMITED"
+    assert "Retry-After" in rate_limited.headers
+
+
+@pytest.mark.asyncio
 async def test_manual_transaction_needs_second_admin_and_proof(
     client, db, authenticated_user
 ):

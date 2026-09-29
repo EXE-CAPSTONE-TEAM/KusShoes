@@ -6,12 +6,13 @@ from app.database import get_db
 from app.dependencies import get_redis
 from app.schemas.studio import ArtisanDownloadResponse, ArtisanPublicView
 from app.services import artisan_service
+from app.utils.http import get_client_ip
 
 router = APIRouter()
 
 
 def _client_ip(request: Request) -> str:
-    return request.client.host if request.client else "unknown"
+    return get_client_ip(request)
 
 
 @router.get("/{token}", response_model=ArtisanPublicView)

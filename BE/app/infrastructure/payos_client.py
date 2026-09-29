@@ -88,6 +88,8 @@ def verify_webhook_signature(payload: dict) -> dict:
     signature = payload.get("signature")
     if not isinstance(data, dict) or not signature:
         raise PayOSSignatureError("Missing data/signature in PayOS webhook payload")
+    if not settings.PAYOS_CHECKSUM_KEY:
+        raise PayOSSignatureError("PayOS checksum key is not configured")
     expected = _sign(data, settings.PAYOS_CHECKSUM_KEY)
     if not hmac.compare_digest(expected, signature):
         raise PayOSSignatureError("PayOS webhook signature mismatch")

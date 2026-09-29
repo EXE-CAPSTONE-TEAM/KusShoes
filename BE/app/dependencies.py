@@ -63,7 +63,7 @@ async def get_current_admin_write(
 
 
 async def verify_service_token(x_service_token: str = Header(...)) -> None:
-    if not hmac.compare_digest(x_service_token, settings.SERVICE_TOKEN):
+    if not settings.SERVICE_TOKEN or not hmac.compare_digest(x_service_token, settings.SERVICE_TOKEN):
         raise AuthTokenInvalid()
 
 

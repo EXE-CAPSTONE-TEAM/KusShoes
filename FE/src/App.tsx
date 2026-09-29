@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, lazy, Suspense } from 'react';
 import { Landing } from './pages/Landing/Landing';
 import { Login } from './pages/Login/Login';
 import { GoogleCallback } from './pages/Login/GoogleCallback';
@@ -14,8 +14,9 @@ import { Feedback } from './pages/Feedback/Feedback';
 import { ImpersonationBanner } from './components/ImpersonationBanner/ImpersonationBanner';
 import { ProjectDetails } from './pages/ProjectDetails/ProjectDetails';
 import { ProductsPage } from './pages/ProductsPage/ProductsPage';
-import { AdminApp } from './pages/Admin/AdminApp';
 import { ArtisanViewer } from './pages/ArtisanViewer/ArtisanViewer';
+
+const AdminApp = lazy(() => import('./pages/Admin/AdminApp').then((m) => ({ default: m.AdminApp })));
 import { api, ApiError, type PortalProject } from './api/client';
 import { getSettingTabFromSearch, type SettingTab } from './pages/Settings/settingsNavigation';
 
@@ -206,7 +207,11 @@ function App() {
   }, [activePage, projects, activeDetailProject]);
 
   if (activePage === 'admin') {
-    return <AdminApp />;
+    return (
+      <Suspense fallback={<div style={{ padding: '2rem', textAlign: 'center', color: 'var(--text-secondary)' }}>Loading admin...</div>}>
+        <AdminApp />
+      </Suspense>
+    );
   }
 
   const isPortalView = [

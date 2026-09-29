@@ -1,3 +1,4 @@
+import asyncio
 import io
 import json
 import uuid
@@ -5,6 +6,7 @@ import zipfile
 from datetime import UTC, datetime, timedelta
 
 import redis.asyncio as aioredis
+from loguru import logger
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.exceptions import (
@@ -66,8 +68,28 @@ async def update_profile(
     changes = body.model_dump(exclude_unset=True)
     username = changes.pop("username", None)
     avatar_path = changes.get("avatar_path")
-    if avatar_path is not None and not avatar_path.startswith(f"avatars/{user.id}/"):
-        raise ProfileInvalid("avatar_path không thuộc tài khoản hiện tại")
+    if avatar_path is not None:
+        if not avatar_path.startswith(f"avatars/{user.id}/"):
+            raise ProfileInvalid("avatar_path không thuộc tài khoản hiện tại")
+        try:
+            metadata = await asyncio.to_thread(storage.get_object_metadata, avatar_path)
+            prefix = await asyncio.to_thread(storage.read_object_prefix, avatar_path, 32)
+        except storage.ObjectNotFoundError:
+            raise ProfileInvalid("File avatar không tồn tại trên storage")
+        except Exception as exc:
+            logger.error(f"Failed to inspect avatar file {avatar_path}: {exc}")
+            raise ProfileInvalid("Không thể xác thực file avatar")
+
+        if metadata.size_bytes < 1 or metadata.size_bytes > 5 * 1024 * 1024:
+            raise ProfileInvalid("Kích thước file avatar không hợp lệ (tối đa 5MB)")
+
+        is_valid_image = (
+            prefix.startswith(b"\xff\xd8\xff")
+            or prefix.startswith(b"\x89PNG\r\n\x1a\n")
+            or (len(prefix) >= 12 and prefix.startswith(b"RIFF") and prefix[8:12] == b"WEBP")
+        )
+        if not is_valid_image:
+            raise ProfileInvalid("Nội dung file avatar không phải định dạng ảnh hợp lệ (JPEG, PNG, WebP)")
     await user_repo.update_fields(db, user, changes)
 
     if username and username != user.username:

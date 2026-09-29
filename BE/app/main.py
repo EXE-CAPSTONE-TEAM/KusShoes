@@ -6,7 +6,7 @@ from contextvars import ContextVar
 from time import monotonic
 
 import sentry_sdk
-from fastapi import FastAPI
+from fastapi import FastAPI, Response
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import PlainTextResponse
 from loguru import logger
@@ -193,7 +193,7 @@ async def health():
 
 
 @app.get("/health/ready", tags=["Health"])
-async def ready():
+async def ready(response: Response):
     import asyncio
 
     import redis.asyncio as aioredis
@@ -210,7 +210,8 @@ async def ready():
             await session.execute(text("SELECT 1"))
         checks["db"] = "ok"
     except Exception as e:
-        checks["db"] = f"error: {e}"
+        logger.error(f"Health ready DB failure: {e}")
+        checks["db"] = "unavailable"
 
     # Redis check
     try:
@@ -219,16 +220,20 @@ async def ready():
         await r.aclose()
         checks["redis"] = "ok"
     except Exception as e:
-        checks["redis"] = f"error: {e}"
+        logger.error(f"Health ready Redis failure: {e}")
+        checks["redis"] = "unavailable"
 
     # S3/MinIO check
     try:
         await asyncio.to_thread(storage.health_check)
         checks["storage"] = "ok"
     except Exception as e:
-        checks["storage"] = f"error: {e}"
+        logger.error(f"Health ready Storage failure: {e}")
+        checks["storage"] = "unavailable"
 
     all_ok = all(v == "ok" for v in checks.values())
+    if not all_ok:
+        response.status_code = 503
     return {
         "status": "ok" if all_ok else "degraded",
         "checks": checks,

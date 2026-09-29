@@ -322,7 +322,8 @@ async def test_momo_ipn_activates_subscription(client, db, auth_headers, authent
     }
     payload = {**data, "signature": _momo_ipn_signature(data)}
 
-    response = await client.post("/api/v1/webhooks/momo", json=payload)
+    with patch.object(settings, "MOMO_ENABLED", True):
+        response = await client.post("/api/v1/webhooks/momo", json=payload)
     assert response.status_code == 200
 
     await db.refresh(invoice)
