@@ -1,6 +1,7 @@
 import { Component, type ReactNode } from "react";
-import { AlertTriangle } from "lucide-react";
+import { AlertTriangle, RotateCw, Home } from "lucide-react";
 import { captureError } from "../../monitoring/sentry";
+import styles from "./ErrorBoundary.module.css";
 
 type ErrorBoundaryProps = {
   children: ReactNode;
@@ -30,20 +31,41 @@ export class ErrorBoundary extends Component<ErrorBoundaryProps, ErrorBoundarySt
   render() {
     if (this.state.hasError) {
       return (
-        <div className="viewer-empty" style={{ color: "#ef4444" }}>
-          <AlertTriangle size={48} />
-          <span>{this.props.fallbackMessage ?? "Something went wrong."}</span>
-          <p className="muted" style={{ marginTop: "8px", fontSize: "14px" }}>
-            {this.state.error?.message}
-          </p>
-          <button
-            type="button"
-            className="btn-neon-orange"
-            style={{ marginTop: "16px" }}
-            onClick={() => window.location.reload()}
-          >
-            Reload app
-          </button>
+        <div className={styles.screen}>
+          <div className={styles.card}>
+            <div className={styles.iconRing}>
+              <AlertTriangle size={28} />
+            </div>
+            <h1 className={styles.title}>{this.props.fallbackMessage ?? "Something went wrong"}</h1>
+            <p className={styles.subtitle}>
+              KusShoes ran into an unexpected error and couldn&apos;t continue. Reloading usually
+              fixes it — if it keeps happening, let us know what you were doing.
+            </p>
+
+            {this.state.error?.message && (
+              <div className={styles.detailsBox}>
+                <span className={styles.detailsLabel}>Technical details</span>
+                <p className={styles.detailsMessage}>{this.state.error.message}</p>
+              </div>
+            )}
+
+            <div className={styles.actions}>
+              <button
+                type="button"
+                className={styles.primaryBtn}
+                onClick={() => window.location.reload()}
+              >
+                <RotateCw size={16} />
+                Reload app
+              </button>
+              <a href="/" className={styles.secondaryBtn}>
+                <Home size={16} />
+                Go to homepage
+              </a>
+            </div>
+
+            <p className={styles.footnote}>This error has been reported automatically.</p>
+          </div>
         </div>
       );
     }
