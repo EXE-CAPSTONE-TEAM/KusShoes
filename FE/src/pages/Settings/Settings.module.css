@@ -259,6 +259,28 @@
   cursor: default;
 }
 
+/* Select trigger sized to match .input (32px, 13px, same border/background) */
+.inputGroup .selectTrigger {
+  height: 32px;
+  padding: 0 10px;
+  background-color: var(--bg-surface);
+  border: 1px solid var(--border);
+  border-radius: var(--radius-md, 6px);
+  font-family: inherit;
+  font-size: 0.8125rem; /* 13px */
+  font-weight: 400;
+  box-sizing: border-box;
+}
+
+.inputGroup .selectTrigger:hover {
+  border-color: var(--border);
+}
+
+.inputGroup .selectTrigger:focus,
+.inputGroup .selectTrigger[data-state='open'] {
+  border-color: var(--text-primary);
+}
+
 /* Textarea */
 .textarea {
   padding: 8px 10px;
