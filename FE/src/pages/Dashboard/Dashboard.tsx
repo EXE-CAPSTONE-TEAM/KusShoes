@@ -10,6 +10,8 @@ import {
   type UserProfile,
 } from '../../api/client';
 import { formatBytes, formatDate, formatRelativeTime } from '../../utils/format';
+import { DESKTOP_INSTALLER_URL } from '../../utils/desktopRelease';
+import { useDesktopRelease } from '../../hooks/useDesktopRelease';
 import styles from './Dashboard.module.css';
 
 interface DashboardProps {
@@ -51,6 +53,7 @@ const UsageMetric: React.FC<{
 );
 
 export const Dashboard: React.FC<DashboardProps> = ({ setActivePage, projects }) => {
+  const desktopRelease = useDesktopRelease();
   const [profile, setProfile] = useState<UserProfile | null>(null);
   const [usage, setUsage] = useState<Usage | null>(null);
   const [subscription, setSubscription] = useState<Subscription | null>(null);
@@ -147,19 +150,41 @@ export const Dashboard: React.FC<DashboardProps> = ({ setActivePage, projects })
                 <Dialog.Overlay className={styles.dialogOverlay} />
                 <Dialog.Content className={styles.dialogContent}>
                   <Dialog.Title className={styles.dialogTitle}>
-                    KusShoes Desktop v1.4.2
+                    KusShoes Editor
+                    {desktopRelease?.status === 'available' ? ` v${desktopRelease.version}` : ''}
                   </Dialog.Title>
                   <Dialog.Description className={styles.dialogDescription}>
-                    Get full 3D rendering, paint mapping, and offline project sync by installing the
-                    Desktop companion app.
+                    Edit, bake and export your scanned shoes on Windows 10/11 (64-bit).
                   </Dialog.Description>
+                  {desktopRelease?.status === 'none' ? (
+                    <p className={styles.dialogDescription}>
+                      The first installer is being prepared. Please check back soon.
+                    </p>
+                  ) : (
+                    <ol className={styles.dialogSteps}>
+                      <li>Click <strong>Download</strong> and open the downloaded file.</li>
+                      <li>
+                        If Windows shows &ldquo;Windows protected your PC&rdquo;, click{' '}
+                        <strong>More info</strong> then <strong>Run anyway</strong>.
+                      </li>
+                      <li>
+                        Click <strong>Install</strong>. On first launch the app downloads its 3D
+                        renderer (about 400&nbsp;MB) and shows the progress.
+                      </li>
+                    </ol>
+                  )}
                   <div className={styles.dialogActions}>
                     <Dialog.Close asChild>
                       <button className={styles.secondaryBtn}>Cancel</button>
                     </Dialog.Close>
-                    <Dialog.Close asChild>
-                      <button className={styles.primaryBtn}>Start Download</button>
-                    </Dialog.Close>
+                    {desktopRelease?.status !== 'none' ? (
+                      <Dialog.Close asChild>
+                        <a className={styles.primaryBtn} href={DESKTOP_INSTALLER_URL} download>
+                          <Download size={16} />
+                          <span>Download for Windows</span>
+                        </a>
+                      </Dialog.Close>
+                    ) : null}
                   </div>
                   <Dialog.Close asChild>
                     <button className={styles.dialogCloseIcon} aria-label="Close">

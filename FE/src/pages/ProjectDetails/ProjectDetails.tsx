@@ -10,6 +10,10 @@ import { VersionHistoryPanel } from './VersionHistoryPanel';
 import { ArtisanSharePanel } from './ArtisanSharePanel';
 import { ModelPanel } from './ModelPanel';
 import styles from './ProjectDetails.module.css';
+import { DESKTOP_INSTALLER_URL } from '../../utils/desktopRelease';
+
+/** If the browser never hands focus to KusStudio within this window, it is probably not installed. */
+const DESKTOP_HANDOFF_MS = 3000;
 
 interface ProjectDetailsProps {
   project: PortalProject;
@@ -42,6 +46,7 @@ export const ProjectDetails: React.FC<ProjectDetailsProps> = ({
   const [syncStatus, setSyncStatus] = useState<'idle' | 'connecting' | 'launched' | 'error'>('idle');
   const [logs, setLogs] = useState<string[]>([]);
   const [launchError, setLaunchError] = useState<string | null>(null);
+  const [desktopMaybeMissing, setDesktopMaybeMissing] = useState(false);
   const consoleEndRef = useRef<HTMLDivElement>(null);
 
   // Auto scroll console logs to bottom
@@ -113,6 +118,18 @@ export const ProjectDetails: React.FC<ProjectDetailsProps> = ({
         ...prev,
         `[${new Date().toLocaleTimeString()}] Ticket ready (${launch.expiresIn}s). Opening KusStudio...`,
       ]);
+      setDesktopMaybeMissing(false);
+      let handedOff = false;
+      const onBlur = () => {
+        handedOff = true;
+      };
+      window.addEventListener('blur', onBlur, { once: true });
+      window.setTimeout(() => {
+        window.removeEventListener('blur', onBlur);
+        if (!handedOff && document.visibilityState === 'visible') {
+          setDesktopMaybeMissing(true);
+        }
+      }, DESKTOP_HANDOFF_MS);
       window.location.assign(launch.desktopUrl);
       setSyncStatus('launched');
     } catch (caught) {
@@ -132,6 +149,7 @@ export const ProjectDetails: React.FC<ProjectDetailsProps> = ({
     setSyncStatus('idle');
     setLogs([]);
     setLaunchError(null);
+    setDesktopMaybeMissing(false);
     toast('Local launch status reset. Project data was not changed.', 'info');
   };
 
@@ -353,6 +371,15 @@ export const ProjectDetails: React.FC<ProjectDetailsProps> = ({
                         <Check size={16} className={styles.checkIcon} />
                         <span>Launch request sent. KusStudio will complete secure sign-in.</span>
                       </div>
+                      {desktopMaybeMissing && (
+                        <p className={styles.desktopInstallHint} role="status">
+                          KusStudio didn&apos;t open?{' '}
+                          <a href={DESKTOP_INSTALLER_URL} download>
+                            Download KusShoes Editor for Windows
+                          </a>
+                          , install it, then click &ldquo;Open in KusStudio Desktop&rdquo; again.
+                        </p>
+                      )}
                       <button className={styles.disconnectBtn} onClick={handleResetConnection}>
                         Reset launch status
                       </button>

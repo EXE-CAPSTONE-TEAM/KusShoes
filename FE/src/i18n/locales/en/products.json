@@ -31,10 +31,13 @@
     "spec3": "GLTF, OBJ, FBX, and Apple USDZ 3D model exports",
     "spec4": "Local daemon compiler server listening on port 8421",
     "selectOs": "Select Operating System",
-    "windowsMeta": "File size: 142 MB • Minimum: GTX 1060 / 8GB RAM",
-    "macSiliconMeta": "File size: 128 MB • Fully native for Apple M-series",
-    "macIntelMeta": "File size: 135 MB • Requires macOS 12.0 or higher",
-    "downloadInstaller": "Download Desktop Installer"
+    "windowsMeta": "Windows 10/11 (64-bit) • The 3D renderer (about 400 MB) downloads on first launch",
+    "macSiliconMeta": "macOS version coming soon",
+    "macIntelMeta": "macOS version coming soon",
+    "downloadInstaller": "Download Desktop Installer",
+    "macComingSoon": "KusShoes Editor for macOS is coming soon. For now, please use a Windows PC.",
+    "noInstallerYet": "The first Windows installer is being prepared. Please check back soon.",
+    "smartScreenHint": "If Windows shows “Windows protected your PC”, click More info → Run anyway."
   },
   "workflow": {
     "title": "How They Sync",
