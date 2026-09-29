@@ -11,6 +11,8 @@ import { Footer } from '../../components/Footer/Footer';
 import { InteractiveParticleGrid } from '../../components/InteractiveParticleGrid/InteractiveParticleGrid';
 import { Select } from '../../components/Select/Select';
 import { useToast } from '../../context/ToastContext';
+import { useDesktopRelease } from '../../hooks/useDesktopRelease';
+import { DESKTOP_INSTALLER_URL } from '../../utils/desktopRelease';
 import styles from './ProductsPage.module.css';
 
 interface ProductsPageProps {
@@ -28,6 +30,7 @@ export const ProductsPage: React.FC<ProductsPageProps> = ({ navigate }) => {
   const { toast } = useToast();
   const [activeTab, setActiveTab] = useState<'ios' | 'android'>('ios');
   const [desktopOS, setDesktopOS] = useState<DesktopOS>('windows');
+  const desktopRelease = useDesktopRelease();
 
   const DESKTOP_OS_OPTIONS: Array<{ value: DesktopOS; label: string }> = [
     { value: 'windows', label: t('osOptions.windows') },
@@ -54,6 +57,19 @@ export const ProductsPage: React.FC<ProductsPageProps> = ({ navigate }) => {
 
   const handleDownload = (appName: string, platform: string) => {
     toast(t('downloadToast', { appName, platform }));
+  };
+
+  const handleDesktopDownload = () => {
+    if (desktopOS !== 'windows') {
+      toast(t('desktop.macComingSoon'));
+      return;
+    }
+    if (desktopRelease?.status === 'none') {
+      toast(t('desktop.noInstallerYet'));
+      return;
+    }
+    toast(t('downloadToast', { appName: 'KusShoes Editor', platform: 'Windows' }));
+    window.location.assign(DESKTOP_INSTALLER_URL);
   };
 
   return (
@@ -225,10 +241,18 @@ export const ProductsPage: React.FC<ProductsPageProps> = ({ navigate }) => {
                   <button
                     className="btn-neon-orange"
                     style={{ width: '100%', marginTop: '12px' }}
-                    onClick={() => handleDownload('KusStudio', desktopOS)}
+                    onClick={handleDesktopDownload}
                   >
                     <Download size={18} /> {t('desktop.downloadInstaller')}
+                    {desktopOS === 'windows' && desktopRelease?.status === 'available'
+                      ? ` v${desktopRelease.version}`
+                      : ''}
                   </button>
+                  {desktopOS === 'windows' && desktopRelease?.status !== 'none' && (
+                    <span style={{ display: 'block', marginTop: '8px', fontSize: '0.8rem', opacity: 0.8 }}>
+                      {t('desktop.smartScreenHint')}
+                    </span>
+                  )}
                 </div>
               </div>
             </div>
