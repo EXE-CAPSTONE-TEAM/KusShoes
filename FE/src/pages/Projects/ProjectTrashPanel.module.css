@@ -1,7 +1,9 @@
+/* Trash dialog — docs/DESIGN.md Section 5.15 (dialog) + 5.12 (list row) */
+
 .overlay {
   position: fixed;
   inset: 0;
-  background-color: rgba(0, 0, 0, 0.6);
+  background-color: var(--overlay-scrim, rgba(0, 0, 0, 0.4));
   z-index: 200;
 }
 
@@ -11,14 +13,14 @@
   left: 50%;
   transform: translate(-50%, -50%);
   width: 92vw;
-  max-width: 480px;
+  max-width: 420px;
   max-height: 80vh;
   overflow-y: auto;
-  background-color: var(--bg-secondary);
-  border: 1px solid var(--glass-border);
-  border-radius: var(--border-radius-md);
-  padding: 28px;
-  box-shadow: var(--shadow-lg);
+  background-color: var(--bg-surface);
+  border: 1px solid var(--border);
+  border-radius: var(--radius-lg, 8px);
+  padding: 20px;
+  box-shadow: var(--shadow-overlay);
   z-index: 201;
 }
 
@@ -31,31 +33,34 @@
   color: var(--text-secondary);
   cursor: pointer;
   padding: 4px;
-  border-radius: var(--border-radius-sm);
-  transition: color var(--transition-fast);
+  border-radius: var(--radius-md, 6px);
+  display: inline-flex;
+  transition: color var(--duration-fast, 120ms), background-color var(--duration-fast, 120ms);
 }
 
 .closeIcon:hover {
   color: var(--text-primary);
+  background-color: var(--bg-hover);
 }
 
 .title {
-  font-family: 'Space Grotesk', sans-serif;
-  font-size: 1.2rem;
-  font-weight: 700;
-  margin-bottom: 8px;
+  font-family: inherit;
+  font-size: 14px;
+  font-weight: 600;
+  color: var(--text-primary);
+  margin: 0 0 4px;
 }
 
 .description {
   color: var(--text-secondary);
-  font-size: 0.85rem;
-  line-height: 1.5;
-  margin-bottom: 20px;
+  font-size: 13px;
+  line-height: 20px;
+  margin: 0 0 16px;
 }
 
 .muted {
   color: var(--text-secondary);
-  font-size: 0.9rem;
+  font-size: 13px;
   text-align: center;
   padding: 24px 0;
 }
@@ -63,28 +68,32 @@
 .list {
   display: flex;
   flex-direction: column;
-  gap: 10px;
   list-style: none;
   padding: 0;
   margin: 0 0 16px;
 }
 
+/* List row — Section 5.12: divider between rows, no per-row box */
 .row {
   display: flex;
   align-items: center;
   gap: 12px;
-  padding: 10px;
-  border: 1px solid var(--glass-border);
-  border-radius: var(--border-radius-sm);
-  background: var(--glass-bg);
+  min-height: 48px;
+  padding: 8px 0;
+  border-top: 1px solid var(--border);
+}
+
+.list li:first-child .row {
+  border-top: none;
 }
 
 .thumb {
-  width: 44px;
-  height: 44px;
-  border-radius: var(--border-radius-sm);
+  width: 36px;
+  height: 36px;
+  border-radius: var(--radius-sm, 4px);
   object-fit: cover;
   flex-shrink: 0;
+  background-color: var(--bg-subtle);
 }
 
 .rowInfo {
@@ -96,8 +105,8 @@
 }
 
 .rowName {
-  font-size: 0.9rem;
-  font-weight: 600;
+  font-size: 13px;
+  font-weight: 500;
   color: var(--text-primary);
   overflow: hidden;
   text-overflow: ellipsis;
@@ -105,58 +114,90 @@
 }
 
 .rowMeta {
-  font-size: 0.75rem;
+  font-size: 12px;
   color: var(--text-secondary);
 }
 
 .rowActions {
   display: flex;
   align-items: center;
-  gap: 6px;
+  gap: 8px;
   flex-shrink: 0;
 }
 
+/* Buttons — Section 5.1 */
 .restoreBtn {
+  height: 28px;
+  padding: 0 10px;
   display: inline-flex;
   align-items: center;
   gap: 6px;
-  padding: 6px 12px;
-  border-radius: var(--border-radius-sm);
-  border: 1px solid var(--glass-border);
-  background: transparent;
+  border-radius: var(--radius-md, 6px);
+  border: 1px solid var(--border);
+  background-color: var(--bg-surface);
   color: var(--text-primary);
-  font-size: 0.78rem;
-  font-weight: 600;
+  font-family: inherit;
+  font-size: 12px;
+  font-weight: 500;
   cursor: pointer;
-  transition: all var(--transition-fast);
+  white-space: nowrap;
+  transition: border-color var(--duration-fast, 120ms), background-color var(--duration-fast, 120ms);
 }
 
 .restoreBtn:hover:not(:disabled) {
-  border-color: var(--color-orange);
-  color: var(--color-orange);
+  border-color: var(--border-strong);
+  background-color: var(--bg-hover);
 }
 
 .purgeBtn {
   display: inline-flex;
   align-items: center;
   justify-content: center;
-  width: 30px;
-  height: 30px;
-  border-radius: var(--border-radius-sm);
-  border: 1px solid var(--glass-border);
-  background: transparent;
+  width: 28px;
+  height: 28px;
+  border-radius: var(--radius-md, 6px);
+  border: 1px solid var(--border);
+  background-color: var(--bg-surface);
   color: var(--text-secondary);
   cursor: pointer;
-  transition: all var(--transition-fast);
+  transition: border-color var(--duration-fast, 120ms), color var(--duration-fast, 120ms);
 }
 
 .purgeBtn:hover:not(:disabled) {
-  border-color: var(--color-crimson);
-  color: var(--color-crimson);
+  border-color: var(--danger);
+  color: var(--danger);
 }
 
 .restoreBtn:disabled,
 .purgeBtn:disabled {
-  opacity: 0.5;
+  opacity: 0.4;
+  cursor: not-allowed;
+}
+
+.btnSecondary {
+  height: 32px;
+  padding: 0 12px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 6px;
+  background-color: var(--bg-surface);
+  color: var(--text-primary);
+  font-family: inherit;
+  font-size: 13px;
+  font-weight: 500;
+  border: 1px solid var(--border);
+  border-radius: var(--radius-md, 6px);
+  cursor: pointer;
+  transition: border-color var(--duration-fast, 120ms), background-color var(--duration-fast, 120ms);
+}
+
+.btnSecondary:hover:not(:disabled) {
+  border-color: var(--border-strong);
+  background-color: var(--bg-hover);
+}
+
+.btnSecondary:disabled {
+  opacity: 0.4;
   cursor: not-allowed;
 }

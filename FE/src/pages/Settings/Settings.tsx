@@ -27,9 +27,9 @@ export const Settings: React.FC<SettingsProps> = ({
   activeTab = DEFAULT_SETTING_TAB,
   onTabChange,
 }) => {
+  const { t, i18n } = useTranslation('portal');
   const { theme, setTheme } = useTheme();
   const { toast } = useToast();
-  const { i18n } = useTranslation();
 
   const [localTab, setLocalTab] = useState<SettingTab>(activeTab);
 
@@ -117,8 +117,9 @@ export const Settings: React.FC<SettingsProps> = ({
         }));
       })
       .catch((caught) =>
-        toast(caught instanceof Error ? caught.message : 'Unable to load profile.', 'error'),
+        toast(caught instanceof Error ? caught.message : t('settings.profile.toastLoadError'), 'error'),
       );
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [toast]);
 
   // Avatar Modal State
@@ -154,9 +155,9 @@ export const Settings: React.FC<SettingsProps> = ({
       });
       if (username) setSavedUsername(username);
       void i18n.changeLanguage(profileData.language);
-      toast('Profile saved to the server.');
+      toast(t('settings.profile.toastSaved'));
     } catch (caught) {
-      toast(caught instanceof Error ? caught.message : 'Unable to save profile.', 'error');
+      toast(caught instanceof Error ? caught.message : t('settings.profile.toastSaveError'), 'error');
     } finally {
       setSaving(false);
     }
@@ -165,16 +166,16 @@ export const Settings: React.FC<SettingsProps> = ({
   const handlePasswordSave = async (e: React.FormEvent) => {
     e.preventDefault();
     if (passwordForm.newPassword !== passwordForm.confirmPassword) {
-      toast('New passwords do not match!', 'error');
+      toast(t('settings.security.toastMismatch'), 'error');
       return;
     }
     setSaving(true);
     try {
       const message = await api.changePassword(passwordForm);
-      toast(message || 'Password updated. Please sign in again.');
+      toast(message || t('settings.security.toastUpdated'));
       setPasswordForm({ currentPassword: '', newPassword: '', confirmPassword: '' });
     } catch (caught) {
-      toast(caught instanceof Error ? caught.message : 'Unable to update password.', 'error');
+      toast(caught instanceof Error ? caught.message : t('settings.security.toastUpdateError'), 'error');
     } finally {
       setSaving(false);
     }
@@ -182,10 +183,7 @@ export const Settings: React.FC<SettingsProps> = ({
 
   const handleSelectPresetAvatar = (url: string) => {
     setProfileData((prev) => ({ ...prev, avatar: url }));
-    toast(
-      'Preset preview selected. Upload a local image to persist an avatar on the server.',
-      'info',
-    );
+    toast(t('settings.profile.toastPresetSelected'), 'info');
   };
 
   const handleCustomUpload = async (event: React.ChangeEvent<HTMLInputElement>) => {
@@ -200,9 +198,9 @@ export const Settings: React.FC<SettingsProps> = ({
         avatar: api.avatarUrl(profile.avatar_path) ?? URL.createObjectURL(file),
       }));
       setIsAvatarModalOpen(false);
-      toast('Avatar uploaded to the server.');
+      toast(t('settings.profile.toastUploaded'));
     } catch (caught) {
-      toast(caught instanceof Error ? caught.message : 'Unable to upload avatar.', 'error');
+      toast(caught instanceof Error ? caught.message : t('settings.profile.toastUploadError'), 'error');
     } finally {
       setUploadProgress(false);
       event.target.value = '';
@@ -215,19 +213,19 @@ export const Settings: React.FC<SettingsProps> = ({
       await api.deleteAvatar();
       setAvatarPath(null);
       setProfileData((prev) => ({ ...prev, avatar: presetAvatars[0].url }));
-      toast('Avatar removed.');
+      toast(t('settings.profile.toastRemoved'));
     } catch (caught) {
-      toast(caught instanceof Error ? caught.message : 'Unable to remove avatar.', 'error');
+      toast(caught instanceof Error ? caught.message : t('settings.profile.toastRemoveError'), 'error');
     } finally {
       setUploadProgress(false);
     }
   };
 
   const tabLabels: Record<SettingTab, string> = {
-    profile: 'Profile',
-    security: 'Security',
-    privacy: 'Privacy',
-    appearance: 'Appearance',
+    profile: t('settings.tabs.profile'),
+    security: t('settings.tabs.security'),
+    privacy: t('settings.tabs.privacy'),
+    appearance: t('settings.tabs.appearance'),
   };
 
   return (
@@ -236,11 +234,11 @@ export const Settings: React.FC<SettingsProps> = ({
       <div className={styles.headerBlock}>
         {/* Row 1 · 56px: Title */}
         <div className={styles.headerTop}>
-          <h1 className={styles.title}>Settings</h1>
+          <h1 className={styles.title}>{t('settings.title')}</h1>
         </div>
 
         {/* Row 2 · 40px: Underline tabs (DESIGN.md 5.4) */}
-        <nav className={styles.tabs} role="tablist" aria-label="Settings navigation">
+        <nav className={styles.tabs} role="tablist" aria-label={t('settings.navLabel')}>
           {SETTINGS_TABS.map((tab) => (
             <button
               key={tab}
@@ -269,10 +267,8 @@ export const Settings: React.FC<SettingsProps> = ({
               className={styles.tabContent}
             >
               <div className={styles.sectionHeader}>
-                <h2 className={styles.sectionTitle}>Profile Details</h2>
-                <p className={styles.sectionSubtitle}>
-                  Manage public information regarding your designer account profile.
-                </p>
+                <h2 className={styles.sectionTitle}>{t('settings.profile.title')}</h2>
+                <p className={styles.sectionSubtitle}>{t('settings.profile.subtitle')}</p>
               </div>
 
               {/* Designer Avatar Preview & Actions */}
@@ -280,12 +276,12 @@ export const Settings: React.FC<SettingsProps> = ({
                 <div className={styles.avatarPreviewWrapper}>
                   <img
                     src={profileData.avatar}
-                    alt={profileData.name || 'Avatar'}
+                    alt={profileData.name || t('settings.profile.avatarFallback')}
                     className={styles.avatarPreviewImg}
                   />
                 </div>
                 <div className={styles.avatarDetails}>
-                  <span className={styles.avatarName}>{profileData.name || 'Designer'}</span>
+                  <span className={styles.avatarName}>{profileData.name || t('settings.profile.designerFallback')}</span>
                   <span className={styles.avatarEmail}>{profileData.email}</span>
                   <div className={styles.avatarActions}>
                     <button
@@ -293,7 +289,7 @@ export const Settings: React.FC<SettingsProps> = ({
                       className={styles.secondaryBtn}
                       onClick={() => setIsAvatarModalOpen(true)}
                     >
-                      Change avatar
+                      {t('settings.profile.changeAvatar')}
                     </button>
                     {avatarPath && (
                       <button
@@ -302,7 +298,7 @@ export const Settings: React.FC<SettingsProps> = ({
                         onClick={() => void handleRemoveAvatar()}
                         disabled={uploadProgress}
                       >
-                        Remove avatar
+                        {t('settings.profile.removeAvatar')}
                       </button>
                     )}
                   </div>
@@ -313,10 +309,10 @@ export const Settings: React.FC<SettingsProps> = ({
               <form onSubmit={handleProfileSave} className={styles.form}>
                 {/* Group A: Designer Identity */}
                 <div className={styles.formSectionGroup}>
-                  <h4 className={styles.formGroupTitle}>Designer Identity</h4>
+                  <h4 className={styles.formGroupTitle}>{t('settings.profile.designerIdentity')}</h4>
                   <div className={styles.formGrid}>
                     <div className={styles.inputGroup}>
-                      <label htmlFor="designer-name">Designer Name</label>
+                      <label htmlFor="designer-name">{t('settings.profile.designerName')}</label>
                       <input
                         id="designer-name"
                         type="text"
@@ -327,7 +323,7 @@ export const Settings: React.FC<SettingsProps> = ({
                       />
                     </div>
                     <div className={styles.inputGroup}>
-                      <label htmlFor="designer-email">Email Address</label>
+                      <label htmlFor="designer-email">{t('settings.profile.emailAddress')}</label>
                       <input
                         id="designer-email"
                         type="email"
@@ -337,7 +333,7 @@ export const Settings: React.FC<SettingsProps> = ({
                       />
                     </div>
                     <div className={styles.inputGroup}>
-                      <label htmlFor="designer-username">Username</label>
+                      <label htmlFor="designer-username">{t('settings.profile.username')}</label>
                       <input
                         id="designer-username"
                         type="text"
@@ -345,12 +341,12 @@ export const Settings: React.FC<SettingsProps> = ({
                         onChange={(e) => setProfileData({ ...profileData, username: e.target.value })}
                         className={styles.input}
                         pattern="[a-zA-Z_][a-zA-Z0-9_]{2,29}"
-                        title="3–30 letters, digits or _; cannot start with a digit"
+                        title={t('settings.profile.usernamePatternTitle')}
                         required
                       />
                     </div>
                     <div className={styles.inputGroup}>
-                      <label htmlFor="designer-phone">Phone Number</label>
+                      <label htmlFor="designer-phone">{t('settings.profile.phoneNumber')}</label>
                       <input
                         id="designer-phone"
                         type="tel"
@@ -362,21 +358,23 @@ export const Settings: React.FC<SettingsProps> = ({
                       />
                     </div>
                     <div className={styles.inputGroup}>
-                      <label>Language</label>
+                      <label>{t('settings.profile.language')}</label>
                       <Select
                         value={profileData.language}
-                        onValueChange={(value) =>
-                          setProfileData({ ...profileData, language: value === 'vi' ? 'vi' : 'en' })
-                        }
+                        onValueChange={(value) => {
+                          const nextLanguage = value === 'vi' ? 'vi' : 'en';
+                          setProfileData({ ...profileData, language: nextLanguage });
+                          void i18n.changeLanguage(nextLanguage);
+                        }}
                         options={[
-                          { value: 'en', label: 'English' },
-                          { value: 'vi', label: 'Tiếng Việt' },
+                          { value: 'en', label: t('settings.profile.languageEnOption') },
+                          { value: 'vi', label: t('settings.profile.languageViOption') },
                         ]}
-                        ariaLabel="Language"
+                        ariaLabel={t('settings.profile.language')}
                       />
                     </div>
                     <div className={styles.inputGroup}>
-                      <label htmlFor="designer-role">Primary Role</label>
+                      <label htmlFor="designer-role">{t('settings.profile.primaryRole')}</label>
                       <input
                         id="designer-role"
                         maxLength={100}
@@ -387,7 +385,7 @@ export const Settings: React.FC<SettingsProps> = ({
                       />
                     </div>
                     <div className={styles.inputGroup}>
-                      <label htmlFor="designer-studio">Studio Name</label>
+                      <label htmlFor="designer-studio">{t('settings.profile.studioName')}</label>
                       <input
                         id="designer-studio"
                         type="text"
@@ -400,7 +398,7 @@ export const Settings: React.FC<SettingsProps> = ({
                       />
                     </div>
                     <div className={styles.inputGroup}>
-                      <label htmlFor="designer-location">Studio Location</label>
+                      <label htmlFor="designer-location">{t('settings.profile.studioLocation')}</label>
                       <input
                         id="designer-location"
                         maxLength={100}
@@ -417,16 +415,16 @@ export const Settings: React.FC<SettingsProps> = ({
 
                 {/* Group B: Studio Bio */}
                 <div className={styles.formSectionGroup}>
-                  <h4 className={styles.formGroupTitle}>Studio Bio & Slogan</h4>
+                  <h4 className={styles.formGroupTitle}>{t('settings.profile.studioBio')}</h4>
                   <div className={styles.inputGroupFull}>
-                    <label htmlFor="designer-bio">Creative Bio</label>
+                    <label htmlFor="designer-bio">{t('settings.profile.creativeBio')}</label>
                     <textarea
                       id="designer-bio"
                       value={profileData.bio}
                       onChange={(e) => setProfileData({ ...profileData, bio: e.target.value })}
                       className={styles.textarea}
                       rows={4}
-                      placeholder="Introduce your shoe customizer studio brand..."
+                      placeholder={t('settings.profile.bioPlaceholder')}
                       required
                     />
                   </div>
@@ -434,10 +432,10 @@ export const Settings: React.FC<SettingsProps> = ({
 
                 {/* Group C: Connected Portfolios */}
                 <div className={styles.formSectionGroup}>
-                  <h4 className={styles.formGroupTitle}>Connected Showcase Handles</h4>
+                  <h4 className={styles.formGroupTitle}>{t('settings.profile.connectedHandles')}</h4>
                   <div className={styles.formGrid}>
                     <div className={styles.inputGroup}>
-                      <label htmlFor="designer-instagram">Instagram Handle</label>
+                      <label htmlFor="designer-instagram">{t('settings.profile.instagram')}</label>
                       <div className={styles.inputWithIconWrapper}>
                         <Instagram size={14} className={styles.fieldIcon} />
                         <input
@@ -453,7 +451,7 @@ export const Settings: React.FC<SettingsProps> = ({
                       </div>
                     </div>
                     <div className={styles.inputGroup}>
-                      <label htmlFor="designer-behance">Behance Username</label>
+                      <label htmlFor="designer-behance">{t('settings.profile.behance')}</label>
                       <div className={styles.inputWithIconWrapper}>
                         <Globe size={14} className={styles.fieldIcon} />
                         <input
@@ -469,7 +467,7 @@ export const Settings: React.FC<SettingsProps> = ({
                       </div>
                     </div>
                     <div className={styles.inputGroup}>
-                      <label htmlFor="designer-tiktok">TikTok Handle</label>
+                      <label htmlFor="designer-tiktok">{t('settings.profile.tiktok')}</label>
                       <div className={styles.inputWithIconWrapper}>
                         <Smartphone size={14} className={styles.fieldIcon} />
                         <input
@@ -490,7 +488,7 @@ export const Settings: React.FC<SettingsProps> = ({
                 <div>
                   <button type="submit" className={styles.primaryBtn} disabled={saving}>
                     <Save size={14} />
-                    <span>Save profile settings</span>
+                    <span>{t('settings.profile.saveProfile')}</span>
                   </button>
                 </div>
               </form>
@@ -507,10 +505,8 @@ export const Settings: React.FC<SettingsProps> = ({
               className={styles.tabContent}
             >
               <div className={styles.sectionHeader}>
-                <h2 className={styles.sectionTitle}>Security & Credentials</h2>
-                <p className={styles.sectionSubtitle}>
-                  Change password and adjust identity verification credentials.
-                </p>
+                <h2 className={styles.sectionTitle}>{t('settings.security.title')}</h2>
+                <p className={styles.sectionSubtitle}>{t('settings.security.subtitle')}</p>
               </div>
 
               <div className={styles.twoColGrid}>
@@ -521,11 +517,11 @@ export const Settings: React.FC<SettingsProps> = ({
                 <form onSubmit={handlePasswordSave} className={styles.passwordCard}>
                   <h3 className={styles.subFormTitle}>
                     <Key size={14} />
-                    Update Password
+                    {t('settings.security.updatePassword')}
                   </h3>
                   <div className={styles.formGrid}>
                     <div className={styles.inputGroup}>
-                      <label htmlFor="current-password">Current Password</label>
+                      <label htmlFor="current-password">{t('settings.security.currentPassword')}</label>
                       <input
                         id="current-password"
                         type="password"
@@ -538,7 +534,7 @@ export const Settings: React.FC<SettingsProps> = ({
                       />
                     </div>
                     <div className={styles.inputGroup}>
-                      <label htmlFor="new-password">New Password</label>
+                      <label htmlFor="new-password">{t('settings.security.newPassword')}</label>
                       <input
                         id="new-password"
                         type="password"
@@ -551,7 +547,7 @@ export const Settings: React.FC<SettingsProps> = ({
                       />
                     </div>
                     <div className={styles.inputGroup}>
-                      <label htmlFor="confirm-password">Confirm New Password</label>
+                      <label htmlFor="confirm-password">{t('settings.security.confirmPassword')}</label>
                       <input
                         id="confirm-password"
                         type="password"
@@ -568,7 +564,7 @@ export const Settings: React.FC<SettingsProps> = ({
                   <div>
                     <button type="submit" className={styles.primaryBtn} disabled={saving}>
                       <Save size={14} />
-                      Update Password
+                      {t('settings.security.updatePassword')}
                     </button>
                   </div>
                 </form>
@@ -589,10 +585,8 @@ export const Settings: React.FC<SettingsProps> = ({
               className={styles.tabContent}
             >
               <div className={styles.sectionHeader}>
-                <h2 className={styles.sectionTitle}>Privacy & Data</h2>
-                <p className={styles.sectionSubtitle}>
-                  Control who can see your work, what you consent to, and your personal data.
-                </p>
+                <h2 className={styles.sectionTitle}>{t('settings.privacy.title')}</h2>
+                <p className={styles.sectionSubtitle}>{t('settings.privacy.subtitle')}</p>
               </div>
 
               <PrivacyPanel />
@@ -609,14 +603,12 @@ export const Settings: React.FC<SettingsProps> = ({
               className={styles.tabContent}
             >
               <div className={styles.sectionHeader}>
-                <h2 className={styles.sectionTitle}>Appearance</h2>
-                <p className={styles.sectionSubtitle}>
-                  Pick how the KusShoes workspace looks. The choice is remembered on this device.
-                </p>
+                <h2 className={styles.sectionTitle}>{t('settings.appearance.title')}</h2>
+                <p className={styles.sectionSubtitle}>{t('settings.appearance.subtitle')}</p>
               </div>
 
               <div className={styles.appearanceGroup}>
-                <h4 className={styles.formGroupTitle}>Theme Preferences</h4>
+                <h4 className={styles.formGroupTitle}>{t('settings.appearance.themePreferences')}</h4>
 
                 <div className={styles.themeSelectorGrid}>
                   {/* Dark Theme Card */}
@@ -624,7 +616,7 @@ export const Settings: React.FC<SettingsProps> = ({
                     className={`${styles.themeCard} ${theme === 'dark' ? styles.themeCardActive : ''}`}
                     onClick={() => {
                       setTheme('dark');
-                      toast('Theme set to Streetwear Dark');
+                      toast(t('settings.appearance.toastDark'));
                     }}
                   >
                     <div className={styles.themeCardPreviewDark}>
@@ -636,10 +628,8 @@ export const Settings: React.FC<SettingsProps> = ({
                       </div>
                     </div>
                     <div className={styles.themeCardMeta}>
-                      <span className={styles.themeCardTitle}>Streetwear Dark</span>
-                      <span className={styles.themeCardDesc}>
-                        Default neon-accented dark system
-                      </span>
+                      <span className={styles.themeCardTitle}>{t('settings.appearance.darkTitle')}</span>
+                      <span className={styles.themeCardDesc}>{t('settings.appearance.darkDesc')}</span>
                     </div>
                   </div>
 
@@ -648,7 +638,7 @@ export const Settings: React.FC<SettingsProps> = ({
                     className={`${styles.themeCard} ${theme === 'light' ? styles.themeCardActive : ''}`}
                     onClick={() => {
                       setTheme('light');
-                      toast('Theme set to Premium Cream');
+                      toast(t('settings.appearance.toastLight'));
                     }}
                   >
                     <div className={styles.themeCardPreviewLight}>
@@ -660,8 +650,8 @@ export const Settings: React.FC<SettingsProps> = ({
                       </div>
                     </div>
                     <div className={styles.themeCardMeta}>
-                      <span className={styles.themeCardTitle}>Premium Cream</span>
-                      <span className={styles.themeCardDesc}>Warm editorial streetwear look</span>
+                      <span className={styles.themeCardTitle}>{t('settings.appearance.lightTitle')}</span>
+                      <span className={styles.themeCardDesc}>{t('settings.appearance.lightDesc')}</span>
                     </div>
                   </div>
                 </div>
@@ -680,7 +670,7 @@ export const Settings: React.FC<SettingsProps> = ({
             animate={{ opacity: 1, scale: 1 }}
           >
             <div className={styles.modalHeader}>
-              <h3 className={styles.modalTitle}>Choose Designer Avatar</h3>
+              <h3 className={styles.modalTitle}>{t('settings.avatarModal.title')}</h3>
               <button
                 type="button"
                 className={styles.modalCloseBtn}
@@ -690,9 +680,7 @@ export const Settings: React.FC<SettingsProps> = ({
                 <X size={16} />
               </button>
             </div>
-            <p className={styles.modalDesc}>
-              Select one of the pre-designed presets or upload a custom image file.
-            </p>
+            <p className={styles.modalDesc}>{t('settings.avatarModal.desc')}</p>
 
             {/* Presets Grid */}
             <div className={styles.avatarGrid}>
@@ -720,7 +708,7 @@ export const Settings: React.FC<SettingsProps> = ({
               {uploadProgress ? (
                 <div className={styles.uploadProgress}>
                   <RefreshCw className={styles.spinIcon} size={16} />
-                  <span>Uploading mesh file avatar...</span>
+                  <span>{t('settings.avatarModal.uploading')}</span>
                 </div>
               ) : (
                 <label
@@ -734,7 +722,7 @@ export const Settings: React.FC<SettingsProps> = ({
                     style={{ display: 'none' }}
                   />
                   <Upload size={14} />
-                  <span>Upload custom photo (.png, .jpg)</span>
+                  <span>{t('settings.avatarModal.uploadCta')}</span>
                 </label>
               )}
             </div>
@@ -747,7 +735,7 @@ export const Settings: React.FC<SettingsProps> = ({
                 onClick={() => void handleRemoveAvatar()}
               >
                 <X size={14} />
-                <span>Remove current avatar</span>
+                <span>{t('settings.avatarModal.removeCurrent')}</span>
               </button>
             )}
 
@@ -757,7 +745,7 @@ export const Settings: React.FC<SettingsProps> = ({
                 className={styles.secondaryBtn}
                 onClick={() => setIsAvatarModalOpen(false)}
               >
-                Cancel
+                {t('settings.avatarModal.cancel')}
               </button>
             </div>
           </motion.div>

@@ -1,5 +1,7 @@
 import React, { useEffect, useState } from 'react';
+import { I18nextProvider } from 'react-i18next';
 import { AdminAuthProvider, useAdminAuth } from '../../context/AdminAuthContext';
+import adminI18n from '../../i18n/adminI18n';
 import { AdminSidebar } from './AdminLayout/AdminSidebar';
 import { AdminLogin } from './AdminLogin/AdminLogin';
 import { AdminDashboard } from './Dashboard/AdminDashboard';
@@ -14,10 +16,11 @@ import { AdminAuditLogs } from './AuditLogs/AdminAuditLogs';
 import { AdminAnalytics } from './Analytics/AdminAnalytics';
 import { AdminContent } from './Content/AdminContent';
 import { AdminFeedbackPage } from './Feedback/AdminFeedbackPage';
+import { AdminSettings } from './Settings/AdminSettings';
 
 const VALID_PAGES = [
   'dashboard', 'analytics', 'users', 'plans', 'billing', 'projects',
-  'bake-jobs', 'exports', 'content', 'feedback', 'system', 'audit-logs',
+  'bake-jobs', 'exports', 'content', 'feedback', 'system', 'audit-logs', 'settings',
 ];
 
 const getSubPage = (): string => {
@@ -69,6 +72,7 @@ const AdminShell: React.FC = () => {
         {page === 'feedback' && <AdminFeedbackPage />}
         {page === 'system' && <AdminSystemHealth />}
         {page === 'audit-logs' && <AdminAuditLogs />}
+        {page === 'settings' && <AdminSettings />}
       </main>
     </div>
   );
@@ -76,8 +80,10 @@ const AdminShell: React.FC = () => {
 
 export const AdminApp: React.FC = () => {
   return (
-    <AdminAuthProvider>
-      <AdminShell />
-    </AdminAuthProvider>
+    <I18nextProvider i18n={adminI18n}>
+      <AdminAuthProvider>
+        <AdminShell />
+      </AdminAuthProvider>
+    </I18nextProvider>
   );
 };

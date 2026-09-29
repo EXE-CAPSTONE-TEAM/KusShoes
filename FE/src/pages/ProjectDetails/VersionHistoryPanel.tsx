@@ -5,6 +5,7 @@ import { ConfirmDialog } from '../../components/ConfirmDialog/ConfirmDialog';
 import { ReportContentLink } from '../../components/ReportContentLink/ReportContentLink';
 import { useToast } from '../../context/ToastContext';
 import { formatDateTime } from '../../utils/format';
+import { LoadingDots } from '../../components/LoadingDots/LoadingDots';
 import styles from './ProjectPanels.module.css';
 
 interface VersionHistoryPanelProps {
@@ -71,13 +72,13 @@ export const VersionHistoryPanel: React.FC<VersionHistoryPanelProps> = ({ projec
   return (
     <div className={styles.stack}>
       {locked && (
-        <div className={styles.lockedBanner}>
+        <div className={`${styles.notice} ${styles.noticeWarning}`}>
           This project is read-only after a plan downgrade, so versions cannot be restored and
           templates cannot be applied.
         </div>
       )}
 
-      <div className={`${styles.panel} glass-panel`}>
+      <div className={styles.panel}>
         <div className={styles.panelHeader}>
           <History size={20} className={styles.panelIcon} />
           <div>
@@ -89,7 +90,7 @@ export const VersionHistoryPanel: React.FC<VersionHistoryPanelProps> = ({ projec
           </div>
         </div>
         {versions === null ? (
-          <p className={styles.muted}>Loading versions…</p>
+          <LoadingDots center label="Loading versions…" />
         ) : versions.length === 0 ? (
           <p className={styles.muted}>
             No saved versions yet. Save a design in KusStudio to start the history.
@@ -100,11 +101,9 @@ export const VersionHistoryPanel: React.FC<VersionHistoryPanelProps> = ({ projec
               <div className={styles.rowMain}>
                 <span className={styles.rowTitle}>
                   Version {version.version_no}
-                  {index === 0 && (
-                    <span className={`${styles.chip} ${styles.chipOk}`}>Current</span>
-                  )}
+                  {index === 0 && <span className={styles.chip}>Current</span>}
                   {version.is_pinned && (
-                    <span className={`${styles.chip} ${styles.chipPin}`}>
+                    <span className={styles.chip}>
                       <Pin size={10} /> Exported
                     </span>
                   )}
@@ -114,7 +113,7 @@ export const VersionHistoryPanel: React.FC<VersionHistoryPanelProps> = ({ projec
               {index > 0 && (
                 <button
                   type="button"
-                  className="btn-outline"
+                  className={`${styles.btnSecondary} ${styles.btnSm}`}
                   disabled={locked || busy}
                   onClick={() => setRestoreTarget(version)}
                 >
@@ -126,7 +125,7 @@ export const VersionHistoryPanel: React.FC<VersionHistoryPanelProps> = ({ projec
         )}
       </div>
 
-      <div className={`${styles.panel} glass-panel`}>
+      <div className={styles.panel}>
         <div className={styles.panelHeader}>
           <LayoutTemplate size={20} className={styles.panelIcon} />
           <div>
@@ -137,7 +136,7 @@ export const VersionHistoryPanel: React.FC<VersionHistoryPanelProps> = ({ projec
           </div>
         </div>
         {templates === null ? (
-          <p className={styles.muted}>Loading templates…</p>
+          <LoadingDots center label="Loading templates…" />
         ) : templates.length === 0 ? (
           <p className={styles.muted}>No templates are published yet.</p>
         ) : (
@@ -159,7 +158,7 @@ export const VersionHistoryPanel: React.FC<VersionHistoryPanelProps> = ({ projec
                 )}
                 <button
                   type="button"
-                  className="btn-outline"
+                  className={`${styles.btnSecondary} ${styles.btnSm}`}
                   disabled={locked || busy}
                   onClick={() => setTemplateTarget(template)}
                 >

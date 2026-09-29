@@ -1,6 +1,7 @@
 import React from 'react';
 import { Download, Footprints, FolderPlus, Laptop, Plus, SearchX, Sparkles } from 'lucide-react';
 import { motion } from 'framer-motion';
+import { LoadingDots } from '../../components/LoadingDots/LoadingDots';
 import styles from './ProjectsEmptyState.module.css';
 
 interface ProjectsEmptyStateProps {
@@ -36,7 +37,7 @@ export const ProjectsEmptyState: React.FC<ProjectsEmptyStateProps> = ({
             <div key={index} className={styles.skeleton} />
           ))}
         </div>
-        <p className={styles.muted}>Loading your projects…</p>
+        <LoadingDots center label="Loading your projects…" role={null} />
       </div>
     );
   }

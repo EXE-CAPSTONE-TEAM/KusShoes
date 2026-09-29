@@ -10,6 +10,7 @@ import {
 } from '../../api/studio';
 import { useToast } from '../../context/ToastContext';
 import { formatDate, formatDateTime } from '../../utils/format';
+import { LoadingDots } from '../../components/LoadingDots/LoadingDots';
 import styles from './Feedback.module.css';
 
 const GROUPS: { value: MarketingGroup; label: string }[] = [
@@ -28,6 +29,22 @@ const STATUS_LABELS: Record<string, string> = {
 };
 
 const MAX_LENGTH = 2000;
+
+/** Status indicator adhering to docs/DESIGN.md Section 5.7 (6px dot + 12px label) */
+function FeedbackStatus({ status }: { status: string }) {
+  const label = STATUS_LABELS[status] ?? status;
+  let color = 'var(--neutral)';
+  if (status === 'done') color = 'var(--success)';
+  else if (status === 'planned' || status === 'reviewed') color = 'var(--warning)';
+  else if (status === 'wont_do') color = 'var(--neutral)';
+
+  return (
+    <span className={styles.statusIndicator}>
+      <span className={styles.statusDot} style={{ backgroundColor: color }} />
+      <span>{label}</span>
+    </span>
+  );
+}
 
 export const Feedback: React.FC = () => {
   const { toast } = useToast();
@@ -74,23 +91,33 @@ export const Feedback: React.FC = () => {
 
   return (
     <div className={styles.container}>
-      <div>
-        <h1 className={styles.title}>Feedback</h1>
-        <p className={styles.subtitle}>Tell us what works and what does not. We read every message.</p>
+      {/* Page Header - docs/DESIGN.md Section 6.1 (Row 1: 56px, no filler subtitle) */}
+      <div className={styles.pageHeader}>
+        <div className={styles.titleGroup}>
+          <h1 className={styles.title}>Feedback</h1>
+          {items !== null && items.length > 0 && (
+            <span className={styles.count}>({items.length})</span>
+          )}
+        </div>
       </div>
 
+      {/* Two-Column Layout - docs/DESIGN.md Section 4.3 */}
       <div className={styles.grid}>
+        {/* Form Card */}
         <motion.form
-          className={`${styles.card} glass-panel`}
+          className={styles.card}
           onSubmit={submit}
-          initial={{ opacity: 0, y: 15 }}
-          animate={{ opacity: 1, y: 0 }}
+          initial={{ opacity: 0 }}
+          animate={{ opacity: 1 }}
+          transition={{ duration: 0.15 }}
         >
-          <h3 className={styles.cardTitle}>Share your thoughts</h3>
+          <div className={styles.cardHeader}>
+            <h2 className={styles.cardTitle}>Share your thoughts</h2>
+          </div>
 
           {eligibility && !eligibility.can_submit && (
             <div className={styles.notice} role="status">
-              <Clock size={16} />
+              <Clock size={16} className={styles.noticeIcon} />
               <span>
                 You have sent feedback recently. You can send another on {formatDate(eligibility.next_allowed_at)}.
               </span>
@@ -110,7 +137,7 @@ export const Feedback: React.FC = () => {
                   className={`${styles.star} ${value <= rating ? styles.starOn : ''}`}
                   onClick={() => setRating(value)}
                 >
-                  <Star size={28} fill={value <= rating ? 'currentColor' : 'none'} />
+                  <Star size={22} fill={value <= rating ? 'currentColor' : 'none'} />
                 </button>
               ))}
             </div>
@@ -133,7 +160,7 @@ export const Feedback: React.FC = () => {
           </div>
 
           <div className={styles.field}>
-            <label htmlFor="feedback-message">Your message</label>
+            <label htmlFor="feedback-message" className={styles.fieldLabel}>Your message</label>
             <textarea
               id="feedback-message"
               className={styles.textarea}
@@ -142,49 +169,51 @@ export const Feedback: React.FC = () => {
               value={message}
               onChange={(event) => setMessage(event.target.value)}
             />
-            <span className={styles.counter}>{message.length} / {MAX_LENGTH}</span>
+            <span className={styles.counter}>{message.length} of {MAX_LENGTH}</span>
           </div>
 
-          <button type="submit" className="btn-neon-orange" disabled={!canSubmit} style={{ alignSelf: 'flex-start' }}>
-            <Send size={16} /> {submitting ? 'Sending…' : 'Send feedback'}
+          <button type="submit" className={styles.btnPrimary} disabled={!canSubmit}>
+            <Send size={14} /> <span>{submitting ? 'Sending…' : 'Send feedback'}</span>
           </button>
         </motion.form>
 
+        {/* History Card - docs/DESIGN.md Section 5.12 */}
         <motion.div
-          className={`${styles.card} glass-panel`}
-          initial={{ opacity: 0, y: 15 }}
-          animate={{ opacity: 1, y: 0 }}
-          transition={{ delay: 0.1 }}
+          className={styles.card}
+          initial={{ opacity: 0 }}
+          animate={{ opacity: 1 }}
+          transition={{ duration: 0.15, delay: 0.05 }}
         >
-          <h3 className={styles.cardTitle}>Your feedback</h3>
+          <div className={styles.cardHeader}>
+            <h2 className={styles.cardTitle}>Your feedback</h2>
+          </div>
+
           {items === null ? (
-            <p className={styles.muted}>Loading…</p>
+            <LoadingDots center label="Loading your feedback…" />
           ) : items.length === 0 ? (
             <p className={styles.muted}>You have not sent any feedback yet.</p>
           ) : (
-            items.map((item) => (
-              <div key={item.id} className={styles.item}>
-                <div className={styles.itemHeader}>
-                  <span className={styles.itemStars} aria-label={`${item.rating} out of 5`}>
-                    {Array.from({ length: item.rating }, (_, index) => (
-                      <Star key={index} size={14} fill="currentColor" />
-                    ))}
-                  </span>
-                  <span
-                    className={`${styles.chip} ${item.status === 'done' ? styles.chipDone : ''} ${item.status === 'planned' ? styles.chipPlanned : ''}`}
-                  >
-                    {STATUS_LABELS[item.status] ?? item.status}
-                  </span>
-                  <span className={styles.itemDate}>{formatDateTime(item.created_at)}</span>
-                </div>
-                <p className={styles.itemMessage}>{item.message}</p>
-                {item.changed_what && (
-                  <div className={styles.changed}>
-                    <strong>What we changed:</strong> {item.changed_what}
+            <div className={styles.itemsList}>
+              {items.map((item) => (
+                <div key={item.id} className={styles.item}>
+                  <div className={styles.itemHeader}>
+                    <span className={styles.itemStars} aria-label={`${item.rating} out of 5`}>
+                      {Array.from({ length: item.rating }, (_, index) => (
+                        <Star key={index} size={12} fill="currentColor" />
+                      ))}
+                    </span>
+                    <FeedbackStatus status={item.status} />
+                    <span className={styles.itemDate}>{formatDateTime(item.created_at)}</span>
                   </div>
-                )}
-              </div>
-            ))
+                  <p className={styles.itemMessage}>{item.message}</p>
+                  {item.changed_what && (
+                    <div className={styles.changed}>
+                      <strong>What we changed:</strong> {item.changed_what}
+                    </div>
+                  )}
+                </div>
+              ))}
+            </div>
           )}
         </motion.div>
       </div>

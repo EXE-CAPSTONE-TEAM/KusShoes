@@ -24,6 +24,7 @@ import * as Separator from '@radix-ui/react-separator';
 import * as Avatar from '@radix-ui/react-avatar';
 import * as DropdownMenu from '@radix-ui/react-dropdown-menu';
 import * as ScrollArea from '@radix-ui/react-scroll-area';
+import { useTranslation } from 'react-i18next';
 import { useTheme } from '../../context/ThemeContext';
 import { formatBytes } from '../../utils/format';
 import { api, type PortalProject, type UserProfile } from '../../api/client';
@@ -45,6 +46,7 @@ export const Sidebar: React.FC<SidebarProps> = ({
   projects,
   activeSettingTab,
 }) => {
+  const { t } = useTranslation('portal');
   const { theme } = useTheme();
   const isSettingsActive = activePage.split('?')[0] === 'settings';
   const [settingsExpanded, setSettingsExpanded] = React.useState(isSettingsActive);
@@ -67,19 +69,19 @@ export const Sidebar: React.FC<SidebarProps> = ({
     });
   };
   const menuItems = [
-    { id: 'dashboard', label: 'Overview', icon: LayoutDashboard },
-    { id: 'projects', label: 'Projects', icon: FolderKanban },
-    { id: 'archives', label: 'Archives', icon: Archive },
-    { id: 'trash', label: 'Trash', icon: Trash2 },
-    { id: 'exports', label: 'Exports', icon: Download },
-    { id: 'billing', label: 'Billing', icon: CreditCard },
-    { id: 'feedback', label: 'Feedback', icon: MessageSquare },
+    { id: 'dashboard', label: t('sidebar.overview'), icon: LayoutDashboard },
+    { id: 'projects', label: t('sidebar.projects'), icon: FolderKanban },
+    { id: 'archives', label: t('sidebar.archives'), icon: Archive },
+    { id: 'trash', label: t('sidebar.trash'), icon: Trash2 },
+    { id: 'exports', label: t('sidebar.exports'), icon: Download },
+    { id: 'billing', label: t('sidebar.billing'), icon: CreditCard },
+    { id: 'feedback', label: t('sidebar.feedback'), icon: MessageSquare },
   ];
   const settingItems: Array<{ id: SettingTab; label: string; icon: typeof User }> = [
-    { id: 'profile', label: 'Profile Details', icon: User },
-    { id: 'security', label: 'Security & Auth', icon: Shield },
-    { id: 'privacy', label: 'Model Privacy', icon: Eye },
-    { id: 'appearance', label: 'Appearance', icon: Palette },
+    { id: 'profile', label: t('sidebar.settingsProfile'), icon: User },
+    { id: 'security', label: t('sidebar.settingsSecurity'), icon: Shield },
+    { id: 'privacy', label: t('sidebar.settingsPrivacy'), icon: Eye },
+    { id: 'appearance', label: t('sidebar.settingsAppearance'), icon: Palette },
   ];
 
   React.useEffect(() => {
@@ -189,7 +191,7 @@ export const Sidebar: React.FC<SidebarProps> = ({
       <Settings className={styles.navIcon} />
       {!collapsed && (
         <>
-          <span className={styles.navLabel}>Settings</span>
+          <span className={styles.navLabel}>{t('sidebar.settings')}</span>
           <ChevronDown
             className={`${styles.navChevron} ${settingsExpanded ? styles.expanded : ''}`}
             aria-hidden="true"
@@ -222,8 +224,8 @@ export const Sidebar: React.FC<SidebarProps> = ({
           type="button"
           className={styles.collapseToggle}
           onClick={toggleCollapsed}
-          aria-label={collapsed ? 'Expand sidebar' : 'Collapse sidebar'}
-          title={collapsed ? 'Expand sidebar' : 'Collapse sidebar'}
+          aria-label={collapsed ? t('sidebar.expandSidebar') : t('sidebar.collapseSidebar')}
+          title={collapsed ? t('sidebar.expandSidebar') : t('sidebar.collapseSidebar')}
         >
           {collapsed ? <PanelLeftOpen size={14} /> : <PanelLeftClose size={14} />}
         </button>
@@ -245,7 +247,7 @@ export const Sidebar: React.FC<SidebarProps> = ({
                           side="right"
                           sideOffset={8}
                         >
-                          Settings
+                          {t('sidebar.settings')}
                           <Tooltip.Arrow className={styles.tooltipArrow} />
                         </Tooltip.Content>
                       </Tooltip.Portal>
@@ -283,7 +285,7 @@ export const Sidebar: React.FC<SidebarProps> = ({
                 <div className={styles.recentSection}>
                   <Separator.Root className={styles.recentDivider} decorative />
                   <div className={styles.recentHeaderRow}>
-                    <span className={styles.recentHeader}>Recent Projects</span>
+                    <span className={styles.recentHeader}>{t('sidebar.recentProjects')}</span>
                     <Tooltip.Root>
                       <Tooltip.Trigger asChild>
                         <button
@@ -302,7 +304,7 @@ export const Sidebar: React.FC<SidebarProps> = ({
                           side="right"
                           sideOffset={8}
                         >
-                          Quick Create Project
+                          {t('sidebar.quickCreate')}
                           <Tooltip.Arrow className={styles.tooltipArrow} />
                         </Tooltip.Content>
                       </Tooltip.Portal>
@@ -325,7 +327,7 @@ export const Sidebar: React.FC<SidebarProps> = ({
                       className={styles.viewAllLink}
                       onClick={() => setActivePage('projects')}
                     >
-                      View all
+                      {t('sidebar.viewAll')}
                     </button>
                   </div>
                 </div>
@@ -341,8 +343,8 @@ export const Sidebar: React.FC<SidebarProps> = ({
         {!collapsed && (
           <div className={styles.storageWidget}>
             <div className={styles.storageLabels}>
-              <span>Storage</span>
-              <span>{storageUsed === null ? '—' : `${formatBytes(storageUsed)} used`}</span>
+              <span>{t('sidebar.storage')}</span>
+              <span>{storageUsed === null ? '—' : t('sidebar.storageUsed', { size: formatBytes(storageUsed) })}</span>
             </div>
           </div>
         )}
@@ -382,20 +384,20 @@ export const Sidebar: React.FC<SidebarProps> = ({
                   className={styles.dropdownItem}
                   onSelect={() => setActivePage('settings?tab=profile')}
                 >
-                  <User size={14} /> Profile
+                  <User size={14} /> {t('sidebar.profile')}
                 </DropdownMenu.Item>
                 <DropdownMenu.Item
                   className={styles.dropdownItem}
                   onSelect={() => setActivePage(`settings?tab=${activeSettingTab}`)}
                 >
-                  <Settings size={14} /> Settings
+                  <Settings size={14} /> {t('sidebar.settings')}
                 </DropdownMenu.Item>
                 <DropdownMenu.Separator className={styles.dropdownSeparator} />
                 <DropdownMenu.Item
                   className={`${styles.dropdownItem} ${styles.dropdownItemDanger}`}
                   onSelect={onLogout}
                 >
-                  <LogOut size={14} /> Log out
+                  <LogOut size={14} /> {t('sidebar.logout')}
                 </DropdownMenu.Item>
               </DropdownMenu.Content>
             </DropdownMenu.Portal>
@@ -410,7 +412,7 @@ export const Sidebar: React.FC<SidebarProps> = ({
               </Tooltip.Trigger>
               <Tooltip.Portal>
                 <Tooltip.Content className={styles.tooltipContent} side="top" sideOffset={8}>
-                  Log out
+                  {t('sidebar.logout')}
                   <Tooltip.Arrow className={styles.tooltipArrow} />
                 </Tooltip.Content>
               </Tooltip.Portal>
