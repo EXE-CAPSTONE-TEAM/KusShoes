@@ -1,24 +1,65 @@
-import { useState, useEffect, lazy, Suspense } from 'react';
+import { lazy, Suspense, useEffect, useState, useTransition } from 'react';
+import { addBootTask, markAppMounted } from './boot/boot';
 import { Landing } from './pages/Landing/Landing';
 import { Login } from './pages/Login/Login';
 import { GoogleCallback } from './pages/Login/GoogleCallback';
-import { PricingPage } from './pages/PricingPage/PricingPage';
 import { Sidebar } from './components/Sidebar/Sidebar';
-import { Dashboard } from './pages/Dashboard/Dashboard';
-import { Projects } from './pages/Projects/Projects';
-import { Trash } from './pages/Trash/Trash';
-import { Exports } from './pages/Exports/Exports';
-import { Billing } from './pages/Billing/Billing';
-import { Settings } from './pages/Settings/Settings';
-import { Feedback } from './pages/Feedback/Feedback';
 import { ImpersonationBanner } from './components/ImpersonationBanner/ImpersonationBanner';
-import { ProjectDetails } from './pages/ProjectDetails/ProjectDetails';
-import { ProductsPage } from './pages/ProductsPage/ProductsPage';
-import { ArtisanViewer } from './pages/ArtisanViewer/ArtisanViewer';
-
-const AdminApp = lazy(() => import('./pages/Admin/AdminApp').then((m) => ({ default: m.AdminApp })));
+import { TopProgressBar } from './components/TopProgressBar/TopProgressBar';
 import { api, ApiError, type PortalProject } from './api/client';
 import { getSettingTabFromSearch, type SettingTab } from './pages/Settings/settingsNavigation';
+
+// Everything except the public entry points (Landing, Login) is code-split. The importers are
+// kept in one map so the first page of a full load can be registered as a boot task.
+const importDashboard = () =>
+  import('./pages/Dashboard/Dashboard').then((m) => ({ default: m.Dashboard }));
+const importProjects = () =>
+  import('./pages/Projects/Projects').then((m) => ({ default: m.Projects }));
+const importTrash = () => import('./pages/Trash/Trash').then((m) => ({ default: m.Trash }));
+const importExports = () => import('./pages/Exports/Exports').then((m) => ({ default: m.Exports }));
+const importBilling = () => import('./pages/Billing/Billing').then((m) => ({ default: m.Billing }));
+const importSettings = () =>
+  import('./pages/Settings/Settings').then((m) => ({ default: m.Settings }));
+const importFeedback = () =>
+  import('./pages/Feedback/Feedback').then((m) => ({ default: m.Feedback }));
+const importProjectDetails = () =>
+  import('./pages/ProjectDetails/ProjectDetails').then((m) => ({ default: m.ProjectDetails }));
+const importProducts = () =>
+  import('./pages/ProductsPage/ProductsPage').then((m) => ({ default: m.ProductsPage }));
+const importPricing = () =>
+  import('./pages/PricingPage/PricingPage').then((m) => ({ default: m.PricingPage }));
+const importAdmin = () => import('./pages/Admin/AdminApp').then((m) => ({ default: m.AdminApp }));
+const importArtisanViewer = () =>
+  import('./pages/ArtisanViewer/ArtisanViewer').then((m) => ({ default: m.ArtisanViewer }));
+
+const Dashboard = lazy(importDashboard);
+const Projects = lazy(importProjects);
+const Trash = lazy(importTrash);
+const Exports = lazy(importExports);
+const Billing = lazy(importBilling);
+const Settings = lazy(importSettings);
+const Feedback = lazy(importFeedback);
+const ProjectDetails = lazy(importProjectDetails);
+const ProductsPage = lazy(importProducts);
+const PricingPage = lazy(importPricing);
+const AdminApp = lazy(importAdmin);
+const ArtisanViewer = lazy(importArtisanViewer);
+
+const pageImporters: Record<string, (() => Promise<unknown>) | undefined> = {
+  dashboard: importDashboard,
+  projects: importProjects,
+  archives: importProjects,
+  trash: importTrash,
+  exports: importExports,
+  billing: importBilling,
+  settings: importSettings,
+  feedback: importFeedback,
+  'project-details': importProjectDetails,
+  'products-info': importProducts,
+  pricing: importPricing,
+  admin: importAdmin,
+  'artisan-viewer': importArtisanViewer,
+};
 
 // Helper to convert URL path to page key
 const getPageFromPath = (path: string): string => {
@@ -65,6 +106,10 @@ const getPageFromPath = (path: string): string => {
   }
 };
 
+// A full load that lands on a lazy page: make the boot loader wait for its chunk.
+const initialImporter = pageImporters[getPageFromPath(window.location.pathname)];
+if (initialImporter) addBootTask(initialImporter());
+
 // Helper to convert page key to URL path
 const getPathFromPage = (page: string): string => {
   const parts = page.split('?');
@@ -109,10 +154,16 @@ function App() {
     return getSettingTabFromSearch(window.location.search);
   });
 
+  // Route changes run in a transition so React keeps the current page on screen while a lazy
+  // chunk loads; `isPending` drives the top progress line.
+  const [isPending, startTransition] = useTransition();
+
   const [activeDetailProject, setActiveDetailProject] = useState<PortalProject | null>(null);
   const [projects, setProjects] = useState<PortalProject[]>([]);
   const [projectsLoading, setProjectsLoading] = useState(false);
   const [projectsError, setProjectsError] = useState('');
+
+  useEffect(() => markAppMounted(), []);
 
   // Intercept state changes and push history
   const navigate = (pageOrPath: string) => {
@@ -120,28 +171,32 @@ function App() {
     const path = isPath ? pageOrPath : getPathFromPage(pageOrPath);
     const page = isPath ? getPageFromPath(pageOrPath) : pageOrPath.split('?')[0];
 
-    if (page === 'settings') {
-      const query = path.includes('?') ? `?${path.split('?')[1]}` : '';
-      setActiveSettingTab(getSettingTabFromSearch(query));
-    }
-
     const currentFull = window.location.pathname + window.location.search;
     if (currentFull !== path) {
       window.history.pushState({}, '', path);
     }
 
-    // Immediately extract and set active project details if applicable
-    if (page === 'project-details') {
-      const searchStr = path.includes('?') ? '?' + path.split('?')[1] : '';
-      const params = new URLSearchParams(searchStr);
-      const id = params.get('id');
-      const found = projects.find((p) => p.id === id);
-      if (found) {
-        setActiveDetailProject(found);
+    // All state for the new route changes together in one transition, so the old page stays
+    // visible while a lazy page chunk loads.
+    startTransition(() => {
+      if (page === 'settings') {
+        const query = path.includes('?') ? `?${path.split('?')[1]}` : '';
+        setActiveSettingTab(getSettingTabFromSearch(query));
       }
-    }
 
-    setActivePage(page);
+      // Immediately extract and set active project details if applicable
+      if (page === 'project-details') {
+        const searchStr = path.includes('?') ? '?' + path.split('?')[1] : '';
+        const params = new URLSearchParams(searchStr);
+        const id = params.get('id');
+        const found = projects.find((p) => p.id === id);
+        if (found) {
+          setActiveDetailProject(found);
+        }
+      }
+
+      setActivePage(page);
+    });
   };
 
   useEffect(() => {
@@ -177,24 +232,26 @@ function App() {
   useEffect(() => {
     const handlePopState = () => {
       const page = getPageFromPath(window.location.pathname);
-      setActivePage(page);
+      startTransition(() => {
+        setActivePage(page);
 
-      if (page === 'settings') {
-        setActiveSettingTab(getSettingTabFromSearch(window.location.search));
-      }
-
-      if (page === 'project-details') {
-        const params = new URLSearchParams(window.location.search);
-        const id = params.get('id');
-        const found = projects.find((p) => p.id === id);
-        if (found) {
-          setActiveDetailProject(found);
+        if (page === 'settings') {
+          setActiveSettingTab(getSettingTabFromSearch(window.location.search));
         }
-      }
+
+        if (page === 'project-details') {
+          const params = new URLSearchParams(window.location.search);
+          const id = params.get('id');
+          const found = projects.find((p) => p.id === id);
+          if (found) {
+            setActiveDetailProject(found);
+          }
+        }
+      });
     };
     window.addEventListener('popstate', handlePopState);
     return () => window.removeEventListener('popstate', handlePopState);
-  }, [projects]);
+  }, [projects, startTransition]);
 
   // Fallback for initial load or query reload
   useEffect(() => {
@@ -208,7 +265,8 @@ function App() {
 
   if (activePage === 'admin') {
     return (
-      <Suspense fallback={<div style={{ padding: '2rem', textAlign: 'center', color: 'var(--text-secondary)' }}>Loading admin...</div>}>
+      <Suspense fallback={null}>
+        <TopProgressBar active={isPending} />
         <AdminApp />
       </Suspense>
     );
@@ -234,8 +292,11 @@ function App() {
     }
   };
 
+  // One Suspense boundary at the root, shared by the admin and main branches, so a route
+  // transition never swaps in a fallback over an already-visible page.
   return (
-    <>
+    <Suspense fallback={null}>
+      <TopProgressBar active={isPending} />
       <ImpersonationBanner onEnded={() => navigate('/admin/users')} />
 
       {/* If it's a logged-in view, show the Sidebar navigation */}
@@ -318,7 +379,7 @@ function App() {
           />
         )}
       </main>
-    </>
+    </Suspense>
   );
 }
 

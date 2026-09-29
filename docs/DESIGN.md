@@ -604,6 +604,9 @@ Tên project tự sinh không lộ cấu trúc nội bộ (tránh "Puma Palermo 
 | Trạng thái | Quy tắc |
 |---|---|
 | **Loading** | Skeleton cùng hình dạng với nội dung thật (card, dòng), nền `--bg-subtle`, hiệu ứng opacity 0.6↔1 (1.2s). Không spinner toàn trang. |
+| **Loading — lần tải đầu (boot loader)** | Chỉ khi tải lại toàn bộ trang, không bao giờ khi điều hướng trong app. Logo cao 32px + track 160×2px, fill `#FF6B35`, nền theo theme, không %, không glow, không spinner. Chỉ hiện sau **150 ms** (tải nhanh/có cache không thấy); đã hiện thì giữ tối thiểu **400 ms**; tối đa chờ **5000 ms** rồi vẫn mở trang. Chỉ chờ nội dung above-the-fold: `document.fonts.ready`, lần render đầu của app, và các tác vụ do đúng trang đang hiển thị đăng ký (Landing: logo + edge art hero; trang lazy: chunk của nó). Lỗi tải → coi như xong, không chặn. Tiến độ không bao giờ lùi; đạt 100% → 250 ms → fade 200 ms → gỡ khỏi DOM. Hiệu ứng vào của trang chỉ chạy sau khi loader biến mất. `role="progressbar"`, reduced motion → không transition. Code: `src/boot/`. |
+| **Loading — chuyển trang** | Trang cũ giữ nguyên trên màn hình khi chunk trang mới đang tải (`startTransition`). Thanh 2px `#FF6B35` ở đầu viewport (`TopProgressBar`), chỉ hiện nếu chờ quá **150 ms**, tiến dần tới 90%, xong thì lên 100% rồi fade 200 ms. `role="progressbar"` + `aria-label="Loading page"`, reduced motion → không transition. |
+| **Loading — chờ dữ liệu API** | Luôn dùng skeleton (dòng trên); không dùng thanh top hay boot loader cho việc gọi API. |
 | **Empty** | Căn giữa vùng nội dung: icon/hình 32–48px `--icon-muted`, tiêu đề 14px/600, mô tả 13px `--text-secondary` (1 câu), 1 nút hành động. Vd: "Scan your first sneaker" + QR tải app. |
 | **No results** | "No projects match "abc"" + Text button "Clear search". |
 | **Error (vùng)** | Thông báo 13px + nút "Try again". Không để vùng trống. |
@@ -824,5 +827,6 @@ Khi chốt một quyết định: cập nhật mục liên quan, xóa dòng kh�
 
 | Phiên bản | Ngày | Thay đổi |
 |---|---|---|
+| 1.2 | 2026-09-29 | Bổ sung quy chuẩn loading: boot loader lần tải đầu, thanh tiến độ khi chuyển trang, dữ liệu API dùng skeleton (mục 8). |
 | 1.1 | 2026-09-26 | Bổ sung quy chuẩn Edge art cho Landing page (mục 6.4). |
 | 1.0 | 2026-09-26 | Bản đầu tiên — chốt phong cách phẳng từ các vòng thiết kế Projects, Overview, Landing. |
