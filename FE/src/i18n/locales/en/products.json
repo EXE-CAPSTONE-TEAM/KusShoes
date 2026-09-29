@@ -1,8 +1,8 @@
 {
   "osOptions": {
     "windows": "Windows 10/11 (.EXE)",
-    "macSilicon": "macOS Apple Silicon (M1/M2/M3 .DMG)",
-    "macIntel": "macOS Intel Core (.DMG)"
+    "macSilicon": "macOS Apple Silicon (coming soon)",
+    "macIntel": "macOS Intel (coming soon)"
   },
   "selectDesktopOsAria": "Select desktop operating system",
   "downloadToast": "Starting download for {{appName}} ({{platform}}). Thank you for participating in our beta test!",
@@ -12,24 +12,27 @@
   "heroSubtitle": "Two dedicated tools working in perfect unison. Capture physical geometry in real-world spaces with our mobile app, and apply pro-grade textures, colors, and designs on your desktop device.",
   "mobile": {
     "tag": "MOBILE CAPTURE APP",
-    "description": "Transform your physical sneaker collection into high-fidelity 3D digital twins. Just take a series of photos of any shoe using your mobile phone, and let our photogrammetry engine do the rest.",
-    "spec1": "Kiri Engine photogrammetry API reconstruction",
-    "spec2": "LiDAR scanning integration for depth mapping",
-    "spec3": "Auto-extraction of upper mesh and sole boundaries",
-    "spec4": "Instant upload & sync to secure Cloud Vault",
+    "description": "Turn a real sneaker into a 3D model. Record a 360° video around the shoe with your phone; KIRI Engine reconstructs the 3D model, you preview it on the phone and save it as a project.",
+    "spec1": "3D reconstruction from video with KIRI Engine",
+    "spec2": "Video uploads straight to secure cloud storage",
+    "spec3": "Preview the 3D model right on your phone",
+    "spec4": "Save as a project and continue on the web and KusStudio Desktop",
     "selectPlatform": "Select Platform",
-    "iosMeta": "Version 1.4.2 (Beta) • iOS 16.0 or higher",
-    "androidMeta": "Version 1.4.0 (Beta) • Android 11.0 or higher",
-    "downloadIos": "Download TestFlight IPA",
-    "downloadAndroid": "Download APK Installer"
+    "iosMeta": "iOS version coming soon",
+    "androidMeta": "Android 7.0 or later • officially signed APK",
+    "downloadIos": "iOS coming soon",
+    "downloadAndroid": "Download APK",
+    "iosComingSoon": "KusShoes for iOS is coming soon. For now, please use an Android phone.",
+    "noApkYet": "The first APK is being prepared. Please check back soon.",
+    "apkInstallHint": "Open the downloaded APK to install. If Android asks, allow installing apps from your browser."
   },
   "desktop": {
     "tag": "DESKTOP DESIGN SUITE",
-    "description": "The ultimate 3D shoe customizer interface. Load your synced mobile scans instantly, map colors, modify materials, apply custom graphics, and export print-ready assets.",
-    "spec1": "Hardware-accelerated real-time WebGL renderer",
-    "spec2": "Multi-layer canvas painting and custom stickers overlay",
-    "spec3": "GLTF, OBJ, FBX, and Apple USDZ 3D model exports",
-    "spec4": "Local daemon compiler server listening on port 8421",
+    "description": "Customise shoes in 3D on your computer: open a scan from your web project, crop the model, add stickers and text, preview and export the 3D file.",
+    "spec1": "Real-time WebGL 3D viewer",
+    "spec2": "Layered stickers and text on the shoe",
+    "spec3": "3D model export as GLB and OBJ",
+    "spec4": "Open a project from the web in one click",
     "selectOs": "Select Operating System",
     "windowsMeta": "Windows 10/11 (64-bit) • The 3D renderer (about 400 MB) downloads on first launch",
     "macSiliconMeta": "macOS version coming soon",
@@ -41,7 +44,7 @@
   },
   "workflow": {
     "title": "How They Sync",
-    "desc": "When you scan a sneaker using the mobile <b1>KusShoes App</b1>, the photogrammetry scans compile directly in our Cloud Vault. Upon launching <b2>KusStudio Desktop</b2>, the application detects your active cloud workspace and syncs all scans in less than 3 seconds. The desktop suite also hosts a local listener that communicates directly with your portal web browser.",
+    "desc": "Scan a sneaker with the <b1>KusShoes App</b1>: the video uploads to the cloud, KIRI Engine builds the 3D model and you save it as a project. The project appears right away in your web dashboard; click “Open in KusStudio” to keep editing it in <b2>KusStudio Desktop</b2>.",
     "cta": "Go to Portal Console",
     "cloudSync": "Cloud Sync"
   }
