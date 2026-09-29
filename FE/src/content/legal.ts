@@ -89,7 +89,7 @@ export const LEGAL_DOCS: Record<LegalLang, Record<LegalDocKey, LegalDoc>> = {
           id: 'basis',
           title: '4. Cơ sở xử lý',
           body: [
-            'Chúng tôi xử lý dữ liệu dựa trên sự đồng ý bạn đưa ra khi đăng ký (bạn tick ô xác nhận đủ 18 tuổi và đồng ý với Điều khoản dịch vụ và Chính sách này), và để thực hiện dịch vụ bạn đã yêu cầu. Bạn có thể rút lại sự đồng ý bất cứ lúc nào (mục 9); khi đó chúng tôi sẽ không thể tiếp tục cung cấp các phần dịch vụ cần đến dữ liệu tương ứng.',
+            'Chúng tôi xử lý dữ liệu dựa trên sự đồng ý bạn đưa ra khi đăng ký (bạn tick ô xác nhận đủ 18 tuổi và đồng ý với Điều khoản dịch vụ và Chính sách này), và để thực hiện dịch vụ bạn đã yêu cầu. Bạn có thể rút lại sự đồng ý bất cứ lúc nào (mục 10); khi đó chúng tôi sẽ không thể tiếp tục cung cấp các phần dịch vụ cần đến dữ liệu tương ứng.',
           ],
         },
         {
@@ -113,8 +113,18 @@ export const LEGAL_DOCS: Record<LegalLang, Record<LegalDocKey, LegalDoc>> = {
           ],
         },
         {
+          id: 'google',
+          title: '6. Dữ liệu từ tài khoản Google',
+          body: [
+            'Khi bạn chọn "Đăng nhập với Google", KusShoes chỉ xin các quyền openid, email và profile. Từ Google, chúng tôi nhận và lưu: mã định danh tài khoản Google, địa chỉ email, tên và họ. Chúng tôi không lưu ảnh đại diện Google, không truy cập Gmail, Drive, danh bạ hay bất kỳ dữ liệu Google nào khác.',
+            'Các dữ liệu này chỉ được dùng để tạo tài khoản KusShoes, đăng nhập và hiển thị tên của bạn trong ứng dụng. Chúng được lưu trong cơ sở dữ liệu của KusShoes (Neon, Singapore) và không được chia sẻ với bên nào khác ngoài các nhà cung cấp hạ tầng ở mục 5; không bị bán, không dùng cho quảng cáo và không dùng để huấn luyện trí tuệ nhân tạo.',
+            'Việc KusShoes sử dụng thông tin nhận từ Google API tuân thủ Chính sách dữ liệu người dùng của dịch vụ Google API (Google API Services User Data Policy), bao gồm các yêu cầu về Sử dụng giới hạn (Limited Use).',
+            'Bạn có thể ngắt kết nối KusShoes khỏi tài khoản Google tại https://myaccount.google.com/permissions. Khi bạn xoá tài khoản KusShoes, các dữ liệu trên bị xoá hoặc ẩn danh hoá theo mục 7.',
+          ],
+        },
+        {
           id: 'retention',
-          title: '6. Chúng tôi lưu dữ liệu bao lâu',
+          title: '7. Chúng tôi lưu dữ liệu bao lâu',
           body: [
             [
               'Dữ liệu tài khoản và dự án: trong suốt thời gian bạn dùng dịch vụ.',
@@ -128,21 +138,21 @@ export const LEGAL_DOCS: Record<LegalLang, Record<LegalDocKey, LegalDoc>> = {
         },
         {
           id: 'security',
-          title: '7. Bảo mật',
+          title: '8. Bảo mật',
           body: [
             'Mọi kết nối tới dịch vụ đều qua HTTPS. Mật khẩu được lưu dạng mã hoá một chiều (bcrypt). File của bạn được lưu trên Cloudflare R2 với tên ngẫu nhiên, không đoán được. Bạn có thể bật xác thực hai bước. Không có hệ thống nào an toàn tuyệt đối; nếu xảy ra sự cố lộ lọt dữ liệu ảnh hưởng tới bạn, chúng tôi sẽ thông báo cho bạn và cơ quan có thẩm quyền theo quy định pháp luật.',
           ],
         },
         {
           id: 'age',
-          title: '8. Độ tuổi',
+          title: '9. Độ tuổi',
           body: [
             'Dịch vụ dành cho người từ 18 tuổi trở lên. Chúng tôi không cố ý thu thập dữ liệu của người dưới 18 tuổi. Nếu bạn biết một người dưới 18 tuổi đã tạo tài khoản, hãy báo cho chúng tôi qua email để chúng tôi xoá tài khoản và dữ liệu đó.',
           ],
         },
         {
           id: 'rights',
-          title: '9. Quyền của bạn',
+          title: '10. Quyền của bạn',
           body: [
             'Theo pháp luật Việt Nam về bảo vệ dữ liệu cá nhân, bạn có quyền:',
             [
@@ -158,14 +168,14 @@ export const LEGAL_DOCS: Record<LegalLang, Record<LegalDocKey, LegalDoc>> = {
         },
         {
           id: 'changes',
-          title: '10. Thay đổi chính sách',
+          title: '11. Thay đổi chính sách',
           body: [
             'Khi thay đổi nội dung quan trọng, chúng tôi sẽ thông báo trên ứng dụng hoặc qua email và đề nghị bạn đồng ý lại trước khi tiếp tục sử dụng. Phiên bản và ngày hiệu lực được ghi ở đầu trang.',
           ],
         },
         {
           id: 'contact',
-          title: '11. Liên hệ',
+          title: '12. Liên hệ',
           body: ['Mọi câu hỏi về quyền riêng tư: kusshoes@gmail.com. ' + OPERATOR_VI],
         },
       ],
@@ -222,7 +232,7 @@ export const LEGAL_DOCS: Record<LegalLang, Record<LegalDocKey, LegalDoc>> = {
           id: 'content',
           title: '6. Nội dung của bạn',
           body: [
-            'Bạn giữ toàn bộ quyền sở hữu với video, mô hình 3D và thiết kế của mình. Bạn cho phép KusShoes lưu trữ, xử lý (bao gồm gửi video tới KIRI Engine để dựng 3D) và hiển thị nội dung đó ở mức cần thiết để cung cấp Dịch vụ cho bạn, và hiển thị cho người khác khi bạn tự chia sẻ bằng link hoặc mã QR. Sự cho phép này chấm dứt khi bạn xoá nội dung hoặc tài khoản (theo thời hạn ở mục 6 của Chính sách bảo mật).',
+            'Bạn giữ toàn bộ quyền sở hữu với video, mô hình 3D và thiết kế của mình. Bạn cho phép KusShoes lưu trữ, xử lý (bao gồm gửi video tới KIRI Engine để dựng 3D) và hiển thị nội dung đó ở mức cần thiết để cung cấp Dịch vụ cho bạn, và hiển thị cho người khác khi bạn tự chia sẻ bằng link hoặc mã QR. Sự cho phép này chấm dứt khi bạn xoá nội dung hoặc tài khoản (theo thời hạn ở mục 7 của Chính sách bảo mật).',
             'Chúng tôi không dùng nội dung của bạn để quảng cáo, giới thiệu hoặc huấn luyện trí tuệ nhân tạo nếu không có sự đồng ý riêng của bạn.',
             'Bạn cam kết có quyền đối với những gì bạn tải lên, và chịu trách nhiệm nếu thiết kế của bạn sử dụng nhãn hiệu, logo, hình ảnh hoặc tác phẩm của người khác (ví dụ logo của hãng giày) mà không được phép.',
           ],
@@ -326,7 +336,7 @@ export const LEGAL_DOCS: Record<LegalLang, Record<LegalDocKey, LegalDoc>> = {
           id: 'basis',
           title: '4. Legal basis',
           body: [
-            'We process data based on the consent you give at sign-up (ticking the box confirming you are 18 or older and agree to the Terms of Service and this Policy) and to provide the service you asked for. You can withdraw consent at any time (section 9); we then cannot keep providing the parts of the service that need that data.',
+            'We process data based on the consent you give at sign-up (ticking the box confirming you are 18 or older and agree to the Terms of Service and this Policy) and to provide the service you asked for. You can withdraw consent at any time (section 10); we then cannot keep providing the parts of the service that need that data.',
           ],
         },
         {
@@ -350,8 +360,18 @@ export const LEGAL_DOCS: Record<LegalLang, Record<LegalDocKey, LegalDoc>> = {
           ],
         },
         {
+          id: 'google',
+          title: '6. Data from your Google account',
+          body: [
+            'When you choose "Sign in with Google", KusShoes only requests the openid, email and profile scopes. From Google we receive and store your Google account ID, email address, first name and last name. We do not store your Google profile picture and do not access Gmail, Drive, contacts or any other Google data.',
+            'This data is used only to create your KusShoes account, sign you in and show your name in the app. It is stored in the KusShoes database (Neon, Singapore) and is not shared with anyone other than the infrastructure providers in section 5; it is not sold, not used for advertising and not used to train artificial intelligence.',
+            "KusShoes' use of information received from Google APIs adheres to the Google API Services User Data Policy, including the Limited Use requirements.",
+            'You can disconnect KusShoes from your Google account at https://myaccount.google.com/permissions. When you delete your KusShoes account this data is deleted or anonymised as described in section 7.',
+          ],
+        },
+        {
           id: 'retention',
-          title: '6. How long we keep data',
+          title: '7. How long we keep data',
           body: [
             [
               'Account and project data: for as long as you use the service.',
@@ -365,21 +385,21 @@ export const LEGAL_DOCS: Record<LegalLang, Record<LegalDocKey, LegalDoc>> = {
         },
         {
           id: 'security',
-          title: '7. Security',
+          title: '8. Security',
           body: [
             'All connections use HTTPS. Passwords are stored as one-way bcrypt hashes. Your files are stored on Cloudflare R2 under random, unguessable names. You can enable two-factor authentication. No system is perfectly secure; if a data breach affects you, we will notify you and the competent authorities as required by law.',
           ],
         },
         {
           id: 'age',
-          title: '8. Age',
+          title: '9. Age',
           body: [
             'The service is for people aged 18 or older. We do not knowingly collect data from anyone under 18. If you know that someone under 18 created an account, email us and we will delete that account and its data.',
           ],
         },
         {
           id: 'rights',
-          title: '9. Your rights',
+          title: '10. Your rights',
           body: [
             'Under Vietnamese personal data protection law you have the right to:',
             [
@@ -395,12 +415,12 @@ export const LEGAL_DOCS: Record<LegalLang, Record<LegalDocKey, LegalDoc>> = {
         },
         {
           id: 'changes',
-          title: '10. Changes',
+          title: '11. Changes',
           body: [
             'For material changes we will notify you in the app or by email and ask you to agree again before you continue. The version and effective date are shown at the top of this page.',
           ],
         },
-        { id: 'contact', title: '11. Contact', body: ['Privacy questions: kusshoes@gmail.com. ' + OPERATOR_EN] },
+        { id: 'contact', title: '12. Contact', body: ['Privacy questions: kusshoes@gmail.com. ' + OPERATOR_EN] },
       ],
     },
     terms: {
@@ -455,7 +475,7 @@ export const LEGAL_DOCS: Record<LegalLang, Record<LegalDocKey, LegalDoc>> = {
           id: 'content',
           title: '6. Your content',
           body: [
-            'You keep full ownership of your videos, 3D models and designs. You allow KusShoes to store, process (including sending videos to KIRI Engine for reconstruction) and display that content as needed to provide the Service to you, and to show it to others when you share it by link or QR code. This permission ends when you delete the content or your account (per section 6 of the Privacy Policy).',
+            'You keep full ownership of your videos, 3D models and designs. You allow KusShoes to store, process (including sending videos to KIRI Engine for reconstruction) and display that content as needed to provide the Service to you, and to show it to others when you share it by link or QR code. This permission ends when you delete the content or your account (per section 7 of the Privacy Policy).',
             'We do not use your content for advertising, showcases or AI training without your separate consent.',
             'You confirm you have the rights to what you upload and are responsible if your designs use trademarks, logos, images or works of others (for example a shoe brand logo) without permission.',
           ],
