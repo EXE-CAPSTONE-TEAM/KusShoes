@@ -48,4 +48,56 @@ export function fetchLatestDesktopRelease(fetcher: typeof fetch = fetch): Promis
 /** Test hook: forget the memoised lookup. */
 export function resetDesktopReleaseCache(): void {
   cached = null;
+  cachedAndroid = null;
+}
+
+const RELEASES_API = `https://api.github.com/repos/${DESKTOP_REPO}/releases?per_page=30`;
+export const ANDROID_APK_NAME = 'KusShoes-Android.apk';
+
+export type AndroidRelease =
+  | { status: 'available'; version: string; url: string }
+  | { status: 'none' }
+  | { status: 'unknown' };
+
+type GithubRelease = { tag_name?: unknown; draft?: boolean; prerelease?: boolean };
+
+/** "mobile-v0.1.0" → "0.1.0". */
+export function androidVersionFromTag(tag: unknown): string | null {
+  if (typeof tag !== 'string') return null;
+  const match = /^mobile-v(\d+\.\d+\.\d+)$/.exec(tag.trim());
+  return match ? match[1] : null;
+}
+
+let cachedAndroid: Promise<AndroidRelease> | null = null;
+
+/**
+ * Newest published Android APK. Mobile releases are deliberately never GitHub's "latest"
+ * (that pointer serves the desktop installer and updater), so pick the newest `mobile-v*` tag
+ * from the release list, which GitHub returns newest first.
+ */
+export function fetchLatestAndroidRelease(fetcher: typeof fetch = fetch): Promise<AndroidRelease> {
+  cachedAndroid ??= (async (): Promise<AndroidRelease> => {
+    try {
+      const response = await fetcher(RELEASES_API, {
+        headers: { Accept: 'application/vnd.github+json' },
+      });
+      if (!response.ok) return { status: 'unknown' };
+      const releases = (await response.json()) as GithubRelease[];
+      for (const release of releases) {
+        if (release.draft || release.prerelease) continue;
+        const version = androidVersionFromTag(release.tag_name);
+        if (version) {
+          return {
+            status: 'available',
+            version,
+            url: `https://github.com/${DESKTOP_REPO}/releases/download/mobile-v${version}/${ANDROID_APK_NAME}`,
+          };
+        }
+      }
+      return { status: 'none' };
+    } catch {
+      return { status: 'unknown' };
+    }
+  })();
+  return cachedAndroid;
 }
