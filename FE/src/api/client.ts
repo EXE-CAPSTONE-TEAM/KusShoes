@@ -94,6 +94,8 @@ export type UserProfile = {
   status: string;
   member_since: string;
   total_designs: number;
+  /** True until the user agrees to the current Terms + Privacy Policy (see LegalConsentGate). */
+  legal_consent_required?: boolean;
 };
 
 export type Usage = {
@@ -591,9 +593,13 @@ export const api = {
     return { userId: payload.user_id, email: payload.email, message: payload.message };
   },
 
-  /** Full-page navigation: BE redirects through Google and back to /auth/google/callback. */
-  startGoogleLogin(): void {
-    window.location.href = `${API_BASE_URL}/api/v1/auth/google`;
+  /**
+   * Full-page navigation: BE redirects through Google and back to /auth/google/callback.
+   * `consent`: the user ticked the 18+ / Terms / Privacy box, required to create a new account.
+   */
+  startGoogleLogin(options: { consent?: boolean } = {}): void {
+    const query = options.consent ? '?consent=true' : '';
+    window.location.href = `${API_BASE_URL}/api/v1/auth/google${query}`;
   },
 
   /** Called by the /auth/google/callback page with the token BE put in the URL fragment. */
@@ -771,6 +777,14 @@ export const api = {
       email: profile.email,
       createdAt: profile.member_since,
     };
+  },
+
+  /** Agree to the current Terms of Service + Privacy Policy (the one-time prompt). */
+  async acceptLegalDocuments(): Promise<UserProfile> {
+    return request<UserProfile>('/api/v1/users/me/legal-consent', {
+      method: 'POST',
+      body: JSON.stringify({ channel: 'web' }),
+    });
   },
 
   async profile(): Promise<UserProfile> {

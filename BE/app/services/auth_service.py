@@ -18,6 +18,7 @@ from app.exceptions import (
     AccountBanned,
     AccountRestoreInvalid,
     AuthAccountLocked,
+    AuthConsentRequired,
     AuthEditorLaunchInvalid,
     AuthGoogleMobileCodeInvalid,
     AuthRateLimited,
@@ -58,7 +59,6 @@ from app.infrastructure import (
 )
 from app.policy import ACCOUNT_RESTORE_DAYS
 from app.repositories import (
-    consent_repo,
     login_history_repo,
     monthly_usage_repo,
     plan_repo,
@@ -82,7 +82,7 @@ from app.schemas.auth import (
     SSODesktopSessionResponse,
     SSOVerifyResponse,
 )
-from app.services import twofa_service
+from app.services import legal_service, twofa_service
 from app.utils.jwt import (
     create_access_token,
     create_editor_access_token,
@@ -117,6 +117,7 @@ async def register_user(
     utm_source: str | None = None,
     utm_campaign: str | None = None,
     referral_code: str | None = None,
+    client: str = "web",
 ) -> RegisterResponse:
     from app.config import settings
 
@@ -162,10 +163,9 @@ async def register_user(
         db, user_id=user.id, period_start=datetime.now(UTC)
     )
 
-    # BR-02/BR-89: age self-certification + ToS/privacy consent, recorded at signup.
-    await consent_repo.create(db, user_id=user.id, type="age_confirmation", doc_version="1.0")
-    await consent_repo.create(db, user_id=user.id, type="tos", doc_version="1.0")
-    await consent_repo.create(db, user_id=user.id, type="privacy_policy", doc_version="1.0")
+    # BR-02/BR-89: age self-certification + ToS/privacy consent. RegisterRequest rejects a
+    # sign-up whose consent box was not ticked, so these records are only ever real consent.
+    await legal_service.record_legal_consent(db, user.id, channel=client)
 
     # Make the account durable before creating external OTP/email side effects.
     await db.commit()
@@ -415,9 +415,13 @@ async def get_google_auth_url(
     *,
     client: str = GOOGLE_CLIENT_WEB,
     code_challenge: str | None = None,
+    consent: bool = False,
 ) -> str:
     state = secrets.token_hex(32)
     record = {"client": client}
+    if consent:
+        # Ticked the 18+ / ToS / privacy box before starting; needed to create a new account.
+        record["consent"] = "1"
     if client == GOOGLE_CLIENT_MOBILE:
         record["code_challenge"] = code_challenge or ""
     await redis.set(f"oauth:state:{state}", json.dumps(record, separators=(",", ":")), ex=600)
@@ -497,9 +501,17 @@ async def handle_google_callback(
 ) -> dict:
     # Verify state
     state_key = f"oauth:state:{state}"
-    if not await redis.get(state_key):
+    raw_state = await redis.get(state_key)
+    if not raw_state:
         raise OAuthStateMismatch()
     await redis.delete(state_key)
+    try:
+        started = json.loads(raw_state)
+    except (TypeError, json.JSONDecodeError):
+        started = None
+    if not isinstance(started, dict):
+        started = {}  # legacy "1" states carry no client/consent information
+    consented = started.get("consent") == "1"
 
     try:
         userinfo = await google_oauth.fetch_user_info(code)
@@ -535,7 +547,9 @@ async def handle_google_callback(
         )
         return {**tokens.__dict__, "is_new_user": False, "linked": True}
 
-    # New user via Google
+    # New user via Google: only with the 18+ / ToS / privacy consent ticked before starting.
+    if not consented:
+        raise AuthConsentRequired()
     username = await _generate_unique_username(db, given_name, family_name, email)
     new_user = await user_repo.create_google_user(
         db,
@@ -544,6 +558,11 @@ async def handle_google_callback(
         first_name=given_name or email.split("@")[0],
         last_name=family_name or "",
         username=username,
+    )
+    await legal_service.record_legal_consent(
+        db,
+        new_user.id,
+        channel="mobile" if started.get("client") == GOOGLE_CLIENT_MOBILE else "web",
     )
     free_plan = await plan_repo.get_free_plan(db)
     if free_plan:

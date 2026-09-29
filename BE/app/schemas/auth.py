@@ -1,6 +1,7 @@
 import re
 import uuid
 from datetime import datetime
+from typing import Literal
 
 from pydantic import BaseModel, EmailStr, Field, field_validator, model_validator
 
@@ -11,8 +12,10 @@ class RegisterRequest(BaseModel):
     password: str
     confirm_password: str
     full_name: str
-    # BR-02: self-certified >=16, must be explicitly ticked.
+    # BR-02: self-certified >=18 plus ToS/privacy consent, must be explicitly ticked.
     age_confirmed: bool = False
+    # Where the account was created, recorded with the consent (BR-89).
+    client: Literal["web", "mobile"] = "web"
     # BR-84: first-touch attribution, optional — FE reads these from the URL/cookie.
     utm_source: str | None = None
     utm_campaign: str | None = None
@@ -22,7 +25,9 @@ class RegisterRequest(BaseModel):
     @classmethod
     def validate_age_confirmed(cls, v: bool) -> bool:
         if not v:
-            raise ValueError("Bạn cần xác nhận đã đủ 16 tuổi để đăng ký")
+            raise ValueError(
+                "Bạn cần xác nhận đã đủ 18 tuổi và đồng ý với Điều khoản dịch vụ & Chính sách bảo mật"
+            )
         return v
 
     @field_validator("username")

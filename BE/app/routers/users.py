@@ -1,6 +1,6 @@
 import uuid
 
-from fastapi import APIRouter, Depends, Query
+from fastapi import APIRouter, Body, Depends, Query
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.database import get_db
@@ -22,6 +22,7 @@ from app.schemas.user import (
     ConsentResponse,
     DataExportResponse,
     DeleteAccountRequest,
+    LegalConsentRequest,
     LoginHistoryResponse,
     MessageResponse,
     PrivacySettingsResponse,
@@ -116,6 +117,17 @@ async def update_privacy_settings(
 
 
 # --- BR-89 Consent ---
+
+
+@router.post("/me/legal-consent", response_model=UserDetailResponse)
+async def accept_legal_documents(
+    body: LegalConsentRequest = Body(default_factory=LegalConsentRequest),
+    db: AsyncSession = Depends(get_db),
+    user=Depends(get_current_user),
+):
+    """Agree to the current Terms of Service + Privacy Policy (the one-time prompt shown when
+    GET /me says `legal_consent_required`)."""
+    return await user_service.accept_legal_documents(db, user, body.channel)
 
 
 @router.get("/me/consents", response_model=list[ConsentResponse])
