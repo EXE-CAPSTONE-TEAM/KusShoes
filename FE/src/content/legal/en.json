@@ -1,7 +1,7 @@
 {
   "privacy": {
     "title": "Privacy Policy",
-    "intro": "This policy explains what KusShoes collects when you use kusshoes.vercel.app, the KusShoes Android app (vn.kusshoes.mobile) and KusStudio Desktop (KusShoes Editor), what we use it for, who we share it with, how long we keep it and what rights you have. The Vietnamese version prevails if the two differ.",
+    "intro": "This policy explains what KusShoes collects when you use kusshoes.kietta.me, the KusShoes Android app (vn.kusshoes.mobile) and KusStudio Desktop (KusShoes Editor), what we use it for, who we share it with, how long we keep it and what rights you have. The Vietnamese version prevails if the two differ.",
     "sections": [
       {
         "id": "operator",
@@ -146,7 +146,7 @@
   },
   "terms": {
     "title": "Terms of Service",
-    "intro": "These Terms are an agreement between you and KusShoes for using kusshoes.vercel.app, the KusShoes Android app and KusStudio Desktop (together, the \"Service\"). By ticking the consent box at sign-up or continuing to use the Service, you accept these Terms and the Privacy Policy. The Vietnamese version prevails if the two differ.",
+    "intro": "These Terms are an agreement between you and KusShoes for using kusshoes.kietta.me, the KusShoes Android app and KusStudio Desktop (together, the \"Service\"). By ticking the consent box at sign-up or continuing to use the Service, you accept these Terms and the Privacy Policy. The Vietnamese version prevails if the two differ.",
     "sections": [
       {
         "id": "operator",
@@ -180,7 +180,7 @@
         "title": "4. Plans and payment",
         "body": [
           [
-            "There is a free plan and monthly paid plans; prices and entitlements are those listed on the Pricing page (https://kusshoes.vercel.app/pricing) when you buy.",
+            "There is a free plan and monthly paid plans; prices and entitlements are those listed on the Pricing page (https://kusshoes.kietta.me/pricing) when you buy.",
             "Payments go through PayOS. We do not store cards and never auto-renew: before a plan expires you get a reminder email and decide whether to renew.",
             "Single scan credits are valid for 12 months from purchase."
           ]
