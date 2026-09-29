@@ -19,6 +19,7 @@ import {
 } from 'lucide-react';
 import { motion, AnimatePresence, useInView } from 'framer-motion';
 import { Trans, useTranslation } from 'react-i18next';
+import { useTheme } from '../../context/ThemeContext';
 import { Navbar } from '../../components/Navbar/Navbar';
 import { Footer } from '../../components/Footer/Footer';
 import { AnimatedPrice } from '../../components/AnimatedPrice/AnimatedPrice';
@@ -28,7 +29,6 @@ import { api, type Plan } from '../../api/client';
 import dashboardShowcase from '../../assets/showcase/dashboard-screenshot.png';
 import projectsShowcase from '../../assets/showcase/projects-screenshot.png';
 import mobileScan from '../../assets/showcase/mobile-scan.png';
-import mobileAppIcon from '../../assets/kusshoes-mobile-app-icon.jpeg';
 import mobileMockup from '../../assets/kusshoes-mobile-mockup.jpg';
 import sneakerHero from '../../assets/sneaker-hero.png';
 import galleryClassicOrange from '../../assets/gallery/classic-orange-studio.png';
@@ -452,6 +452,7 @@ interface LandingProps {
 
 export const Landing: React.FC<LandingProps> = ({ navigate }) => {
   const { t } = useTranslation('landing');
+  const { theme } = useTheme();
   const [isAnnual, setIsAnnual] = useState(false);
   const { t: tPricing } = useTranslation('pricing');
   const [apiPlans, setApiPlans] = useState<Plan[] | null>(null);
@@ -517,9 +518,17 @@ export const Landing: React.FC<LandingProps> = ({ navigate }) => {
     { label: t('socialProof.tickerLidar') },
   ];
 
+  // Yearly plans exist in the backend but can be deactivated for a given term (BR-93) —
+  // only offer the toggle when there's an active yearly plan to actually switch to, otherwise
+  // paid tiers would vanish from the grid with nothing left to pick from.
+  const hasAnnualPlans = useMemo(
+    () => (apiPlans ?? []).some((plan) => plan.billing_cycle === 'yearly'),
+    [apiPlans],
+  );
+
   // Prices and limits come from /api/v1/plans; only the marketing name/blurb per tier is copy.
   const plans = useMemo(() => {
-    const cycle = isAnnual ? 'yearly' : 'monthly';
+    const cycle = isAnnual && hasAnnualPlans ? 'yearly' : 'monthly';
     const copyTiers = ['free', 'basic', 'pro'];
     return (apiPlans ?? [])
       .filter((plan) => plan.billing_cycle === null || plan.billing_cycle === cycle)
@@ -547,7 +556,7 @@ export const Landing: React.FC<LandingProps> = ({ navigate }) => {
           popular: plan.tier === 'basic',
         };
       });
-  }, [apiPlans, isAnnual, t, tPricing]);
+  }, [apiPlans, isAnnual, hasAnnualPlans, t, tPricing]);
 
   const formatPrice = (val: number) => {
     if (val === 0) return '0 VNĐ';
@@ -633,7 +642,7 @@ export const Landing: React.FC<LandingProps> = ({ navigate }) => {
             <div className={styles.productTitleRow}>
               <div className={styles.productLogoFrame}>
                 <img
-                  src={mobileAppIcon}
+                  src={theme === 'dark' ? '/KusShoes_Logo_Dark_Mode_cropped.png' : '/KusShoes_Logo_cropped.png'}
                   alt={t('products.mobileIconAlt')}
                   className={styles.productLogoImage}
                 />
@@ -1024,17 +1033,19 @@ export const Landing: React.FC<LandingProps> = ({ navigate }) => {
             {t('pricingSection.subtitle')}
           </motion.p>
 
-          {/* Toggle billing */}
-          <div className={styles.toggleContainer}>
-            <span className={!isAnnual ? styles.activePeriod : ''}>{t('pricingSection.monthly')}</span>
-            <button
-              className={`${styles.toggleSwitch} ${isAnnual ? styles.switchActive : ''}`}
-              onClick={() => setIsAnnual(!isAnnual)}
-            >
-              <div className={styles.switchKnob} />
-            </button>
-            <span className={isAnnual ? styles.activePeriod : ''}>{t('pricingSection.annually')}</span>
-          </div>
+          {/* Toggle billing — only shown when yearly plans are actually on sale */}
+          {hasAnnualPlans && (
+            <div className={styles.toggleContainer}>
+              <span className={!isAnnual ? styles.activePeriod : ''}>{t('pricingSection.monthly')}</span>
+              <button
+                className={`${styles.toggleSwitch} ${isAnnual ? styles.switchActive : ''}`}
+                onClick={() => setIsAnnual(!isAnnual)}
+              >
+                <div className={styles.switchKnob} />
+              </button>
+              <span className={isAnnual ? styles.activePeriod : ''}>{t('pricingSection.annually')}</span>
+            </div>
+          )}
         </div>
 
         <div className={styles.pricingGrid}>

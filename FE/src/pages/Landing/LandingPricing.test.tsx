@@ -63,4 +63,26 @@ describe('Landing pricing section', () => {
     fireEvent.click(screen.getByText('Annually').previousElementSibling as HTMLElement);
     expect(await screen.findByText('999.000 VNĐ')).toBeInTheDocument();
   });
+
+  it('hides the Annual toggle instead of dropping paid tiers when no yearly plan is active', async () => {
+    // Matches production today: yearly rows are deactivated (BR-93, monthly-only this term),
+    // so /plans only ever returns monthly + free. Without a guard, picking "Annually" used to
+    // filter basic/pro out of the grid entirely since no billing_cycle === 'yearly' plan exists.
+    vi.mocked(api.listPlans).mockResolvedValue([
+      plan({ id: 'free', tier: 'free' }),
+      plan({ id: 'bm', tier: 'basic', billing_cycle: 'monthly', price_vnd: 259000, max_projects: 20 }),
+      plan({ id: 'pm', tier: 'pro', billing_cycle: 'monthly', price_vnd: 649000, max_projects: 50 }),
+    ]);
+    render(
+      <ThemeProvider>
+        <ToastProvider>
+          <Landing navigate={vi.fn()} />
+        </ToastProvider>
+      </ThemeProvider>,
+    );
+
+    await screen.findByText('259.000 VNĐ');
+    expect(screen.getByText('649.000 VNĐ')).toBeInTheDocument();
+    expect(screen.queryByText('Annually')).not.toBeInTheDocument();
+  });
 });
