@@ -20,7 +20,11 @@ import portalVi from './locales/vi/portal.json';
 export const defaultNS = 'common';
 export const LANGUAGE_STORAGE_KEY = 'kusshoes_lang';
 
-i18n
+// Awaited in main.tsx before the first render: without it, React can render one frame before
+// i18next (and LanguageDetector's async detection) finishes, and any t(key, { returnObjects:
+// true }) call during that window gets back the raw key string instead of the real value —
+// e.g. Landing.tsx's FAQ list, where calling .map() on that string crashed the whole page.
+export const i18nReady = i18n
   .use(LanguageDetector)
   .use(initReactI18next)
   .init({

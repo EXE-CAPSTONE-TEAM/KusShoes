@@ -554,7 +554,11 @@ export const Landing: React.FC<LandingProps> = ({ navigate }) => {
     return val.toLocaleString('vi-VN') + ' VNĐ';
   };
 
-  const faqs = t('faqSection.items', { returnObjects: true }) as Array<{ q: string; a: string }>;
+  // t(..., { returnObjects: true }) can hand back the raw key string instead of the array on
+  // the very first render, before i18next's async language detection has resolved — guard it so
+  // that race doesn't crash the whole page with "X.map is not a function".
+  const rawFaqs = t('faqSection.items', { returnObjects: true });
+  const faqs = Array.isArray(rawFaqs) ? (rawFaqs as Array<{ q: string; a: string }>) : [];
   const [openFaqIndex, setOpenFaqIndex] = useState<number | null>(0);
 
   return (
