@@ -9,6 +9,7 @@ import { ImpersonationBanner } from './components/ImpersonationBanner/Impersonat
 import { TopProgressBar } from './components/TopProgressBar/TopProgressBar';
 import { api, ApiError, type PortalProject } from './api/client';
 import { getSettingTabFromSearch, type SettingTab } from './pages/Settings/settingsNavigation';
+import { useDocumentMeta } from './seo/useDocumentMeta';
 
 // Everything except the public entry points (Landing, Login) is code-split. The importers are
 // kept in one map so the first page of a full load can be registered as a boot task.
@@ -178,6 +179,7 @@ function App() {
   const [projectsError, setProjectsError] = useState('');
 
   useEffect(() => markAppMounted(), []);
+  useDocumentMeta(activePage);
 
   // Intercept state changes and push history
   const navigate = (pageOrPath: string) => {
