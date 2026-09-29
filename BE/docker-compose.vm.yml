@@ -1,4 +1,4 @@
-# VM override (GCP e2-small, 2 vCPU / 2 GB): Neon + R2 managed, nginx on 136.85.55.175.sslip.io (sslip.io).
+# VM override (GCP e2-small, 2 vCPU / 2 GB): Neon + R2 managed, nginx on api.kusshoes.kietta.me (legacy: 136.85.55.175.sslip.io).
 # Use: docker compose -f docker-compose.prod.yml -f docker-compose.vm.yml up -d --build
 # First TLS certificate: see deploy/nginx-vm/README.md.
 services:
@@ -16,7 +16,7 @@ services:
     command: /bin/sh -c 'while :; do sleep 6h & wait $${!}; nginx -s reload; done & exec nginx -g "daemon off;"'
 
   # KIRI relay (ar-ai-exe backend, APP_ROLE=relay — spec §D). Code lives in ../relay (git archive of
-  # ar-ai-exe/backend); no Blender/OpenMVS/ffmpeg in the image. Served at relay.<ip>.sslip.io.
+  # ar-ai-exe/backend); no Blender/OpenMVS/ffmpeg in the image. Served at relay.kusshoes.kietta.me.
   kiri-relay:
     build:
       context: ../relay

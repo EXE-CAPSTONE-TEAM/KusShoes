@@ -82,7 +82,7 @@
     "tickerBuilds": "HƠN 12,4K MẪU TUỲ CHỈNH",
     "tickerStreetCred": "ĐÃ XÁC MINH STREET CRED",
     "tickerRevolution": "CUỘC CÁCH MẠNG GIÀY 3D",
-    "tickerLidar": "CHÍNH XÁC BẰNG LIDAR"
+    "tickerLidar": "DỰNG 3D BẰNG KIRI ENGINE"
   },
   "pricingSection": {
     "title": "Bảng giá KusShoes",
@@ -97,24 +97,15 @@
     "plans": {
       "free": {
         "name": "Free Starter",
-        "desc": "Thử nghiệm quy trình photogrammetry di động.",
-        "f1": "3 dự án hoạt động",
-        "f2": "Độ phân giải quét tiêu chuẩn",
-        "f3": "Chỉ lưu cục bộ trên client"
+        "desc": "Thử nghiệm quy trình photogrammetry di động."
       },
       "basic": {
         "name": "Basic Creator",
-        "desc": "Hoàn hảo cho nhà thiết kế giày tuỳ chỉnh.",
-        "f1": "10 dự án hoạt động",
-        "f2": "Mesh 3D độ nét cao",
-        "f3": "5GB lưu trữ bản quét trên đám mây"
+        "desc": "Hoàn hảo cho nhà thiết kế giày tuỳ chỉnh."
       },
       "pro": {
         "name": "Pro Designer",
-        "desc": "Dành cho xưởng thiết kế giày chuyên nghiệp.",
-        "f1": "50 dự án hoạt động",
-        "f2": "Độ phân giải quét siêu nét",
-        "f3": "Hạn mức lưu trữ đám mây 50GB"
+        "desc": "Dành cho xưởng thiết kế giày chuyên nghiệp."
       }
     }
   },
@@ -163,12 +154,5 @@
         "a": "Mật khẩu được mã hoá, hỗ trợ xác thực hai lớp (2FA), và bạn có thể xem, thu hồi từng thiết bị đăng nhập bất cứ lúc nào. Bạn cũng có thể tải toàn bộ dữ liệu hoặc xoá tài khoản vĩnh viễn khi cần."
       }
     ]
-  },
-  "newsletter": {
-    "title": "Tham gia bản Beta KusShoes",
-    "desc": "Đăng ký email ngay hôm nay để nhận liên kết tải KusShoes & KusStudio khi mở thử nghiệm công khai. Nhận 50 lượt quét đám mây miễn phí khi ra mắt!",
-    "successMessage": "Cảm ơn bạn! Chúng tôi sẽ gửi thông tin đăng nhập bản beta sớm nhất.",
-    "emailPlaceholder": "Nhập địa chỉ email của bạn...",
-    "subscribe": "Đăng ký"
   }
 }

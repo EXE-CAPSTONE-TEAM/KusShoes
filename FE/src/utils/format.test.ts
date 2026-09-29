@@ -1,6 +1,7 @@
 import { describe, expect, it } from 'vitest';
 import {
   describeUserAgent,
+  formatBytes,
   formatDate,
   formatDateTime,
   formatRelativeTime,
@@ -61,5 +62,15 @@ describe('format helpers', () => {
       expect(formatRelativeTime(null, now)).toBe('—');
       expect(formatRelativeTime('not-a-date', now)).toBe('—');
     });
+  });
+});
+
+describe('formatBytes', () => {
+  it('uses binary units with one decimal from KB up', () => {
+    expect(formatBytes(0)).toBe('0 B');
+    expect(formatBytes(1023)).toBe('1023 B');
+    expect(formatBytes(1024)).toBe('1.0 KB');
+    expect(formatBytes(1.4 * 1024 * 1024)).toBe('1.4 MB');
+    expect(formatBytes(2 * 1024 ** 3)).toBe('2.0 GB');
   });
 });

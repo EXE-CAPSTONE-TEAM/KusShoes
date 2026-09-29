@@ -4,6 +4,7 @@ import {
   FolderKanban,
   Archive,
   Trash2,
+  Download,
   CreditCard,
   Settings,
   LogOut,
@@ -19,13 +20,13 @@ import {
   PanelLeftOpen,
 } from 'lucide-react';
 import * as Tooltip from '@radix-ui/react-tooltip';
-import * as Progress from '@radix-ui/react-progress';
 import * as Separator from '@radix-ui/react-separator';
 import * as Avatar from '@radix-ui/react-avatar';
 import * as DropdownMenu from '@radix-ui/react-dropdown-menu';
 import * as ScrollArea from '@radix-ui/react-scroll-area';
 import { useTranslation } from 'react-i18next';
 import { useTheme } from '../../context/ThemeContext';
+import { formatBytes } from '../../utils/format';
 import { api, type PortalProject, type UserProfile } from '../../api/client';
 import type { SettingTab } from '../../pages/Settings/settingsNavigation';
 import styles from './Sidebar.module.css';
@@ -72,6 +73,7 @@ export const Sidebar: React.FC<SidebarProps> = ({
     { id: 'projects', label: t('sidebar.projects'), icon: FolderKanban },
     { id: 'archives', label: t('sidebar.archives'), icon: Archive },
     { id: 'trash', label: t('sidebar.trash'), icon: Trash2 },
+    { id: 'exports', label: t('sidebar.exports'), icon: Download },
     { id: 'billing', label: t('sidebar.billing'), icon: CreditCard },
     { id: 'feedback', label: t('sidebar.feedback'), icon: MessageSquare },
   ];
@@ -86,9 +88,7 @@ export const Sidebar: React.FC<SidebarProps> = ({
     setSettingsExpanded(isSettingsActive);
   }, [isSettingsActive]);
 
-  // Storage usage isn't exposed by the backend yet; this mirrors the placeholder that was
-  // already hardcoded in the widget below (1.4 GB of 5.0 GB).
-  const storagePercent = 28;
+  const [storageUsed, setStorageUsed] = React.useState<number | null>(null);
 
   // Signed-in user for the footer card — fetched here (rather than lifted to App) because
   // the Sidebar is the only consumer; mirrors the same api.profile() call Settings.tsx makes.
@@ -102,6 +102,20 @@ export const Sidebar: React.FC<SidebarProps> = ({
       })
       .catch(() => {
         // Non-critical chrome element: fall back to initials/blank rather than surface a toast.
+      });
+    return () => {
+      cancelled = true;
+    };
+  }, []);
+  React.useEffect(() => {
+    let cancelled = false;
+    api
+      .usage()
+      .then((usage) => {
+        if (!cancelled) setStorageUsed(usage.storage_used_bytes);
+      })
+      .catch(() => {
+        // Non-critical chrome element: the widget keeps showing "—".
       });
     return () => {
       cancelled = true;
@@ -325,25 +339,13 @@ export const Sidebar: React.FC<SidebarProps> = ({
           </ScrollArea.Scrollbar>
         </ScrollArea.Root>
 
-        {/* Storage Widget */}
+        {/* Storage Widget: bytes held for this account. No plan has a storage limit, so no bar. */}
         {!collapsed && (
           <div className={styles.storageWidget}>
             <div className={styles.storageLabels}>
-              <span>1.4 GB of 5 GB</span>
-              <span>28%</span>
+              <span>{t('sidebar.storage')}</span>
+              <span>{storageUsed === null ? '—' : t('sidebar.storageUsed', { size: formatBytes(storageUsed) })}</span>
             </div>
-            <Progress.Root className={styles.storageBarBg} value={storagePercent}>
-              <Progress.Indicator
-                className={`${styles.storageBarFill} ${
-                  storagePercent > 95
-                    ? styles.storageCritical
-                    : storagePercent > 80
-                      ? styles.storageWarning
-                      : ''
-                }`}
-                style={{ transform: `translateX(-${100 - storagePercent}%)` }}
-              />
-            </Progress.Root>
           </div>
         )}
 

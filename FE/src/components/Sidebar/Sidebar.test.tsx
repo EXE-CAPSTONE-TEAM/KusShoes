@@ -1,6 +1,7 @@
 import { cleanup, fireEvent, render, screen } from '@testing-library/react';
 import { afterEach, describe, expect, it, vi } from 'vitest';
 
+import { api, type Usage } from '../../api/client';
 import { ThemeProvider } from '../../context/ThemeContext';
 import type { SettingTab } from '../../pages/Settings/settingsNavigation';
 import { Sidebar } from './Sidebar';
@@ -72,5 +73,17 @@ describe('Sidebar settings submenu', () => {
     expect(setActivePage).toHaveBeenNthCalledWith(1, 'settings?tab=profile');
     expect(setActivePage).toHaveBeenNthCalledWith(2, 'settings?tab=security');
     expect(setActivePage).toHaveBeenNthCalledWith(3, 'settings?tab=privacy');
+  });
+});
+
+describe('Sidebar storage widget', () => {
+  it('shows the storage the backend reports, not a fixed quota', async () => {
+    vi.spyOn(api, 'profile').mockRejectedValue(new Error('not needed'));
+    vi.spyOn(api, 'usage').mockResolvedValue({ storage_used_bytes: 3 * 1024 * 1024 } as Usage);
+    renderSidebar();
+
+    expect(await screen.findByText('3.0 MB used')).toBeInTheDocument();
+    expect(screen.queryByText(/of 5 GB/)).not.toBeInTheDocument();
+    vi.restoreAllMocks();
   });
 });

@@ -150,6 +150,15 @@ async def list_admin(
     ]
 
 
+async def total_bytes_for_user(db: AsyncSession, user_id: uuid.UUID) -> int:
+    result = await db.execute(
+        select(func.coalesce(func.sum(ExportRecord.file_size_bytes), 0)).where(
+            ExportRecord.user_id == user_id
+        )
+    )
+    return int(result.scalar_one())
+
+
 async def count_for_user_since(db: AsyncSession, user_id: uuid.UUID, since: datetime) -> int:
     result = await db.execute(
         select(func.count(ExportRecord.id)).where(

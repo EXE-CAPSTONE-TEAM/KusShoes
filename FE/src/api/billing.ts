@@ -52,7 +52,12 @@ export type CreditLedgerPage = {
   has_next: boolean;
 };
 
+/** Which checkout gateways accept a payment right now (MoMo is switched on server-side). */
+export type PaymentGateways = { payos: boolean; momo: boolean };
+
 export const billingApi = {
+  getPaymentGateways: () => request<PaymentGateways>("/api/v1/subscription/gateways"),
+
   /** Price after a promo code for one plan, without creating an invoice (BR-26). */
   previewCoupon: (tier: string, billingCycle: string, couponCode: string) =>
     request<CouponPreview>("/api/v1/subscription/coupon/preview", {

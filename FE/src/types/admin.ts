@@ -48,6 +48,8 @@ export interface AdminUserSummary {
   role: AdminRole;
   status: UserStatus;
   is_verified: boolean;
+  /** BR-83: staff/demo/test account, excluded from paying-customer KPIs and revenue. */
+  is_internal: boolean;
   deleted_at: string | null;
   created_at: string;
 }

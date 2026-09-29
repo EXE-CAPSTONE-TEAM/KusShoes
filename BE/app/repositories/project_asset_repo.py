@@ -1,7 +1,7 @@
 import uuid
 
 from sqlalchemy import delete as sql_delete
-from sqlalchemy import select
+from sqlalchemy import func, select
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.models.project_asset import ProjectAsset
@@ -31,6 +31,21 @@ async def create_upload(
     db.add(asset)
     await db.flush()
     return asset
+
+
+# Assets that occupy storage: "uploading" is only a reserved presigned URL (nothing confirmed yet)
+# and "failed" never produced a file.
+_STORED_ASSET_STATUSES = ("processing", "ready", "raw")
+
+
+async def total_bytes_for_user(db: AsyncSession, user_id: uuid.UUID) -> int:
+    result = await db.execute(
+        select(func.coalesce(func.sum(ProjectAsset.file_size_bytes), 0)).where(
+            ProjectAsset.user_id == user_id,
+            ProjectAsset.status.in_(_STORED_ASSET_STATUSES),
+        )
+    )
+    return int(result.scalar_one())
 
 
 async def get_by_id(db: AsyncSession, asset_id: uuid.UUID) -> ProjectAsset | None:

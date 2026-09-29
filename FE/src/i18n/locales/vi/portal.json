@@ -11,13 +11,16 @@
     "settingsSecurity": "Bảo mật & Đăng nhập",
     "settingsPrivacy": "Quyền riêng tư mô hình",
     "settingsAppearance": "Giao diện",
+    "exports": "Xuất file",
     "recentProjects": "Dự án gần đây",
     "quickCreate": "Tạo nhanh dự án",
     "viewAll": "Xem tất cả",
     "expandSidebar": "Mở rộng thanh bên",
     "collapseSidebar": "Thu gọn thanh bên",
     "profile": "Hồ sơ",
-    "logout": "Đăng xuất"
+    "logout": "Đăng xuất",
+    "storage": "Dung lượng",
+    "storageUsed": "Đã dùng {{size}}"
   },
   "settings": {
     "title": "Cài đặt",
@@ -36,7 +39,14 @@
       "designerIdentity": "Thông tin nhà thiết kế",
       "designerName": "Tên nhà thiết kế",
       "emailAddress": "Địa chỉ email",
+      "username": "Tên đăng nhập",
+      "usernamePatternTitle": "3-30 ký tự chữ, số hoặc dấu gạch dưới; không bắt đầu bằng số",
+      "phoneNumber": "Số điện thoại",
+      "language": "Ngôn ngữ",
+      "languageEnOption": "English",
+      "languageViOption": "Tiếng Việt",
       "primaryRole": "Vai trò chính",
+      "studioName": "Tên studio",
       "studioLocation": "Địa điểm studio",
       "studioBio": "Giới thiệu & Slogan studio",
       "creativeBio": "Giới thiệu bản thân",
@@ -81,14 +91,7 @@
       "lightTitle": "Premium Cream",
       "lightDesc": "Phong cách streetwear ấm áp, tinh tế",
       "toastDark": "Đã chuyển sang giao diện Streetwear Dark",
-      "toastLight": "Đã chuyển sang giao diện Premium Cream",
-      "languageTitle": "Ngôn ngữ",
-      "languageDesc": "Chọn ngôn ngữ cho không gian làm việc KusShoes. Lựa chọn được ghi nhớ trên thiết bị này.",
-      "languageEnTitle": "English",
-      "languageEnDesc": "Ngôn ngữ tiếng Anh",
-      "languageViTitle": "Tiếng Việt",
-      "languageViDesc": "Ngôn ngữ mặc định",
-      "toastLanguageChanged": "Đã cập nhật ngôn ngữ."
+      "toastLight": "Đã chuyển sang giao diện Premium Cream"
     },
     "avatarModal": {
       "title": "Chọn ảnh đại diện nhà thiết kế",

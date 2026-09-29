@@ -1,10 +1,10 @@
-import asyncio
 import uuid
 
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.database import AsyncSessionLocal
 from app.services import maintenance_service
+from app.workers.async_runner import run_async
 from app.workers.celery_app import celery_app
 
 
@@ -15,52 +15,52 @@ def delete_storage_file(file_path: str) -> dict:
 
 @celery_app.task(name="app.workers.tasks.maintenance_tasks.cleanup_project_files")
 def cleanup_project_files(project_id: str) -> dict:
-    return asyncio.run(_cleanup_project_files(uuid.UUID(project_id)))
+    return run_async(_cleanup_project_files(uuid.UUID(project_id)))
 
 
 @celery_app.task(name="app.workers.tasks.maintenance_tasks.cleanup_user_files")
 def cleanup_user_files(user_id: str) -> dict:
-    return asyncio.run(_cleanup_user_files(uuid.UUID(user_id)))
+    return run_async(_cleanup_user_files(uuid.UUID(user_id)))
 
 
 @celery_app.task(name="app.workers.tasks.maintenance_tasks.enter_grace_period")
 def enter_grace_period() -> dict:
-    return asyncio.run(_enter_grace_period())
+    return run_async(_enter_grace_period())
 
 
 @celery_app.task(name="app.workers.tasks.maintenance_tasks.finalize_grace_expiry")
 def finalize_grace_expiry() -> dict:
-    return asyncio.run(_finalize_grace_expiry())
+    return run_async(_finalize_grace_expiry())
 
 
 @celery_app.task(name="app.workers.tasks.maintenance_tasks.send_renewal_reminders")
 def send_renewal_reminders() -> dict:
-    return asyncio.run(_send_renewal_reminders())
+    return run_async(_send_renewal_reminders())
 
 
 @celery_app.task(name="app.workers.tasks.maintenance_tasks.cancel_stale_pending_invoices")
 def cancel_stale_pending_invoices() -> dict:
-    return asyncio.run(_cancel_stale_pending_invoices())
+    return run_async(_cancel_stale_pending_invoices())
 
 
 @celery_app.task(name="app.workers.tasks.maintenance_tasks.purge_old_login_history")
 def purge_old_login_history() -> dict:
-    return asyncio.run(_purge_old_login_history())
+    return run_async(_purge_old_login_history())
 
 
 @celery_app.task(name="app.workers.tasks.maintenance_tasks.purge_expired_trash")
 def purge_expired_trash() -> dict:
-    return asyncio.run(_purge_expired_trash())
+    return run_async(_purge_expired_trash())
 
 
 @celery_app.task(name="app.workers.tasks.maintenance_tasks.purge_deleted_accounts")
 def purge_deleted_accounts() -> dict:
-    return asyncio.run(_purge_deleted_accounts())
+    return run_async(_purge_deleted_accounts())
 
 
 @celery_app.task(name="app.workers.tasks.maintenance_tasks.cleanup_stale_uploads")
 def cleanup_stale_uploads() -> dict:
-    return asyncio.run(_cleanup_stale_uploads())
+    return run_async(_cleanup_stale_uploads())
 
 
 async def _cleanup_project_files(project_id: uuid.UUID) -> dict:

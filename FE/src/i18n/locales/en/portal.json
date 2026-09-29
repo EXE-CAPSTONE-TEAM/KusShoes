@@ -11,13 +11,16 @@
     "settingsSecurity": "Security & Auth",
     "settingsPrivacy": "Model Privacy",
     "settingsAppearance": "Appearance",
+    "exports": "Exports",
     "recentProjects": "Recent Projects",
     "quickCreate": "Quick Create Project",
     "viewAll": "View all",
     "expandSidebar": "Expand sidebar",
     "collapseSidebar": "Collapse sidebar",
     "profile": "Profile",
-    "logout": "Log out"
+    "logout": "Log out",
+    "storage": "Storage",
+    "storageUsed": "{{size}} used"
   },
   "settings": {
     "title": "Settings",
@@ -36,7 +39,14 @@
       "designerIdentity": "Designer Identity",
       "designerName": "Designer Name",
       "emailAddress": "Email Address",
+      "username": "Username",
+      "usernamePatternTitle": "3–30 letters, digits or _; cannot start with a digit",
+      "phoneNumber": "Phone Number",
+      "language": "Language",
+      "languageEnOption": "English",
+      "languageViOption": "Tiếng Việt",
       "primaryRole": "Primary Role",
+      "studioName": "Studio Name",
       "studioLocation": "Studio Location",
       "studioBio": "Studio Bio & Slogan",
       "creativeBio": "Creative Bio",
@@ -81,14 +91,7 @@
       "lightTitle": "Premium Cream",
       "lightDesc": "Warm editorial streetwear look",
       "toastDark": "Theme set to Streetwear Dark",
-      "toastLight": "Theme set to Premium Cream",
-      "languageTitle": "Language",
-      "languageDesc": "Choose the language for the KusShoes workspace. The choice is remembered on this device.",
-      "languageEnTitle": "English",
-      "languageEnDesc": "Default language",
-      "languageViTitle": "Tiếng Việt",
-      "languageViDesc": "Vietnamese language",
-      "toastLanguageChanged": "Language updated."
+      "toastLight": "Theme set to Premium Cream"
     },
     "avatarModal": {
       "title": "Choose Designer Avatar",

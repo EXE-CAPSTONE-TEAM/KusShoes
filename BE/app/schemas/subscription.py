@@ -49,6 +49,13 @@ class CheckoutResponse(BaseModel):
     checkout_url: str
 
 
+class PaymentGatewaysResponse(BaseModel):
+    """Which checkout gateways accept a payment right now (MoMo is behind MOMO_ENABLED)."""
+
+    payos: bool
+    momo: bool
+
+
 class CancelSubscriptionRequest(BaseModel):
     immediate: bool = False
 

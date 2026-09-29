@@ -238,6 +238,11 @@ async def set_canonical_asset(
     await db.flush()
 
 
+async def set_thumbnail(db: AsyncSession, project: Project, thumbnail_path: str) -> None:
+    project.thumbnail_path = thumbnail_path
+    await db.flush()
+
+
 async def get_by_id_any(db: AsyncSession, project_id: uuid.UUID) -> Project | None:
     """Includes soft-deleted rows."""
     return await db.get(Project, project_id)

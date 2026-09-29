@@ -1,11 +1,12 @@
 import React, { useEffect, useState } from 'react';
-import { Smartphone, Save, Key, Instagram, Globe, X, Upload, RefreshCw, Languages } from 'lucide-react';
+import { Smartphone, Save, Key, Instagram, Globe, X, Upload, RefreshCw } from 'lucide-react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { useTranslation } from 'react-i18next';
 import styles from './Settings.module.css';
 import { useTheme } from '../../context/ThemeContext';
 import { useToast } from '../../context/ToastContext';
 import { api } from '../../api/client';
+import { Select } from '../../components/Select/Select';
 import { DEFAULT_SETTING_TAB, SETTINGS_TABS, type SettingTab } from './settingsNavigation';
 import { TwoFactorPanel } from './TwoFactorPanel';
 import { SessionsPanel } from './SessionsPanel';
@@ -29,7 +30,6 @@ export const Settings: React.FC<SettingsProps> = ({
   const { t, i18n } = useTranslation('portal');
   const { theme, setTheme } = useTheme();
   const { toast } = useToast();
-  const currentLanguage: 'en' | 'vi' = i18n.resolvedLanguage === 'vi' ? 'vi' : 'en';
 
   const [localTab, setLocalTab] = useState<SettingTab>(activeTab);
 
@@ -75,7 +75,10 @@ export const Settings: React.FC<SettingsProps> = ({
   const [profileData, setProfileData] = useState({
     name: '',
     email: '',
-    role: 'Sneaker Designer',
+    username: '',
+    phone: '',
+    language: 'en' as 'en' | 'vi',
+    role: '',
     avatar:
       'https://images.unsplash.com/photo-1534528741775-53994a69daeb?auto=format&fit=crop&w=100&q=80',
     studioName: '',
@@ -87,16 +90,28 @@ export const Settings: React.FC<SettingsProps> = ({
   });
   const [saving, setSaving] = useState(false);
   const [avatarPath, setAvatarPath] = useState<string | null>(null);
+  // Only send username when it changed: BE rate-limits username changes.
+  const [savedUsername, setSavedUsername] = useState('');
 
   useEffect(() => {
     api
       .profile()
       .then((profile) => {
         setAvatarPath(profile.avatar_path);
+        setSavedUsername(profile.username);
         setProfileData((current) => ({
           ...current,
           name: `${profile.first_name} ${profile.last_name}`.trim(),
           email: profile.email,
+          username: profile.username,
+          phone: profile.phone_number ?? '',
+          role: profile.designer_role ?? '',
+          studioName: profile.studio_name ?? '',
+          location: profile.studio_location ?? '',
+          instagram: profile.instagram_handle ?? '',
+          behance: profile.behance_username ?? '',
+          tiktok: profile.tiktok_handle ?? '',
+          language: profile.language === 'vi' ? 'vi' : 'en',
           bio: profile.bio ?? '',
           avatar: api.avatarUrl(profile.avatar_path) ?? current.avatar,
         }));
@@ -123,11 +138,23 @@ export const Settings: React.FC<SettingsProps> = ({
     const [firstName, ...lastNameParts] = profileData.name.trim().split(/\s+/);
     setSaving(true);
     try {
+      const username = profileData.username.trim();
       await api.updateProfile({
         first_name: firstName,
         last_name: lastNameParts.join(' '),
         bio: profileData.bio.trim() || null,
+        phone_number: profileData.phone.trim() || null,
+        designer_role: profileData.role.trim() || null,
+        studio_name: profileData.studioName.trim() || null,
+        studio_location: profileData.location.trim() || null,
+        instagram_handle: profileData.instagram.trim() || null,
+        behance_username: profileData.behance.trim() || null,
+        tiktok_handle: profileData.tiktok.trim() || null,
+        language: profileData.language,
+        ...(username && username !== savedUsername ? { username } : {}),
       });
+      if (username) setSavedUsername(username);
+      void i18n.changeLanguage(profileData.language);
       toast(t('settings.profile.toastSaved'));
     } catch (caught) {
       toast(caught instanceof Error ? caught.message : t('settings.profile.toastSaveError'), 'error');
@@ -306,27 +333,81 @@ export const Settings: React.FC<SettingsProps> = ({
                       />
                     </div>
                     <div className={styles.inputGroup}>
+                      <label htmlFor="designer-username">{t('settings.profile.username')}</label>
+                      <input
+                        id="designer-username"
+                        type="text"
+                        value={profileData.username}
+                        onChange={(e) => setProfileData({ ...profileData, username: e.target.value })}
+                        className={styles.input}
+                        pattern="[a-zA-Z_][a-zA-Z0-9_]{2,29}"
+                        title={t('settings.profile.usernamePatternTitle')}
+                        required
+                      />
+                    </div>
+                    <div className={styles.inputGroup}>
+                      <label htmlFor="designer-phone">{t('settings.profile.phoneNumber')}</label>
+                      <input
+                        id="designer-phone"
+                        type="tel"
+                        value={profileData.phone}
+                        onChange={(e) => setProfileData({ ...profileData, phone: e.target.value })}
+                        className={styles.input}
+                        maxLength={20}
+                        placeholder="0901 234 567"
+                      />
+                    </div>
+                    <div className={styles.inputGroup}>
+                      <label>{t('settings.profile.language')}</label>
+                      <Select
+                        value={profileData.language}
+                        onValueChange={(value) => {
+                          const nextLanguage = value === 'vi' ? 'vi' : 'en';
+                          setProfileData({ ...profileData, language: nextLanguage });
+                          void i18n.changeLanguage(nextLanguage);
+                        }}
+                        options={[
+                          { value: 'en', label: t('settings.profile.languageEnOption') },
+                          { value: 'vi', label: t('settings.profile.languageViOption') },
+                        ]}
+                        ariaLabel={t('settings.profile.language')}
+                      />
+                    </div>
+                    <div className={styles.inputGroup}>
                       <label htmlFor="designer-role">{t('settings.profile.primaryRole')}</label>
                       <input
                         id="designer-role"
+                        maxLength={100}
                         type="text"
                         value={profileData.role}
                         onChange={(e) => setProfileData({ ...profileData, role: e.target.value })}
                         className={styles.input}
-                        required
+                      />
+                    </div>
+                    <div className={styles.inputGroup}>
+                      <label htmlFor="designer-studio">{t('settings.profile.studioName')}</label>
+                      <input
+                        id="designer-studio"
+                        type="text"
+                        value={profileData.studioName}
+                        onChange={(e) =>
+                          setProfileData({ ...profileData, studioName: e.target.value })
+                        }
+                        className={styles.input}
+                        maxLength={100}
                       />
                     </div>
                     <div className={styles.inputGroup}>
                       <label htmlFor="designer-location">{t('settings.profile.studioLocation')}</label>
                       <input
                         id="designer-location"
+                        maxLength={100}
                         type="text"
                         value={profileData.location}
                         onChange={(e) =>
                           setProfileData({ ...profileData, location: e.target.value })
                         }
                         className={styles.input}
-                        required
                       />
                     </div>
                   </div>
@@ -359,6 +440,7 @@ export const Settings: React.FC<SettingsProps> = ({
                         <Instagram size={14} className={styles.fieldIcon} />
                         <input
                           id="designer-instagram"
+                          maxLength={100}
                           type="text"
                           value={profileData.instagram}
                           onChange={(e) =>
@@ -374,6 +456,7 @@ export const Settings: React.FC<SettingsProps> = ({
                         <Globe size={14} className={styles.fieldIcon} />
                         <input
                           id="designer-behance"
+                          maxLength={100}
                           type="text"
                           value={profileData.behance}
                           onChange={(e) =>
@@ -389,6 +472,7 @@ export const Settings: React.FC<SettingsProps> = ({
                         <Smartphone size={14} className={styles.fieldIcon} />
                         <input
                           id="designer-tiktok"
+                          maxLength={100}
                           type="text"
                           value={profileData.tiktok}
                           onChange={(e) =>
@@ -568,63 +652,6 @@ export const Settings: React.FC<SettingsProps> = ({
                     <div className={styles.themeCardMeta}>
                       <span className={styles.themeCardTitle}>{t('settings.appearance.lightTitle')}</span>
                       <span className={styles.themeCardDesc}>{t('settings.appearance.lightDesc')}</span>
-                    </div>
-                  </div>
-                </div>
-              </div>
-
-              <div className={styles.appearanceGroup}>
-                <h4 className={styles.formGroupTitle}>{t('settings.appearance.languageTitle')}</h4>
-                <p className={styles.sectionSubtitle} style={{ marginTop: -8 }}>
-                  {t('settings.appearance.languageDesc')}
-                </p>
-
-                <div className={styles.themeSelectorGrid}>
-                  <div
-                    className={`${styles.themeCard} ${currentLanguage === 'en' ? styles.themeCardActive : ''}`}
-                    role="button"
-                    tabIndex={0}
-                    onClick={() => {
-                      void i18n.changeLanguage('en');
-                      toast(t('settings.appearance.toastLanguageChanged'));
-                    }}
-                    onKeyDown={(e) => {
-                      if (e.key === 'Enter') {
-                        void i18n.changeLanguage('en');
-                        toast(t('settings.appearance.toastLanguageChanged'));
-                      }
-                    }}
-                  >
-                    <div className={styles.themeCardMeta}>
-                      <span className={styles.themeCardTitle}>
-                        <Languages size={14} style={{ verticalAlign: '-2px', marginRight: 6 }} />
-                        {t('settings.appearance.languageEnTitle')}
-                      </span>
-                      <span className={styles.themeCardDesc}>{t('settings.appearance.languageEnDesc')}</span>
-                    </div>
-                  </div>
-
-                  <div
-                    className={`${styles.themeCard} ${currentLanguage === 'vi' ? styles.themeCardActive : ''}`}
-                    role="button"
-                    tabIndex={0}
-                    onClick={() => {
-                      void i18n.changeLanguage('vi');
-                      toast(t('settings.appearance.toastLanguageChanged'));
-                    }}
-                    onKeyDown={(e) => {
-                      if (e.key === 'Enter') {
-                        void i18n.changeLanguage('vi');
-                        toast(t('settings.appearance.toastLanguageChanged'));
-                      }
-                    }}
-                  >
-                    <div className={styles.themeCardMeta}>
-                      <span className={styles.themeCardTitle}>
-                        <Languages size={14} style={{ verticalAlign: '-2px', marginRight: 6 }} />
-                        {t('settings.appearance.languageViTitle')}
-                      </span>
-                      <span className={styles.themeCardDesc}>{t('settings.appearance.languageViDesc')}</span>
                     </div>
                   </div>
                 </div>

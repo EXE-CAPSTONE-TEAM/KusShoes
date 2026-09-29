@@ -29,7 +29,7 @@ class ProjectAsset(Base):
         UUID(as_uuid=True), ForeignKey("users.id"), nullable=False
     )
     asset_type: Mapped[str] = mapped_column(String(30), nullable=False)
-    # source_model | sticker | texture | reference_image
+    # source_model | sticker | texture | reference_image | thumbnail
 
     original_filename: Mapped[str | None] = mapped_column(String(255), nullable=True)
     file_path: Mapped[str] = mapped_column(Text, nullable=False)

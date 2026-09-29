@@ -121,6 +121,22 @@ function UsageMeter({ label, used, limit }: { label: string; used: number; limit
   );
 }
 
+/** MoMo checkout, or a disabled "Coming Soon" button while the server has MoMo switched off. */
+function MomoButton({ enabled, disabled, onClick }: { enabled: boolean; disabled?: boolean; onClick: () => void }) {
+  if (!enabled) {
+    return (
+      <button className={styles.btnSecondary} disabled title="Cổng thanh toán MoMo sắp ra mắt (Coming Soon)">
+        MoMo (Coming Soon)
+      </button>
+    );
+  }
+  return (
+    <button className={styles.btnSecondary} disabled={disabled} onClick={onClick}>
+      Pay via MoMo
+    </button>
+  );
+}
+
 export const Billing: React.FC = () => {
   const { toast } = useToast();
   const [showUpgradeModal, setShowUpgradeModal] = useState(false);
@@ -141,6 +157,15 @@ export const Billing: React.FC = () => {
   const [showBuyCreditModal, setShowBuyCreditModal] = useState(false);
   const [buyQuantity, setBuyQuantity] = useState(1);
   const [buyingCredit, setBuyingCredit] = useState(false);
+  const [momoEnabled, setMomoEnabled] = useState(false);
+
+  useEffect(() => {
+    // Non-critical: without an answer MoMo just stays "Coming Soon".
+    billingApi
+      .getPaymentGateways()
+      .then((gateways) => setMomoEnabled(gateways.momo))
+      .catch(() => setMomoEnabled(false));
+  }, []);
 
   // Landing here from PayOS/MoMo (/billing/success): poll until the webhook has settled the invoice (MSG29).
   const returnedFromGateway = window.location.pathname === '/billing/success';
@@ -767,13 +792,11 @@ export const Billing: React.FC = () => {
                 >
                   {buyingCredit ? 'Connecting…' : 'Pay via PayOS'}
                 </button>
-                <button
-                  className={styles.btnSecondary}
-                  disabled
-                  title="Cổng thanh toán MoMo sắp ra mắt (Coming Soon)"
-                >
-                  MoMo (Coming Soon)
-                </button>
+                <MomoButton
+                  enabled={momoEnabled}
+                  disabled={buyingCredit}
+                  onClick={() => handleBuyCredit('momo')}
+                />
               </div>
             </motion.div>
           </div>
@@ -885,13 +908,10 @@ export const Billing: React.FC = () => {
                             >
                               Pay via PayOS
                             </button>
-                            <button
-                              className={styles.btnSecondary}
-                              disabled
-                              title="Cổng thanh toán MoMo sắp ra mắt (Coming Soon)"
-                            >
-                              MoMo (Coming Soon)
-                            </button>
+                            <MomoButton
+                              enabled={momoEnabled}
+                              onClick={() => handleChoosePlan(tier.plan, 'momo')}
+                            />
                           </>
                         )}
                       </div>

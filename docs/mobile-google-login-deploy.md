@@ -32,7 +32,7 @@ sequenceDiagram
 | `POST /api/v1/auth/google/mobile/exchange` | Mới. Mã dùng một lần; sai verifier cũng hủy mã; lỗi trả `401 AUTH_GOOGLE_MOBILE_CODE_INVALID`. |
 | Config mới | `MOBILE_GOOGLE_REDIRECT_URI` (mặc định `vn.kusshoes.mobile://auth/google`), `MOBILE_GOOGLE_CODE_EXPIRE_SECONDS` (mặc định `60`). Có default nên **không cần sửa `.env`**. |
 | DB | Không có migration. |
-| Google Cloud Console | **Không cần sửa.** Redirect URI vẫn là `https://136.85.55.175.sslip.io/api/v1/auth/google/callback`. Email test vẫn phải nằm trong *OAuth consent screen → Test users*. |
+| Google Cloud Console | Redirect URI `https://api.kusshoes.kietta.me/api/v1/auth/google/callback` (giữ URI sslip.io cũ tới khi bỏ host legacy). `kietta.me` phải có trong *OAuth consent screen → Authorized domains*. Email test vẫn phải nằm trong *OAuth consent screen → Test users*. |
 
 Bảo mật: URI trả về app là giá trị cấu hình cố định (không nhận từ client → không thành open
 redirect). Nếu app khác chiếm scheme `vn.kusshoes.mobile` thì cũng chỉ lấy được mã, không đổi được
@@ -58,7 +58,7 @@ docker compose -f docker-compose.prod.yml -f docker-compose.vm.yml ps api   # đ
 Chạy từ máy bất kỳ:
 
 ```bash
-API=https://136.85.55.175.sslip.io
+API=https://api.kusshoes.kietta.me
 
 # 1. Endpoint mới đã có
 curl -s $API/openapi.json | grep -o '/api/v1/auth/google/mobile/exchange'
