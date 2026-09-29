@@ -36,7 +36,10 @@ services:
     restart: unless-stopped
 
   minio:
-    image: quay.io/minio/minio
+    # Upstream stopped publishing MinIO images (quay.io/minio/* is private, docker.io/minio/* needs
+    # auth), which broke `docker compose up` in CI. pgsty/* is the community-maintained build of the
+    # same server and CLI; pinned so a new release cannot change dev/CI behaviour silently.
+    image: pgsty/minio:RELEASE.2026-08-04T00-00-00Z
     container_name: kusshoes_minio
     command: server /data --console-address ":9001"
     environment:
@@ -56,7 +59,7 @@ services:
 
   # Tự động tạo bucket khi MinIO khởi động lần đầu, chạy 1 lần rồi thoát
   minio-init:
-    image: quay.io/minio/mc
+    image: pgsty/mc:RELEASE.2026-09-16T00-00-00Z
     container_name: kusshoes_minio_init
     depends_on:
       minio:
