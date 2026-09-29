@@ -1,7 +1,7 @@
 {
   "privacy": {
     "title": "Chính sách bảo mật",
-    "intro": "Chính sách này giải thích KusShoes thu thập dữ liệu gì khi bạn dùng trang web kusshoes.vercel.app, ứng dụng Android KusShoes (vn.kusshoes.mobile) và ứng dụng KusStudio Desktop (KusShoes Editor), dùng vào việc gì, chia sẻ với ai, lưu bao lâu và bạn có những quyền gì.",
+    "intro": "Chính sách này giải thích KusShoes thu thập dữ liệu gì khi bạn dùng trang web kusshoes.kietta.me, ứng dụng Android KusShoes (vn.kusshoes.mobile) và ứng dụng KusStudio Desktop (KusShoes Editor), dùng vào việc gì, chia sẻ với ai, lưu bao lâu và bạn có những quyền gì.",
     "sections": [
       {
         "id": "operator",
@@ -146,7 +146,7 @@
   },
   "terms": {
     "title": "Điều khoản dịch vụ",
-    "intro": "Điều khoản này là thoả thuận giữa bạn và KusShoes khi bạn dùng trang web kusshoes.vercel.app, ứng dụng Android KusShoes và KusStudio Desktop (gọi chung là \"Dịch vụ\"). Bằng việc tick ô đồng ý khi đăng ký hoặc tiếp tục sử dụng Dịch vụ, bạn chấp nhận Điều khoản này và Chính sách bảo mật.",
+    "intro": "Điều khoản này là thoả thuận giữa bạn và KusShoes khi bạn dùng trang web kusshoes.kietta.me, ứng dụng Android KusShoes và KusStudio Desktop (gọi chung là \"Dịch vụ\"). Bằng việc tick ô đồng ý khi đăng ký hoặc tiếp tục sử dụng Dịch vụ, bạn chấp nhận Điều khoản này và Chính sách bảo mật.",
     "sections": [
       {
         "id": "operator",
@@ -180,7 +180,7 @@
         "title": "4. Gói dịch vụ và thanh toán",
         "body": [
           [
-            "Có gói miễn phí và các gói trả phí theo tháng; giá và quyền lợi từng gói được niêm yết tại trang Bảng giá (https://kusshoes.vercel.app/pricing) tại thời điểm bạn mua.",
+            "Có gói miễn phí và các gói trả phí theo tháng; giá và quyền lợi từng gói được niêm yết tại trang Bảng giá (https://kusshoes.kietta.me/pricing) tại thời điểm bạn mua.",
             "Thanh toán qua PayOS. Chúng tôi không lưu thẻ và không tự động gia hạn: khi gói sắp hết hạn, bạn nhận email nhắc và tự quyết định có gia hạn hay không.",
             "Credit quét lẻ có hạn dùng 12 tháng kể từ ngày mua."
           ]
