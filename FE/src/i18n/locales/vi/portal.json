@@ -1,0 +1,102 @@
+{
+  "sidebar": {
+    "overview": "Tổng quan",
+    "projects": "Dự án",
+    "archives": "Lưu trữ",
+    "trash": "Thùng rác",
+    "billing": "Thanh toán",
+    "feedback": "Phản hồi",
+    "settings": "Cài đặt",
+    "settingsProfile": "Thông tin hồ sơ",
+    "settingsSecurity": "Bảo mật & Đăng nhập",
+    "settingsPrivacy": "Quyền riêng tư mô hình",
+    "settingsAppearance": "Giao diện",
+    "recentProjects": "Dự án gần đây",
+    "quickCreate": "Tạo nhanh dự án",
+    "viewAll": "Xem tất cả",
+    "expandSidebar": "Mở rộng thanh bên",
+    "collapseSidebar": "Thu gọn thanh bên",
+    "profile": "Hồ sơ",
+    "logout": "Đăng xuất"
+  },
+  "settings": {
+    "title": "Cài đặt",
+    "navLabel": "Điều hướng cài đặt",
+    "tabs": {
+      "profile": "Hồ sơ",
+      "security": "Bảo mật",
+      "privacy": "Riêng tư",
+      "appearance": "Giao diện"
+    },
+    "profile": {
+      "title": "Thông tin hồ sơ",
+      "subtitle": "Quản lý thông tin công khai trên hồ sơ nhà thiết kế của bạn.",
+      "changeAvatar": "Đổi ảnh đại diện",
+      "removeAvatar": "Xoá ảnh đại diện",
+      "designerIdentity": "Thông tin nhà thiết kế",
+      "designerName": "Tên nhà thiết kế",
+      "emailAddress": "Địa chỉ email",
+      "primaryRole": "Vai trò chính",
+      "studioLocation": "Địa điểm studio",
+      "studioBio": "Giới thiệu & Slogan studio",
+      "creativeBio": "Giới thiệu bản thân",
+      "bioPlaceholder": "Giới thiệu về thương hiệu studio tuỳ chỉnh giày của bạn...",
+      "connectedHandles": "Liên kết mạng xã hội",
+      "instagram": "Tài khoản Instagram",
+      "behance": "Tên người dùng Behance",
+      "tiktok": "Tài khoản TikTok",
+      "saveProfile": "Lưu thông tin hồ sơ",
+      "designerFallback": "Nhà thiết kế",
+      "avatarFallback": "Ảnh đại diện",
+      "toastSaved": "Đã lưu hồ sơ lên máy chủ.",
+      "toastSaveError": "Không thể lưu hồ sơ.",
+      "toastLoadError": "Không thể tải hồ sơ.",
+      "toastPresetSelected": "Đã chọn ảnh xem trước. Tải lên ảnh cục bộ để lưu ảnh đại diện trên máy chủ.",
+      "toastUploaded": "Đã tải ảnh đại diện lên máy chủ.",
+      "toastUploadError": "Không thể tải ảnh đại diện lên.",
+      "toastRemoved": "Đã xoá ảnh đại diện.",
+      "toastRemoveError": "Không thể xoá ảnh đại diện."
+    },
+    "security": {
+      "title": "Bảo mật & Thông tin đăng nhập",
+      "subtitle": "Đổi mật khẩu và điều chỉnh phương thức xác thực danh tính.",
+      "updatePassword": "Cập nhật mật khẩu",
+      "currentPassword": "Mật khẩu hiện tại",
+      "newPassword": "Mật khẩu mới",
+      "confirmPassword": "Xác nhận mật khẩu mới",
+      "toastMismatch": "Mật khẩu mới không khớp!",
+      "toastUpdated": "Đã cập nhật mật khẩu. Vui lòng đăng nhập lại.",
+      "toastUpdateError": "Không thể cập nhật mật khẩu."
+    },
+    "privacy": {
+      "title": "Quyền riêng tư & Dữ liệu",
+      "subtitle": "Kiểm soát ai có thể xem tác phẩm của bạn, những gì bạn đồng ý chia sẻ, và dữ liệu cá nhân."
+    },
+    "appearance": {
+      "title": "Giao diện",
+      "subtitle": "Chọn giao diện hiển thị cho không gian làm việc KusShoes. Lựa chọn được ghi nhớ trên thiết bị này.",
+      "themePreferences": "Tuỳ chọn giao diện",
+      "darkTitle": "Streetwear Dark",
+      "darkDesc": "Giao diện tối neon mặc định",
+      "lightTitle": "Premium Cream",
+      "lightDesc": "Phong cách streetwear ấm áp, tinh tế",
+      "toastDark": "Đã chuyển sang giao diện Streetwear Dark",
+      "toastLight": "Đã chuyển sang giao diện Premium Cream",
+      "languageTitle": "Ngôn ngữ",
+      "languageDesc": "Chọn ngôn ngữ cho không gian làm việc KusShoes. Lựa chọn được ghi nhớ trên thiết bị này.",
+      "languageEnTitle": "English",
+      "languageEnDesc": "Ngôn ngữ tiếng Anh",
+      "languageViTitle": "Tiếng Việt",
+      "languageViDesc": "Ngôn ngữ mặc định",
+      "toastLanguageChanged": "Đã cập nhật ngôn ngữ."
+    },
+    "avatarModal": {
+      "title": "Chọn ảnh đại diện nhà thiết kế",
+      "desc": "Chọn một trong các mẫu có sẵn hoặc tải lên ảnh tuỳ chỉnh.",
+      "uploading": "Đang tải ảnh đại diện lên...",
+      "uploadCta": "Tải ảnh tuỳ chỉnh (.png, .jpg)",
+      "removeCurrent": "Xoá ảnh đại diện hiện tại",
+      "cancel": "Huỷ"
+    }
+  }
+}

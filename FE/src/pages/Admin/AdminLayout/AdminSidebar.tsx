@@ -2,9 +2,10 @@ import React, { useEffect, useState } from 'react';
 import {
   LayoutDashboard, Users, Package, CreditCard, FolderKanban,
   Flame, Download, Activity, ScrollText, LogOut, BarChart3, Sparkles, MessageSquare,
-  PanelLeftClose, PanelLeftOpen, Sun, Moon,
+  PanelLeftClose, PanelLeftOpen, Sun, Moon, Settings,
 } from 'lucide-react';
 import * as Tooltip from '@radix-ui/react-tooltip';
+import { useTranslation } from 'react-i18next';
 import { useAdminAuth } from '../../../context/AdminAuthContext';
 import { useTheme } from '../../../context/ThemeContext';
 import { adminDashboard, adminSystem } from '../../../api/adminClient';
@@ -28,6 +29,7 @@ interface NavGroup {
 }
 
 export const AdminSidebar: React.FC<AdminSidebarProps> = ({ activePage, navigate }) => {
+  const { t } = useTranslation('admin');
   const { session, logout, isLoggingOut, isAdmin } = useAdminAuth();
   const { theme, toggleTheme } = useTheme();
 
@@ -76,35 +78,36 @@ export const AdminSidebar: React.FC<AdminSidebarProps> = ({ activePage, navigate
 
   const navGroups: NavGroup[] = [
     {
-      heading: 'Tổng quan • Core',
+      heading: t('sidebar.groupCore'),
       items: [
-        { id: 'dashboard', label: 'Dashboard', icon: LayoutDashboard, badge: 'live' },
-        { id: 'analytics', label: 'Phân tích & Báo cáo', icon: BarChart3 },
+        { id: 'dashboard', label: t('sidebar.navDashboard'), icon: LayoutDashboard, badge: 'live' },
+        { id: 'analytics', label: t('sidebar.navAnalytics'), icon: BarChart3 },
       ],
     },
     {
-      heading: 'Quản lý & Kinh doanh',
+      heading: t('sidebar.groupBusiness'),
       items: [
-        { id: 'users', label: 'Người dùng', icon: Users, badge: 'users' },
-        { id: 'plans', label: 'Gói cước & Đăng ký', icon: Package },
-        { id: 'billing', label: 'Thanh toán & Doanh thu', icon: CreditCard },
-        { id: 'feedback', label: 'Phản hồi khách hàng', icon: MessageSquare },
+        { id: 'users', label: t('sidebar.navUsers'), icon: Users, badge: 'users' },
+        { id: 'plans', label: t('sidebar.navPlans'), icon: Package },
+        { id: 'billing', label: t('sidebar.navBilling'), icon: CreditCard },
+        { id: 'feedback', label: t('sidebar.navFeedback'), icon: MessageSquare },
       ],
     },
     {
-      heading: '3D Pipeline & Tác vụ',
+      heading: t('sidebar.groupPipeline'),
       items: [
-        { id: 'projects', label: 'Dự án 3D', icon: FolderKanban },
-        { id: 'bake-jobs', label: 'Tiến trình Bake', icon: Flame, badge: 'bake' },
-        { id: 'exports', label: 'Xuất file (GLB/OBJ)', icon: Download, badge: 'exports' },
-        { id: 'content', label: 'Nội dung & Studio', icon: Sparkles },
+        { id: 'projects', label: t('sidebar.navProjects'), icon: FolderKanban },
+        { id: 'bake-jobs', label: t('sidebar.navBakeJobs'), icon: Flame, badge: 'bake' },
+        { id: 'exports', label: t('sidebar.navExports'), icon: Download, badge: 'exports' },
+        { id: 'content', label: t('sidebar.navContent'), icon: Sparkles },
       ],
     },
     {
-      heading: 'Hạ tầng & An ninh',
+      heading: t('sidebar.groupInfra'),
       items: [
-        { id: 'system', label: 'Sức khỏe hệ thống', icon: Activity, badge: 'health' },
-        ...(isAdmin ? [{ id: 'audit-logs', label: 'Nhật ký bảo mật', icon: ScrollText } as NavItem] : []),
+        { id: 'system', label: t('sidebar.navSystem'), icon: Activity, badge: 'health' },
+        ...(isAdmin ? [{ id: 'audit-logs', label: t('sidebar.navAuditLogs'), icon: ScrollText } as NavItem] : []),
+        { id: 'settings', label: t('sidebar.navSettings'), icon: Settings },
       ],
     },
   ];
@@ -114,7 +117,7 @@ export const AdminSidebar: React.FC<AdminSidebarProps> = ({ activePage, navigate
       return (
         <span className={styles.liveTag}>
           <span className={styles.liveDot} />
-          Live
+          {t('sidebar.live')}
         </span>
       );
     }
@@ -125,13 +128,13 @@ export const AdminSidebar: React.FC<AdminSidebarProps> = ({ activePage, navigate
       return <span className={styles.countBadge}>{totalExports} files</span>;
     }
     if (badge === 'bake' && bakeActive !== null && bakeActive > 0) {
-      return <span className={styles.accentBadge}>{bakeActive} đang chạy</span>;
+      return <span className={styles.accentBadge}>{bakeActive} {t('sidebar.running')}</span>;
     }
     if (badge === 'health' && healthStatus) {
       return (
         <span className={healthStatus === 'ok' ? styles.healthBadgeOk : styles.healthBadgeWarn}>
           <span className={styles.healthDot} />
-          {healthStatus === 'ok' ? 'Ổn định' : 'Degraded'}
+          {healthStatus === 'ok' ? t('sidebar.healthOk') : t('sidebar.healthDegraded')}
         </span>
       );
     }
@@ -180,8 +183,8 @@ export const AdminSidebar: React.FC<AdminSidebarProps> = ({ activePage, navigate
           type="button"
           className={styles.collapseToggle}
           onClick={toggleCollapsed}
-          aria-label={collapsed ? 'Expand sidebar' : 'Collapse sidebar'}
-          title={collapsed ? 'Expand sidebar' : 'Collapse sidebar'}
+          aria-label={collapsed ? t('sidebar.expandSidebar') : t('sidebar.collapseSidebar')}
+          title={collapsed ? t('sidebar.expandSidebar') : t('sidebar.collapseSidebar')}
         >
           {collapsed ? <PanelLeftOpen size={14} /> : <PanelLeftClose size={14} />}
         </button>
@@ -195,7 +198,7 @@ export const AdminSidebar: React.FC<AdminSidebarProps> = ({ activePage, navigate
                   alt="KusShoes"
                   className={styles.brandLogoImage}
                 />
-                <span className={styles.brandTagline}>3D Sneaker Lab</span>
+                <span className={styles.brandTagline}>{t('sidebar.brandTagline')}</span>
               </div>
             )}
           </div>
@@ -216,7 +219,7 @@ export const AdminSidebar: React.FC<AdminSidebarProps> = ({ activePage, navigate
               <div className={styles.pipelineWidgetHeader}>
                 <span className={styles.pipelineWidgetLabel}>
                   <Flame size={14} className={styles.pipelineWidgetIcon} />
-                  Bake Pipeline
+                  {t('sidebar.bakePipeline')}
                 </span>
                 <span className={styles.pipelineWidgetPct}>{bakePct}%</span>
               </div>
@@ -224,8 +227,8 @@ export const AdminSidebar: React.FC<AdminSidebarProps> = ({ activePage, navigate
                 <div className={styles.pipelineBarFill} style={{ width: `${bakePct}%` }} />
               </div>
               <div className={styles.pipelineWidgetFooter}>
-                <span>{bakeActive} đang xử lý</span>
-                <span>{bakeTotal} tổng cộng</span>
+                <span>{bakeActive} {t('sidebar.processing')}</span>
+                <span>{bakeTotal} {t('sidebar.total')}</span>
               </div>
             </div>
           )}
@@ -234,9 +237,9 @@ export const AdminSidebar: React.FC<AdminSidebarProps> = ({ activePage, navigate
             <div className={styles.profileAvatar}>{initials}</div>
             {!collapsed && (
               <div className={styles.sessionInfo}>
-                <span className={styles.sessionEmail}>{session?.email || 'Active admin session'}</span>
+                <span className={styles.sessionEmail}>{session?.email || t('sidebar.activeSession')}</span>
                 <span className={`${styles.roleBadge} ${isAdmin ? styles.roleAdmin : styles.roleStaff}`}>
-                  {isAdmin ? 'Admin' : 'Staff'}
+                  {isAdmin ? t('sidebar.roleAdmin') : t('sidebar.roleStaff')}
                 </span>
               </div>
             )}
@@ -245,15 +248,15 @@ export const AdminSidebar: React.FC<AdminSidebarProps> = ({ activePage, navigate
                 <button
                   className={styles.logoutBtn}
                   onClick={toggleTheme}
-                  aria-label={theme === 'dark' ? 'Chuyển sang giao diện Sáng' : 'Chuyển sang giao diện Tối'}
-                  title={theme === 'dark' ? 'Chế độ Sáng' : 'Chế độ Tối'}
+                  aria-label={theme === 'dark' ? t('sidebar.switchToLight') : t('sidebar.switchToDark')}
+                  title={theme === 'dark' ? t('sidebar.lightMode') : t('sidebar.darkMode')}
                 >
                   {theme === 'dark' ? <Sun size={15} /> : <Moon size={15} />}
                 </button>
               </Tooltip.Trigger>
               <Tooltip.Portal>
                 <Tooltip.Content className={styles.tooltipContent} side="top" sideOffset={8}>
-                  {theme === 'dark' ? 'Chế độ Sáng' : 'Chế độ Tối'}
+                  {theme === 'dark' ? t('sidebar.lightMode') : t('sidebar.darkMode')}
                   <Tooltip.Arrow className={styles.tooltipArrow} />
                 </Tooltip.Content>
               </Tooltip.Portal>
@@ -270,7 +273,7 @@ export const AdminSidebar: React.FC<AdminSidebarProps> = ({ activePage, navigate
               </Tooltip.Trigger>
               <Tooltip.Portal>
                 <Tooltip.Content className={styles.tooltipContent} side="top" sideOffset={8}>
-                  Log out
+                  {t('sidebar.logout')}
                   <Tooltip.Arrow className={styles.tooltipArrow} />
                 </Tooltip.Content>
               </Tooltip.Portal>
