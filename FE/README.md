@@ -1,5 +1,7 @@
 # 👟 KusShoes & KusStudio: 3D Sneaker Customization Ecosystem
 
+🔗 **Live: [https://kusshoes.kietta.me](https://kusshoes.kietta.me)**
+
 KusShoes is a state-of-the-art 3D sneaker customization web application built using **React**, **Vite**, **TypeScript**, and **Framer Motion**. The system enables designers and streetwear enthusiasts to digitize physical footwear via photogrammetry (using mobile-based scanning APIs) and refine/edit 3D assets in a desktop-compatible digital workspace (KusStudio).
 
 ---
