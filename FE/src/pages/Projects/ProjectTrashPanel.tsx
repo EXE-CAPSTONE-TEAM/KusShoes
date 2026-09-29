@@ -4,6 +4,7 @@ import { RotateCcw, Trash2, X } from 'lucide-react';
 import { api, type PortalProject, type TrashedProject } from '../../api/client';
 import { ConfirmDialog } from '../../components/ConfirmDialog/ConfirmDialog';
 import { useToast } from '../../context/ToastContext';
+import { LoadingDots } from '../../components/LoadingDots/LoadingDots';
 import styles from './ProjectTrashPanel.module.css';
 
 interface ProjectTrashPanelProps {
@@ -97,7 +98,7 @@ export const ProjectTrashPanel: React.FC<ProjectTrashPanelProps> = ({
             </Dialog.Description>
 
             {loading && items.length === 0 ? (
-              <p className={styles.muted}>Loading…</p>
+              <LoadingDots center label="Loading trashed projects…" />
             ) : items.length === 0 ? (
               <p className={styles.muted}>Trash is empty.</p>
             ) : (
@@ -142,7 +143,7 @@ export const ProjectTrashPanel: React.FC<ProjectTrashPanelProps> = ({
             {nextCursor && (
               <button
                 type="button"
-                className="btn-outline"
+                className={styles.btnSecondary}
                 onClick={() => void load(nextCursor)}
                 disabled={loading}
               >

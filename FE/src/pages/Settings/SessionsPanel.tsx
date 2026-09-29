@@ -3,6 +3,7 @@ import { MonitorSmartphone, History, LogOut } from 'lucide-react';
 import { accountApi, type LoginHistoryItem, type SessionInfo } from '../../api/account';
 import { useToast } from '../../context/ToastContext';
 import { describeUserAgent, formatDateTime } from '../../utils/format';
+import { LoadingDots } from '../../components/LoadingDots/LoadingDots';
 import panel from './AccountPanels.module.css';
 
 /** Active sessions (revocable) and the recent sign-in history (BR-18). */
@@ -70,7 +71,7 @@ export const SessionsPanel: React.FC = () => {
           </button>
         </div>
         {sessions === null ? (
-          <p className={panel.muted}>Loading sessions…</p>
+          <LoadingDots center label="Loading sessions…" />
         ) : sessions.length === 0 ? (
           <p className={panel.muted}>No active sessions.</p>
         ) : (
@@ -104,7 +105,7 @@ export const SessionsPanel: React.FC = () => {
           </div>
         </div>
         {history === null ? (
-          <p className={panel.muted}>Loading activity…</p>
+          <LoadingDots center label="Loading activity…" />
         ) : history.length === 0 ? (
           <p className={panel.muted}>No sign-in activity recorded yet.</p>
         ) : (

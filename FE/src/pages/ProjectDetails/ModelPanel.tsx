@@ -10,6 +10,7 @@ import {
   inferSourceModelContentType,
   type SourceModelImportStep,
 } from '../../api/sourceModel';
+import { LoadingDots } from '../../components/LoadingDots/LoadingDots';
 import styles from './ProjectPanels.module.css';
 
 interface ModelPanelProps {
@@ -104,12 +105,12 @@ export const ModelPanel: React.FC<ModelPanelProps> = ({ projectId, canonicalMode
   return (
     <div className={styles.stack}>
       {locked && (
-        <div className={styles.lockedBanner}>
+        <div className={`${styles.notice} ${styles.noticeWarning}`}>
           This project is read-only after a plan downgrade, so the 3D model cannot be imported or deleted.
         </div>
       )}
 
-      <div className={`${styles.panel} glass-panel`}>
+      <div className={styles.panel}>
         <div className={styles.panelHeader}>
           <Box size={20} className={styles.panelIcon} />
           <div>
@@ -121,7 +122,7 @@ export const ModelPanel: React.FC<ModelPanelProps> = ({ projectId, canonicalMode
           </div>
           <button
             type="button"
-            className={`btn-neon-orange ${styles.headerAction}`}
+            className={`${styles.btnPrimary} ${styles.headerAction}`}
             onClick={() => fileInputRef.current?.click()}
             disabled={uploading || locked}
           >
@@ -144,14 +145,14 @@ export const ModelPanel: React.FC<ModelPanelProps> = ({ projectId, canonicalMode
         )}
 
         {loadError ? (
-          <div className={styles.notice} role="alert">
+          <div className={`${styles.notice} ${styles.noticeDanger}`} role="alert">
             <span>{loadError}</span>
-            <button type="button" className="btn-outline" onClick={() => void load()}>
+            <button type="button" className={styles.btnSecondary} onClick={() => void load()}>
               Retry
             </button>
           </div>
         ) : assets === null ? (
-          <p className={styles.muted}>Loading assets…</p>
+          <LoadingDots center label="Loading assets…" />
         ) : assets.length === 0 ? (
           <p className={styles.muted}>No assets yet. Import a 3D model to get started.</p>
         ) : (
@@ -161,7 +162,7 @@ export const ModelPanel: React.FC<ModelPanelProps> = ({ projectId, canonicalMode
                 <span className={styles.rowTitle}>
                   {asset.original_filename ?? asset.file_path.split('/').pop()}
                   {asset.id === canonicalModelAssetId && (
-                    <span className={`${styles.chip} ${styles.chipOk}`}>Canonical model</span>
+                    <span className={styles.chip}>Canonical model</span>
                   )}
                   <span className={styles.chip}>{asset.asset_type}</span>
                 </span>
@@ -172,7 +173,7 @@ export const ModelPanel: React.FC<ModelPanelProps> = ({ projectId, canonicalMode
               <div className={styles.rowActions}>
                 <button
                   type="button"
-                  className="btn-outline"
+                  className={`${styles.btnSecondary} ${styles.btnSm}`}
                   disabled={busy || locked}
                   onClick={() => setDeleteTarget(asset)}
                 >

@@ -4,6 +4,7 @@ import { ApiError } from '../../api/client';
 import { studioApi, type ArtisanLink, type CreatedArtisanLink } from '../../api/studio';
 import { useToast } from '../../context/ToastContext';
 import { formatDate } from '../../utils/format';
+import { LoadingDots } from '../../components/LoadingDots/LoadingDots';
 import styles from './ProjectPanels.module.css';
 
 interface ArtisanSharePanelProps {
@@ -90,7 +91,7 @@ export const ArtisanSharePanel: React.FC<ArtisanSharePanelProps> = ({ projectId,
 
   return (
     <div className={styles.stack}>
-      <div className={`${styles.panel} glass-panel`}>
+      <div className={styles.panel}>
         <div className={styles.panelHeader}>
           <Share2 size={20} className={styles.panelIcon} />
           <div>
@@ -100,16 +101,16 @@ export const ArtisanSharePanel: React.FC<ArtisanSharePanelProps> = ({ projectId,
               revoke it at any time.
             </p>
           </div>
-          <button type="button" className={`btn-neon-orange ${styles.headerAction}`} onClick={create} disabled={busy}>
+          <button type="button" className={`${styles.btnPrimary} ${styles.headerAction}`} onClick={create} disabled={busy}>
             <Link2 size={16} /> New link
           </button>
         </div>
 
         {blocked && (
-          <div className={styles.notice} role="alert">
+          <div className={`${styles.notice} ${styles.noticeDanger}`} role="alert">
             <span>{blocked}</span>
             {onUpgrade && blocked === REASONS.ARTISAN_LINK_PLAN_REQUIRED && (
-              <button type="button" className="btn-outline" onClick={onUpgrade}>See plans</button>
+              <button type="button" className={styles.btnSecondary} onClick={onUpgrade}>See plans</button>
             )}
           </div>
         )}
@@ -118,7 +119,9 @@ export const ArtisanSharePanel: React.FC<ArtisanSharePanelProps> = ({ projectId,
           <div className={styles.stack}>
             <div className={styles.linkBox}>
               <span className={styles.linkText}>{fresh.url}</span>
-              <button type="button" className="btn-outline" onClick={copyLink}><Copy size={14} /> Copy</button>
+              <button type="button" className={`${styles.btnSecondary} ${styles.btnSm}`} onClick={copyLink}>
+                <Copy size={14} /> Copy
+              </button>
             </div>
             <span className={styles.muted}>
               Anyone with this link can download the file until {formatDate(fresh.expires_at)}.
@@ -127,51 +130,60 @@ export const ArtisanSharePanel: React.FC<ArtisanSharePanelProps> = ({ projectId,
         )}
 
         {links === null ? (
-          <p className={styles.muted}>Loading links…</p>
+          <LoadingDots center label="Loading links…" />
         ) : links.length === 0 ? (
           <p className={styles.muted}>No links yet.</p>
         ) : (
-          links.map((link) => (
-            <div key={link.id} className={styles.row}>
-              <div className={styles.rowMain}>
-                <span className={styles.rowTitle}>
-                  Created link
-                  <span className={`${styles.chip} ${link.is_active ? styles.chipOk : styles.chipOff}`}>
-                    {link.revoked_at ? 'Revoked' : link.is_active ? 'Active' : 'Expired'}
+          links.map((link) => {
+            const statusLabel = link.revoked_at ? 'Revoked' : link.is_active ? 'Active' : 'Expired';
+            const statusColor = link.revoked_at
+              ? 'var(--danger)'
+              : link.is_active
+                ? 'var(--success)'
+                : 'var(--neutral)';
+            return (
+              <div key={link.id} className={styles.row}>
+                <div className={styles.rowMain}>
+                  <span className={styles.rowTitle}>
+                    Created link
+                    <span className={styles.statusIndicator}>
+                      <span className={styles.statusDot} style={{ backgroundColor: statusColor }} />
+                      {statusLabel}
+                    </span>
                   </span>
-                </span>
-                <span className={styles.rowMeta}>
-                  {link.download_count} / {link.max_downloads} downloads · expires {formatDate(link.expires_at)}
-                </span>
+                  <span className={styles.rowMeta}>
+                    {link.download_count} / {link.max_downloads} downloads · expires {formatDate(link.expires_at)}
+                  </span>
+                </div>
+                <div className={styles.rowActions}>
+                  {!link.revoked_at && (
+                    <button
+                      type="button"
+                      className={`${styles.btnSecondary} ${styles.btnSm}`}
+                      disabled={busy}
+                      onClick={() => void act(() => studioApi.renewArtisanLink(link.id), 'Link renewed for another 30 days.')}
+                    >
+                      <RefreshCw size={14} /> Renew
+                    </button>
+                  )}
+                  {link.is_active && (
+                    <button
+                      type="button"
+                      className={`${styles.btnSecondary} ${styles.btnSm}`}
+                      disabled={busy}
+                      onClick={() => void act(() => studioApi.revokeArtisanLink(link.id), 'Link revoked.')}
+                    >
+                      Revoke
+                    </button>
+                  )}
+                </div>
               </div>
-              <div className={styles.rowActions}>
-                {!link.revoked_at && (
-                  <button
-                    type="button"
-                    className="btn-outline"
-                    disabled={busy}
-                    onClick={() => void act(() => studioApi.renewArtisanLink(link.id), 'Link renewed for another 30 days.')}
-                  >
-                    <RefreshCw size={14} /> Renew
-                  </button>
-                )}
-                {link.is_active && (
-                  <button
-                    type="button"
-                    className="btn-outline"
-                    disabled={busy}
-                    onClick={() => void act(() => studioApi.revokeArtisanLink(link.id), 'Link revoked.')}
-                  >
-                    Revoke
-                  </button>
-                )}
-              </div>
-            </div>
-          ))
+            );
+          })
         )}
       </div>
 
-      <div className={`${styles.panel} glass-panel`}>
+      <div className={styles.panel}>
         <div className={styles.panelHeader}>
           <FileText size={20} className={styles.panelIcon} />
           <div>
@@ -181,7 +193,12 @@ export const ArtisanSharePanel: React.FC<ArtisanSharePanelProps> = ({ projectId,
               {fresh ? ' It will include a QR code for the link you just created.' : ''}
             </p>
           </div>
-          <button type="button" className={`btn-outline ${styles.headerAction}`} onClick={downloadPack} disabled={busy}>
+          <button
+            type="button"
+            className={`${styles.btnSecondary} ${styles.headerAction}`}
+            onClick={downloadPack}
+            disabled={busy}
+          >
             Download PDF
           </button>
         </div>
