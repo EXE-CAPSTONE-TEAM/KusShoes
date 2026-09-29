@@ -37,7 +37,7 @@ from app.schemas.data_transfer import (
     DataImportResultResponse,
     DataImportUploadResponse,
 )
-from app.services import quota_service
+from app.services import guardrail_service, quota_service
 
 BACKUP_FORMAT = "kusshoes-backup"
 MANIFEST_MEMBER = "manifest.json"
@@ -322,6 +322,10 @@ def _copy_name(original: str) -> str:
 async def _create_copy(db: AsyncSession, user_id: uuid.UUID, entry: dict[str, Any]) -> None:
     """New row, new UUID, status draft, unlocked, no canonical model and no thumbnail: the
     original project (same id or name) is never read or written."""
+    if entry.get("design_config") is not None:
+        # BR-54: nội dung nhập lại phải qua cùng hàng rào kiểm duyệt như khi lưu thiết kế mới —
+        # một quy tắc cấm ban hành sau khi backup được xuất vẫn phải chặn nội dung cũ quay lại.
+        await guardrail_service.check_design(db, entry["design_config"])
     project = await project_repo.create(
         db, user_id=user_id, name=_copy_name(entry["name"]), description=entry.get("description")
     )

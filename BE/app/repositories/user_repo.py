@@ -145,7 +145,15 @@ async def set_google_id(db: AsyncSession, user_id: uuid.UUID, google_id: str) ->
 
 
 async def set_verified_google_link(db: AsyncSession, user: User, google_id: str) -> None:
-    """Auto-link: set google_id and mark verified in one operation."""
+    """Auto-link: set google_id and mark verified in one operation.
+
+    If the account had never verified its email, any password on it was set by someone who
+    never proved they own the address (e.g. a pre-registration account-takeover attempt). Google
+    has now proven ownership, so clear that unverified password: it must not survive the link and
+    let the earlier party keep logging in with email/password. A previously verified account keeps
+    its password — that owner already proved the email is theirs."""
+    if not user.is_verified:
+        user.password_hash = None
     user.google_id = google_id
     user.is_verified = True
 

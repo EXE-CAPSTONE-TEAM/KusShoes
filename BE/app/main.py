@@ -6,7 +6,7 @@ from contextvars import ContextVar
 from time import monotonic
 
 import sentry_sdk
-from fastapi import FastAPI, Response
+from fastapi import Depends, FastAPI, Response
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import PlainTextResponse
 from loguru import logger
@@ -15,6 +15,7 @@ from sentry_sdk.integrations.fastapi import FastApiIntegration
 from app.api_docs import API_DESCRIPTION, TAGS
 from app.api_docs import install as install_api_docs
 from app.config import settings
+from app.dependencies import verify_service_token
 from app.exceptions import register_exception_handlers
 from app.metrics import observe_request, render_prometheus
 from app.routers import (
@@ -241,6 +242,8 @@ async def ready(response: Response):
     }
 
 
-@app.get("/metrics", tags=["Monitoring"])
+@app.get("/metrics", tags=["Monitoring"], dependencies=[Depends(verify_service_token)])
 async def metrics():
+    """Số liệu Prometheus — yêu cầu header X-Service-Token (SERVICE_TOKEN) để không phơi bày
+    danh sách route/tần suất/độ trễ nội bộ ra công khai. Scraper cấu hình gửi kèm header này."""
     return PlainTextResponse(render_prometheus(), media_type="text/plain; version=0.0.4")

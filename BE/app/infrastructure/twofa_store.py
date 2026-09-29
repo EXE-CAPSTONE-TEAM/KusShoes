@@ -3,10 +3,28 @@ import secrets
 import redis.asyncio as aioredis
 
 CHALLENGE_TTL = 300  # 5 minutes
+MAX_VERIFY_ATTEMPTS = 5  # brute-force guard: burn the challenge after this many wrong codes
 
 
 def _challenge_key(token: str) -> str:
     return f"2fa:challenge:{token}"
+
+
+def _attempts_key(token: str) -> str:
+    return f"2fa:attempts:{token}"
+
+
+async def record_failed_attempt(redis: aioredis.Redis, token: str) -> int:
+    """Count a wrong code against this challenge; returns the running total."""
+    key = _attempts_key(token)
+    count = await redis.incr(key)
+    if count == 1:
+        await redis.expire(key, CHALLENGE_TTL)
+    return count
+
+
+async def clear_attempts(redis: aioredis.Redis, token: str) -> None:
+    await redis.delete(_attempts_key(token))
 
 
 async def create_challenge(redis: aioredis.Redis, user_id: str) -> str:

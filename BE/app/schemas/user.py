@@ -79,6 +79,8 @@ class ChangePasswordRequest(BaseModel):
     def validate_password(cls, value: str) -> str:
         if len(value) < 8 or not any(c.isupper() for c in value) or not any(c.isdigit() for c in value):
             raise ValueError("Mật khẩu mới cần tối thiểu 8 ký tự, 1 chữ hoa và 1 chữ số")
+        if len(value.encode("utf-8")) > 72:
+            raise ValueError("Mật khẩu không được vượt quá 72 byte khi mã hóa UTF-8")
         return value
 
     @model_validator(mode="after")

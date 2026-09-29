@@ -42,6 +42,10 @@ class RegisterRequest(BaseModel):
     def validate_password(cls, v: str) -> str:
         if len(v) < 8:
             raise ValueError("Mật khẩu tối thiểu 8 ký tự")
+        # bcrypt chỉ băm 72 byte đầu và raise nếu vượt quá; chữ tiếng Việt có dấu chiếm 2–3 byte
+        # nên chặn theo số byte UTF-8, không phải số ký tự.
+        if len(v.encode("utf-8")) > 72:
+            raise ValueError("Mật khẩu không được vượt quá 72 byte khi mã hóa UTF-8")
         if not any(c.isupper() for c in v):
             raise ValueError("Mật khẩu phải có ít nhất 1 chữ hoa")
         if not any(c.isdigit() for c in v):
@@ -147,6 +151,8 @@ class ResetPasswordRequest(BaseModel):
             or not any(c.isdigit() for c in value)
         ):
             raise ValueError("Mật khẩu mới cần tối thiểu 8 ký tự, 1 chữ hoa và 1 chữ số")
+        if len(value.encode("utf-8")) > 72:
+            raise ValueError("Mật khẩu không được vượt quá 72 byte khi mã hóa UTF-8")
         return value
 
     @model_validator(mode="after")

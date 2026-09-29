@@ -126,9 +126,15 @@ async def test_request_id_header_is_echoed(client):
 
 
 @pytest.mark.asyncio
-async def test_metrics_endpoint_exposes_prometheus_text(client):
+async def test_metrics_endpoint_requires_service_token(client):
     await client.get("/health")
-    response = await client.get("/metrics")
+    # Public access is rejected: metrics must not leak internal route/latency data.
+    unauth = await client.get("/metrics")
+    assert unauth.status_code != 200
+    # The scraper authenticates with the service token.
+    response = await client.get(
+        "/metrics", headers={"X-Service-Token": settings.SERVICE_TOKEN}
+    )
     assert response.status_code == 200
     assert "text/plain" in response.headers["content-type"]
     assert "kusshoes_http_requests_total" in response.text

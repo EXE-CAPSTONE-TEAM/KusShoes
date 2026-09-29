@@ -214,6 +214,50 @@ async def test_totp_2fa_setup_enable_and_login_challenge(client, auth_headers, a
 
 
 @pytest.mark.asyncio
+async def test_two_factor_challenge_locks_out_after_repeated_wrong_codes(
+    client, auth_headers, authenticated_user
+):
+    """Brute-force guard: after MAX_VERIFY_ATTEMPTS wrong codes the challenge is burned,
+    so the 6-digit space cannot be exhausted within the challenge TTL."""
+    from app.infrastructure import totp, twofa_store
+
+    setup = await client.post(
+        "/api/v1/users/me/2fa/setup", headers=auth_headers, json={"method": "totp"}
+    )
+    secret = setup.json()["totp_secret"]
+    code = totp._hotp(secret, int(__import__("time").time() // 30))
+    enabled = await client.post(
+        "/api/v1/users/me/2fa/enable",
+        headers=auth_headers,
+        json={"method": "totp", "code": code},
+    )
+    assert enabled.status_code == 200
+
+    login = await client.post(
+        "/api/v1/auth/login",
+        json={"email": authenticated_user.email, "password": "Password1"},
+    )
+    challenge_token = login.json()["challenge_token"]
+
+    for _ in range(twofa_store.MAX_VERIFY_ATTEMPTS):
+        bad = await client.post(
+            "/api/v1/auth/2fa/verify",
+            json={"challenge_token": challenge_token, "code": "000000"},
+        )
+        assert bad.status_code == 400
+        assert bad.json()["code"] == "AUTH_2FA_CODE_INVALID"
+
+    # Challenge is now burned: even the correct code no longer completes the login.
+    fresh_code = totp._hotp(secret, int(__import__("time").time() // 30))
+    after_lockout = await client.post(
+        "/api/v1/auth/2fa/verify",
+        json={"challenge_token": challenge_token, "code": fresh_code},
+    )
+    assert after_lockout.status_code != 200
+    assert after_lockout.json()["code"] == "AUTH_2FA_CHALLENGE_INVALID"
+
+
+@pytest.mark.asyncio
 async def test_totp_recovery_code_completes_login(client, auth_headers, authenticated_user):
     from app.infrastructure import totp
 

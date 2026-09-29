@@ -372,9 +372,17 @@ async def verify_two_factor_login(
         db, redis, user, code=code, recovery_code=recovery_code
     )
     if not ok:
+        # Brute-force guard: a 6-digit code is only 10^6 wide, and the challenge lives 5 min.
+        # Burn it after MAX_VERIFY_ATTEMPTS wrong tries so the space can't be exhausted; the
+        # user must log in again (which is itself rate-limited) to get a fresh challenge.
+        attempts = await twofa_store.record_failed_attempt(redis, challenge_token)
+        if attempts >= twofa_store.MAX_VERIFY_ATTEMPTS:
+            await twofa_store.delete_challenge(redis, challenge_token)
+            await twofa_store.clear_attempts(redis, challenge_token)
         raise AuthTwoFactorCodeInvalid()
 
     await twofa_store.delete_challenge(redis, challenge_token)
+    await twofa_store.clear_attempts(redis, challenge_token)
     return await _complete_login(db, user, ip_address=client_ip, user_agent=user_agent)
 
 
