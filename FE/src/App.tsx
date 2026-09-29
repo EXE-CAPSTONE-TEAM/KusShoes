@@ -1,17 +1,11 @@
 import { lazy, Suspense, useEffect, useState, useTransition } from 'react';
 import { addBootTask, markAppMounted } from './boot/boot';
-import { useState, useEffect, lazy, Suspense } from 'react';
 import { Landing } from './pages/Landing/Landing';
 import { Login } from './pages/Login/Login';
 import { GoogleCallback } from './pages/Login/GoogleCallback';
 import { Sidebar } from './components/Sidebar/Sidebar';
 import { ImpersonationBanner } from './components/ImpersonationBanner/ImpersonationBanner';
 import { TopProgressBar } from './components/TopProgressBar/TopProgressBar';
-import { ProjectDetails } from './pages/ProjectDetails/ProjectDetails';
-import { ProductsPage } from './pages/ProductsPage/ProductsPage';
-import { ArtisanViewer } from './pages/ArtisanViewer/ArtisanViewer';
-
-const AdminApp = lazy(() => import('./pages/Admin/AdminApp').then((m) => ({ default: m.AdminApp })));
 import { api, ApiError, type PortalProject } from './api/client';
 import { getSettingTabFromSearch, type SettingTab } from './pages/Settings/settingsNavigation';
 
