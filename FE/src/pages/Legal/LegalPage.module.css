@@ -1,0 +1,82 @@
+.page {
+  min-height: 100vh;
+  display: flex;
+  flex-direction: column;
+  background: var(--bg-primary);
+  color: var(--text-primary);
+}
+
+.main {
+  flex: 1;
+  padding: 120px 16px 64px;
+}
+
+.article {
+  max-width: 760px;
+  margin: 0 auto;
+  line-height: 1.7;
+  font-size: 0.975rem;
+}
+
+.header h1 {
+  font-size: clamp(1.8rem, 4vw, 2.4rem);
+  margin: 0 0 8px;
+}
+
+.meta {
+  color: var(--text-secondary);
+  font-size: 0.85rem;
+  margin: 0 0 16px;
+}
+
+.toc {
+  margin: 24px 0 32px;
+  padding: 16px 20px;
+  border: 1px solid var(--border-color, rgba(127, 127, 127, 0.25));
+  border-radius: 12px;
+}
+
+.toc ol {
+  margin: 0;
+  padding-left: 0;
+  list-style: none;
+  display: grid;
+  gap: 4px;
+}
+
+.toc a,
+.seeAlso a {
+  color: var(--accent, #ff5a36);
+  text-decoration: none;
+}
+
+.toc a:hover,
+.seeAlso a:hover {
+  text-decoration: underline;
+}
+
+.section {
+  scroll-margin-top: 96px;
+  margin-bottom: 28px;
+}
+
+.section h2 {
+  font-size: 1.15rem;
+  margin: 0 0 8px;
+}
+
+.section p {
+  margin: 0 0 10px;
+}
+
+.section ul {
+  margin: 0 0 12px;
+  padding-left: 1.25rem;
+  display: grid;
+  gap: 4px;
+}
+
+.seeAlso {
+  margin-top: 40px;
+  font-weight: 600;
+}

@@ -59,6 +59,17 @@ class AuthUserSuspended(AppException):
         super().__init__(403, "AUTH_USER_SUSPENDED", "Tài khoản đã bị khóa")
 
 
+class AuthConsentRequired(AppException):
+    """A new account needs the 18+ confirmation and ToS/privacy consent first."""
+
+    def __init__(self):
+        super().__init__(
+            400,
+            "AUTH_CONSENT_REQUIRED",
+            "Bạn cần xác nhận đã đủ 18 tuổi và đồng ý với Điều khoản dịch vụ & Chính sách bảo mật",
+        )
+
+
 class AuthRoleForbidden(AppException):
     def __init__(self):
         super().__init__(403, "AUTH_ROLE_FORBIDDEN", "Bạn không có quyền truy cập tài nguyên này")

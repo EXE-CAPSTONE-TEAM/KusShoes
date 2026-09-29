@@ -3,6 +3,7 @@ import { addBootTask, markAppMounted } from './boot/boot';
 import { Landing } from './pages/Landing/Landing';
 import { Login } from './pages/Login/Login';
 import { GoogleCallback } from './pages/Login/GoogleCallback';
+import { LegalConsentGate } from './components/LegalConsentGate/LegalConsentGate';
 import { Sidebar } from './components/Sidebar/Sidebar';
 import { ImpersonationBanner } from './components/ImpersonationBanner/ImpersonationBanner';
 import { TopProgressBar } from './components/TopProgressBar/TopProgressBar';
@@ -29,6 +30,8 @@ const importProducts = () =>
 const importPricing = () =>
   import('./pages/PricingPage/PricingPage').then((m) => ({ default: m.PricingPage }));
 const importAdmin = () => import('./pages/Admin/AdminApp').then((m) => ({ default: m.AdminApp }));
+const importLegal = () =>
+  import('./pages/Legal/LegalPage').then((m) => ({ default: m.LegalPage }));
 const importArtisanViewer = () =>
   import('./pages/ArtisanViewer/ArtisanViewer').then((m) => ({ default: m.ArtisanViewer }));
 
@@ -44,6 +47,7 @@ const ProductsPage = lazy(importProducts);
 const PricingPage = lazy(importPricing);
 const AdminApp = lazy(importAdmin);
 const ArtisanViewer = lazy(importArtisanViewer);
+const LegalPage = lazy(importLegal);
 
 const pageImporters: Record<string, (() => Promise<unknown>) | undefined> = {
   dashboard: importDashboard,
@@ -59,6 +63,8 @@ const pageImporters: Record<string, (() => Promise<unknown>) | undefined> = {
   pricing: importPricing,
   admin: importAdmin,
   'artisan-viewer': importArtisanViewer,
+  privacy: importLegal,
+  terms: importLegal,
 };
 
 // Helper to convert URL path to page key
@@ -80,6 +86,10 @@ const getPageFromPath = (path: string): string => {
       return 'products-info';
     case '/pricing':
       return 'pricing';
+    case '/privacy':
+      return 'privacy';
+    case '/terms':
+      return 'terms';
     case '/login':
       return 'login';
     case '/dashboard':
@@ -120,6 +130,10 @@ const getPathFromPage = (page: string): string => {
       return '/project-details' + query;
     case 'pricing':
       return '/pricing' + query;
+    case 'privacy':
+      return '/privacy' + query;
+    case 'terms':
+      return '/terms' + query;
     case 'login':
       return '/login' + query;
     case 'dashboard':
@@ -298,6 +312,7 @@ function App() {
     <Suspense fallback={null}>
       <TopProgressBar active={isPending} />
       <ImpersonationBanner onEnded={() => navigate('/admin/users')} />
+      {isPortalView && <LegalConsentGate activePage={activePage} onLogout={() => void handleLogout()} />}
 
       {/* If it's a logged-in view, show the Sidebar navigation */}
       {isPortalView && (
@@ -328,6 +343,8 @@ function App() {
         {activePage === 'google-callback' && <GoogleCallback setPage={navigate} />}
         {activePage === 'artisan-viewer' && <ArtisanViewer />}
         {activePage === 'pricing' && <PricingPage navigate={navigate} />}
+        {activePage === 'privacy' && <LegalPage doc="privacy" navigate={navigate} />}
+        {activePage === 'terms' && <LegalPage doc="terms" navigate={navigate} />}
 
         {/* Portal pages */}
         {activePage === 'dashboard' && <Dashboard setActivePage={navigate} projects={projects} />}

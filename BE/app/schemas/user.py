@@ -114,6 +114,13 @@ class UserDetailResponse(BaseModel):
     status: str
     member_since: datetime
     total_designs: int
+    # True until the user has agreed to the current Terms + Privacy Policy (LEGAL_VERSION);
+    # the web and mobile apps then ask once and POST /users/me/legal-consent.
+    legal_consent_required: bool = False
+
+
+class LegalConsentRequest(BaseModel):
+    channel: Literal["web", "mobile"] = "web"
 
 
 class UsageResponse(BaseModel):

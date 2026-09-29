@@ -46,7 +46,7 @@ from app.schemas.user import (
     UsageResponse,
     UserDetailResponse,
 )
-from app.services import data_import_service, quota_service
+from app.services import data_import_service, legal_service, quota_service
 from app.utils.password import hash_password, verify_password
 
 USERNAME_CHANGE_COOLDOWN_DAYS = 30
@@ -59,7 +59,18 @@ RESERVED_USERNAMES = {
 
 async def get_profile(db: AsyncSession, user) -> UserDetailResponse:
     total_designs = await project_repo.count_for_user(db, user.id)
-    return _to_detail(user, total_designs)
+    detail = _to_detail(user, total_designs)
+    detail.legal_consent_required = not await legal_service.has_current_legal_consent(
+        db, user.id
+    )
+    return detail
+
+
+async def accept_legal_documents(db: AsyncSession, user, channel: str) -> UserDetailResponse:
+    """POST /users/me/legal-consent: the one-time prompt for the current Terms + Privacy Policy."""
+    await legal_service.accept_current_documents(db, user.id, channel=channel)
+    await db.commit()
+    return await get_profile(db, user)
 
 
 async def update_profile(

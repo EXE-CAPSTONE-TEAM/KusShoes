@@ -64,8 +64,8 @@ export const Footer: React.FC<FooterProps> = ({ navigate }) => {
         {/* Col 4: Support & Security */}
         <div className={styles.footerLinkCol}>
           <h4>{t('footer.supportHeading')}</h4>
-          <a href="#terms" onClick={(e) => { e.preventDefault(); toast(t('footer.toastTermsComingSoon'), 'info'); }}>{t('footer.terms')}</a>
-          <a href="#privacy" onClick={(e) => { e.preventDefault(); toast(t('footer.toastPrivacyComingSoon'), 'info'); }}>{t('footer.privacy')}</a>
+          <a href="/terms" onClick={(e) => { e.preventDefault(); navigate('/terms'); }}>{t('footer.terms')}</a>
+          <a href="/privacy" onClick={(e) => { e.preventDefault(); navigate('/privacy'); }}>{t('footer.privacy')}</a>
           <a href="/pricing" onClick={handlePricingClick}>{t('footer.faqs')}</a>
         </div>
       </div>

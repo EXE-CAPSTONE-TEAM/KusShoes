@@ -23,6 +23,12 @@ export const GoogleCallback: React.FC<GoogleCallbackProps> = ({ setPage }) => {
     // Drop the token out of the URL/history immediately, whether or not it parsed.
     window.history.replaceState({}, '', '/auth/google/callback');
 
+    if (params.get('error') === 'AUTH_CONSENT_REQUIRED') {
+      // A Google account that is not a KusShoes user yet: sign-up needs the 18+ / Terms /
+      // Privacy tick first, so send them to the register tab to tick it and try Google again.
+      setPage('login?register=1&google_consent=1');
+      return;
+    }
     if (!accessToken) {
       setError('Google sign-in did not complete. Please try again.');
       return;

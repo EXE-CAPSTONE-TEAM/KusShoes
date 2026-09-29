@@ -108,6 +108,7 @@ async def register(
         utm_source=body.utm_source,
         utm_campaign=body.utm_campaign,
         referral_code=body.referral_code,
+        client=body.client,
     )
 
 
@@ -191,9 +192,14 @@ async def verify_two_factor_login(
 async def google_login(
     client: Literal["web", "mobile"] = "web",
     code_challenge: str | None = Query(default=None, pattern=r"^[A-Za-z0-9_-]{43}$"),
+    consent: bool = False,
     redis: aioredis.Redis = Depends(get_redis),
 ):
-    """Start Google sign-in. The mobile app passes `client=mobile` plus its PKCE S256 challenge."""
+    """Start Google sign-in. The mobile app passes `client=mobile` plus its PKCE S256 challenge.
+
+    `consent=true` means the user ticked the 18+ / Terms / Privacy box; without it a Google account
+    that is not yet a KusShoes user is refused (AUTH_CONSENT_REQUIRED) instead of created.
+    """
     if client == auth_service.GOOGLE_CLIENT_MOBILE and not code_challenge:
         raise RequestValidationError(
             [
@@ -206,7 +212,7 @@ async def google_login(
             ]
         )
     url = await auth_service.get_google_auth_url(
-        redis, client=client, code_challenge=code_challenge
+        redis, client=client, code_challenge=code_challenge, consent=consent
     )
     return RedirectResponse(url=url)
 
