@@ -312,6 +312,8 @@ const WebsiteShowcase: React.FC = () => {
                 src={active.img}
                 alt={t('showcase.screenshotAlt', { label: active.label })}
                 className={styles.browserScreenshot}
+                loading="lazy"
+                decoding="async"
                 initial={{ opacity: 0 }}
                 animate={{ opacity: 1 }}
                 exit={{ opacity: 0 }}
@@ -667,6 +669,7 @@ export const Landing: React.FC<LandingProps> = ({ navigate }) => {
                   src={theme === 'dark' ? '/KusShoes_Logo_Dark_Mode_cropped.png' : '/KusShoes_Logo_cropped.png'}
                   alt={t('products.mobileIconAlt')}
                   className={styles.productLogoImage}
+                  loading="lazy"
                 />
               </div>
               <h3 className={styles.productTitle}>{t('products.mobileTitle')}</h3>
@@ -677,6 +680,8 @@ export const Landing: React.FC<LandingProps> = ({ navigate }) => {
                 src={mobileMockup}
                 alt={t('products.mobileScreenshotAlt')}
                 className={styles.mobileProductImage}
+                loading="lazy"
+                decoding="async"
               />
             </div>
           </motion.div>
@@ -798,7 +803,13 @@ export const Landing: React.FC<LandingProps> = ({ navigate }) => {
                     <div
                       className={`${styles.stepVisual} ${step.dashed ? styles.stepVisualDashed : ''}`}
                     >
-                      <img src={step.image} alt={step.imageAlt} className={styles.stepImage} />
+                      <img
+                        src={step.image}
+                        alt={step.imageAlt}
+                        className={styles.stepImage}
+                        loading="lazy"
+                        decoding="async"
+                      />
                       <span
                         className={`${styles.stepCornerBadge} ${step.swatches ? styles.stepCornerBadgeAccent : ''}`}
                       >
@@ -914,7 +925,7 @@ export const Landing: React.FC<LandingProps> = ({ navigate }) => {
           >
             <div className={styles.trustAvatars}>
               {trustAvatars.map((src, i) => (
-                <img key={i} src={src} alt="" className={styles.trustAvatarImg} />
+                <img key={i} src={src} alt="" className={styles.trustAvatarImg} loading="lazy" />
               ))}
               <span className={styles.trustAvatarMore}>+980</span>
             </div>
@@ -1000,7 +1011,12 @@ export const Landing: React.FC<LandingProps> = ({ navigate }) => {
               >
                 <p className={styles.testimonialQuote}>&ldquo;{t.quote}&rdquo;</p>
                 <div className={styles.testimonialAuthor}>
-                  <img src={t.avatar} alt={t.name} className={styles.testimonialAvatar} />
+                  <img
+                    src={t.avatar}
+                    alt={t.name}
+                    className={styles.testimonialAvatar}
+                    loading="lazy"
+                  />
                   <div className={styles.testimonialAuthorText}>
                     <span className={styles.testimonialName}>{t.name}</span>
                     <span className={styles.testimonialHandle}>{t.handle}</span>
