@@ -518,9 +518,17 @@ export const Landing: React.FC<LandingProps> = ({ navigate }) => {
     { label: t('socialProof.tickerLidar') },
   ];
 
+  // Yearly plans exist in the backend but can be deactivated for a given term (BR-93) —
+  // only offer the toggle when there's an active yearly plan to actually switch to, otherwise
+  // paid tiers would vanish from the grid with nothing left to pick from.
+  const hasAnnualPlans = useMemo(
+    () => (apiPlans ?? []).some((plan) => plan.billing_cycle === 'yearly'),
+    [apiPlans],
+  );
+
   // Prices and limits come from /api/v1/plans; only the marketing name/blurb per tier is copy.
   const plans = useMemo(() => {
-    const cycle = isAnnual ? 'yearly' : 'monthly';
+    const cycle = isAnnual && hasAnnualPlans ? 'yearly' : 'monthly';
     const copyTiers = ['free', 'basic', 'pro'];
     return (apiPlans ?? [])
       .filter((plan) => plan.billing_cycle === null || plan.billing_cycle === cycle)
@@ -548,7 +556,7 @@ export const Landing: React.FC<LandingProps> = ({ navigate }) => {
           popular: plan.tier === 'basic',
         };
       });
-  }, [apiPlans, isAnnual, t, tPricing]);
+  }, [apiPlans, isAnnual, hasAnnualPlans, t, tPricing]);
 
   const formatPrice = (val: number) => {
     if (val === 0) return '0 VNĐ';
@@ -1025,17 +1033,19 @@ export const Landing: React.FC<LandingProps> = ({ navigate }) => {
             {t('pricingSection.subtitle')}
           </motion.p>
 
-          {/* Toggle billing */}
-          <div className={styles.toggleContainer}>
-            <span className={!isAnnual ? styles.activePeriod : ''}>{t('pricingSection.monthly')}</span>
-            <button
-              className={`${styles.toggleSwitch} ${isAnnual ? styles.switchActive : ''}`}
-              onClick={() => setIsAnnual(!isAnnual)}
-            >
-              <div className={styles.switchKnob} />
-            </button>
-            <span className={isAnnual ? styles.activePeriod : ''}>{t('pricingSection.annually')}</span>
-          </div>
+          {/* Toggle billing — only shown when yearly plans are actually on sale */}
+          {hasAnnualPlans && (
+            <div className={styles.toggleContainer}>
+              <span className={!isAnnual ? styles.activePeriod : ''}>{t('pricingSection.monthly')}</span>
+              <button
+                className={`${styles.toggleSwitch} ${isAnnual ? styles.switchActive : ''}`}
+                onClick={() => setIsAnnual(!isAnnual)}
+              >
+                <div className={styles.switchKnob} />
+              </button>
+              <span className={isAnnual ? styles.activePeriod : ''}>{t('pricingSection.annually')}</span>
+            </div>
+          )}
         </div>
 
         <div className={styles.pricingGrid}>

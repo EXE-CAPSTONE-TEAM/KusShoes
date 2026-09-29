@@ -25,12 +25,20 @@ export const PricingPage: React.FC<PricingPageProps> = ({ navigate }) => {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
+  // Yearly plans exist in the backend but can be deactivated for a given term (BR-93) —
+  // only offer the toggle when there's an active yearly plan to actually switch to, otherwise
+  // paid tiers would vanish from the grid with nothing left to pick from.
+  const hasAnnualPlans = useMemo(
+    () => plans.some((plan) => plan.billing_cycle === 'yearly'),
+    [plans],
+  );
+
   const visiblePlans = useMemo(() => {
-    const cycle = isAnnual ? 'yearly' : 'monthly';
+    const cycle = isAnnual && hasAnnualPlans ? 'yearly' : 'monthly';
     return plans
       .filter((plan) => plan.billing_cycle === null || plan.billing_cycle === cycle)
       .sort((a, b) => a.price_vnd - b.price_vnd);
-  }, [plans, isAnnual]);
+  }, [plans, isAnnual, hasAnnualPlans]);
 
   const comparisons = useMemo(() => [
     {
@@ -125,17 +133,19 @@ export const PricingPage: React.FC<PricingPageProps> = ({ navigate }) => {
         <h1 className={styles.title}>{t('title')}</h1>
         <p className={styles.desc}>{t('desc')}</p>
 
-        {/* Toggle billing */}
-        <div className={styles.toggleContainer}>
-          <span className={!isAnnual ? styles.activePeriod : ''}>{t('billMonthly')}</span>
-          <button
-            className={`${styles.toggleSwitch} ${isAnnual ? styles.switchActive : ''}`}
-            onClick={() => setIsAnnual(!isAnnual)}
-          >
-            <div className={styles.switchKnob} />
-          </button>
-          <span className={isAnnual ? styles.activePeriod : ''}>{t('billAnnually')}</span>
-        </div>
+        {/* Toggle billing — only shown when yearly plans are actually on sale */}
+        {hasAnnualPlans && (
+          <div className={styles.toggleContainer}>
+            <span className={!isAnnual ? styles.activePeriod : ''}>{t('billMonthly')}</span>
+            <button
+              className={`${styles.toggleSwitch} ${isAnnual ? styles.switchActive : ''}`}
+              onClick={() => setIsAnnual(!isAnnual)}
+            >
+              <div className={styles.switchKnob} />
+            </button>
+            <span className={isAnnual ? styles.activePeriod : ''}>{t('billAnnually')}</span>
+          </div>
+        )}
       </section>
 
       {/* Pricing Grid */}
