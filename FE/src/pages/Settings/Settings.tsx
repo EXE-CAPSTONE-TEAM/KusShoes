@@ -371,6 +371,7 @@ export const Settings: React.FC<SettingsProps> = ({
                           { value: 'vi', label: t('settings.profile.languageViOption') },
                         ]}
                         ariaLabel={t('settings.profile.language')}
+                        triggerClassName={styles.selectTrigger}
                       />
                     </div>
                     <div className={styles.inputGroup}>
