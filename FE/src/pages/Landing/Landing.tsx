@@ -1,4 +1,4 @@
-import React, { useState, useRef, useEffect, useMemo } from 'react';
+import React, { useState, useRef, useEffect, useLayoutEffect, useMemo } from 'react';
 import {
   Monitor,
   Check,
@@ -31,6 +31,10 @@ import projectsShowcase from '../../assets/showcase/projects-screenshot.png';
 import mobileScan from '../../assets/showcase/mobile-scan.png';
 import mobileMockup from '../../assets/kusshoes-mobile-mockup.jpg';
 import sneakerHero from '../../assets/sneaker-hero.png';
+import heroEdgeLeft from '../../assets/edge-art/hero-left.png';
+import heroEdgeLeftDark from '../../assets/edge-art/hero-left-dark.png';
+import heroEdgeRight from '../../assets/edge-art/hero-right.png';
+import heroEdgeRightDark from '../../assets/edge-art/hero-right-dark.png';
 import galleryClassicOrange from '../../assets/gallery/classic-orange-studio.png';
 import galleryInvertedBlock from '../../assets/gallery/inverted-block-studio.png';
 import galleryStreetGraffiti from '../../assets/gallery/street-graffiti-skate.png';
@@ -47,6 +51,8 @@ import galleryStudioClassic from '../../assets/gallery/studio-classic-angle.png'
 import galleryBlockEdition from '../../assets/gallery/block-edition-single.png';
 import galleryDetailFocus from '../../assets/gallery/detail-focus-single.png';
 import galleryTagDetail from '../../assets/gallery/tag-detail-pair.png';
+import { addBootTask, preloadImage } from '../../boot/boot';
+import { useBootDone } from '../../boot/useBootDone';
 import styles from './Landing.module.css';
 
 // Scroll-triggered reveal: headings stay hidden (blurred, offset, transparent) until they
@@ -360,7 +366,7 @@ const StatCounter: React.FC<StatCounterProps> = ({ target, decimals = 0, suffix 
   );
 };
 
-const TypewriterHeadline: React.FC = () => {
+const TypewriterHeadline: React.FC<{ start: boolean }> = ({ start }) => {
   const [line1Done, setLine1Done] = useState(false);
   const [line2Done, setLine2Done] = useState(false);
 
@@ -400,7 +406,7 @@ const TypewriterHeadline: React.FC = () => {
         className={styles.typewriterLine}
         variants={container1}
         initial="hidden"
-        animate="visible"
+        animate={start ? 'visible' : undefined}
         onAnimationComplete={() => setLine1Done(true)}
       >
         {'SCAN WITH '.split('').map((char, index) => (
@@ -424,7 +430,7 @@ const TypewriterHeadline: React.FC = () => {
         className={styles.typewriterLine}
         variants={container2}
         initial="hidden"
-        animate="visible"
+        animate={start ? 'visible' : undefined}
         onAnimationComplete={() => setLine2Done(true)}
       >
         {'DESIGN IN '.split('').map((char, index) => (
@@ -453,6 +459,22 @@ interface LandingProps {
 export const Landing: React.FC<LandingProps> = ({ navigate }) => {
   const { t } = useTranslation('landing');
   const { theme } = useTheme();
+  const bootReady = useBootDone();
+
+  // First-screen assets the boot loader waits for: the current theme's hero edge art (hidden
+  // below 1100px, so skipped there) and the navbar logo. Failures resolve, never block.
+  useLayoutEffect(() => {
+    const logo =
+      theme === 'dark' ? '/KusShoes_Logo_Dark_Mode_cropped.png' : '/KusShoes_Logo_cropped.png';
+    addBootTask(preloadImage(logo));
+    if (window.matchMedia?.('(min-width: 1101px)').matches) {
+      const dark = theme === 'dark';
+      addBootTask(preloadImage(dark ? heroEdgeLeftDark : heroEdgeLeft));
+      addBootTask(preloadImage(dark ? heroEdgeRightDark : heroEdgeRight));
+    }
+    // Registered once for the theme the page first renders with.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
   const [isAnnual, setIsAnnual] = useState(false);
   const { t: tPricing } = useTranslation('pricing');
   const [apiPlans, setApiPlans] = useState<Plan[] | null>(null);
@@ -587,11 +609,11 @@ export const Landing: React.FC<LandingProps> = ({ navigate }) => {
         <motion.div
           className={styles.heroContent}
           initial={{ opacity: 0, y: 30 }}
-          animate={{ opacity: 1, y: 0 }}
+          animate={bootReady ? { opacity: 1, y: 0 } : undefined}
           transition={{ duration: 0.8 }}
         >
           <span className={styles.heroBadge}>{t('hero.badge')}</span>
-          <TypewriterHeadline />
+          <TypewriterHeadline start={bootReady} />
           <p className={styles.heroDesc}>{t('hero.desc')}</p>
           <div className={styles.heroActions}>
             <button

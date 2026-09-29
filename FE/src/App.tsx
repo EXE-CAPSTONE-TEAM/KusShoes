@@ -1,4 +1,5 @@
 import { useState, useEffect } from 'react';
+import { markAppMounted } from './boot/boot';
 import { Landing } from './pages/Landing/Landing';
 import { Login } from './pages/Login/Login';
 import { GoogleCallback } from './pages/Login/GoogleCallback';
@@ -112,6 +113,8 @@ function App() {
   const [projects, setProjects] = useState<PortalProject[]>([]);
   const [projectsLoading, setProjectsLoading] = useState(false);
   const [projectsError, setProjectsError] = useState('');
+
+  useEffect(() => markAppMounted(), []);
 
   // Intercept state changes and push history
   const navigate = (pageOrPath: string) => {
