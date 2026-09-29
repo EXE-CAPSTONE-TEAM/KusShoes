@@ -16,6 +16,11 @@ jobs:
     runs-on: ubuntu-latest
     env:
       REGISTRY_IMAGE: ${{ secrets.BACKEND_REGISTRY_IMAGE }}
+      # Postgres is behind the `local-db` profile and the override points api/worker/beat at it
+      # (same as `make up-local-db`); .env.example's DATABASE_URL is a Neon placeholder.
+      # Applies to every `docker compose` call below: up, exec and down.
+      COMPOSE_FILE: docker-compose.yml:docker-compose.local-db.yml
+      COMPOSE_PROFILES: local-db
     steps:
       - uses: actions/checkout@v4
 
