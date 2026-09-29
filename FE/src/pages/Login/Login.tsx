@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { Mail, Lock, ArrowLeft, CheckCircle2, UserPlus, LogIn, Eye, EyeOff, CheckSquare, Square, UserRound, KeyRound, ShieldCheck, AlertCircle, Info } from 'lucide-react';
+import { Mail, Lock, ArrowLeft, CheckCircle2, UserPlus, LogIn, Eye, EyeOff, UserRound, KeyRound, ShieldCheck, AlertCircle, Info } from 'lucide-react';
 import { motion } from 'framer-motion';
 import { useTranslation } from 'react-i18next';
 import { api, ApiError } from '../../api/client';
@@ -14,6 +14,7 @@ import {
   type RegisterFieldErrors,
   type LoginFieldErrors,
 } from '../../utils/authValidation';
+import { ConsentCheckbox } from '../../components/LegalConsentGate/ConsentCheckbox';
 import { LoginArt } from './LoginArt';
 import { AccountRecovery, type RecoveryMode } from './AccountRecovery';
 import styles from './Login.module.css';
@@ -25,7 +26,10 @@ interface LoginProps {
 export const Login: React.FC<LoginProps> = ({ setPage }) => {
   const { t } = useTranslation('auth');
   const { theme } = useTheme();
-  const [isLoginTab, setIsLoginTab] = useState(true);
+  // /login?register=1 opens the register tab (e.g. a new Google account that still has to consent).
+  const [isLoginTab, setIsLoginTab] = useState(
+    () => new URLSearchParams(window.location.search).get('register') !== '1',
+  );
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [confirmPassword, setConfirmPassword] = useState('');
@@ -49,7 +53,11 @@ export const Login: React.FC<LoginProps> = ({ setPage }) => {
   const [resending, setResending] = useState(false);
   const [success, setSuccess] = useState(false);
   const [error, setError] = useState('');
-  const [notice, setNotice] = useState('');
+  const [notice, setNotice] = useState(() =>
+    new URLSearchParams(window.location.search).get('google_consent') === '1'
+      ? t('login.googleConsentNeeded')
+      : '',
+  );
   const [fieldErrors, setFieldErrors] = useState<RegisterFieldErrors & LoginFieldErrors>({});
 
   // Password strength state
@@ -651,17 +659,11 @@ export const Login: React.FC<LoginProps> = ({ setPage }) => {
                 </>
               ) : (
                 <div className={styles.forgotRow} style={{ marginTop: '4px' }}>
-                  <label
+                  <ConsentCheckbox
                     className={styles.rememberMe}
-                    onClick={() => setAgreeTerms(!agreeTerms)}
-                  >
-                    {agreeTerms ? (
-                      <CheckSquare size={16} className={styles.checkboxIconActive} />
-                    ) : (
-                      <Square size={16} className={styles.checkboxIcon} />
-                    )}
-                    <span>{t('login.agreeTermsCheckbox')}</span>
-                  </label>
+                    checked={agreeTerms}
+                    onChange={setAgreeTerms}
+                  />
                 </div>
               )}
 
@@ -694,7 +696,15 @@ export const Login: React.FC<LoginProps> = ({ setPage }) => {
             <button
               className={styles.googleBtn} style={{ marginTop: '16px' }}
               type="button"
-              onClick={() => api.startGoogleLogin()}
+              onClick={() => {
+                // Creating an account with Google needs the same 18+ / Terms / Privacy tick;
+                // signing in to an existing account does not.
+                if (!isLoginTab && !agreeTerms) {
+                  setError(t('login.agreeTermsRequired'));
+                  return;
+                }
+                api.startGoogleLogin({ consent: !isLoginTab && agreeTerms });
+              }}
             >
               <svg className={styles.googleIcon} viewBox="0 0 48 48" width="18" height="18" aria-hidden="true">
                 <path fill="#EA4335" d="M24 9.5c3.54 0 6.71 1.22 9.21 3.6l6.85-6.85C35.9 2.38 30.47 0 24 0 14.62 0 6.51 5.38 2.56 13.22l7.98 6.19C12.43 13.72 17.74 9.5 24 9.5z"/>

@@ -1,0 +1,266 @@
+{
+  "privacy": {
+    "title": "Privacy Policy",
+    "intro": "This policy explains what KusShoes collects when you use kusshoes.vercel.app, the KusShoes Android app (vn.kusshoes.mobile) and KusStudio Desktop (KusShoes Editor), what we use it for, who we share it with, how long we keep it and what rights you have. The Vietnamese version prevails if the two differ.",
+    "sections": [
+      {
+        "id": "operator",
+        "title": "1. Who is responsible for your data",
+        "body": [
+          "KusShoes is a project of a student team at FPT University, Ho Chi Minh City campus, and is not a registered legal entity. Address: Lot E2a-7, D1 Street, Saigon Hi-Tech Park, Tang Nhon Phu Ward, Ho Chi Minh City, Vietnam. Email: kusshoes@gmail.com."
+        ]
+      },
+      {
+        "id": "collect",
+        "title": "2. Data we collect",
+        "body": [
+          "Data you provide:",
+          [
+            "Account: email, password (stored only as a one-way bcrypt hash that we cannot read), name, username.",
+            "Profile (optional): avatar, phone number, bio, studio details, social media handles, language and style preferences.",
+            "Security (if you enable it): two-factor authentication settings, recovery email.",
+            "Content: shoe scan videos, 3D models reconstructed from them, designs (stickers, text, colours), project thumbnails and the files you export.",
+            "Feedback and abuse reports you send us."
+          ],
+          "Data recorded automatically:",
+          [
+            "Sign-in history: time, IP address, browser/device type, success or failure.",
+            "If you sign in with Google: your Google account ID, email and name from your Google profile.",
+            "Referral source, if any (UTM parameters, referral code).",
+            "Plan and invoice details: plan, amount, payment status. We never receive or store your card or bank account details."
+          ],
+          "The Android app only asks for Camera (to record the shoe video) and Internet. Videos are recorded without sound."
+        ]
+      },
+      {
+        "id": "purpose",
+        "title": "3. What we use data for",
+        "body": [
+          [
+            "Creating and running your account: sign-in, two-factor authentication, password recovery.",
+            "Reconstructing 3D models from scan videos, storing and showing your projects on the web, the Android app and KusStudio Desktop.",
+            "Processing payments, invoices, renewal reminders and refunds.",
+            "Sending account emails: verification codes, password resets, invoices, renewal reminders.",
+            "Protecting the service: detecting unusual sign-ins, preventing abuse, handling abuse reports and copyright complaints."
+          ],
+          "We do not use advertising cookies or third-party trackers, we do not sell your data, and we do not send marketing emails. If we ever want analytics or marketing emails, we will update this policy and ask for your consent first.",
+          "We do not use your videos, models or designs for advertising or to train artificial intelligence unless you consent separately in each case."
+        ]
+      },
+      {
+        "id": "basis",
+        "title": "4. Legal basis",
+        "body": [
+          "We process data based on the consent you give at sign-up (ticking the box confirming you are 18 or older and agree to the Terms of Service and this Policy) and to provide the service you asked for. You can withdraw consent at any time (section 10); we then cannot keep providing the parts of the service that need that data."
+        ]
+      },
+      {
+        "id": "share",
+        "title": "5. Who we share data with",
+        "body": [
+          "We use the providers below to run the service. Each receives only what it needs:",
+          [
+            "KIRI Engine (KIRI Innovation): receives your scan video to reconstruct the 3D model. Videos are processed on KIRI servers outside Vietnam under their policy: https://www.kiriengine.app/privacy-policy. As soon as KIRI accepts a video, we delete our copy.",
+            "Neon: database (servers in Singapore).",
+            "Google Cloud Platform: application server (Singapore).",
+            "Cloudflare R2: file storage (videos before they go to KIRI, 3D models, images, exports).",
+            "Vercel: hosts the website.",
+            "Google: Sign in with Google (if you choose it).",
+            "Gmail (Google): sends you email.",
+            "PayOS: payment processing; payment details you enter are handled directly by PayOS and your bank."
+          ],
+          "International transfers: most of these providers operate servers outside Vietnam (Singapore and other countries), so your data is transferred and processed abroad. By agreeing to this Policy you consent to that transfer for running the service.",
+          "We disclose data to authorities only when legally required under Vietnamese law.",
+          "When you create a share link or QR code (Artisan), anyone with the link can view and download the shared model until you revoke the link on the project page."
+        ]
+      },
+      {
+        "id": "google",
+        "title": "6. Data from your Google account",
+        "body": [
+          "When you choose \"Sign in with Google\", KusShoes only requests the openid, email and profile scopes. From Google we receive and store your Google account ID, email address, first name and last name. We do not store your Google profile picture and do not access Gmail, Drive, contacts or any other Google data.",
+          "This data is used only to create your KusShoes account, sign you in and show your name in the app. It is stored in the KusShoes database (Neon, Singapore) and is not shared with anyone other than the infrastructure providers in section 5; it is not sold, not used for advertising and not used to train artificial intelligence.",
+          "KusShoes' use of information received from Google APIs adheres to the Google API Services User Data Policy, including the Limited Use requirements.",
+          "You can disconnect KusShoes from your Google account at https://myaccount.google.com/permissions. When you delete your KusShoes account this data is deleted or anonymised as described in section 7."
+        ]
+      },
+      {
+        "id": "retention",
+        "title": "7. How long we keep data",
+        "body": [
+          [
+            "Account and project data: for as long as you use the service.",
+            "Scan videos: deleted from our storage as soon as KIRI Engine accepts them for processing.",
+            "Sign-in history (with IP): 90 days, then deleted automatically.",
+            "Projects you delete: kept in Trash for 30 days so you can restore them, then permanently deleted with their files.",
+            "Accounts you delete: restorable for 30 days; after that all projects and files are deleted and the personal data in the account is anonymised.",
+            "Invoices: kept for accounting obligations even after your account is deleted."
+          ]
+        ]
+      },
+      {
+        "id": "security",
+        "title": "8. Security",
+        "body": [
+          "All connections use HTTPS. Passwords are stored as one-way bcrypt hashes. Your files are stored on Cloudflare R2 under random, unguessable names. You can enable two-factor authentication. No system is perfectly secure; if a data breach affects you, we will notify you and the competent authorities as required by law."
+        ]
+      },
+      {
+        "id": "age",
+        "title": "9. Age",
+        "body": [
+          "The service is for people aged 18 or older. We do not knowingly collect data from anyone under 18. If you know that someone under 18 created an account, email us and we will delete that account and its data."
+        ]
+      },
+      {
+        "id": "rights",
+        "title": "10. Your rights",
+        "body": [
+          "Under Vietnamese personal data protection law you have the right to:",
+          [
+            "Be informed about how your data is processed (this Policy).",
+            "View and correct your personal information in Account settings.",
+            "Download a copy of your data (Settings → Privacy → Export data).",
+            "Delete your account (Settings → Privacy → Delete account) or ask us to delete part of your data.",
+            "Withdraw consent, object to or ask us to restrict processing.",
+            "Complain, report and claim compensation as provided by law."
+          ],
+          "For anything you cannot do in the app, email kusshoes@gmail.com from your account email. We respond within 7 working days."
+        ]
+      },
+      {
+        "id": "changes",
+        "title": "11. Changes",
+        "body": [
+          "For material changes we will notify you in the app or by email and ask you to agree again before you continue. The version and effective date are shown at the top of this page."
+        ]
+      },
+      {
+        "id": "contact",
+        "title": "12. Contact",
+        "body": [
+          "Privacy questions: kusshoes@gmail.com. KusShoes is a project of a student team at FPT University, Ho Chi Minh City campus, and is not a registered legal entity. Address: Lot E2a-7, D1 Street, Saigon Hi-Tech Park, Tang Nhon Phu Ward, Ho Chi Minh City, Vietnam. Email: kusshoes@gmail.com."
+        ]
+      }
+    ]
+  },
+  "terms": {
+    "title": "Terms of Service",
+    "intro": "These Terms are an agreement between you and KusShoes for using kusshoes.vercel.app, the KusShoes Android app and KusStudio Desktop (together, the \"Service\"). By ticking the consent box at sign-up or continuing to use the Service, you accept these Terms and the Privacy Policy. The Vietnamese version prevails if the two differ.",
+    "sections": [
+      {
+        "id": "operator",
+        "title": "1. About KusShoes",
+        "body": [
+          "KusShoes is a project of a student team at FPT University, Ho Chi Minh City campus, and is not a registered legal entity. Address: Lot E2a-7, D1 Street, Saigon Hi-Tech Park, Tang Nhon Phu Ward, Ho Chi Minh City, Vietnam. Email: kusshoes@gmail.com.",
+          "The Service is in beta; features may change, pause or break."
+        ]
+      },
+      {
+        "id": "service",
+        "title": "2. The Service",
+        "body": [
+          "KusShoes lets you record a 360° video of a shoe with the Android app, reconstruct a 3D model through the KIRI Engine service, save it as a project, view and manage it on the web, then edit it (crop the model, add stickers and text) and export GLB/OBJ files with KusStudio Desktop on Windows.",
+          "Model quality depends on the scan video (lighting, angles, shoe surface) and on KIRI Engine; we do not guarantee that every scan produces a usable result."
+        ]
+      },
+      {
+        "id": "account",
+        "title": "3. Your account",
+        "body": [
+          [
+            "You must be 18 or older.",
+            "Registration details must be accurate; one account per person.",
+            "You are responsible for keeping your password secret and for all activity under your account. Tell us immediately about any unauthorised access."
+          ]
+        ]
+      },
+      {
+        "id": "plans",
+        "title": "4. Plans and payment",
+        "body": [
+          [
+            "There is a free plan and monthly paid plans; prices and entitlements are those listed on the Pricing page (https://kusshoes.vercel.app/pricing) when you buy.",
+            "Payments go through PayOS. We do not store cards and never auto-renew: before a plan expires you get a reminder email and decide whether to renew.",
+            "Single scan credits are valid for 12 months from purchase."
+          ]
+        ]
+      },
+      {
+        "id": "refund",
+        "title": "5. Refunds",
+        "body": [
+          [
+            "Full refund if you paid but the plan was not activated because of a system error, or you were charged twice for the same transaction.",
+            "Full refund if you ask within 7 days of payment and have not used any paid entitlement of the plan (no scans or exports counted against the plan).",
+            "Otherwise we do not refund time already used. Used scan credits are not refundable.",
+            "Send refund requests to kusshoes@gmail.com with the invoice number. We process them within 7 working days and refund through the channel you paid with (PayOS)."
+          ]
+        ]
+      },
+      {
+        "id": "content",
+        "title": "6. Your content",
+        "body": [
+          "You keep full ownership of your videos, 3D models and designs. You allow KusShoes to store, process (including sending videos to KIRI Engine for reconstruction) and display that content as needed to provide the Service to you, and to show it to others when you share it by link or QR code. This permission ends when you delete the content or your account (per section 7 of the Privacy Policy).",
+          "We do not use your content for advertising, showcases or AI training without your separate consent.",
+          "You confirm you have the rights to what you upload and are responsible if your designs use trademarks, logos, images or works of others (for example a shoe brand logo) without permission."
+        ]
+      },
+      {
+        "id": "rules",
+        "title": "7. Prohibited use",
+        "body": [
+          [
+            "Uploading or sharing content that breaks Vietnamese law, infringes intellectual property or privacy, or is sexually explicit, violent, inciting or hateful.",
+            "Recording other people or their personal information without their consent.",
+            "Attempting unauthorised access, scanning, overloading or disrupting the Service; using automation to abuse quotas.",
+            "Selling or transferring accounts, or using the Service for fraud."
+          ]
+        ]
+      },
+      {
+        "id": "moderation",
+        "title": "8. Moderation and copyright complaints",
+        "body": [
+          "When a valid abuse report or copyright complaint reaches kusshoes@gmail.com, we review it and may remove the content. Violations are handled in three steps, none skipped: (1) warning; (2) no public sharing for 30 days; (3) account suspension."
+        ]
+      },
+      {
+        "id": "termination",
+        "title": "9. Termination",
+        "body": [
+          "You can delete your account at any time in Settings → Privacy; it can be restored for 30 days, after which data is deleted per the Privacy Policy. We may suspend or terminate accounts that break these Terms under section 8."
+        ]
+      },
+      {
+        "id": "liability",
+        "title": "10. Limitation of liability",
+        "body": [
+          "The Service is provided as is during beta. To the extent permitted by law, KusShoes is not liable for indirect damages from service interruptions, failures of third-party services (such as KIRI Engine or PayOS) or 3D model quality. Our liability for any payment is limited to the amount you paid for it. Nothing here limits your rights as a consumer under Vietnamese law."
+        ]
+      },
+      {
+        "id": "law",
+        "title": "11. Governing law and disputes",
+        "body": [
+          "These Terms are governed by Vietnamese law. Disputes are first negotiated via kusshoes@gmail.com; failing that, either party may bring them before the competent court in Ho Chi Minh City."
+        ]
+      },
+      {
+        "id": "changes",
+        "title": "12. Changes",
+        "body": [
+          "For material changes we will notify you in the app or by email and ask you to agree again before you continue."
+        ]
+      },
+      {
+        "id": "contact",
+        "title": "13. Contact",
+        "body": [
+          "kusshoes@gmail.com. KusShoes is a project of a student team at FPT University, Ho Chi Minh City campus, and is not a registered legal entity. Address: Lot E2a-7, D1 Street, Saigon Hi-Tech Park, Tang Nhon Phu Ward, Ho Chi Minh City, Vietnam. Email: kusshoes@gmail.com."
+        ]
+      }
+    ]
+  }
+}
