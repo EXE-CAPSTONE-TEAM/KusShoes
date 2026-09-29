@@ -78,6 +78,8 @@ async def create_payment(
 
 def verify_ipn_signature(payload: dict) -> None:
     """Raises MoMoSignatureError if the IPN signature doesn't match."""
+    if not settings.MOMO_SECRET_KEY or not settings.MOMO_ACCESS_KEY:
+        raise MoMoSignatureError("MoMo secret key or access key is not configured")
     signature = payload.get("signature")
     expected = _sign(_IPN_SIGNATURE_FIELDS, {**payload, "accessKey": settings.MOMO_ACCESS_KEY}, settings.MOMO_SECRET_KEY)
     if not signature or not hmac.compare_digest(expected, signature):

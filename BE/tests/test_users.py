@@ -132,3 +132,62 @@ async def test_soft_delete_user_blocks_token(client, auth_headers):
     assert response.status_code == 200
     response = await client.get("/api/v1/users/me", headers=auth_headers)
     assert response.status_code == 401
+
+
+@pytest.mark.asyncio
+async def test_avatar_upload_validation(client, auth_headers, authenticated_user):
+    from app.infrastructure.storage import ObjectMetadata, ObjectNotFoundError
+
+    # 1. Foreign avatar path rejected
+    res = await client.patch(
+        "/api/v1/users/me",
+        headers=auth_headers,
+        json={"avatar_path": "avatars/other-user-uuid/photo.jpg"},
+    )
+    assert res.status_code == 422
+
+    # 2. Storage file not found rejected
+    with patch("app.infrastructure.storage.get_object_metadata", side_effect=ObjectNotFoundError("not found")):
+        res = await client.patch(
+            "/api/v1/users/me",
+            headers=auth_headers,
+            json={"avatar_path": f"avatars/{authenticated_user.id}/photo.jpg"},
+        )
+        assert res.status_code == 422
+
+    # 3. File exceeding 5MB rejected
+    with patch(
+        "app.infrastructure.storage.get_object_metadata",
+        return_value=ObjectMetadata(size_bytes=6 * 1024 * 1024, content_type="image/jpeg", etag=None),
+    ), patch("app.infrastructure.storage.read_object_prefix", return_value=b"\xff\xd8\xff"):
+        res = await client.patch(
+            "/api/v1/users/me",
+            headers=auth_headers,
+            json={"avatar_path": f"avatars/{authenticated_user.id}/photo.jpg"},
+        )
+        assert res.status_code == 422
+
+    # 4. Invalid magic bytes rejected
+    with patch(
+        "app.infrastructure.storage.get_object_metadata",
+        return_value=ObjectMetadata(size_bytes=1000, content_type="image/jpeg", etag=None),
+    ), patch("app.infrastructure.storage.read_object_prefix", return_value=b"NOT_AN_IMAGE_FILE"):
+        res = await client.patch(
+            "/api/v1/users/me",
+            headers=auth_headers,
+            json={"avatar_path": f"avatars/{authenticated_user.id}/photo.jpg"},
+        )
+        assert res.status_code == 422
+
+    # 5. Valid avatar accepted
+    with patch(
+        "app.infrastructure.storage.get_object_metadata",
+        return_value=ObjectMetadata(size_bytes=1000, content_type="image/png", etag=None),
+    ), patch("app.infrastructure.storage.read_object_prefix", return_value=b"\x89PNG\r\n\x1a\n"):
+        res = await client.patch(
+            "/api/v1/users/me",
+            headers=auth_headers,
+            json={"avatar_path": f"avatars/{authenticated_user.id}/photo.png"},
+        )
+        assert res.status_code == 200
+        assert res.json()["avatar_path"] == f"avatars/{authenticated_user.id}/photo.png"
