@@ -1,3 +1,4 @@
+import { addBootTask, finishBoot } from './boot/boot'
 import { StrictMode } from 'react'
 import { createRoot } from 'react-dom/client'
 import { I18nextProvider } from 'react-i18next'
@@ -10,6 +11,9 @@ import { ErrorBoundary } from './components/Layout/ErrorBoundary.tsx'
 import { initSentry } from './monitoring/sentry.ts'
 
 initSentry()
+
+addBootTask(document.fonts.ready)
+void finishBoot()
 
 // Wait for i18next to finish (translations + language detection) before the first render, so
 // no component can ever render mid-init and see a half-ready `t()`.

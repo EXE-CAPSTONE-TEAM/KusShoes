@@ -9,13 +9,14 @@ from app.database import get_db
 from app.dependencies import get_current_user, get_redis
 from app.schemas.moderation import ContentReportAccepted, ContentReportCreate, MyModerationStatus
 from app.services import moderation_service
+from app.utils.http import get_client_ip
 
 public_router = APIRouter()
 router = APIRouter()
 
 
 def _client_ip(request: Request) -> str:
-    return request.client.host if request.client else "unknown"
+    return get_client_ip(request)
 
 
 @public_router.post("/content-reports", response_model=ContentReportAccepted, status_code=202)

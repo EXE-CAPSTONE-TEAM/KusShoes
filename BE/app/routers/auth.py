@@ -50,6 +50,7 @@ from app.schemas.auth import (
     TwoFactorLoginVerifyRequest,
 )
 from app.services import auth_service
+from app.utils.http import get_client_ip
 
 router = APIRouter()
 
@@ -464,7 +465,7 @@ async def create_desktop_session(
 
 
 def _client_ip(request: Request) -> str:
-    return request.client.host if request.client else "unknown"
+    return get_client_ip(request)
 
 
 @router.post(

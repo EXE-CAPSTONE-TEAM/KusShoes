@@ -17,8 +17,18 @@ from httpx import ASGITransport, AsyncClient
 from sqlalchemy.ext.asyncio import async_sessionmaker, create_async_engine
 from sqlalchemy.pool import NullPool
 
+from app.config import settings
 from app.database import get_db
 from app.main import app
+
+if not settings.PAYOS_CHECKSUM_KEY:
+    settings.PAYOS_CHECKSUM_KEY = "test_payos_checksum_key_for_testing"
+if not settings.MOMO_SECRET_KEY:
+    settings.MOMO_SECRET_KEY = "test_momo_secret_key_for_testing"
+if not settings.MOMO_ACCESS_KEY:
+    settings.MOMO_ACCESS_KEY = "test_momo_access_key_for_testing"
+if not settings.MOMO_PARTNER_CODE:
+    settings.MOMO_PARTNER_CODE = "MOMO_TEST"
 
 # ── Test DB ──────────────────────────────────────────────────────────────────
 # Defaults to kusshoes_test — must exist (alembic upgrade head against it).
