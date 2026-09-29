@@ -11,6 +11,7 @@ from app.routers.auth import (
 )
 from app.schemas.auth import AdminLoginResponse, LoginRequest, LogoutRequest
 from app.services import auth_service
+from app.utils.http import get_client_ip
 
 router = APIRouter()
 
@@ -23,7 +24,7 @@ async def admin_login(
     db: AsyncSession = Depends(get_db),
     redis: aioredis.Redis = Depends(get_redis),
 ):
-    client_ip = request.client.host if request.client else "unknown"
+    client_ip = get_client_ip(request)
     result = await auth_service.login_admin(
         db,
         redis,

@@ -3,11 +3,13 @@ import math
 import uuid
 from datetime import UTC, datetime, timedelta
 
+import redis.asyncio as aioredis
 from loguru import logger
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.config import settings
 from app.exceptions import (
+    AuthRateLimited,
     CouponInvalid,
     InvoiceNotFound,
     InvoiceNotRefundable,
@@ -21,7 +23,7 @@ from app.exceptions import (
     SubPlanNotFound,
     SubPlanNotSellable,
 )
-from app.infrastructure import momo_client, payos_client, task_queue
+from app.infrastructure import momo_client, payos_client, rate_limiter, task_queue
 from app.infrastructure.momo_client import MoMoError, MoMoSignatureError
 from app.infrastructure.payos_client import PayOSError, PayOSSignatureError
 from app.models.invoice import Invoice
@@ -280,8 +282,24 @@ async def create_credit_checkout(db: AsyncSession, user, *, quantity: int, gatew
 
 
 async def preview_coupon(
-    db: AsyncSession, user, *, tier: str, billing_cycle: str, coupon_code: str
+    db: AsyncSession,
+    user,
+    *,
+    tier: str,
+    billing_cycle: str,
+    coupon_code: str,
+    redis: aioredis.Redis | None = None,
 ) -> dict:
+    if redis is not None:
+        retry_after = await rate_limiter.consume(
+            redis,
+            bucket="coupon-preview",
+            identifier=str(user.id),
+            limit=10,
+            window_seconds=60,
+        )
+        if retry_after:
+            raise AuthRateLimited(retry_after)
     plan = await plan_repo.get_by_tier_and_cycle(db, tier, billing_cycle)
     if not plan or tier == "free":
         raise SubPlanNotFound()
@@ -557,6 +575,10 @@ async def handle_momo_ipn(db: AsyncSession, *, payload: dict) -> int:
     except MoMoSignatureError:
         logger.warning("MoMo IPN signature invalid")
         return 403
+
+    if not settings.MOMO_ENABLED:
+        logger.warning("MoMo IPN rejected: MoMo gateway is disabled")
+        return 404
 
     if payload.get("resultCode") != 0:
         logger.info(f"MoMo IPN: resultCode={payload.get('resultCode')}, marking failed")

@@ -5,6 +5,7 @@ from datetime import UTC, datetime
 
 from sqlalchemy.ext.asyncio import AsyncSession
 
+from app.config import settings
 from app.exceptions import ExportCursorInvalid, ExportNotFound
 from app.infrastructure import storage
 from app.repositories import export_record_repo
@@ -61,7 +62,9 @@ async def create_download_url(
     record = await export_record_repo.get_for_user(db, export_id, user.id)
     if not record:
         raise ExportNotFound()
-    download_url = storage.generate_presigned_download_url(record.file_path, ttl=3600)
+    download_url = storage.generate_presigned_download_url(
+        record.file_path, ttl=settings.SIGNED_URL_TTL_SECONDS
+    )
     await export_record_repo.increment_download_count(db, record)
     return ExportDownloadResponse(download_url=download_url)
 
