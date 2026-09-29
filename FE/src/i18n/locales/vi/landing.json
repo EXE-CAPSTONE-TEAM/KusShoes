@@ -154,12 +154,5 @@
         "a": "Mật khẩu được mã hoá, hỗ trợ xác thực hai lớp (2FA), và bạn có thể xem, thu hồi từng thiết bị đăng nhập bất cứ lúc nào. Bạn cũng có thể tải toàn bộ dữ liệu hoặc xoá tài khoản vĩnh viễn khi cần."
       }
     ]
-  },
-  "newsletter": {
-    "title": "Tham gia bản Beta KusShoes",
-    "desc": "Đăng ký email ngay hôm nay để nhận liên kết tải KusShoes & KusStudio khi mở thử nghiệm công khai. Nhận 50 lượt quét đám mây miễn phí khi ra mắt!",
-    "successMessage": "Cảm ơn bạn! Chúng tôi sẽ gửi thông tin đăng nhập bản beta sớm nhất.",
-    "emailPlaceholder": "Nhập địa chỉ email của bạn...",
-    "subscribe": "Đăng ký"
   }
 }

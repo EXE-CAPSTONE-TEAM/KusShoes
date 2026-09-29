@@ -79,9 +79,10 @@ BE+FE = needs backend work · DECISION = blocked on a product decision from T AK
   Lane: BE+FE. BE has MoMo behind `MOMO_ENABLED`; FE hardcodes "Coming Soon". Acceptance: BE
   exposes enabled gateways (e.g. on `/plans` or a config endpoint), FE enables MoMo from that.
 
-- [ ] **T14 — Landing newsletter form**
+- [x] **T14 — Landing newsletter form**
   The form fakes success for 3 s; there is no BE endpoint.
-  **Decided 2026-09-29: newsletters are posted by admin only for now** (scope being clarified).
+  **Decided 2026-09-29: remove the signup form.** Newsletters will be posted by admin later
+  (separate ticket when needed); no public subscription for now.
 
 - [x] **T15 — Landing stat counters (12 400+, 3 150+, …)**
   **Decided 2026-09-29: keep the marketing numbers for now.** No change.

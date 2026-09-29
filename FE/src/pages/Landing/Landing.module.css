@@ -1629,85 +1629,6 @@
   padding: 0 26px 24px;
 }
 
-/* Newsletter Section */
-.newsletterSection {
-  padding: 60px 40px;
-  max-width: 1000px;
-  margin: 0 auto;
-  width: 100%;
-  position: relative;
-  z-index: 2;
-}
-
-.newsletterBox {
-  padding: 40px;
-  border-radius: var(--border-radius-md);
-  text-align: center;
-  display: flex;
-  flex-direction: column;
-  align-items: center;
-  gap: 20px;
-}
-
-.newsTitle {
-  font-family: 'Space Grotesk', sans-serif;
-  font-size: 2.2rem;
-  font-weight: 800;
-  letter-spacing: -0.5px;
-}
-
-.newsDesc {
-  color: var(--text-secondary);
-  font-size: 1rem;
-  line-height: 1.6;
-  max-width: 600px;
-}
-
-.newsForm {
-  width: 100%;
-  max-width: 500px;
-  margin-top: 12px;
-}
-
-.inputContainer {
-  display: flex;
-  gap: 12px;
-  width: 100%;
-}
-
-.newsInput {
-  background: var(--bg-primary);
-  border: 1px solid var(--glass-border);
-  color: var(--text-primary);
-  padding: 14px 20px;
-  border-radius: var(--border-radius-sm);
-  font-family: var(--font-sans);
-  font-size: 0.95rem;
-  flex-grow: 1;
-}
-
-.newsInput:focus {
-  outline: none;
-  border-color: var(--color-orange);
-}
-
-.successMessage {
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  gap: 12px;
-  padding: 14px;
-  border-radius: var(--border-radius-sm);
-  background: rgba(54, 211, 153, 0.08);
-  border: 1px solid rgba(54, 211, 153, 0.2);
-  color: var(--status-scanned);
-  font-weight: 500;
-}
-
-.successIcon {
-  flex-shrink: 0;
-}
-
 /* Footer */
 .footer {
   border-top: 1px solid var(--glass-border);
@@ -1818,9 +1739,6 @@
   .heroTitle {
     font-size: 2.6rem;
   }
-  .inputContainer {
-    flex-direction: column;
-  }
   .showcaseTabs {
     gap: 8px;
   }
@@ -1851,7 +1769,6 @@
     justify-content: center;
   }
 }
-
 
 .typingCursor {
   display: inline-block;
@@ -1944,8 +1861,7 @@
   .workflowSection,
   .featuresSection,
   .pricingSection,
-  .showcaseSection,
-  .newsletterSection {
+  .showcaseSection {
     padding: 48px max(20px, env(safe-area-inset-right)) 48px max(20px, env(safe-area-inset-left));
   }
   .sectionHeader {
@@ -2018,23 +1934,6 @@
   }
   .browserUrlBar {
     max-width: 130px;
-  }
-
-  /* ---- Newsletter ---- */
-  .newsletterBox {
-    padding: 28px 20px;
-    border-radius: var(--border-radius-md);
-  }
-  .newsTitle {
-    font-size: 1.6rem;
-  }
-  .inputContainer {
-    width: 100%;
-  }
-  /* 16px stops iOS Safari from zooming the page when the field is focused */
-  .newsInput {
-    font-size: 1rem;
-    min-height: 48px;
   }
 
   /* ---- Footer ---- */

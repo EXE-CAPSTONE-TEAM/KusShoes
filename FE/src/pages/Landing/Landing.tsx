@@ -1,8 +1,6 @@
 import React, { useState, useRef, useEffect, useMemo } from 'react';
 import {
   Monitor,
-  Send,
-  CheckCircle2,
   Check,
   ArrowRight,
   Plus,
@@ -454,8 +452,6 @@ interface LandingProps {
 
 export const Landing: React.FC<LandingProps> = ({ navigate }) => {
   const { t } = useTranslation('landing');
-  const [emailInput, setEmailInput] = useState('');
-  const [submittedEmail, setSubmittedEmail] = useState(false);
   const [isAnnual, setIsAnnual] = useState(false);
   const { t: tPricing } = useTranslation('pricing');
   const [apiPlans, setApiPlans] = useState<Plan[] | null>(null);
@@ -475,17 +471,6 @@ export const Landing: React.FC<LandingProps> = ({ navigate }) => {
       cancelled = true;
     };
   }, []);
-
-  const handleNewsletterSubmit = (e: React.FormEvent) => {
-    e.preventDefault();
-    if (emailInput.trim()) {
-      setSubmittedEmail(true);
-      setTimeout(() => {
-        setSubmittedEmail(false);
-        setEmailInput('');
-      }, 3000);
-    }
-  };
 
   const steps = [
     {
@@ -1162,44 +1147,6 @@ export const Landing: React.FC<LandingProps> = ({ navigate }) => {
             );
           })}
         </div>
-      </section>
-
-      {/* Beta Registration Newsletter Section */}
-      <section className={styles.newsletterSection}>
-        <motion.div
-          className={`${styles.newsletterBox} glass-panel`}
-          initial={{ opacity: 0, scale: 0.95 }}
-          whileInView={{ opacity: 1, scale: 1 }}
-          viewport={{ once: true }}
-          transition={{ duration: 0.6 }}
-        >
-          <h2 className={styles.newsTitle}>{t('newsletter.title')}</h2>
-          <p className={styles.newsDesc}>{t('newsletter.desc')}</p>
-
-          <form onSubmit={handleNewsletterSubmit} className={styles.newsForm}>
-            {submittedEmail ? (
-              <div className={styles.successMessage}>
-                <CheckCircle2 size={24} className={styles.successIcon} />
-                <span>{t('newsletter.successMessage')}</span>
-              </div>
-            ) : (
-              <div className={styles.inputContainer}>
-                <input
-                  type="email"
-                  placeholder={t('newsletter.emailPlaceholder')}
-                  value={emailInput}
-                  onChange={(e) => setEmailInput(e.target.value)}
-                  className={styles.newsInput}
-                  required
-                />
-                <button type="submit" className="btn-neon-orange">
-                  <span>{t('newsletter.subscribe')}</span>
-                  <Send size={14} />
-                </button>
-              </div>
-            )}
-          </form>
-        </motion.div>
       </section>
 
       {/* Reusable Footer */}

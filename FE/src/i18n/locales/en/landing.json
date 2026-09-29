@@ -154,12 +154,5 @@
         "a": "Passwords are encrypted, two-factor authentication (2FA) is supported, and you can view and revoke individual login devices anytime. You can also download all your data or permanently delete your account whenever you want."
       }
     ]
-  },
-  "newsletter": {
-    "title": "Join the KusShoes Beta",
-    "desc": "Register your email today to receive download links for KusShoes & KusStudio once public testing starts. Get 50 free cloud scans upon launch!",
-    "successMessage": "Thank you! We will email you beta credentials soon.",
-    "emailPlaceholder": "Enter your email address...",
-    "subscribe": "Subscribe"
   }
 }
