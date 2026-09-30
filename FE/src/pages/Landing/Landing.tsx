@@ -30,6 +30,7 @@ import { api, type Plan } from '../../api/client';
 import dashboardShowcase from '../../assets/showcase/dashboard-screenshot.png';
 import projectsShowcase from '../../assets/showcase/projects-screenshot.png';
 import mobileScan from '../../assets/showcase/mobile-scan.png';
+import mobileAppIcon from '../../assets/kusshoes-mobile-app-icon.jpeg';
 import mobileMockup from '../../assets/kusshoes-mobile-mockup.jpg';
 import sneakerHero from '../../assets/sneaker-hero.png';
 import heroEdgeLeft from '../../assets/edge-art/hero-left.png';
@@ -412,10 +413,6 @@ export const Landing: React.FC<LandingProps> = ({ navigate }) => {
     };
   }, []);
 
-  useEffect(() => {
-    document.title = 'KusShoes: Shape your shoes, show your style';
-  }, []);
-
   const steps = [
     {
       num: '01',
@@ -560,7 +557,7 @@ export const Landing: React.FC<LandingProps> = ({ navigate }) => {
             <div className={styles.productTitleRow}>
               <div className={styles.productLogoFrame}>
                 <img
-                  src={theme === 'dark' ? '/KusShoes_Logo_Dark_Mode_cropped.png' : '/KusShoes_Logo_cropped.png'}
+                  src={mobileAppIcon}
                   alt={t('products.mobileIconAlt')}
                   className={styles.productLogoImage}
                   loading="lazy"

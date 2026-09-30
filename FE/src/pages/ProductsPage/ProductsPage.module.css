@@ -1,6 +1,7 @@
 .container {
   width: 100%;
   min-height: 100vh;
+  min-height: 100dvh;
   background-color: var(--bg-primary);
   color: var(--text-primary);
   display: flex;
@@ -8,6 +9,7 @@
   flex-shrink: 0;
   scroll-behavior: smooth;
   position: relative;
+  overflow-x: clip; /* the decorative glows bleed past the edges on purpose */
   transition: background-color var(--transition-normal);
 }
 
@@ -405,5 +407,46 @@
   }
   .workflowCallout {
     padding: 24px;
+  }
+  /* 16px stops iOS Safari zooming the page when the select is focused */
+  .osSelect {
+    font-size: 16px;
+    min-height: 44px;
+  }
+  .tabBtn {
+    min-height: 44px;
+  }
+}
+
+@media (max-width: 480px) {
+  .mainContent {
+    padding: 104px 16px 64px;
+  }
+  .mainTitle {
+    font-size: clamp(2rem, 10vw, 3.2rem);
+    letter-spacing: -1px;
+  }
+  .heroSubtitle {
+    font-size: 1rem;
+  }
+  .productCard,
+  .workflowCallout {
+    padding: 20px;
+  }
+  .cardHeader {
+    gap: 14px;
+  }
+  .cardTitle,
+  .calloutTitle {
+    font-size: 1.5rem;
+  }
+  .downloadBox {
+    padding: 16px;
+  }
+  .tabButtons {
+    flex-wrap: wrap;
+  }
+  .syncGraphic {
+    padding: 16px 8px;
   }
 }

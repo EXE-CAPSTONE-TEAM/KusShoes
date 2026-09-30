@@ -1,6 +1,7 @@
 .container {
   width: 100%;
   min-height: 100vh;
+  min-height: 100dvh;
   background-color: var(--bg-primary);
   display: flex;
   align-items: center;
@@ -541,6 +542,28 @@
   .authCard button {
     padding: 10px 20px !important;
     font-size: 0.9rem !important;
+  }
+}
+
+/* Touch widths: 16px inputs stop iOS Safari zooming the page on focus; 44px tap targets */
+@media (max-width: 768px) {
+  .input {
+    font-size: 16px;
+  }
+  .otpInput {
+    font-size: 1.3rem;
+  }
+  .backBtn {
+    min-height: 44px;
+  }
+  .eyeBtn {
+    right: 6px;
+    min-width: 44px;
+    min-height: 44px;
+  }
+  .tabBtn,
+  .textButton {
+    min-height: 44px;
   }
 }
 

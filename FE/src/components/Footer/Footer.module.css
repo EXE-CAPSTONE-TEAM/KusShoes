@@ -98,17 +98,63 @@
   transform: scale(1.1);
 }
 
+/* Tablet: brand on its own row, the three link columns share the row below (a single stacked
+   column would make the footer several screens tall). */
 @media (max-width: 1050px) {
   .footerGrid {
-    grid-template-columns: 1fr;
+    grid-template-columns: repeat(3, minmax(0, 1fr));
     gap: 32px;
+  }
+  .footerBrandBlock {
+    grid-column: 1 / -1;
+    max-width: 560px;
   }
 }
 
 @media (max-width: 768px) {
+  .footer {
+    padding: 56px 24px calc(28px + env(safe-area-inset-bottom));
+  }
+  .footerGrid {
+    padding-bottom: 40px;
+  }
   .footerBottom {
     flex-direction: column;
-    gap: 16px;
+    gap: 12px;
     text-align: center;
+    line-height: 1.5;
+  }
+  /* 44px hit area for the icons, same 18px glyph */
+  .socialsList {
+    gap: 4px;
+  }
+  .socialIcon {
+    width: 44px;
+    height: 44px;
+  }
+}
+
+/* Phone: two link columns, brand across the top */
+@media (max-width: 600px) {
+  .footer {
+    padding: 48px max(20px, env(safe-area-inset-right)) calc(24px + env(safe-area-inset-bottom))
+      max(20px, env(safe-area-inset-left));
+  }
+  .footerGrid {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    gap: 32px 20px;
+  }
+  .footerBrandBlock {
+    max-width: none;
+  }
+  .footerLinkCol {
+    gap: 4px;
+  }
+  .footerLinkCol h4 {
+    margin-bottom: 8px;
+  }
+  .footerLinkCol a {
+    padding: 8px 0;
+    overflow-wrap: anywhere;
   }
 }

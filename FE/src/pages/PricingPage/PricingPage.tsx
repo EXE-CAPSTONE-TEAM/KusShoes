@@ -25,10 +25,6 @@ export const PricingPage: React.FC<PricingPageProps> = ({ navigate }) => {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
-  useEffect(() => {
-    document.title = 'Pricing – KusShoes';
-  }, []);
-
   // Yearly plans exist in the backend but can be deactivated for a given term (BR-93) —
   // only offer the toggle when there's an active yearly plan to actually switch to, otherwise
   // paid tiers would vanish from the grid with nothing left to pick from.

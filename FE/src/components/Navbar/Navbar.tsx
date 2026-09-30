@@ -91,7 +91,7 @@ export const Navbar: React.FC<NavbarProps> = ({ navigate, currentPage }) => {
     const previousOverflow = document.body.style.overflow;
     document.body.style.overflow = 'hidden';
     const onKey = (event: KeyboardEvent) => event.key === 'Escape' && setMenuOpen(false);
-    const onResize = () => window.innerWidth > 768 && setMenuOpen(false);
+    const onResize = () => window.innerWidth > 1024 && setMenuOpen(false);
     window.addEventListener('keydown', onKey);
     window.addEventListener('resize', onResize);
     return () => {

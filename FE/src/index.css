@@ -6,20 +6,42 @@
   padding: 0;
 }
 
+html {
+  -webkit-text-size-adjust: 100%;
+  text-size-adjust: 100%;
+}
+
+/* Media never outgrows its container (a fixed-size intrinsic image would otherwise force
+   horizontal scroll on narrow phones). */
+img,
+video {
+  max-inline-size: 100%;
+}
+
 body {
   font-family: var(--font-sans);
   background-color: var(--bg-primary);
   color: var(--text-primary);
   overflow-x: hidden;
+  overflow-x: clip; /* unlike hidden, clip doesn't turn body into a scroll container (keeps sticky/pin working) */
   -webkit-font-smoothing: antialiased;
   -moz-osx-font-smoothing: grayscale;
   min-height: 100vh;
+  min-height: 100dvh;
   transition: background-color var(--transition-normal), color var(--transition-normal);
 }
 
 #root {
   min-height: 100vh;
+  min-height: 100dvh;
   display: flex;
+}
+
+/* #root is a flex row. Without this, <main> (flex item) refuses to shrink below its widest
+   descendant's min-content width, so one wide child stretches the whole page past the phone
+   viewport and every `left: 5%` / `width: 100%` inside is computed against that wider box. */
+#root > main {
+  min-width: 0;
 }
 
 /* Glassmorphism card utility */
