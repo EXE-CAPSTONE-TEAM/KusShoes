@@ -497,10 +497,6 @@ export const Landing: React.FC<LandingProps> = ({ navigate }) => {
     };
   }, []);
 
-  useEffect(() => {
-    document.title = 'KusShoes: Shape your shoes, show your style';
-  }, []);
-
   const steps = [
     {
       num: '01',
