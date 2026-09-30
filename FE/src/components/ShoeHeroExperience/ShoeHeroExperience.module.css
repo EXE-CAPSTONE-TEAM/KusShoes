@@ -13,6 +13,7 @@
   position: relative;
   width: 100%;
   height: 100vh;
+  height: 100svh; /* small-viewport height: the mobile URL bar can't crop the pinned stage */
   overflow: hidden;
   display: flex;
   align-items: center;
@@ -70,6 +71,7 @@
   position: absolute;
   bottom: 30px;
   width: 580px;
+  max-width: 90%;
   height: 100px;
   background: radial-gradient(
     ellipse at center,
@@ -504,42 +506,140 @@
 }
 
 /* Responsive Rules */
+/* Tablet + phone (the JS in ShoeHeroExperience.tsx switches to its "mobile" tween values at the
+   same 900px). The desktop composition overlays copy on a shoe that sits beside it; on a narrow
+   screen there is no beside, so the layout stacks: sneaker in the upper part of the viewport,
+   copy anchored to the bottom. GSAP owns `transform` on the overlays (it writes it inline), so
+   the copy is positioned with top/bottom only. */
 @media (max-width: 900px) {
-  .beat1Hero {
-    left: 5%;
-    right: 5%;
-    top: 22%;
-    transform: translateY(-20%);
-    max-width: 100%;
-    text-align: center;
-  }
-
-  .heroSubtitle {
-    margin-left: auto;
-    margin-right: auto;
-  }
-
-  .heroActions {
-    justify-content: center;
+  .stage3D {
+    inset: 0 0 auto 0;
+    height: 44%;
+    padding-top: 56px; /* clear the fixed navbar */
   }
 
   .shoeTransformWrapper {
-    height: 450px;
+    height: 100%;
   }
 
   .shoeImageLayer,
   .shoeAltImageLayer {
     width: 90%;
+    max-height: 100%;
   }
 
+  .beat1Hero,
   .beat2Card,
   .beat3Card {
     left: 5%;
     right: 5%;
     top: auto;
-    bottom: 8%;
+    bottom: max(44px, calc(env(safe-area-inset-bottom) + 36px));
     transform: none;
     max-width: 100%;
+  }
+
+  .beat1Hero {
+    text-align: center;
+  }
+
+  .badge {
+    max-width: 100%;
+    margin-bottom: 12px;
+    padding: 6px 12px;
+    font-size: 0.68rem;
+    letter-spacing: 0.06em;
+    line-height: 1.4;
+    text-align: left;
+  }
+
+  .heroTitle {
+    font-size: clamp(1.6rem, 7vw, 2.6rem);
+    margin-bottom: 12px;
+  }
+
+  .heroSubtitle {
+    margin: 0 auto 18px;
+    font-size: 0.95rem;
+    line-height: 1.5;
+    display: -webkit-box;
+    -webkit-box-orient: vertical;
+    -webkit-line-clamp: 4;
+    line-clamp: 4;
+    overflow: hidden;
+  }
+
+  .heroActions {
+    flex-direction: column;
+    align-items: stretch;
+    gap: 10px;
+  }
+
+  /* The buttons carry inline padding/font-size from the markup, hence !important */
+  .heroActions > button,
+  .beat4Actions > button {
+    min-height: 48px;
+    padding: 12px 18px !important;
+    font-size: 1rem !important;
+    justify-content: center;
+    text-align: center;
+  }
+
+  .hudCard {
+    padding: 18px;
+  }
+
+  .hudHeader {
+    margin-bottom: 8px;
+  }
+
+  .hudIndex {
+    font-size: 0.7rem;
+  }
+
+  .hudTitle {
+    font-size: 1.2rem;
+    margin-bottom: 8px;
+  }
+
+  .hudDesc {
+    font-size: 0.88rem;
+    line-height: 1.5;
+    margin-bottom: 12px;
+  }
+
+  .beat4Card {
+    width: 92%;
+    bottom: max(44px, calc(env(safe-area-inset-bottom) + 36px));
+  }
+
+  .beat4Title {
+    font-size: clamp(1.4rem, 6vw, 2.2rem);
+    margin-bottom: 8px;
+  }
+
+  .beat4Desc {
+    font-size: 0.9rem;
+    line-height: 1.5;
+    margin-bottom: 12px;
+  }
+
+  .swatchRow {
+    flex-wrap: wrap;
+    justify-content: center;
+    gap: 10px;
+    margin-bottom: 14px;
+  }
+
+  .swatchBtn {
+    width: 32px;
+    height: 32px;
+  }
+
+  .beat4Actions {
+    flex-direction: column;
+    align-items: stretch;
+    gap: 10px;
   }
 
   .hotspotPin {
@@ -548,5 +648,83 @@
 
   .tiltHint {
     display: none;
+  }
+
+  /* The label would sit on top of the bottom-anchored copy; the animated bar alone is enough */
+  .scrollIndicator {
+    bottom: 8px;
+  }
+
+  .scrollLabel {
+    display: none;
+  }
+}
+
+/* Tablet portrait: full-width buttons would be ~740px wide */
+@media (min-width: 601px) and (max-width: 900px) {
+  .heroActions,
+  .beat4Actions {
+    width: 100%;
+    max-width: 440px;
+    margin-inline: auto;
+  }
+}
+
+/* Narrowest phones: the colorway row (label + 4 swatches) no longer fits on one line, and the
+   label only repeats what the swatches' own titles say. */
+@media (max-width: 360px) {
+  .swatchLabel {
+    display: none;
+  }
+}
+
+/* Short phones (iPhone SE / 360x640 Android): the copy has less room under the sneaker, so
+   tighten it rather than let it climb over the shoe. */
+@media (max-width: 900px) and (max-height: 720px) {
+  .stage3D {
+    height: 40%;
+    padding-top: 52px;
+  }
+
+  .badge {
+    margin-bottom: 8px;
+  }
+
+  .heroTitle {
+    font-size: clamp(1.4rem, 6.4vw, 2rem);
+    margin-bottom: 8px;
+  }
+
+  .heroSubtitle {
+    -webkit-line-clamp: 3;
+    line-clamp: 3;
+    font-size: 0.88rem;
+    margin-bottom: 12px;
+  }
+
+  .hudCard {
+    padding: 14px;
+  }
+
+  .hudDesc {
+    -webkit-line-clamp: 4;
+    line-clamp: 4;
+    display: -webkit-box;
+    -webkit-box-orient: vertical;
+    overflow: hidden;
+  }
+
+  .beat4Desc {
+    display: -webkit-box;
+    -webkit-box-orient: vertical;
+    -webkit-line-clamp: 2;
+    line-clamp: 2;
+    overflow: hidden;
+  }
+
+  .heroActions > button,
+  .beat4Actions > button {
+    min-height: 44px;
+    padding: 10px 16px !important;
   }
 }

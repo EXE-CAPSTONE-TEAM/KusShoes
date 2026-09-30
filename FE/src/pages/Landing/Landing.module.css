@@ -1,6 +1,7 @@
 .container {
   width: 100%;
   min-height: 100vh;
+  min-height: 100dvh;
   background-color: var(--bg-primary);
   color: var(--text-primary);
   display: flex;
@@ -242,18 +243,22 @@
   gap: 14px;
 }
 
+/* The source icon has a thin white margin baked in around its rounded square; the frame
+   clips a slightly oversized image to crop that margin out instead of showing a white box. */
 .productLogoFrame {
-  height: 40px;
+  width: 44px;
+  height: 44px;
+  border-radius: 10px;
+  overflow: hidden;
   align-self: center;
   flex-shrink: 0;
-  display: flex;
-  align-items: center;
 }
 
 .productLogoImage {
-  height: 100%;
-  width: auto;
-  object-fit: contain;
+  width: 118%;
+  height: 118%;
+  margin: -9%;
+  object-fit: cover;
 }
 
 .productDesc {
@@ -1813,5 +1818,52 @@
   .featCard:hover,
   .priceCard:hover {
     transform: none;
+  }
+  /* Gallery captions are revealed on hover; touch screens (tablets included) never hover */
+  .galleryOverlay {
+    opacity: 1;
+  }
+}
+
+/* Tabs wrap instead of overflowing on narrow tablets / large phones */
+.showcaseTabs {
+  flex-wrap: wrap;
+}
+
+/* Sections the phone block above doesn't cover, plus the long uppercase headline */
+@media (max-width: 600px) {
+  .gallerySection,
+  .socialProofSection,
+  .faqSection {
+    padding: 48px max(20px, env(safe-area-inset-right)) 48px max(20px, env(safe-area-inset-left));
+  }
+  .proofHeader {
+    margin-bottom: 32px;
+  }
+  .proofHeadline {
+    font-size: clamp(1.6rem, 7.6vw, 2.6rem);
+  }
+  .proofSubtitle {
+    font-size: 0.95rem;
+  }
+  .trustBar {
+    gap: 12px;
+  }
+  .testimonialRow,
+  .statTileGrid {
+    gap: 12px;
+  }
+  .tickerStrip {
+    margin-top: 32px;
+  }
+  .faqQuestion {
+    padding: 16px 18px;
+  }
+  .faqQuestionText {
+    font-size: 0.98rem;
+    line-height: 1.35;
+  }
+  .faqAnswer {
+    padding: 0 18px 18px;
   }
 }

@@ -118,7 +118,7 @@
   display: none;
 }
 
-@media (max-width: 768px) {
+@media (max-width: 1024px) {
   .navbar {
     width: calc(100% - 24px);
     top: calc(10px + env(safe-area-inset-top));
@@ -212,12 +212,19 @@
   border-top: 1px solid var(--glass-border);
 }
 
-.mobileActions > button {
+.mobileActions > button,
+.mobileActions > :first-child {
   min-height: 48px;
   justify-content: center;
 }
 
-@media (min-width: 769px) {
+/* Language + Sign in share the first row; the primary CTA gets a full-width row of its own
+   (as the third grid item it would otherwise sit alone in half the width). */
+.mobileActions > :last-child {
+  grid-column: 1 / -1;
+}
+
+@media (min-width: 1025px) {
   .menuBackdrop,
   .mobileMenu {
     display: none;

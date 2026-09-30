@@ -1,6 +1,7 @@
 .container {
   width: 100%;
   min-height: 100vh;
+  min-height: 100dvh;
   background-color: var(--bg-primary);
   color: var(--text-primary);
   display: flex;
@@ -8,6 +9,7 @@
   flex-shrink: 0;
   padding-top: 100px;
   position: relative;
+  overflow-x: clip; /* the decorative glows/topo art bleed past the edges on purpose */
   transition: background-color var(--transition-normal);
 }
 
@@ -325,6 +327,7 @@
 
 .compTable {
   width: 100%;
+  min-width: 520px; /* keeps the columns legible; .tableWrapper scrolls sideways below this */
   border-collapse: collapse;
   text-align: center;
 }
@@ -423,6 +426,8 @@
   max-width: 1400px;
   margin: 0 auto;
   display: flex;
+  flex-wrap: wrap;
+  gap: 8px 24px;
   justify-content: space-between;
   font-size: 0.8rem;
   color: var(--text-muted);
@@ -437,6 +442,55 @@
   }
   .title {
     font-size: 2.4rem;
+  }
+}
+
+@media (max-width: 600px) {
+  .container {
+    padding-top: 84px;
+  }
+  .pricingHeader {
+    padding: 36px 20px 24px;
+  }
+  .title {
+    font-size: clamp(1.75rem, 8vw, 2.4rem);
+  }
+  .desc {
+    font-size: 1rem;
+  }
+  .toggleContainer {
+    flex-wrap: wrap;
+    justify-content: center;
+    gap: 12px;
+  }
+  .pricingSection {
+    padding: 20px 20px 40px;
+  }
+  .pricingGrid {
+    gap: 20px;
+  }
+  .priceCard {
+    padding: 28px 22px;
+  }
+  .comparisonSection {
+    padding: 48px 20px;
+  }
+  .compTitle {
+    font-size: 1.5rem;
+    margin-bottom: 24px;
+  }
+  .compTable th,
+  .compTable td {
+    padding: 14px 12px;
+  }
+  .faqSection {
+    padding: 24px 20px 64px;
+  }
+  .faqCard {
+    padding: 22px 20px;
+  }
+  .footer {
+    padding: 32px 20px calc(24px + env(safe-area-inset-bottom));
   }
 }
 
