@@ -1,0 +1,552 @@
+/* Shoe Hero Experience - Pure Image 3D Perspective & GSAP ScrollTrigger */
+
+.storySection {
+  position: relative;
+  width: 100%;
+  background: radial-gradient(circle at 70% 45%, rgba(255, 90, 54, 0.12) 0%, transparent 55%),
+              radial-gradient(circle at 25% 75%, rgba(230, 30, 67, 0.08) 0%, transparent 50%),
+              radial-gradient(circle at 50% 10%, rgba(255, 255, 255, 0.03) 0%, transparent 60%),
+              var(--bg-primary, #0A0A0C);
+}
+
+.stickyViewport {
+  position: relative;
+  width: 100%;
+  height: 100vh;
+  overflow: hidden;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  perspective: 1400px; /* 3D Perspective chamber */
+}
+
+/* Subtle background grid & technical accents */
+.gridOverlay {
+  position: absolute;
+  inset: 0;
+  background-image:
+    linear-gradient(rgba(255, 255, 255, 0.03) 1px, transparent 1px),
+    linear-gradient(90deg, rgba(255, 255, 255, 0.03) 1px, transparent 1px);
+  background-size: 50px 50px;
+  background-position: center center;
+  mask-image: radial-gradient(circle at center, black 45%, transparent 85%);
+  -webkit-mask-image: radial-gradient(circle at center, black 45%, transparent 85%);
+  pointer-events: none;
+  z-index: 1;
+}
+
+/* The Central 3D Stage */
+.stage3D {
+  position: absolute;
+  inset: 0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  transform-style: preserve-3d;
+  pointer-events: auto;
+  z-index: 2;
+  cursor: grab;
+}
+
+.stage3D:active {
+  cursor: grabbing;
+}
+
+/* Shoe Frame Wrapper with 3D transforms */
+.shoeTransformWrapper {
+  position: relative;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 100%;
+  max-width: 920px;
+  height: 600px;
+  transform-style: preserve-3d;
+  will-change: transform;
+}
+
+/* Realistic Ground Shadow & Ambient Light Oval */
+.floorShadow {
+  position: absolute;
+  bottom: 30px;
+  width: 580px;
+  height: 100px;
+  background: radial-gradient(
+    ellipse at center,
+    rgba(0, 0, 0, 0.88) 0%,
+    rgba(255, 90, 54, 0.15) 30%,
+    transparent 70%
+  );
+  filter: blur(14px);
+  border-radius: 50%;
+  pointer-events: none;
+  transform: rotateX(80deg) translateZ(-40px);
+  transition: transform 0.3s ease;
+  will-change: transform, opacity;
+}
+
+/* Primary Hero Sneaker Image */
+.shoeImageLayer {
+  position: absolute;
+  max-width: 680px;
+  width: 78%;
+  height: auto;
+  object-fit: contain;
+  filter: drop-shadow(0 25px 45px rgba(0, 0, 0, 0.85))
+          drop-shadow(0 0 35px rgba(255, 90, 54, 0.22));
+  transform-style: preserve-3d;
+  will-change: transform, opacity, filter;
+  user-select: none;
+  -webkit-user-drag: none;
+}
+
+/* Secondary Sneaker Layer for Cross-angle Beat Transitions */
+.shoeAltImageLayer {
+  position: absolute;
+  max-width: 680px;
+  width: 78%;
+  height: auto;
+  object-fit: contain;
+  filter: drop-shadow(0 25px 45px rgba(0, 0, 0, 0.85))
+          drop-shadow(0 0 35px rgba(255, 90, 54, 0.22));
+  transform-style: preserve-3d;
+  will-change: transform, opacity;
+  opacity: 0;
+  pointer-events: none;
+  user-select: none;
+  -webkit-user-drag: none;
+}
+
+/* Interactive 3D Hotspot Pins */
+.hotspotLayer {
+  position: absolute;
+  inset: 0;
+  pointer-events: none;
+  transform-style: preserve-3d;
+}
+
+.hotspotPin {
+  position: absolute;
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  pointer-events: auto;
+  transform: translateZ(40px);
+  will-change: opacity, transform;
+}
+
+.pinBeacon {
+  position: relative;
+  width: 22px;
+  height: 22px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.pinCore {
+  width: 10px;
+  height: 10px;
+  border-radius: 50%;
+  background: var(--color-orange, #FF5A36);
+  box-shadow: 0 0 10px var(--color-orange, #FF5A36);
+}
+
+.pinWave {
+  position: absolute;
+  inset: 0;
+  border-radius: 50%;
+  border: 2px solid var(--color-orange, #FF5A36);
+  animation: pingWave 1.8s cubic-bezier(0, 0.2, 0.8, 1) infinite;
+}
+
+@keyframes pingWave {
+  0% { transform: scale(0.6); opacity: 1; }
+  100% { transform: scale(2.2); opacity: 0; }
+}
+
+.pinLabelCard {
+  background: rgba(14, 14, 18, 0.85);
+  backdrop-filter: blur(12px);
+  -webkit-backdrop-filter: blur(12px);
+  border: 1px solid rgba(255, 90, 54, 0.35);
+  border-radius: 8px;
+  padding: 8px 14px;
+  box-shadow: 0 8px 24px rgba(0, 0, 0, 0.6);
+  white-space: nowrap;
+}
+
+.pinLabelTitle {
+  display: block;
+  font-family: var(--font-mono, monospace);
+  font-size: 0.72rem;
+  font-weight: 700;
+  text-transform: uppercase;
+  color: var(--color-orange, #FF5A36);
+  letter-spacing: 0.08em;
+  margin-bottom: 2px;
+}
+
+.pinLabelDesc {
+  display: block;
+  font-size: 0.82rem;
+  color: #FFFFFF;
+}
+
+/* Overlays Layer */
+.storyOverlays {
+  position: absolute;
+  inset: 0;
+  pointer-events: none;
+  z-index: 4;
+}
+
+/* Beat 1: Hero Pitch */
+.beat1Hero {
+  position: absolute;
+  left: 6%;
+  top: 50%;
+  transform: translateY(-50%);
+  max-width: 560px;
+  pointer-events: auto;
+  will-change: opacity, transform;
+}
+
+.badge {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  padding: 6px 14px;
+  border-radius: 9999px;
+  background: rgba(255, 90, 54, 0.12);
+  border: 1px solid rgba(255, 90, 54, 0.3);
+  color: var(--color-orange, #FF5A36);
+  font-family: var(--font-mono, monospace);
+  font-size: 0.8rem;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  margin-bottom: 18px;
+}
+
+.heroTitle {
+  font-family: var(--font-sans, sans-serif);
+  font-size: clamp(2.4rem, 4.6vw, 4.2rem);
+  font-weight: 900;
+  line-height: 1.05;
+  letter-spacing: -0.03em;
+  text-transform: uppercase;
+  color: #FFFFFF;
+  margin-bottom: 18px;
+}
+
+.titleGradient {
+  background: linear-gradient(135deg, #FF5A36 0%, #FF8A50 45%, #FFFFFF 90%);
+  -webkit-background-clip: text;
+  -webkit-text-fill-color: transparent;
+}
+
+.heroSubtitle {
+  font-size: 1.05rem;
+  line-height: 1.6;
+  color: var(--text-secondary, #B8B8C6);
+  margin-bottom: 28px;
+  max-width: 480px;
+}
+
+.heroActions {
+  display: flex;
+  align-items: center;
+  gap: 14px;
+  flex-wrap: wrap;
+}
+
+/* Beat 2 & 3 HUD Cards */
+.beat2Card {
+  position: absolute;
+  right: 6%;
+  top: 50%;
+  transform: translateY(-50%);
+  max-width: 430px;
+  pointer-events: auto;
+  will-change: opacity, transform;
+}
+
+.beat3Card {
+  position: absolute;
+  left: 6%;
+  top: 50%;
+  transform: translateY(-50%);
+  max-width: 430px;
+  pointer-events: auto;
+  will-change: opacity, transform;
+}
+
+.hudCard {
+  background: rgba(14, 14, 18, 0.82);
+  backdrop-filter: blur(18px);
+  -webkit-backdrop-filter: blur(18px);
+  border: 1px solid rgba(255, 255, 255, 0.08);
+  border-left: 3px solid var(--color-orange, #FF5A36);
+  border-radius: 12px;
+  padding: 28px 24px;
+  box-shadow: 0 20px 45px rgba(0, 0, 0, 0.7), 0 0 25px rgba(255, 90, 54, 0.1);
+  transition: border-color 0.3s ease;
+}
+
+.hudCard:hover {
+  border-color: rgba(255, 90, 54, 0.45);
+}
+
+.hudHeader {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin-bottom: 12px;
+}
+
+.hudIndex {
+  font-family: var(--font-mono, monospace);
+  font-size: 0.8rem;
+  font-weight: 700;
+  color: var(--color-orange, #FF5A36);
+  letter-spacing: 0.1em;
+}
+
+.hudLiveDot {
+  width: 8px;
+  height: 8px;
+  border-radius: 50%;
+  background: #36D399;
+  box-shadow: 0 0 8px #36D399;
+}
+
+.hudTitle {
+  font-family: var(--font-sans, sans-serif);
+  font-size: 1.45rem;
+  font-weight: 800;
+  text-transform: uppercase;
+  letter-spacing: -0.01em;
+  color: #FFFFFF;
+  margin-bottom: 10px;
+}
+
+.hudDesc {
+  font-size: 0.95rem;
+  line-height: 1.55;
+  color: var(--text-secondary, #B8B8C6);
+  margin-bottom: 18px;
+}
+
+.hudTagRow {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+}
+
+.hudTag {
+  padding: 5px 12px;
+  font-family: var(--font-mono, monospace);
+  font-size: 0.72rem;
+  text-transform: uppercase;
+  letter-spacing: 0.06em;
+  border-radius: 4px;
+  background: rgba(255, 255, 255, 0.04);
+  border: 1px solid rgba(255, 255, 255, 0.08);
+  color: #F0F0F0;
+}
+
+/* Beat 4: Customizer Studio (Center-bottom) */
+.beat4Card {
+  position: absolute;
+  left: 50%;
+  bottom: 8%;
+  transform: translateX(-50%);
+  width: 90%;
+  max-width: 660px;
+  text-align: center;
+  pointer-events: auto;
+  will-change: opacity, transform;
+}
+
+.beat4Title {
+  font-family: var(--font-sans, sans-serif);
+  font-size: clamp(1.8rem, 3.2vw, 2.5rem);
+  font-weight: 900;
+  text-transform: uppercase;
+  color: #FFFFFF;
+  margin-bottom: 10px;
+}
+
+.beat4Desc {
+  font-size: 1rem;
+  color: var(--text-secondary, #B8B8C6);
+  margin-bottom: 18px;
+  max-width: 520px;
+  margin-left: auto;
+  margin-right: auto;
+}
+
+/* Colorway Swatches Selector */
+.swatchRow {
+  display: inline-flex;
+  align-items: center;
+  gap: 12px;
+  margin-bottom: 22px;
+  padding: 6px 14px;
+  border-radius: 30px;
+  background: rgba(0, 0, 0, 0.5);
+  border: 1px solid rgba(255, 255, 255, 0.08);
+}
+
+.swatchLabel {
+  font-family: var(--font-mono, monospace);
+  font-size: 0.72rem;
+  color: var(--text-muted, #8E8E9E);
+  text-transform: uppercase;
+  letter-spacing: 0.08em;
+  margin-right: 4px;
+}
+
+.swatchBtn {
+  width: 24px;
+  height: 24px;
+  border-radius: 50%;
+  border: 2px solid transparent;
+  cursor: pointer;
+  transition: transform 0.2s ease, border-color 0.2s ease;
+  padding: 0;
+}
+
+.swatchBtn:hover {
+  transform: scale(1.15);
+}
+
+.swatchBtnActive {
+  border-color: #FFFFFF;
+  transform: scale(1.2);
+  box-shadow: 0 0 10px rgba(255, 255, 255, 0.4);
+}
+
+.beat4Actions {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 16px;
+  flex-wrap: wrap;
+}
+
+/* Scroll indicator */
+.scrollIndicator {
+  position: absolute;
+  bottom: 24px;
+  left: 50%;
+  transform: translateX(-50%);
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 6px;
+  z-index: 5;
+  pointer-events: none;
+  opacity: 0.8;
+  will-change: opacity, transform;
+}
+
+.scrollLabel {
+  font-family: var(--font-mono, monospace);
+  font-size: 0.7rem;
+  letter-spacing: 0.15em;
+  text-transform: uppercase;
+  color: var(--text-muted, #8E8E9E);
+}
+
+.scrollBar {
+  width: 2px;
+  height: 24px;
+  background: rgba(255, 255, 255, 0.15);
+  position: relative;
+  overflow: hidden;
+  border-radius: 1px;
+}
+
+.scrollThumb {
+  width: 100%;
+  height: 40%;
+  background: var(--color-orange, #FF5A36);
+  position: absolute;
+  top: 0;
+  animation: scrollTrack 1.8s ease infinite;
+}
+
+@keyframes scrollTrack {
+  0% { transform: translateY(-100%); }
+  100% { transform: translateY(250%); }
+}
+
+/* Mouse 3D Tilt Badge Tip */
+.tiltHint {
+  position: absolute;
+  bottom: 24px;
+  right: 32px;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 6px 12px;
+  border-radius: 20px;
+  background: rgba(0, 0, 0, 0.5);
+  backdrop-filter: blur(8px);
+  border: 1px solid rgba(255, 255, 255, 0.08);
+  color: var(--text-muted, #8E8E9E);
+  font-family: var(--font-mono, monospace);
+  font-size: 0.72rem;
+  letter-spacing: 0.04em;
+  z-index: 5;
+  pointer-events: none;
+}
+
+/* Responsive Rules */
+@media (max-width: 900px) {
+  .beat1Hero {
+    left: 5%;
+    right: 5%;
+    top: 22%;
+    transform: translateY(-20%);
+    max-width: 100%;
+    text-align: center;
+  }
+
+  .heroSubtitle {
+    margin-left: auto;
+    margin-right: auto;
+  }
+
+  .heroActions {
+    justify-content: center;
+  }
+
+  .shoeTransformWrapper {
+    height: 450px;
+  }
+
+  .shoeImageLayer,
+  .shoeAltImageLayer {
+    width: 90%;
+  }
+
+  .beat2Card,
+  .beat3Card {
+    left: 5%;
+    right: 5%;
+    top: auto;
+    bottom: 8%;
+    transform: none;
+    max-width: 100%;
+  }
+
+  .hotspotPin {
+    display: none; /* Hide micro-pins on mobile for clean touch UI */
+  }
+
+  .tiltHint {
+    display: none;
+  }
+}

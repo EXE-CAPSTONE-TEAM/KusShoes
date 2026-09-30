@@ -25,6 +25,7 @@ import { Footer } from '../../components/Footer/Footer';
 import { AnimatedPrice } from '../../components/AnimatedPrice/AnimatedPrice';
 import { InteractiveParticleGrid } from '../../components/InteractiveParticleGrid/InteractiveParticleGrid';
 import { EdgeArt } from '../../components/EdgeArt/EdgeArt';
+import { ShoeHeroExperience } from '../../components/ShoeHeroExperience/ShoeHeroExperience';
 import { api, type Plan } from '../../api/client';
 import dashboardShowcase from '../../assets/showcase/dashboard-screenshot.png';
 import projectsShowcase from '../../assets/showcase/projects-screenshot.png';
@@ -368,92 +369,6 @@ const StatCounter: React.FC<StatCounterProps> = ({ target, decimals = 0, suffix 
   );
 };
 
-const TypewriterHeadline: React.FC<{ start: boolean }> = ({ start }) => {
-  const [line1Done, setLine1Done] = useState(false);
-  const [line2Done, setLine2Done] = useState(false);
-
-  const container1 = {
-    hidden: { opacity: 1 },
-    visible: {
-      opacity: 1,
-      transition: {
-        staggerChildren: 0.04,
-      },
-    },
-  };
-
-  const container2 = {
-    hidden: { opacity: 1 },
-    visible: {
-      opacity: 1,
-      transition: {
-        delayChildren: 0.9,
-        staggerChildren: 0.04,
-      },
-    },
-  };
-
-  const letter = {
-    hidden: { opacity: 0, display: 'none' },
-    visible: {
-      opacity: 1,
-      display: 'inline',
-    },
-  };
-
-  return (
-    <h1 className={styles.heroTitle}>
-      {/* Line 1 */}
-      <motion.div
-        className={styles.typewriterLine}
-        variants={container1}
-        initial="hidden"
-        animate={start ? 'visible' : undefined}
-        onAnimationComplete={() => setLine1Done(true)}
-      >
-        {'SCAN WITH '.split('').map((char, index) => (
-          <motion.span key={index} variants={letter}>
-            {char}
-          </motion.span>
-        ))}
-        <span className="text-gradient-orange">
-          {'KUSSHOES'.split('').map((char, index) => (
-            <motion.span key={index} variants={letter}>
-              {char}
-            </motion.span>
-          ))}
-        </span>
-        <motion.span variants={letter}>.</motion.span>
-        {!line1Done && <span className={styles.typingCursor} />}
-      </motion.div>
-
-      {/* Line 2 */}
-      <motion.div
-        className={styles.typewriterLine}
-        variants={container2}
-        initial="hidden"
-        animate={start ? 'visible' : undefined}
-        onAnimationComplete={() => setLine2Done(true)}
-      >
-        {'DESIGN IN '.split('').map((char, index) => (
-          <motion.span key={index} variants={letter}>
-            {char}
-          </motion.span>
-        ))}
-        <span className="text-gradient-orange">
-          {'KUSSTUDIO'.split('').map((char, index) => (
-            <motion.span key={index} variants={letter}>
-              {char}
-            </motion.span>
-          ))}
-        </span>
-        <motion.span variants={letter}>.</motion.span>
-        {line1Done && !line2Done && <span className={styles.typingCursor} />}
-      </motion.div>
-    </h1>
-  );
-};
-
 interface LandingProps {
   navigate: (path: string) => void;
 }
@@ -461,7 +376,7 @@ interface LandingProps {
 export const Landing: React.FC<LandingProps> = ({ navigate }) => {
   const { t } = useTranslation('landing');
   const { theme } = useTheme();
-  const bootReady = useBootDone();
+  useBootDone();
 
   // First-screen assets the boot loader waits for: the current theme's hero edge art (hidden
   // below 1100px, so skipped there) and the navbar logo. Failures resolve, never block.
@@ -609,39 +524,14 @@ export const Landing: React.FC<LandingProps> = ({ navigate }) => {
       {/* Reusable Navbar */}
       <Navbar navigate={navigate} currentPage="landing" />
 
-      {/* Hero Section */}
-      <section className={styles.heroSection}>
-        <EdgeArt variant="hero" />
-        <motion.div
-          className={styles.heroContent}
-          initial={{ opacity: 0, y: 30 }}
-          animate={bootReady ? { opacity: 1, y: 0 } : undefined}
-          transition={{ duration: 0.8 }}
-        >
-          <span className={styles.heroBadge}>{t('hero.badge')}</span>
-          <TypewriterHeadline start={bootReady} />
-          <p className={styles.heroDesc}>{t('hero.desc')}</p>
-          <div className={styles.heroActions}>
-            <button
-              className="btn-neon-orange"
-              onClick={() => navigate('/login')}
-              style={{ padding: '16px 36px', fontSize: '1.05rem' }}
-            >
-              {t('hero.launchApp')}
-            </button>
-            <a
-              href="#products"
-              className="btn-outline"
-              style={{ padding: '16px 36px', fontSize: '1.05rem', textDecoration: 'none' }}
-            >
-              {t('hero.exploreProducts')}
-            </a>
-          </div>
-        </motion.div>
-
-        {/* Subtle decorative grid background overlay */}
-        <div className={styles.heroGridOverlay} />
-      </section>
+      {/* 3D Sneaker Storytelling Hero Experience with GSAP ScrollTrigger */}
+      <ShoeHeroExperience
+        navigate={navigate}
+        onExploreProducts={() => {
+          const el = document.getElementById('products');
+          el?.scrollIntoView({ behavior: 'smooth' });
+        }}
+      />
 
       {/* Products Showcase Section */}
       <section id="products" className={styles.productsSection}>

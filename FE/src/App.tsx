@@ -332,8 +332,9 @@ function App() {
         style={{
           flexGrow: 1,
           backgroundColor: 'var(--bg-primary)',
-          height: '100vh',
-          overflowY: 'auto',
+          height: isPortalView ? '100vh' : 'auto',
+          minHeight: '100vh',
+          overflowY: isPortalView ? 'auto' : undefined,
           display: 'flex',
           flexDirection: 'column',
           transition: 'background-color var(--transition-normal)',
