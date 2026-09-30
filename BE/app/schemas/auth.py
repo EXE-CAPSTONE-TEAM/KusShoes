@@ -283,6 +283,11 @@ class GoogleMobileExchangeRequest(BaseModel):
         return value
 
 
+class GoogleDesktopExchangeRequest(GoogleMobileExchangeRequest):
+    """Payload to exchange a Desktop PKCE one-time Google authorization code."""
+    pass
+
+
 class EditorLaunchExchangeResponse(BaseModel):
     access_token: str
     token_type: str = "bearer"

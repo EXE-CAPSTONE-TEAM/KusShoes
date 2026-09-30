@@ -25,6 +25,10 @@ class Settings(BaseSettings):
     MOBILE_GOOGLE_REDIRECT_URI: str = "vn.kusshoes.mobile://auth/google"
     MOBILE_GOOGLE_CODE_EXPIRE_SECONDS: int = 60
 
+    # Desktop Google sign-in: one-time PKCE code returned via custom protocol
+    DESKTOP_GOOGLE_REDIRECT_URI: str = "kusshoes-editor://auth/google/callback"
+    DESKTOP_GOOGLE_CODE_EXPIRE_SECONDS: int = 60
+
     # JWT
     ACCESS_TOKEN_EXPIRE_MINUTES: int = 5
     REFRESH_TOKEN_EXPIRE_DAYS: int = 30

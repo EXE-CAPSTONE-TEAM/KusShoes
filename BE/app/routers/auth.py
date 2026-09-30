@@ -1,3 +1,4 @@
+import html
 import uuid
 from typing import Literal
 from urllib.parse import urlencode
@@ -5,7 +6,7 @@ from urllib.parse import urlencode
 import redis.asyncio as aioredis
 from fastapi import APIRouter, Body, Depends, Query, Request, Response, status
 from fastapi.exceptions import RequestValidationError
-from fastapi.responses import RedirectResponse
+from fastapi.responses import HTMLResponse, RedirectResponse
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.config import settings
@@ -29,6 +30,7 @@ from app.schemas.auth import (
     EditorSessionResponse,
     ForgotPasswordRequest,
     ForgotPasswordResponse,
+    GoogleDesktopExchangeRequest,
     GoogleMobileExchangeRequest,
     LoginRequest,
     LoginResult,
@@ -190,23 +192,23 @@ async def verify_two_factor_login(
 
 @router.get("/google")
 async def google_login(
-    client: Literal["web", "mobile"] = "web",
+    client: Literal["web", "mobile", "desktop"] = "web",
     code_challenge: str | None = Query(default=None, pattern=r"^[A-Za-z0-9_-]{43}$"),
     consent: bool = False,
     redis: aioredis.Redis = Depends(get_redis),
 ):
-    """Start Google sign-in. The mobile app passes `client=mobile` plus its PKCE S256 challenge.
+    """Start Google sign-in. Mobile and desktop apps pass `client=mobile|desktop` plus PKCE S256 challenge.
 
     `consent=true` means the user ticked the 18+ / Terms / Privacy box; without it a Google account
     that is not yet a KusShoes user is refused (AUTH_CONSENT_REQUIRED) instead of created.
     """
-    if client == auth_service.GOOGLE_CLIENT_MOBILE and not code_challenge:
+    if client in (auth_service.GOOGLE_CLIENT_MOBILE, auth_service.GOOGLE_CLIENT_DESKTOP) and not code_challenge:
         raise RequestValidationError(
             [
                 {
                     "type": "missing",
                     "loc": ("query", "code_challenge"),
-                    "msg": "code_challenge is required for mobile sign-in",
+                    "msg": f"code_challenge is required for {client} sign-in",
                     "input": None,
                 }
             ]
@@ -225,18 +227,21 @@ async def google_callback(
     db: AsyncSession = Depends(get_db),
     redis: aioredis.Redis = Depends(get_redis),
 ):
-    """Finish Google sign-in and send the browser back to the web app.
+    """Finish Google sign-in and send the browser back to the web app, mobile app, or desktop editor.
 
     The web app (PUBLIC_WEB_URL, e.g. on Vercel) is a different site from the API, so the session
     travels in the URL *fragment* of `/auth/google/callback` — fragments are never sent to a server
     or written to access logs. The refresh token is set as the usual HttpOnly cookie.
 
-    A mobile sign-in instead returns to MOBILE_GOOGLE_REDIRECT_URI with a one-time `code` that
-    only the app holding the PKCE verifier can exchange (`POST /auth/google/mobile/exchange`).
+    A mobile sign-in returns to MOBILE_GOOGLE_REDIRECT_URI with a one-time `code`.
+    A desktop sign-in returns to DESKTOP_GOOGLE_REDIRECT_URI with a one-time `code`.
     """
     started_by = await auth_service.peek_google_state(redis, state)
-    if started_by.get("client") == auth_service.GOOGLE_CLIENT_MOBILE:
+    client_type = started_by.get("client")
+    if client_type == auth_service.GOOGLE_CLIENT_MOBILE:
         return await _finish_mobile_google_login(request, db, redis, code, state, started_by)
+    if client_type == auth_service.GOOGLE_CLIENT_DESKTOP:
+        return await _finish_desktop_google_login(request, db, redis, code, state, started_by)
 
     target = f"{settings.PUBLIC_WEB_URL.rstrip('/')}/auth/google/callback"
     try:
@@ -299,6 +304,94 @@ async def _finish_mobile_google_login(
     )
 
 
+async def _finish_desktop_google_login(
+    request: Request,
+    db: AsyncSession,
+    redis: aioredis.Redis,
+    code: str,
+    state: str,
+    started_by: dict[str, str],
+) -> Response:
+    target = settings.DESKTOP_GOOGLE_REDIRECT_URI
+    try:
+        result = await auth_service.handle_google_callback(
+            db,
+            redis,
+            code=code,
+            state=state,
+            user_agent=request.headers.get("user-agent"),
+            ip_address=_client_ip(request),
+        )
+    except AppException as exc:
+        error_url = f"{target}?{urlencode({'error': exc.code})}"
+        return _render_desktop_bridge_html(error_url, error=exc.code)
+
+    one_time_code = await auth_service.create_desktop_google_code(
+        redis, tokens=result, code_challenge=started_by.get("code_challenge", "")
+    )
+    redirect_url = f"{target}?{urlencode({'code': one_time_code})}"
+    return _render_desktop_bridge_html(redirect_url)
+
+
+def _render_desktop_bridge_html(url: str, error: str | None = None) -> HTMLResponse:
+    escaped_url = html.escape(url)
+    if error:
+        escaped_error = html.escape(error)
+        content = f"""<!DOCTYPE html>
+<html lang="vi">
+<head>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <title>KusShoes Editor - Đăng nhập</title>
+    <meta http-equiv="refresh" content="0;url={escaped_url}">
+    <style>
+        body {{ font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif; background: #0f1115; color: #f3f4f6; display: flex; align-items: center; justify-content: center; min-height: 100vh; margin: 0; }}
+        .card {{ background: #1a1d24; border: 1px solid #2e3440; border-radius: 12px; padding: 32px; max-width: 440px; text-align: center; box-shadow: 0 8px 24px rgba(0,0,0,0.4); }}
+        h1 {{ font-size: 20px; color: #ef4444; margin-bottom: 12px; }}
+        p {{ font-size: 14px; color: #9ca3af; line-height: 1.5; }}
+        .btn {{ display: inline-block; margin-top: 20px; padding: 10px 20px; background: #f97316; color: #fff; text-decoration: none; border-radius: 8px; font-weight: 500; font-size: 14px; }}
+    </style>
+</head>
+<body>
+    <div class="card">
+        <h1>Đăng nhập không thành công</h1>
+        <p>Mã lỗi: {escaped_error}. Vui lòng quay lại KusShoes Editor để thử lại.</p>
+        <a class="btn" href="{escaped_url}">Quay lại ứng dụng</a>
+    </div>
+    <script>window.location.href = "{escaped_url}";</script>
+</body>
+</html>"""
+        return HTMLResponse(content=content, status_code=200)
+
+    content = f"""<!DOCTYPE html>
+<html lang="vi">
+<head>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <title>KusShoes Editor - Đang mở ứng dụng</title>
+    <meta http-equiv="refresh" content="0;url={escaped_url}">
+    <style>
+        body {{ font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif; background: #0f1115; color: #f3f4f6; display: flex; align-items: center; justify-content: center; min-height: 100vh; margin: 0; }}
+        .card {{ background: #1a1d24; border: 1px solid #2e3440; border-radius: 12px; padding: 32px; max-width: 440px; text-align: center; box-shadow: 0 8px 24px rgba(0,0,0,0.4); }}
+        h1 {{ font-size: 20px; color: #f97316; margin-bottom: 12px; }}
+        p {{ font-size: 14px; color: #9ca3af; line-height: 1.5; }}
+        .btn {{ display: inline-block; margin-top: 20px; padding: 10px 20px; background: #f97316; color: #fff; text-decoration: none; border-radius: 8px; font-weight: 500; font-size: 14px; }}
+        .hint {{ font-size: 12px; color: #6b7280; margin-top: 16px; }}
+    </style>
+</head>
+<body>
+    <div class="card">
+        <h1>Đăng nhập thành công!</h1>
+        <p>Đang chuyển hướng về KusShoes Editor Desktop...</p>
+        <a class="btn" href="{escaped_url}">Mở KusShoes Editor</a>
+        <p class="hint">Nếu ứng dụng không tự mở, bấm nút trên hoặc bạn có thể đóng tab trình duyệt này.</p>
+    </div>
+    <script>window.location.href = "{escaped_url}";</script>
+</body>
+</html>"""
+    return HTMLResponse(content=content, status_code=200)
+
+
 @router.post("/google/mobile/exchange", response_model=TokenResponse)
 async def google_mobile_exchange(
     body: GoogleMobileExchangeRequest,
@@ -307,6 +400,20 @@ async def google_mobile_exchange(
 ):
     """Trade the mobile one-time code + PKCE verifier for the session (same shape as /login)."""
     tokens = await auth_service.exchange_mobile_google_code(
+        redis, code=body.code, code_verifier=body.code_verifier
+    )
+    _set_refresh_cookie(response, tokens.refresh_token)
+    return TokenResponse(access_token=tokens.access_token, token_type=tokens.token_type)
+
+
+@router.post("/google/desktop/exchange", response_model=TokenResponse)
+async def google_desktop_exchange(
+    body: GoogleDesktopExchangeRequest,
+    response: Response,
+    redis: aioredis.Redis = Depends(get_redis),
+):
+    """Trade the desktop one-time code + PKCE verifier for the session (same shape as /login)."""
+    tokens = await auth_service.exchange_desktop_google_code(
         redis, code=body.code, code_verifier=body.code_verifier
     )
     _set_refresh_cookie(response, tokens.refresh_token)

@@ -533,6 +533,57 @@ async def test_google_mobile_errors_return_to_the_app(client, redis, monkeypatch
 
 
 @pytest.mark.asyncio
+async def test_google_desktop_start_requires_a_pkce_challenge(client):
+    res = await client.get("/api/v1/auth/google", params={"client": "desktop"})
+    assert res.status_code == 422
+
+
+@pytest.mark.asyncio
+async def test_google_desktop_flow(client, redis, monkeypatch):
+    import re
+    from urllib.parse import parse_qs, urlparse
+    from app.services import auth_service
+
+    verifier, challenge = _pkce_pair()
+    start = await client.get(
+        "/api/v1/auth/google", params={"client": "desktop", "code_challenge": challenge}
+    )
+    assert start.status_code in (302, 307)
+    state = parse_qs(urlparse(start.headers["location"]).query)["state"][0]
+
+    async def fake_callback(_db, _redis, **kwargs):
+        assert kwargs["state"] == state
+        await redis.delete(f"oauth:state:{state}")
+        return {
+            "access_token": "acc.desktop",
+            "refresh_token": "ref-desktop",
+            "token_type": "bearer",
+            "is_new_user": False,
+            "linked": False,
+        }
+
+    monkeypatch.setattr(auth_service, "handle_google_callback", fake_callback)
+    res = await client.get(f"/api/v1/auth/google/callback?code=mock_code&state={state}")
+    assert res.status_code == 200
+    assert "text/html" in res.headers.get("content-type", "")
+
+    # HTML contains the desktop custom protocol redirect
+    match = re.search(r'kusshoes-editor://auth/google/callback\?code=([A-Za-z0-9_-]+)', res.text)
+    assert match is not None
+    code = match.group(1)
+
+    # Exchange with correct PKCE verifier
+    exchange_url = "/api/v1/auth/google/desktop/exchange"
+    ok = await client.post(exchange_url, json={"code": code, "code_verifier": verifier})
+    assert ok.status_code == 200
+    assert ok.json()["access_token"] == "acc.desktop"
+
+    # Single-use replay protection
+    replay = await client.post(exchange_url, json={"code": code, "code_verifier": verifier})
+    assert replay.status_code == 401
+
+
+@pytest.mark.asyncio
 async def test_cors_allows_the_configured_web_app(client):
     res = await client.options(
         "/api/v1/auth/login",

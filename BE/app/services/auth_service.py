@@ -408,6 +408,7 @@ async def _complete_login(
 
 GOOGLE_CLIENT_WEB = "web"
 GOOGLE_CLIENT_MOBILE = "mobile"
+GOOGLE_CLIENT_DESKTOP = "desktop"
 
 
 async def get_google_auth_url(
@@ -422,7 +423,7 @@ async def get_google_auth_url(
     if consent:
         # Ticked the 18+ / ToS / privacy box before starting; needed to create a new account.
         record["consent"] = "1"
-    if client == GOOGLE_CLIENT_MOBILE:
+    if client in (GOOGLE_CLIENT_MOBILE, GOOGLE_CLIENT_DESKTOP):
         record["code_challenge"] = code_challenge or ""
     await redis.set(f"oauth:state:{state}", json.dumps(record, separators=(",", ":")), ex=600)
     return google_oauth.create_authorization_url(state)
@@ -476,6 +477,49 @@ async def exchange_mobile_google_code(
 ) -> IssuedTokens:
     # Consumed before the verifier check: a wrong guess burns the code.
     record = await _consume_opaque_record(redis, "google-mobile-code", code)
+    if not record:
+        raise AuthGoogleMobileCodeInvalid()
+    expected_challenge = str(record.get("code_challenge", ""))
+    if not expected_challenge or not hmac.compare_digest(
+        expected_challenge, _pkce_s256(code_verifier)
+    ):
+        raise AuthGoogleMobileCodeInvalid()
+    return IssuedTokens(
+        access_token=str(record["access_token"]),
+        refresh_token=str(record["refresh_token"]),
+        token_type=str(record.get("token_type", "bearer")),
+    )
+
+
+async def create_desktop_google_code(
+    redis: aioredis.Redis,
+    *,
+    tokens: dict,
+    code_challenge: str,
+) -> str:
+    """Park a finished Google session behind a one-time code bound to the desktop app's PKCE challenge."""
+    from app.config import settings
+
+    return await _store_opaque_record(
+        redis,
+        prefix="google-desktop-code",
+        payload={
+            "access_token": tokens["access_token"],
+            "refresh_token": tokens["refresh_token"],
+            "token_type": tokens.get("token_type", "bearer"),
+            "code_challenge": code_challenge,
+        },
+        ttl=settings.DESKTOP_GOOGLE_CODE_EXPIRE_SECONDS,
+    )
+
+
+async def exchange_desktop_google_code(
+    redis: aioredis.Redis,
+    *,
+    code: str,
+    code_verifier: str,
+) -> IssuedTokens:
+    record = await _consume_opaque_record(redis, "google-desktop-code", code)
     if not record:
         raise AuthGoogleMobileCodeInvalid()
     expected_challenge = str(record.get("code_challenge", ""))
@@ -562,7 +606,7 @@ async def handle_google_callback(
     await legal_service.record_legal_consent(
         db,
         new_user.id,
-        channel="mobile" if started.get("client") == GOOGLE_CLIENT_MOBILE else "web",
+        channel="mobile" if started.get("client") == GOOGLE_CLIENT_MOBILE else ("desktop" if started.get("client") == GOOGLE_CLIENT_DESKTOP else "web"),
     )
     free_plan = await plan_repo.get_free_plan(db)
     if free_plan:
