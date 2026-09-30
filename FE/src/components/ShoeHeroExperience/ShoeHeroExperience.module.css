@@ -1,12 +1,13 @@
-/* Shoe Hero Experience - Pure Image 3D Perspective & GSAP ScrollTrigger */
+/* Landing hero — pinned GSAP scroll story around a 3D-tilting sneaker.
+   Follows docs/DESIGN.md: flat (1px borders, no shadows / gradients / blur), theme tokens only,
+   one accent. GSAP writes `transform` inline on the overlay blocks and the shoe wrapper, so the
+   copy is positioned with top/left/right/bottom and never relies on a CSS transform. */
 
 .storySection {
   position: relative;
+  z-index: 2; /* stacking context for the edge art (z-index: -1) behind the copy */
   width: 100%;
-  background: radial-gradient(circle at 70% 45%, rgba(255, 90, 54, 0.12) 0%, transparent 55%),
-              radial-gradient(circle at 25% 75%, rgba(230, 30, 67, 0.08) 0%, transparent 50%),
-              radial-gradient(circle at 50% 10%, rgba(255, 255, 255, 0.03) 0%, transparent 60%),
-              var(--bg-primary, #0A0A0C);
+  background: var(--bg-primary);
 }
 
 .stickyViewport {
@@ -18,25 +19,11 @@
   display: flex;
   align-items: center;
   justify-content: center;
-  perspective: 1400px; /* 3D Perspective chamber */
+  perspective: 1400px;
 }
 
-/* Subtle background grid & technical accents */
-.gridOverlay {
-  position: absolute;
-  inset: 0;
-  background-image:
-    linear-gradient(rgba(255, 255, 255, 0.03) 1px, transparent 1px),
-    linear-gradient(90deg, rgba(255, 255, 255, 0.03) 1px, transparent 1px);
-  background-size: 50px 50px;
-  background-position: center center;
-  mask-image: radial-gradient(circle at center, black 45%, transparent 85%);
-  -webkit-mask-image: radial-gradient(circle at center, black 45%, transparent 85%);
-  pointer-events: none;
-  z-index: 1;
-}
+/* ---- Sneaker stage ---------------------------------------------------------------------- */
 
-/* The Central 3D Stage */
 .stage3D {
   position: absolute;
   inset: 0;
@@ -44,7 +31,6 @@
   align-items: center;
   justify-content: center;
   transform-style: preserve-3d;
-  pointer-events: auto;
   z-index: 2;
   cursor: grab;
 }
@@ -53,7 +39,6 @@
   cursor: grabbing;
 }
 
-/* Shoe Frame Wrapper with 3D transforms */
 .shoeTransformWrapper {
   position: relative;
   display: flex;
@@ -66,136 +51,40 @@
   will-change: transform;
 }
 
-/* Realistic Ground Shadow & Ambient Light Oval */
+/* Flat ground ring: a 1px ellipse instead of a blurred shadow */
 .floorShadow {
   position: absolute;
   bottom: 30px;
   width: 580px;
   max-width: 90%;
   height: 100px;
-  background: radial-gradient(
-    ellipse at center,
-    rgba(0, 0, 0, 0.88) 0%,
-    rgba(255, 90, 54, 0.15) 30%,
-    transparent 70%
-  );
-  filter: blur(14px);
+  border: 1px solid var(--border);
   border-radius: 50%;
   pointer-events: none;
   transform: rotateX(80deg) translateZ(-40px);
-  transition: transform 0.3s ease;
   will-change: transform, opacity;
 }
 
-/* Primary Hero Sneaker Image */
-.shoeImageLayer {
-  position: absolute;
-  max-width: 680px;
-  width: 78%;
-  height: auto;
-  object-fit: contain;
-  filter: drop-shadow(0 25px 45px rgba(0, 0, 0, 0.85))
-          drop-shadow(0 0 35px rgba(255, 90, 54, 0.22));
-  transform-style: preserve-3d;
-  will-change: transform, opacity, filter;
-  user-select: none;
-  -webkit-user-drag: none;
-}
-
-/* Secondary Sneaker Layer for Cross-angle Beat Transitions */
+.shoeImageLayer,
 .shoeAltImageLayer {
   position: absolute;
   max-width: 680px;
   width: 78%;
   height: auto;
   object-fit: contain;
-  filter: drop-shadow(0 25px 45px rgba(0, 0, 0, 0.85))
-          drop-shadow(0 0 35px rgba(255, 90, 54, 0.22));
   transform-style: preserve-3d;
   will-change: transform, opacity;
-  opacity: 0;
-  pointer-events: none;
   user-select: none;
   -webkit-user-drag: none;
 }
 
-/* Interactive 3D Hotspot Pins */
-.hotspotLayer {
-  position: absolute;
-  inset: 0;
+.shoeAltImageLayer {
+  opacity: 0;
   pointer-events: none;
-  transform-style: preserve-3d;
 }
 
-.hotspotPin {
-  position: absolute;
-  display: flex;
-  align-items: center;
-  gap: 12px;
-  pointer-events: auto;
-  transform: translateZ(40px);
-  will-change: opacity, transform;
-}
+/* ---- Copy ------------------------------------------------------------------------------- */
 
-.pinBeacon {
-  position: relative;
-  width: 22px;
-  height: 22px;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-}
-
-.pinCore {
-  width: 10px;
-  height: 10px;
-  border-radius: 50%;
-  background: var(--color-orange, #FF5A36);
-  box-shadow: 0 0 10px var(--color-orange, #FF5A36);
-}
-
-.pinWave {
-  position: absolute;
-  inset: 0;
-  border-radius: 50%;
-  border: 2px solid var(--color-orange, #FF5A36);
-  animation: pingWave 1.8s cubic-bezier(0, 0.2, 0.8, 1) infinite;
-}
-
-@keyframes pingWave {
-  0% { transform: scale(0.6); opacity: 1; }
-  100% { transform: scale(2.2); opacity: 0; }
-}
-
-.pinLabelCard {
-  background: rgba(14, 14, 18, 0.85);
-  backdrop-filter: blur(12px);
-  -webkit-backdrop-filter: blur(12px);
-  border: 1px solid rgba(255, 90, 54, 0.35);
-  border-radius: 8px;
-  padding: 8px 14px;
-  box-shadow: 0 8px 24px rgba(0, 0, 0, 0.6);
-  white-space: nowrap;
-}
-
-.pinLabelTitle {
-  display: block;
-  font-family: var(--font-mono, monospace);
-  font-size: 0.72rem;
-  font-weight: 700;
-  text-transform: uppercase;
-  color: var(--color-orange, #FF5A36);
-  letter-spacing: 0.08em;
-  margin-bottom: 2px;
-}
-
-.pinLabelDesc {
-  display: block;
-  font-size: 0.82rem;
-  color: #FFFFFF;
-}
-
-/* Overlays Layer */
 .storyOverlays {
   position: absolute;
   inset: 0;
@@ -203,241 +92,162 @@
   z-index: 4;
 }
 
-/* Beat 1: Hero Pitch */
-.beat1Hero {
+.beat1Hero,
+.beat2Card,
+.beat3Card,
+.beat4Card {
   position: absolute;
-  left: 6%;
-  top: 50%;
-  transform: translateY(-50%);
-  max-width: 560px;
   pointer-events: auto;
   will-change: opacity, transform;
 }
 
-.badge {
-  display: inline-flex;
-  align-items: center;
-  gap: 8px;
-  padding: 6px 14px;
-  border-radius: 9999px;
-  background: rgba(255, 90, 54, 0.12);
-  border: 1px solid rgba(255, 90, 54, 0.3);
-  color: var(--color-orange, #FF5A36);
-  font-family: var(--font-mono, monospace);
-  font-size: 0.8rem;
-  letter-spacing: 0.08em;
-  text-transform: uppercase;
-  margin-bottom: 18px;
-}
-
-.heroTitle {
-  font-family: var(--font-sans, sans-serif);
-  font-size: clamp(2.4rem, 4.6vw, 4.2rem);
-  font-weight: 900;
-  line-height: 1.05;
-  letter-spacing: -0.03em;
-  text-transform: uppercase;
-  color: #FFFFFF;
-  margin-bottom: 18px;
-}
-
-.titleGradient {
-  background: linear-gradient(135deg, #FF5A36 0%, #FF8A50 45%, #FFFFFF 90%);
-  -webkit-background-clip: text;
-  -webkit-text-fill-color: transparent;
-}
-
-.heroSubtitle {
-  font-size: 1.05rem;
-  line-height: 1.6;
-  color: var(--text-secondary, #B8B8C6);
-  margin-bottom: 28px;
+.beat1Hero {
+  left: 6%;
+  top: 50%;
   max-width: 480px;
 }
 
-.heroActions {
-  display: flex;
-  align-items: center;
-  gap: 14px;
-  flex-wrap: wrap;
-}
-
-/* Beat 2 & 3 HUD Cards */
 .beat2Card {
-  position: absolute;
   right: 6%;
   top: 50%;
-  transform: translateY(-50%);
-  max-width: 430px;
-  pointer-events: auto;
-  will-change: opacity, transform;
+  max-width: 400px;
 }
 
 .beat3Card {
-  position: absolute;
   left: 6%;
   top: 50%;
-  transform: translateY(-50%);
-  max-width: 430px;
-  pointer-events: auto;
-  will-change: opacity, transform;
+  max-width: 400px;
 }
 
-.hudCard {
-  background: rgba(14, 14, 18, 0.82);
-  backdrop-filter: blur(18px);
-  -webkit-backdrop-filter: blur(18px);
-  border: 1px solid rgba(255, 255, 255, 0.08);
-  border-left: 3px solid var(--color-orange, #FF5A36);
-  border-radius: 12px;
-  padding: 28px 24px;
-  box-shadow: 0 20px 45px rgba(0, 0, 0, 0.7), 0 0 25px rgba(255, 90, 54, 0.1);
-  transition: border-color 0.3s ease;
+.beat4Card {
+  left: 50%;
+  bottom: 6%;
+  width: 90%;
+  max-width: 460px;
+  /* The one block centred with a transform: GSAP reads it as its starting x, so it must stay */
+  transform: translateX(-50%);
 }
 
-.hudCard:hover {
-  border-color: rgba(255, 90, 54, 0.45);
+.eyebrow {
+  margin: 0 0 12px;
+  font-size: 0.8125rem;
+  font-weight: 500;
+  line-height: 1.4;
+  color: var(--text-secondary);
 }
 
-.hudHeader {
+.heroTitle {
+  margin: 0 0 16px;
+  font-family: 'Space Grotesk', sans-serif;
+  font-size: clamp(2rem, 3.4vw, 3rem);
+  font-weight: 800;
+  line-height: 1.1;
+  letter-spacing: -0.02em;
+  color: var(--text-primary);
+}
+
+.heroSubtitle {
+  margin: 0 0 28px;
+  max-width: 440px;
+  font-size: 1rem;
+  line-height: 1.6;
+  color: var(--text-secondary);
+}
+
+.heroActions,
+.beat4Actions {
   display: flex;
   align-items: center;
-  justify-content: space-between;
-  margin-bottom: 12px;
+  flex-wrap: wrap;
+  gap: 12px;
 }
 
-.hudIndex {
-  font-family: var(--font-mono, monospace);
-  font-size: 0.8rem;
+/* Step cards: flat surface + 1px border (no shadow, no blur, no side accent bar) */
+.card {
+  padding: 24px;
+  background: var(--bg-surface);
+  border: 1px solid var(--border);
+  border-radius: var(--radius-lg);
+}
+
+.cardTitle {
+  margin: 0 0 8px;
+  font-family: 'Space Grotesk', sans-serif;
+  font-size: 1.25rem;
   font-weight: 700;
-  color: var(--color-orange, #FF5A36);
-  letter-spacing: 0.1em;
-}
-
-.hudLiveDot {
-  width: 8px;
-  height: 8px;
-  border-radius: 50%;
-  background: #36D399;
-  box-shadow: 0 0 8px #36D399;
-}
-
-.hudTitle {
-  font-family: var(--font-sans, sans-serif);
-  font-size: 1.45rem;
-  font-weight: 800;
-  text-transform: uppercase;
+  line-height: 1.3;
   letter-spacing: -0.01em;
-  color: #FFFFFF;
-  margin-bottom: 10px;
+  color: var(--text-primary);
 }
 
-.hudDesc {
+.cardDesc {
+  margin: 0;
   font-size: 0.95rem;
   line-height: 1.55;
-  color: var(--text-secondary, #B8B8C6);
-  margin-bottom: 18px;
+  color: var(--text-secondary);
 }
 
-.hudTagRow {
+.cardMeta {
   display: flex;
-  flex-wrap: wrap;
-  gap: 8px;
-}
-
-.hudTag {
-  padding: 5px 12px;
-  font-family: var(--font-mono, monospace);
-  font-size: 0.72rem;
-  text-transform: uppercase;
-  letter-spacing: 0.06em;
-  border-radius: 4px;
-  background: rgba(255, 255, 255, 0.04);
-  border: 1px solid rgba(255, 255, 255, 0.08);
-  color: #F0F0F0;
-}
-
-/* Beat 4: Customizer Studio (Center-bottom) */
-.beat4Card {
-  position: absolute;
-  left: 50%;
-  bottom: 8%;
-  transform: translateX(-50%);
-  width: 90%;
-  max-width: 660px;
-  text-align: center;
-  pointer-events: auto;
-  will-change: opacity, transform;
-}
-
-.beat4Title {
-  font-family: var(--font-sans, sans-serif);
-  font-size: clamp(1.8rem, 3.2vw, 2.5rem);
-  font-weight: 900;
-  text-transform: uppercase;
-  color: #FFFFFF;
-  margin-bottom: 10px;
-}
-
-.beat4Desc {
-  font-size: 1rem;
-  color: var(--text-secondary, #B8B8C6);
-  margin-bottom: 18px;
-  max-width: 520px;
-  margin-left: auto;
-  margin-right: auto;
-}
-
-/* Colorway Swatches Selector */
-.swatchRow {
-  display: inline-flex;
   align-items: center;
-  gap: 12px;
-  margin-bottom: 22px;
-  padding: 6px 14px;
-  border-radius: 30px;
-  background: rgba(0, 0, 0, 0.5);
-  border: 1px solid rgba(255, 255, 255, 0.08);
+  gap: 6px;
+  margin: 16px 0 0;
+  padding-top: 14px;
+  border-top: 1px solid var(--border);
+  font-size: 0.75rem;
+  line-height: 1.4;
+  color: var(--text-tertiary);
+}
+
+.cardMeta svg {
+  flex-shrink: 0;
+  color: var(--icon-muted);
+}
+
+/* Colorway selector: 12px-style swatch from DESIGN 5.8, enlarged to stay tappable */
+.swatchRow {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  margin: 18px 0;
 }
 
 .swatchLabel {
-  font-family: var(--font-mono, monospace);
-  font-size: 0.72rem;
-  color: var(--text-muted, #8E8E9E);
-  text-transform: uppercase;
-  letter-spacing: 0.08em;
   margin-right: 4px;
+  font-size: 0.75rem;
+  color: var(--text-tertiary);
 }
 
 .swatchBtn {
   width: 24px;
   height: 24px;
-  border-radius: 50%;
-  border: 2px solid transparent;
-  cursor: pointer;
-  transition: transform 0.2s ease, border-color 0.2s ease;
   padding: 0;
+  border: none;
+  border-radius: var(--radius-full);
+  cursor: pointer;
+  box-shadow: inset 0 0 0 1px rgba(0, 0, 0, 0.12);
 }
 
-.swatchBtn:hover {
-  transform: scale(1.15);
+[data-theme='dark'] .swatchBtn {
+  box-shadow: inset 0 0 0 1px rgba(255, 255, 255, 0.16);
 }
 
 .swatchBtnActive {
-  border-color: #FFFFFF;
-  transform: scale(1.2);
-  box-shadow: 0 0 10px rgba(255, 255, 255, 0.4);
+  outline: 2px solid var(--accent);
+  outline-offset: 2px;
+}
+
+.swatchBtn:focus-visible {
+  outline: 2px solid var(--accent);
+  outline-offset: 2px;
 }
 
 .beat4Actions {
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  gap: 16px;
-  flex-wrap: wrap;
+  margin-bottom: 0;
 }
 
-/* Scroll indicator */
+/* ---- Hints ------------------------------------------------------------------------------ */
+
 .scrollIndicator {
   position: absolute;
   bottom: 24px;
@@ -449,68 +259,83 @@
   gap: 6px;
   z-index: 5;
   pointer-events: none;
-  opacity: 0.8;
   will-change: opacity, transform;
 }
 
 .scrollLabel {
-  font-family: var(--font-mono, monospace);
-  font-size: 0.7rem;
-  letter-spacing: 0.15em;
-  text-transform: uppercase;
-  color: var(--text-muted, #8E8E9E);
+  font-size: 0.75rem;
+  color: var(--text-tertiary);
 }
 
 .scrollBar {
+  position: relative;
   width: 2px;
   height: 24px;
-  background: rgba(255, 255, 255, 0.15);
-  position: relative;
   overflow: hidden;
-  border-radius: 1px;
+  background: var(--border);
 }
 
 .scrollThumb {
-  width: 100%;
-  height: 40%;
-  background: var(--color-orange, #FF5A36);
   position: absolute;
   top: 0;
+  width: 100%;
+  height: 40%;
+  background: var(--accent);
   animation: scrollTrack 1.8s ease infinite;
 }
 
 @keyframes scrollTrack {
-  0% { transform: translateY(-100%); }
-  100% { transform: translateY(250%); }
+  0% {
+    transform: translateY(-100%);
+  }
+  100% {
+    transform: translateY(250%);
+  }
 }
 
-/* Mouse 3D Tilt Badge Tip */
 .tiltHint {
   position: absolute;
   bottom: 24px;
   right: 32px;
+  z-index: 5;
   display: flex;
   align-items: center;
   gap: 8px;
   padding: 6px 12px;
-  border-radius: 20px;
-  background: rgba(0, 0, 0, 0.5);
-  backdrop-filter: blur(8px);
-  border: 1px solid rgba(255, 255, 255, 0.08);
-  color: var(--text-muted, #8E8E9E);
-  font-family: var(--font-mono, monospace);
-  font-size: 0.72rem;
-  letter-spacing: 0.04em;
-  z-index: 5;
+  background: var(--bg-surface);
+  border: 1px solid var(--border);
+  border-radius: var(--radius-md);
+  font-size: 0.75rem;
+  color: var(--text-tertiary);
   pointer-events: none;
 }
 
-/* Responsive Rules */
-/* Tablet + phone (the JS in ShoeHeroExperience.tsx switches to its "mobile" tween values at the
-   same 900px). The desktop composition overlays copy on a shoe that sits beside it; on a narrow
-   screen there is no beside, so the layout stacks: sneaker in the upper part of the viewport,
-   copy anchored to the bottom. GSAP owns `transform` on the overlays (it writes it inline), so
-   the copy is positioned with top/bottom only. */
+@media (prefers-reduced-motion: reduce) {
+  .scrollThumb {
+    animation: none;
+  }
+}
+
+/* ---- Wide screens: keep the copy clear of the edge art (shown above 1100px) ------------- */
+
+@media (min-width: 1101px) {
+  .beat1Hero,
+  .beat3Card {
+    left: max(6%, calc(clamp(200px, 24vw, 440px) + 24px));
+  }
+  .beat2Card {
+    right: max(6%, calc(clamp(200px, 24vw, 440px) + 24px));
+  }
+  .beat1Hero {
+    max-width: 440px;
+  }
+}
+
+/* ---- Tablet + phone ---------------------------------------------------------------------
+   The JS in ShoeHeroExperience.tsx switches to its "mobile" tween values at the same 900px.
+   The desktop composition overlays copy on a shoe that sits beside it; on a narrow screen there
+   is no "beside", so the layout stacks: sneaker in the upper part of the viewport, copy anchored
+   to the bottom. */
 @media (max-width: 900px) {
   .stage3D {
     inset: 0 0 auto 0;
@@ -535,26 +360,24 @@
     right: 5%;
     top: auto;
     bottom: max(44px, calc(env(safe-area-inset-bottom) + 36px));
-    transform: none;
     max-width: 100%;
+  }
+
+  .beat4Card {
+    width: 92%;
+    bottom: max(44px, calc(env(safe-area-inset-bottom) + 36px));
   }
 
   .beat1Hero {
     text-align: center;
   }
 
-  .badge {
-    max-width: 100%;
-    margin-bottom: 12px;
-    padding: 6px 12px;
-    font-size: 0.68rem;
-    letter-spacing: 0.06em;
-    line-height: 1.4;
-    text-align: left;
+  .eyebrow {
+    margin-bottom: 8px;
   }
 
   .heroTitle {
-    font-size: clamp(1.6rem, 7vw, 2.6rem);
+    font-size: clamp(1.75rem, 7.2vw, 2.5rem);
     margin-bottom: 12px;
   }
 
@@ -569,81 +392,45 @@
     overflow: hidden;
   }
 
-  .heroActions {
-    flex-direction: column;
-    align-items: stretch;
-    gap: 10px;
-  }
-
-  /* The buttons carry inline padding/font-size from the markup, hence !important */
-  .heroActions > button,
-  .beat4Actions > button {
-    min-height: 48px;
-    padding: 12px 18px !important;
-    font-size: 1rem !important;
-    justify-content: center;
-    text-align: center;
-  }
-
-  .hudCard {
-    padding: 18px;
-  }
-
-  .hudHeader {
-    margin-bottom: 8px;
-  }
-
-  .hudIndex {
-    font-size: 0.7rem;
-  }
-
-  .hudTitle {
-    font-size: 1.2rem;
-    margin-bottom: 8px;
-  }
-
-  .hudDesc {
-    font-size: 0.88rem;
-    line-height: 1.5;
-    margin-bottom: 12px;
-  }
-
-  .beat4Card {
-    width: 92%;
-    bottom: max(44px, calc(env(safe-area-inset-bottom) + 36px));
-  }
-
-  .beat4Title {
-    font-size: clamp(1.4rem, 6vw, 2.2rem);
-    margin-bottom: 8px;
-  }
-
-  .beat4Desc {
-    font-size: 0.9rem;
-    line-height: 1.5;
-    margin-bottom: 12px;
-  }
-
-  .swatchRow {
-    flex-wrap: wrap;
-    justify-content: center;
-    gap: 10px;
-    margin-bottom: 14px;
-  }
-
-  .swatchBtn {
-    width: 32px;
-    height: 32px;
-  }
-
+  .heroActions,
   .beat4Actions {
     flex-direction: column;
     align-items: stretch;
     gap: 10px;
   }
 
-  .hotspotPin {
-    display: none; /* Hide micro-pins on mobile for clean touch UI */
+  .heroActions > button,
+  .beat4Actions > button {
+    min-height: 48px;
+    justify-content: center;
+  }
+
+  .card {
+    padding: 18px;
+  }
+
+  .cardTitle {
+    font-size: 1.125rem;
+  }
+
+  .cardDesc {
+    font-size: 0.9rem;
+    line-height: 1.5;
+  }
+
+  .cardMeta {
+    margin-top: 12px;
+    padding-top: 10px;
+  }
+
+  .swatchRow {
+    flex-wrap: wrap;
+    margin: 14px 0;
+  }
+
+  .swatchBtn {
+    width: 32px;
+    height: 32px;
   }
 
   .tiltHint {
@@ -670,28 +457,23 @@
   }
 }
 
-/* Narrowest phones: the colorway row (label + 4 swatches) no longer fits on one line, and the
-   label only repeats what the swatches' own titles say. */
+/* Narrowest phones: the colorway row (label + 4 swatches) no longer fits on one line */
 @media (max-width: 360px) {
   .swatchLabel {
     display: none;
   }
 }
 
-/* Short phones (iPhone SE / 360x640 Android): the copy has less room under the sneaker, so
-   tighten it rather than let it climb over the shoe. */
+/* Short phones (iPhone SE / 360x640 Android): less room under the sneaker, so tighten the copy
+   rather than let it climb over the shoe. */
 @media (max-width: 900px) and (max-height: 720px) {
   .stage3D {
     height: 40%;
     padding-top: 52px;
   }
 
-  .badge {
-    margin-bottom: 8px;
-  }
-
   .heroTitle {
-    font-size: clamp(1.4rem, 6.4vw, 2rem);
+    font-size: clamp(1.5rem, 6.4vw, 2rem);
     margin-bottom: 8px;
   }
 
@@ -702,29 +484,20 @@
     margin-bottom: 12px;
   }
 
-  .hudCard {
+  .card {
     padding: 14px;
   }
 
-  .hudDesc {
-    -webkit-line-clamp: 4;
-    line-clamp: 4;
+  .cardDesc {
     display: -webkit-box;
     -webkit-box-orient: vertical;
-    overflow: hidden;
-  }
-
-  .beat4Desc {
-    display: -webkit-box;
-    -webkit-box-orient: vertical;
-    -webkit-line-clamp: 2;
-    line-clamp: 2;
+    -webkit-line-clamp: 3;
+    line-clamp: 3;
     overflow: hidden;
   }
 
   .heroActions > button,
   .beat4Actions > button {
     min-height: 44px;
-    padding: 10px 16px !important;
   }
 }

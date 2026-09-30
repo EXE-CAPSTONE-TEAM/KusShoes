@@ -1,5 +1,6 @@
 import React, { useRef, useState } from 'react';
-import { ArrowRight, Sparkles, Layers, ShieldCheck, Compass, Move3d, Palette } from 'lucide-react';
+import { ArrowRight, Cloud, Monitor, Move3d, Smartphone } from 'lucide-react';
+import { useTranslation } from 'react-i18next';
 import gsap from 'gsap';
 import { ScrollTrigger } from 'gsap/ScrollTrigger';
 import { useGSAP } from '@gsap/react';
@@ -9,6 +10,7 @@ import classicOrangeNoBg from '../../assets/classic-orange-nobg.png';
 import streetGraffitiNoBg from '../../assets/street-graffiti-nobg.png';
 import neonAlleyNoBg from '../../assets/neon-alley-nobg.png';
 import webCrimsonNoBg from '../../assets/web-crimson-nobg.png';
+import { EdgeArt } from '../EdgeArt/EdgeArt';
 import styles from './ShoeHeroExperience.module.css';
 
 gsap.registerPlugin(ScrollTrigger, useGSAP);
@@ -29,6 +31,7 @@ export const ShoeHeroExperience: React.FC<ShoeHeroExperienceProps> = ({
   navigate,
   onExploreProducts,
 }) => {
+  const { t } = useTranslation('landing');
   const containerRef = useRef<HTMLDivElement>(null);
   const viewportRef = useRef<HTMLDivElement>(null);
   const stageRef = useRef<HTMLDivElement>(null);
@@ -41,9 +44,6 @@ export const ShoeHeroExperience: React.FC<ShoeHeroExperienceProps> = ({
   const beat2Ref = useRef<HTMLDivElement>(null);
   const beat3Ref = useRef<HTMLDivElement>(null);
   const beat4Ref = useRef<HTMLDivElement>(null);
-  const pin1Ref = useRef<HTMLDivElement>(null);
-  const pin2Ref = useRef<HTMLDivElement>(null);
-  const pin3Ref = useRef<HTMLDivElement>(null);
   const indicatorRef = useRef<HTMLDivElement>(null);
 
   const [activeColorway, setActiveColorway] = useState<string>('orange');
@@ -85,7 +85,10 @@ export const ShoeHeroExperience: React.FC<ShoeHeroExperienceProps> = ({
       }
 
       // Initial layout settings
-      const beat1X = isMobile ? 0 : 180;
+      // Above 1100px the edge art is visible and the copy column moves in to clear it (see the
+      // min-width: 1101px rule in the CSS), so the sneaker sits further right to keep clear of it.
+      const hasEdgeArt = window.innerWidth > 1100;
+      const beat1X = isMobile ? 0 : hasEdgeArt ? 300 : 180;
       const beat1Y = isMobile ? -30 : 0;
       const beat2X = isMobile ? 0 : -220;
       const beat3X = isMobile ? 0 : 200;
@@ -93,7 +96,7 @@ export const ShoeHeroExperience: React.FC<ShoeHeroExperienceProps> = ({
       gsap.set(shoeEl, {
         x: beat1X,
         y: beat1Y,
-        scale: isMobile ? 0.95 : 1.08,
+        scale: isMobile ? 0.95 : hasEdgeArt ? 1 : 1.08,
         rotationZ: isMobile ? 0 : 3,
         transformPerspective: 1200,
       });
@@ -102,12 +105,6 @@ export const ShoeHeroExperience: React.FC<ShoeHeroExperienceProps> = ({
       gsap.set(beat2Ref.current, { opacity: 0, y: 40 });
       gsap.set(beat3Ref.current, { opacity: 0, y: 40 });
       gsap.set(beat4Ref.current, { opacity: 0, y: 40 });
-
-      // Hotspots initial state
-      gsap.set([pin1Ref.current, pin2Ref.current, pin3Ref.current], {
-        opacity: 0,
-        scale: 0.6,
-      });
 
       // Master Timeline with ScrollTrigger Pinned Scrub
       const tl = gsap.timeline({
@@ -165,20 +162,9 @@ export const ShoeHeroExperience: React.FC<ShoeHeroExperienceProps> = ({
           { opacity: 1, y: 0, duration: 0.45, ease: 'power2.out' },
           'beat1+=0.55'
         )
-        // Stagger in leather callout pins
-        .to(
-          [pin1Ref.current, pin2Ref.current],
-          { opacity: 1, scale: 1, stagger: 0.15, duration: 0.4, ease: 'back.out(1.7)' },
-          'beat1+=0.6'
-        )
         .addLabel('beat2')
 
-        // --- BEAT 3 (Traction & Outsole Profile Transition) ---
-        .to(
-          [pin1Ref.current, pin2Ref.current],
-          { opacity: 0, scale: 0.5, duration: 0.25 },
-          'beat2+=0.25'
-        )
+        // --- BEAT 3 (Cloud step: crossfade to the studio angle) ---
         .to(
           beat2Ref.current,
           { opacity: 0, y: -30, duration: 0.35, ease: 'power2.in' },
@@ -223,19 +209,9 @@ export const ShoeHeroExperience: React.FC<ShoeHeroExperienceProps> = ({
           { opacity: 1, y: 0, duration: 0.45, ease: 'power2.out' },
           'beat2+=0.65'
         )
-        .to(
-          pin3Ref.current,
-          { opacity: 1, scale: 1, duration: 0.4, ease: 'back.out(1.7)' },
-          'beat2+=0.7'
-        )
         .addLabel('beat3')
 
-        // --- BEAT 4 (The Complete Pair & Customizer Studio) ---
-        .to(
-          pin3Ref.current,
-          { opacity: 0, scale: 0.5, duration: 0.25 },
-          'beat3+=0.25'
-        )
+        // --- BEAT 4 (The complete pair & KusStudio) ---
         .to(
           beat3Ref.current,
           { opacity: 0, y: -30, duration: 0.35, ease: 'power2.in' },
@@ -245,8 +221,8 @@ export const ShoeHeroExperience: React.FC<ShoeHeroExperienceProps> = ({
           shoeEl,
           {
             x: 0,
-            y: isMobile ? -60 : -45,
-            scale: isMobile ? 1.05 : 1.2,
+            y: isMobile ? -60 : -110,
+            scale: isMobile ? 1.05 : 1.1,
             rotationZ: 0,
             duration: 0.8,
             ease: 'power2.inOut',
@@ -292,191 +268,100 @@ export const ShoeHeroExperience: React.FC<ShoeHeroExperienceProps> = ({
 
   return (
     <section ref={containerRef} className={styles.storySection}>
+      {/* Decorative line art on the viewport edges — the hero is the one place it carries the
+          orange accent (docs/DESIGN.md 6.4). Hidden <= 1100px by EdgeArt itself. */}
+      <EdgeArt variant="hero" />
+
       <div ref={viewportRef} className={styles.stickyViewport}>
-        <div className={styles.gridOverlay} />
 
         {/* 3D Perspective Stage */}
         <div ref={stageRef} className={styles.stage3D}>
           <div ref={shoeWrapperRef} className={styles.shoeTransformWrapper}>
-            {/* Ambient Ground Shadow */}
-            <div ref={floorShadowRef} className={styles.floorShadow} />
+            {/* Flat ground ring under the shoe */}
+            <div ref={floorShadowRef} className={styles.floorShadow} aria-hidden="true" />
 
-            {/* Primary Sneaker Image (Beat 1 & 2: heroSneakerNoBg) */}
+            {/* Primary sneaker image (beats 1–2) */}
             <img
               ref={shoeImgRef}
               src={heroSneakerNoBg}
-              alt="KusShoes Sneaker Craftsmanship"
+              alt={t('hero.imageAlt')}
               className={styles.shoeImageLayer}
               loading="eager"
+              draggable={false}
             />
 
-            {/* Alternate Sneaker Image (Beat 3 & 4: heroSneakerAltNoBg or selected colorway) */}
+            {/* Alternate angle (beats 3–4, swaps to the selected colorway) */}
             <img
               ref={shoeAltImgRef}
               src={selectedImg || heroSneakerAltNoBg}
-              alt="KusShoes Studio Sneaker Angle"
+              alt=""
+              aria-hidden="true"
               className={styles.shoeAltImageLayer}
               loading="eager"
+              draggable={false}
             />
-
-            {/* 3D Hotspot Annotations */}
-            <div className={styles.hotspotLayer}>
-              {/* Pin 1: Toe Vamp */}
-              <div
-                ref={pin1Ref}
-                className={styles.hotspotPin}
-                style={{ top: '65%', left: '26%' }}
-              >
-                <div className={styles.pinBeacon}>
-                  <span className={styles.pinWave} />
-                  <span className={styles.pinCore} />
-                </div>
-                <div className={styles.pinLabelCard}>
-                  <span className={styles.pinLabelTitle}>01 // FULL-GRAIN LEATHER</span>
-                  <span className={styles.pinLabelDesc}>Mũi da đục lỗ thoáng khí gia công tỉ mỉ</span>
-                </div>
-              </div>
-
-              {/* Pin 2: KusShoes K-Emblem */}
-              <div
-                ref={pin2Ref}
-                className={styles.hotspotPin}
-                style={{ top: '35%', left: '46%' }}
-              >
-                <div className={styles.pinBeacon}>
-                  <span className={styles.pinWave} />
-                  <span className={styles.pinCore} />
-                </div>
-                <div className={styles.pinLabelCard}>
-                  <span className={styles.pinLabelTitle}>02 // EMBOSSED K-EMBLEM</span>
-                  <span className={styles.pinLabelDesc}>Logo chữ K ép nhiệt viền cam phản quang</span>
-                </div>
-              </div>
-
-              {/* Pin 3: Grip-Tech Outsole */}
-              <div
-                ref={pin3Ref}
-                className={styles.hotspotPin}
-                style={{ top: '75%', right: '28%' }}
-              >
-                <div className={styles.pinBeacon}>
-                  <span className={styles.pinWave} />
-                  <span className={styles.pinCore} />
-                </div>
-                <div className={styles.pinLabelCard}>
-                  <span className={styles.pinLabelTitle}>03 // DUAL-DENSITY OUTSOLE</span>
-                  <span className={styles.pinLabelDesc}>Đế cao su lưu hóa đa hướng chống trượt</span>
-                </div>
-              </div>
-            </div>
           </div>
         </div>
 
-        {/* Narrative Overlays synced with GSAP ScrollTrigger beats */}
+        {/* Copy synced with the GSAP ScrollTrigger beats */}
         <div className={styles.storyOverlays}>
-          {/* Beat 1: Hero Main Pitch */}
+          {/* Beat 1: pitch */}
           <div ref={beat1Ref} className={styles.beat1Hero}>
-            <span className={styles.badge}>
-              <Sparkles size={14} />
-              Văn Hóa Giày Streetwear Đỉnh Cao
-            </span>
-            <h1 className={styles.heroTitle}>
-              Cảm Nhận <span className={styles.titleGradient}>Chất Giày</span> Chuẩn Từng Đường Nét.
-            </h1>
-            <p className={styles.heroSubtitle}>
-              Khám phá cấu tạo sneaker thực thụ từ lớp da thuộc tuyển chọn,
-              đường may kép gia cố đến rãnh đế cao su công nghệ cao sẵn sàng cho mọi bản phối cá nhân.
-            </p>
+            <p className={styles.eyebrow}>{t('hero.eyebrow')}</p>
+            <h1 className={styles.heroTitle}>{t('hero.title')}</h1>
+            <p className={styles.heroSubtitle}>{t('hero.subtitle')}</p>
             <div className={styles.heroActions}>
-              <button
-                type="button"
-                className="btn-neon-orange"
-                onClick={() => navigate('/login')}
-                style={{ padding: '16px 36px', fontSize: '1.05rem' }}
-              >
-                Khởi chạy KusStudio <ArrowRight size={18} style={{ marginLeft: 6 }} />
+              <button type="button" className="btn-neon-orange" onClick={() => navigate('/login')}>
+                {t('hero.launchApp')} <ArrowRight size={16} />
               </button>
-              <button
-                type="button"
-                className="btn-outline"
-                onClick={onExploreProducts}
-                style={{ padding: '16px 32px', fontSize: '1.05rem' }}
-              >
-                Khám phá sản phẩm
+              <button type="button" className="btn-outline" onClick={onExploreProducts}>
+                {t('hero.exploreProducts')}
               </button>
             </div>
           </div>
 
-          {/* Beat 2: Craftsmanship & Upper Leather */}
+          {/* Beat 2: scan */}
           <div ref={beat2Ref} className={styles.beat2Card}>
-            <div className={styles.hudCard}>
-              <div className={styles.hudHeader}>
-                <span className={styles.hudIndex}>01 // CRAFTSMANSHIP & LEATHER</span>
-                <span className={styles.hudLiveDot} />
-              </div>
-              <h2 className={styles.hudTitle}>Da Thuộc Tuyển Chọn</h2>
-              <p className={styles.hudDesc}>
-                Bề mặt da mềm mại tự nhiên với lỗ đục thoáng khí và đường chỉ may kép gia cường.
-                Độ hoàn thiện tinh xảo giúp giữ form dáng hoàn hảo qua thời gian sử dụng.
+            <div className={styles.card}>
+              <p className={styles.eyebrow}>{t('workflow.stepLabel', { number: 1 })}</p>
+              <h2 className={styles.cardTitle}>{t('workflow.step1.title')}</h2>
+              <p className={styles.cardDesc}>{t('workflow.step1.description')}</p>
+              <p className={styles.cardMeta}>
+                <Smartphone size={14} aria-hidden="true" />
+                {t('workflow.step1.metaText')}
               </p>
-              <div className={styles.hudTagRow}>
-                <span className={styles.hudTag}>
-                  <Layers size={13} style={{ marginRight: 4, verticalAlign: -1 }} />
-                  Full-Grain Leather
-                </span>
-                <span className={styles.hudTag}>
-                  <ShieldCheck size={13} style={{ marginRight: 4, verticalAlign: -1 }} />
-                  Reinforced Stitching
-                </span>
-              </div>
             </div>
           </div>
 
-          {/* Beat 3: Traction & Outsole Geometry */}
+          {/* Beat 3: cloud */}
           <div ref={beat3Ref} className={styles.beat3Card}>
-            <div className={styles.hudCard}>
-              <div className={styles.hudHeader}>
-                <span className={styles.hudIndex}>02 // TRACTION & SOLE GEOMETRY</span>
-                <span className={styles.hudLiveDot} />
-              </div>
-              <h2 className={styles.hudTitle}>Đế Cao Su Đa Hướng</h2>
-              <p className={styles.hudDesc}>
-                Rãnh gai bám đường được thiết kế đa khối giúp tăng cường ma sát tối đa.
-                Lớp đệm gót hấp thụ xung lực mang đến bước đi vững vàng và êm ái trên từng góc phố.
+            <div className={styles.card}>
+              <p className={styles.eyebrow}>{t('workflow.stepLabel', { number: 2 })}</p>
+              <h2 className={styles.cardTitle}>{t('workflow.step2.title')}</h2>
+              <p className={styles.cardDesc}>{t('workflow.step2.description')}</p>
+              <p className={styles.cardMeta}>
+                <Cloud size={14} aria-hidden="true" />
+                {t('workflow.step2.metaText')}
               </p>
-              <div className={styles.hudTagRow}>
-                <span className={styles.hudTag}>
-                  <Compass size={13} style={{ marginRight: 4, verticalAlign: -1 }} />
-                  Grip-Tech Sole
-                </span>
-                <span className={styles.hudTag}>Impact Cushioning</span>
-              </div>
             </div>
           </div>
 
-          {/* Beat 4: Colorway Showcase & Studio CTA */}
+          {/* Beat 4: KusStudio + colorways */}
           <div ref={beat4Ref} className={styles.beat4Card}>
-            <div className={styles.hudCard} style={{ borderLeft: 'none', borderTop: '3px solid var(--color-orange)' }}>
-              <span className={styles.badge} style={{ marginBottom: 12 }}>
-                <Palette size={14} />
-                Bản Phối Sẵn Sàng Sáng Tạo
-              </span>
-              <h2 className={styles.beat4Title}>
-                Tự Tay Tạo Nên <span className={styles.titleGradient}>Dấu Ấn Của Riêng Bạn</span>
-              </h2>
-              <p className={styles.beat4Desc}>
-                Chọn phối màu thử nghiệm hoặc truy cập KusStudio để tùy biến từng mảng màu,
-                chất liệu da và tag cá nhân hóa.
-              </p>
+            <div className={styles.card}>
+              <p className={styles.eyebrow}>{t('workflow.stepLabel', { number: 3 })}</p>
+              <h2 className={styles.cardTitle}>{t('workflow.step3.title')}</h2>
+              <p className={styles.cardDesc}>{t('workflow.step3.description')}</p>
 
-              {/* Interactive Colorway Switcher */}
               <div className={styles.swatchRow}>
-                <span className={styles.swatchLabel}>Colorways:</span>
+                <span className={styles.swatchLabel}>{t('workflow.colorway')}</span>
                 {COLORWAYS.map((cw) => (
                   <button
                     key={cw.id}
                     type="button"
                     title={cw.name}
+                    aria-label={t('hero.colorwayAria', { name: cw.name })}
+                    aria-pressed={activeColorway === cw.id}
                     className={`${styles.swatchBtn} ${activeColorway === cw.id ? styles.swatchBtnActive : ''}`}
                     style={{ background: cw.color }}
                     onClick={() => handleSelectColorway(cw)}
@@ -485,39 +370,33 @@ export const ShoeHeroExperience: React.FC<ShoeHeroExperienceProps> = ({
               </div>
 
               <div className={styles.beat4Actions}>
-                <button
-                  type="button"
-                  className="btn-neon-orange"
-                  onClick={() => navigate('/login')}
-                  style={{ padding: '16px 40px', fontSize: '1.1rem' }}
-                >
-                  Bắt Đầu Custom Trong 3D Studio <ArrowRight size={18} style={{ marginLeft: 6 }} />
+                <button type="button" className="btn-neon-orange" onClick={() => navigate('/login')}>
+                  {t('workflow.startFreeScan')} <ArrowRight size={16} />
                 </button>
-                <button
-                  type="button"
-                  className="btn-outline"
-                  onClick={onExploreProducts}
-                  style={{ padding: '16px 32px' }}
-                >
-                  Xem thêm sản phẩm
+                <button type="button" className="btn-outline" onClick={onExploreProducts}>
+                  {t('hero.exploreProducts')}
                 </button>
               </div>
+              <p className={styles.cardMeta}>
+                <Monitor size={14} aria-hidden="true" />
+                {t('workflow.step3.metaText')}
+              </p>
             </div>
           </div>
         </div>
 
-        {/* Scroll down indicator */}
-        <div ref={indicatorRef} className={styles.scrollIndicator}>
-          <span className={styles.scrollLabel}>Cuộn để khám phá</span>
+        {/* Scroll indicator */}
+        <div ref={indicatorRef} className={styles.scrollIndicator} aria-hidden="true">
+          <span className={styles.scrollLabel}>{t('hero.scrollHint')}</span>
           <div className={styles.scrollBar}>
             <div className={styles.scrollThumb} />
           </div>
         </div>
 
-        {/* Mouse 3D Tilt Tip */}
-        <div className={styles.tiltHint}>
+        {/* Pointer tilt hint (desktop only) */}
+        <div className={styles.tiltHint} aria-hidden="true">
           <Move3d size={14} />
-          <span>Rê chuột để cảm nhận 3D Depth</span>
+          <span>{t('hero.tiltHint')}</span>
         </div>
       </div>
     </section>

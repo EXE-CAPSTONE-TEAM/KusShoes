@@ -7,10 +7,15 @@
     "screenshotAlt": "Ảnh chụp màn hình {{label}} của KusShoes"
   },
   "hero": {
-    "badge": "TƯƠNG LAI CỦA TUỲ CHỈNH SNEAKER",
-    "desc": "Một hệ sinh thái thiết kế thống nhất. Biến giày thật thành mô hình 3D tương tác bằng photogrammetry, lưu lên đám mây và tạo ra các mẫu độc bản trong studio thiết kế 3D mượt mà.",
+    "eyebrow": "Tuỳ chỉnh sneaker 3D",
+    "title": "Quét giày thật. Thiết kế 3D theo ý bạn.",
+    "subtitle": "Quét đôi giày thật bằng điện thoại, rồi đổi màu, đổi chất liệu và xuất file trong KusStudio.",
     "launchApp": "Vào App Portal",
-    "exploreProducts": "Khám phá sản phẩm"
+    "exploreProducts": "Khám phá sản phẩm",
+    "scrollHint": "Cuộn để khám phá",
+    "tiltHint": "Rê chuột để xoay giày",
+    "imageAlt": "Đôi sneaker KusShoes ở chế độ xem 3D",
+    "colorwayAria": "Phối màu: {{name}}"
   },
   "products": {
     "title": "Sản phẩm KusShoes",

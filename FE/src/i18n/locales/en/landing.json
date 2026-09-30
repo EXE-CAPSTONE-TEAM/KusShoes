@@ -7,10 +7,15 @@
     "screenshotAlt": "KusShoes {{label}} screenshot"
   },
   "hero": {
-    "badge": "THE FUTURE OF SNEAKER CUSTOMIZATION",
-    "desc": "A unified design ecosystem. Turn physical sneakers into interactive 3D models via photogrammetry, save them to the cloud, and build unique customs inside a responsive 3D design studio.",
+    "eyebrow": "3D sneaker customization",
+    "title": "Scan your sneakers. Design them in 3D.",
+    "subtitle": "Capture a real pair with your phone, then recolor it, swap materials and export it from KusStudio.",
     "launchApp": "Launch App Portal",
-    "exploreProducts": "Explore Products"
+    "exploreProducts": "Explore Products",
+    "scrollHint": "Scroll to explore",
+    "tiltHint": "Move your cursor to tilt the shoe",
+    "imageAlt": "KusShoes sneaker in a 3D view",
+    "colorwayAria": "Colorway: {{name}}"
   },
   "products": {
     "title": "KusShoes Products",
