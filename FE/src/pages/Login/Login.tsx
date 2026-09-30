@@ -60,6 +60,18 @@ export const Login: React.FC<LoginProps> = ({ setPage }) => {
   );
   const [fieldErrors, setFieldErrors] = useState<RegisterFieldErrors & LoginFieldErrors>({});
 
+  useEffect(() => {
+    const params = new URLSearchParams(window.location.search);
+    if (params.get('from') === 'desktop' || params.get('return_to') === 'desktop') {
+      try {
+        sessionStorage.setItem('kusshoes_return_to_desktop', '1');
+        localStorage.setItem('kusshoes_return_to_desktop', '1');
+      } catch {
+        // Ignore storage access restrictions
+      }
+    }
+  }, []);
+
   // Password strength state
   const [strengthScore, setStrengthScore] = useState(0); // 0 to 3
   const [strengthLabelKey, setStrengthLabelKey] = useState<'tooWeak' | 'weak' | 'medium' | 'strong'>('tooWeak');

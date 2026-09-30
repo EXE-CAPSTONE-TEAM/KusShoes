@@ -14,6 +14,7 @@ interface GoogleCallbackProps {
  */
 export const GoogleCallback: React.FC<GoogleCallbackProps> = ({ setPage }) => {
   const [error, setError] = useState<string | null>(null);
+  const [desktopLink, setDesktopLink] = useState<string | null>(null);
 
   useEffect(() => {
     const hash = window.location.hash.startsWith('#') ? window.location.hash.slice(1) : '';
@@ -34,6 +35,27 @@ export const GoogleCallback: React.FC<GoogleCallbackProps> = ({ setPage }) => {
       return;
     }
     api.completeGoogleLogin(accessToken, tokenType);
+
+    let returnToDesktop = false;
+    try {
+      returnToDesktop =
+        sessionStorage.getItem('kusshoes_return_to_desktop') === '1' ||
+        localStorage.getItem('kusshoes_return_to_desktop') === '1';
+      sessionStorage.removeItem('kusshoes_return_to_desktop');
+      localStorage.removeItem('kusshoes_return_to_desktop');
+    } catch {
+      // Ignore storage errors
+    }
+
+    if (returnToDesktop) {
+      const deepLink = `kusshoes-editor://auth/callback?access_token=${encodeURIComponent(
+        accessToken
+      )}&token_type=${encodeURIComponent(tokenType)}`;
+      setDesktopLink(deepLink);
+      window.location.assign(deepLink);
+      return;
+    }
+
     setPage('dashboard');
   }, [setPage]);
 
@@ -41,7 +63,30 @@ export const GoogleCallback: React.FC<GoogleCallbackProps> = ({ setPage }) => {
     <div className={styles.container}>
       <LoginBackdrop />
       <div style={{ position: 'relative', zIndex: 1, display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 16, textAlign: 'center' }}>
-        {error ? (
+        {desktopLink ? (
+          <>
+            <h2 style={{ color: '#f97316', margin: '0 0 8px 0', fontSize: 20 }}>Đăng nhập thành công!</h2>
+            <p>Đang chuyển hướng về ứng dụng KusShoes Editor Desktop...</p>
+            <a
+              href={desktopLink}
+              style={{
+                display: 'inline-block',
+                marginTop: 12,
+                padding: '10px 24px',
+                background: '#f97316',
+                color: '#fff',
+                borderRadius: 8,
+                textDecoration: 'none',
+                fontWeight: 600,
+              }}
+            >
+              Mở KusShoes Editor
+            </a>
+            <p style={{ fontSize: 13, color: '#888', marginTop: 8 }}>
+              Nếu ứng dụng không tự mở, bấm vào nút trên hoặc bạn có thể đóng tab này.
+            </p>
+          </>
+        ) : error ? (
           <>
             <p>{error}</p>
             <button className="btn-neon-orange" onClick={() => setPage('login')}>Back to sign in</button>
