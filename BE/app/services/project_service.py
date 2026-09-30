@@ -47,10 +47,14 @@ from app.schemas.project import (
     TriggerBakeRequest,
     UpdateProjectRequest,
 )
+from app.config import settings
 from app.services import guardrail_service, job_service, quota_service, version_service
 from app.services.project_access import require_owner
 
-EDITOR_BASE_URL = "https://app.kusshoes.vn/editor"
+
+def _get_editor_url(project_id: str) -> str:
+    base = (settings.PUBLIC_WEB_URL or "https://kusshoes.kietta.me").rstrip("/")
+    return f"{base}/project-details?id={project_id}"
 
 
 async def list_projects(
@@ -360,7 +364,7 @@ def _to_response(project) -> ProjectResponse:
         is_locked=project.is_locked,
         thumbnail_path=project.thumbnail_path,
         design_config=project.design_config,
-        editor_url=f"{EDITOR_BASE_URL}/{project.id}",
+        editor_url=_get_editor_url(project.id),
         created_at=project.created_at,
         updated_at=project.updated_at,
     )
