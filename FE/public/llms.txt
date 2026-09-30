@@ -1,0 +1,19 @@
+# KusShoes
+
+> KusShoes là nền tảng số hóa và tùy biến sneaker 3D: quét giày thật từ điện thoại thành mô hình 3D trên đám mây, chỉnh sửa chi tiết trong KusStudio và xuất file chuẩn chế tác hoặc trải nghiệm thực tế ảo AR.
+
+KusShoes cung cấp giải pháp trọn gói từ khâu quét video thực tế bằng điện thoại di động (tích hợp KIRI Engine photogrammetry), làm sạch lưới tự động bằng Blender pipeline, chỉnh sửa vật liệu/màu sắc/decal trong studio 3D thời gian thực (Three.js/React Three Fiber), cho đến thử giày thực tế tăng cường (AR Try-on).
+
+## Liên kết chính
+
+- [Trang chủ](https://kusshoes.kietta.me/): Giới thiệu nền tảng, tính năng quét 3D và phòng thiết kế KusStudio.
+- [Sản phẩm & Ứng dụng](https://kusshoes.kietta.me/products): Khám phá các tính năng của KusShoes App (Android) và KusStudio (Web & Desktop).
+- [Bảng giá dịch vụ](https://kusshoes.kietta.me/pricing): Các gói miễn phí và chuyên nghiệp cho cá nhân sáng tạo và thương hiệu thời trang.
+- [Chính sách bảo mật](https://kusshoes.kietta.me/privacy): Quy định về bảo mật dữ liệu người dùng, hình ảnh quét 3D và quyền riêng tư.
+- [Điều khoản dịch vụ](https://kusshoes.kietta.me/terms): Các điều khoản pháp lý khi sử dụng dịch vụ và phần mềm KusShoes.
+
+## Khả năng kỹ thuật (Capabilities)
+
+- **3D Scanning Pipeline**: Tải lên video quét góc quay thực tế, trích xuất khung hình và tái tạo mô hình 3D dạng GLB/OBJ.
+- **3D Customizer (KusStudio)**: Tùy biến vật liệu (Roughness, Metalness, BaseColor), đính nhãn decal SVG/Text, và bóc tách mặt cắt giày trực quan.
+- **AR Experience**: Xem trước mô hình trên không gian thực tế thông qua camera di động với tỷ lệ thực 1:1.
