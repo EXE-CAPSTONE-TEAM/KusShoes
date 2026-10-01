@@ -1,6 +1,7 @@
 import { Component, type ReactNode } from "react";
 import { AlertTriangle, RotateCw, Home } from "lucide-react";
 import { captureError } from "../../monitoring/sentry";
+import i18n from "../../i18n";
 import styles from "./ErrorBoundary.module.css";
 
 type ErrorBoundaryProps = {
@@ -30,21 +31,22 @@ export class ErrorBoundary extends Component<ErrorBoundaryProps, ErrorBoundarySt
 
   render() {
     if (this.state.hasError) {
+      // Class component: read the i18n singleton directly instead of a hook.
+      const t = (key: string) => i18n.t(`account:errorBoundary.${key}`);
       return (
         <div className={styles.screen}>
           <div className={styles.card}>
             <div className={styles.iconRing}>
               <AlertTriangle size={28} />
             </div>
-            <h1 className={styles.title}>{this.props.fallbackMessage ?? "Something went wrong"}</h1>
+            <h1 className={styles.title}>{this.props.fallbackMessage ?? t('title')}</h1>
             <p className={styles.subtitle}>
-              KusShoes ran into an unexpected error and couldn&apos;t continue. Reloading usually
-              fixes it — if it keeps happening, let us know what you were doing.
+              {t('subtitle')}
             </p>
 
             {this.state.error?.message && (
               <div className={styles.detailsBox}>
-                <span className={styles.detailsLabel}>Technical details</span>
+                <span className={styles.detailsLabel}>{t('details')}</span>
                 <p className={styles.detailsMessage}>{this.state.error.message}</p>
               </div>
             )}
@@ -56,15 +58,15 @@ export class ErrorBoundary extends Component<ErrorBoundaryProps, ErrorBoundarySt
                 onClick={() => window.location.reload()}
               >
                 <RotateCw size={16} />
-                Reload app
+                {t('reload')}
               </button>
               <a href="/" className={styles.secondaryBtn}>
                 <Home size={16} />
-                Go to homepage
+                {t('home')}
               </a>
             </div>
 
-            <p className={styles.footnote}>This error has been reported automatically.</p>
+            <p className={styles.footnote}>{t('reported')}</p>
           </div>
         </div>
       );

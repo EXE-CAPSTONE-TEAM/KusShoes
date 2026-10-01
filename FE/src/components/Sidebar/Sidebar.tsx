@@ -444,7 +444,7 @@ export const Sidebar: React.FC<SidebarProps> = ({
                   <Avatar.Image
                     className={styles.avatar}
                     src={avatarSrc}
-                    alt={displayName || 'User avatar'}
+                    alt={displayName || t('sidebar.userAvatar')}
                   />
                   <Avatar.Fallback className={styles.avatarFallback} delayMs={300}>
                     {initials}

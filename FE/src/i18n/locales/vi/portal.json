@@ -22,7 +22,8 @@
     "profile": "Hồ sơ",
     "logout": "Đăng xuất",
     "storage": "Dung lượng",
-    "storageUsed": "Đã dùng {{size}}"
+    "storageUsed": "Đã dùng {{size}}",
+    "userAvatar": "Ảnh đại diện"
   },
   "settings": {
     "title": "Cài đặt",
@@ -96,6 +97,7 @@
       "toastLight": "Đã chuyển sang giao diện Premium Cream"
     },
     "avatarModal": {
+      "choosePreset": "Chọn ảnh có sẵn",
       "presetLabel": "Ảnh mẫu {{n}}",
       "title": "Chọn ảnh đại diện nhà thiết kế",
       "desc": "Chọn một trong các mẫu có sẵn hoặc tải lên ảnh tuỳ chỉnh.",
@@ -103,6 +105,7 @@
       "uploadCta": "Tải ảnh lên (.png, .jpg)",
       "removeCurrent": "Xoá ảnh đại diện hiện tại",
       "cancel": "Huỷ"
-    }
+    },
+    "closeDialog": "Đóng hộp thoại"
   }
 }

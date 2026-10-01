@@ -1,6 +1,7 @@
 import React, { useCallback, useEffect, useState } from 'react';
 import { Clock, Send, Star } from 'lucide-react';
 import { motion } from 'framer-motion';
+import { useTranslation } from 'react-i18next';
 import { ApiError } from '../../api/client';
 import {
   studioApi,
@@ -13,26 +14,27 @@ import { formatDate, formatDateTime } from '../../utils/format';
 import { LoadingDots } from '../../components/LoadingDots/LoadingDots';
 import styles from './Feedback.module.css';
 
-const GROUPS: { value: MarketingGroup; label: string }[] = [
-  { value: 'product', label: 'Product & features' },
-  { value: 'price', label: 'Pricing & plans' },
-  { value: 'place', label: 'Where to find us' },
-  { value: 'promotion', label: 'Offers & content' },
+const GROUPS: { value: MarketingGroup; labelKey: string }[] = [
+  { value: 'product', labelKey: 'feedback.groupProduct' },
+  { value: 'price', labelKey: 'feedback.groupPrice' },
+  { value: 'place', labelKey: 'feedback.groupPlace' },
+  { value: 'promotion', labelKey: 'feedback.groupPromotion' },
 ];
 
-const STATUS_LABELS: Record<string, string> = {
-  new: 'Received',
-  reviewed: 'Reviewed',
-  planned: 'Planned',
-  done: 'Done',
-  wont_do: 'Not planned',
+const STATUS_KEYS: Record<string, string> = {
+  new: 'feedback.statusNew',
+  reviewed: 'feedback.statusReviewed',
+  planned: 'feedback.statusPlanned',
+  done: 'feedback.statusDone',
+  wont_do: 'feedback.statusWontDo',
 };
 
 const MAX_LENGTH = 2000;
 
 /** Status indicator adhering to docs/DESIGN.md Section 5.7 (6px dot + 12px label) */
 function FeedbackStatus({ status }: { status: string }) {
-  const label = STATUS_LABELS[status] ?? status;
+  const { t } = useTranslation('account');
+  const label = STATUS_KEYS[status] ? t(STATUS_KEYS[status]) : status;
   let color = 'var(--neutral)';
   if (status === 'done') color = 'var(--success)';
   else if (status === 'planned' || status === 'reviewed') color = 'var(--warning)';
@@ -47,6 +49,7 @@ function FeedbackStatus({ status }: { status: string }) {
 }
 
 export const Feedback: React.FC = () => {
+  const { t } = useTranslation('account');
   const { toast } = useToast();
   const [rating, setRating] = useState(0);
   const [group, setGroup] = useState<MarketingGroup>('product');
@@ -61,15 +64,16 @@ export const Feedback: React.FC = () => {
       setItems(mine);
       setEligibility(allowed);
     } catch (caught) {
-      toast(caught instanceof Error ? caught.message : 'Unable to load your feedback.', 'error');
+      toast(caught instanceof Error ? caught.message : t('feedback.loadError'), 'error');
     }
-  }, [toast]);
+  }, [toast, t]);
 
   useEffect(() => {
     void load();
   }, [load]);
 
-  const canSubmit = eligibility?.can_submit !== false && rating > 0 && message.trim().length >= 3 && !submitting;
+  const canSubmit =
+    eligibility?.can_submit !== false && rating > 0 && message.trim().length >= 3 && !submitting;
 
   const submit = async (event: React.FormEvent) => {
     event.preventDefault();
@@ -77,13 +81,13 @@ export const Feedback: React.FC = () => {
     setSubmitting(true);
     try {
       await studioApi.submitFeedback({ rating, message: message.trim(), marketing_group: group });
-      toast('Thank you! Your feedback was sent to the team.');
+      toast(t('feedback.thanks'));
       setRating(0);
       setMessage('');
       await load();
     } catch (caught) {
       if (caught instanceof ApiError && caught.code === 'FEEDBACK_TOO_SOON') await load();
-      toast(caught instanceof Error ? caught.message : 'Unable to send your feedback.', 'error');
+      toast(caught instanceof Error ? caught.message : t('feedback.sendError'), 'error');
     } finally {
       setSubmitting(false);
     }
@@ -94,7 +98,7 @@ export const Feedback: React.FC = () => {
       {/* Page Header - docs/DESIGN.md Section 6.1 (Row 1: 56px, no filler subtitle) */}
       <div className={styles.pageHeader}>
         <div className={styles.titleGroup}>
-          <h1 className={styles.title}>Feedback</h1>
+          <h1 className={styles.title}>{t('feedback.title')}</h1>
           {items !== null && items.length > 0 && (
             <span className={styles.count}>({items.length})</span>
           )}
@@ -112,28 +116,28 @@ export const Feedback: React.FC = () => {
           transition={{ duration: 0.15 }}
         >
           <div className={styles.cardHeader}>
-            <h2 className={styles.cardTitle}>Share your thoughts</h2>
+            <h2 className={styles.cardTitle}>{t('feedback.shareTitle')}</h2>
           </div>
 
           {eligibility && !eligibility.can_submit && (
             <div className={styles.notice} role="status">
               <Clock size={16} className={styles.noticeIcon} />
               <span>
-                You have sent feedback recently. You can send another on {formatDate(eligibility.next_allowed_at)}.
+                {t('feedback.tooSoon', { date: formatDate(eligibility.next_allowed_at) })}
               </span>
             </div>
           )}
 
           <div className={styles.field}>
-            <span className={styles.fieldLabel}>How would you rate KusShoes?</span>
-            <div className={styles.stars} role="radiogroup" aria-label="Rating">
+            <span className={styles.fieldLabel}>{t('feedback.rateLabel')}</span>
+            <div className={styles.stars} role="radiogroup" aria-label={t('feedback.rating')}>
               {[1, 2, 3, 4, 5].map((value) => (
                 <button
                   key={value}
                   type="button"
                   role="radio"
                   aria-checked={rating === value}
-                  aria-label={`${value} star${value > 1 ? 's' : ''}`}
+                  aria-label={t('feedback.stars', { count: value })}
                   className={`${styles.star} ${value <= rating ? styles.starOn : ''}`}
                   onClick={() => setRating(value)}
                 >
@@ -144,7 +148,7 @@ export const Feedback: React.FC = () => {
           </div>
 
           <div className={styles.field}>
-            <span className={styles.fieldLabel}>What is it about?</span>
+            <span className={styles.fieldLabel}>{t('feedback.aboutLabel')}</span>
             <div className={styles.groups}>
               {GROUPS.map((option) => (
                 <button
@@ -153,27 +157,32 @@ export const Feedback: React.FC = () => {
                   className={`${styles.group} ${group === option.value ? styles.groupOn : ''}`}
                   onClick={() => setGroup(option.value)}
                 >
-                  {option.label}
+                  {t(option.labelKey)}
                 </button>
               ))}
             </div>
           </div>
 
           <div className={styles.field}>
-            <label htmlFor="feedback-message" className={styles.fieldLabel}>Your message</label>
+            <label htmlFor="feedback-message" className={styles.fieldLabel}>
+              {t('feedback.messageLabel')}
+            </label>
             <textarea
               id="feedback-message"
               className={styles.textarea}
               maxLength={MAX_LENGTH}
-              placeholder="What should we improve, or what did you like?"
+              placeholder={t('feedback.placeholder')}
               value={message}
               onChange={(event) => setMessage(event.target.value)}
             />
-            <span className={styles.counter}>{message.length} of {MAX_LENGTH}</span>
+            <span className={styles.counter}>
+              {t('feedback.counter', { n: message.length, max: MAX_LENGTH })}
+            </span>
           </div>
 
           <button type="submit" className={styles.btnPrimary} disabled={!canSubmit}>
-            <Send size={14} /> <span>{submitting ? 'Sending…' : 'Send feedback'}</span>
+            <Send size={14} />{' '}
+            <span>{submitting ? t('feedback.sending') : t('feedback.send')}</span>
           </button>
         </motion.form>
 
@@ -185,19 +194,22 @@ export const Feedback: React.FC = () => {
           transition={{ duration: 0.15, delay: 0.05 }}
         >
           <div className={styles.cardHeader}>
-            <h2 className={styles.cardTitle}>Your feedback</h2>
+            <h2 className={styles.cardTitle}>{t('feedback.yourFeedback')}</h2>
           </div>
 
           {items === null ? (
-            <LoadingDots center label="Loading your feedback…" />
+            <LoadingDots center label={t('feedback.loading')} />
           ) : items.length === 0 ? (
-            <p className={styles.muted}>You have not sent any feedback yet.</p>
+            <p className={styles.muted}>{t('feedback.empty')}</p>
           ) : (
             <div className={styles.itemsList}>
               {items.map((item) => (
                 <div key={item.id} className={styles.item}>
                   <div className={styles.itemHeader}>
-                    <span className={styles.itemStars} aria-label={`${item.rating} out of 5`}>
+                    <span
+                      className={styles.itemStars}
+                      aria-label={t('feedback.outOf5', { n: item.rating })}
+                    >
                       {Array.from({ length: item.rating }, (_, index) => (
                         <Star key={index} size={12} fill="currentColor" />
                       ))}
@@ -208,7 +220,7 @@ export const Feedback: React.FC = () => {
                   <p className={styles.itemMessage}>{item.message}</p>
                   {item.changed_what && (
                     <div className={styles.changed}>
-                      <strong>What we changed:</strong> {item.changed_what}
+                      <strong>{t('feedback.changed')}</strong> {item.changed_what}
                     </div>
                   )}
                 </div>

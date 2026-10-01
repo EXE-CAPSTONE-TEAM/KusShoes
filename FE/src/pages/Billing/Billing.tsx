@@ -13,6 +13,7 @@ import {
   Plus,
 } from 'lucide-react';
 import { motion, AnimatePresence } from 'framer-motion';
+import { Trans, useTranslation } from 'react-i18next';
 import { ConfirmDialog } from '../../components/ConfirmDialog/ConfirmDialog';
 import { useToast } from '../../context/ToastContext';
 import {
@@ -55,12 +56,12 @@ function normalizeInvoiceStatus(status: string): InvoiceStatus {
   return 'Pending';
 }
 
-function toInvoiceRow(invoice: ApiInvoice): Invoice {
+function toInvoiceRow(invoice: ApiInvoice, vatLabel: (rate: number) => string): Invoice {
   return {
     id: invoice.id,
     date: formatDate(invoice.created_at),
     amount: formatVnd(invoice.amount_vnd),
-    vatNote: invoice.vat.enabled ? `incl. ${invoice.vat.rate_percent}% VAT` : null,
+    vatNote: invoice.vat.enabled ? vatLabel(invoice.vat.rate_percent) : null,
     status: normalizeInvoiceStatus(invoice.status),
     receiptNumber: invoice.receipt_number ?? null,
   };
@@ -92,9 +93,10 @@ function StatusIndicator({ status, label }: { status: 'success' | 'warning' | 'd
 function UsageMeter({ label, used, limit }: { label: string; used: number; limit: number | null | undefined }) {
   // null/undefined = the plan sets no cap ("unlimited"). A real 0 is a cap of zero, not "no cap" —
   // treating it as unlimited (the old `limit > 0` check did) inverted the meaning for the Free tier.
+  const { t } = useTranslation('billing');
   const hasLimit = typeof limit === 'number';
   const percent = hasLimit ? (limit > 0 ? Math.min(100, Math.round((used / limit) * 100)) : 100) : 0;
-  const displayValue = hasLimit ? `${used} of ${limit}` : `${used} (unlimited)`;
+  const displayValue = hasLimit ? t('meter.of', { used, limit }) : t('meter.unlimited', { used });
 
   let fillColor = 'var(--text-primary)';
   if (hasLimit) {
@@ -123,22 +125,28 @@ function UsageMeter({ label, used, limit }: { label: string; used: number; limit
 
 /** MoMo checkout, or a disabled "Coming Soon" button while the server has MoMo switched off. */
 function MomoButton({ enabled, disabled, onClick }: { enabled: boolean; disabled?: boolean; onClick: () => void }) {
+  const { t } = useTranslation('billing');
   if (!enabled) {
     return (
-      <button className={styles.btnSecondary} disabled title="Cổng thanh toán MoMo sắp ra mắt (Coming Soon)">
-        MoMo (Coming Soon)
+      <button className={styles.btnSecondary} disabled title={t('momo.soonTitle')}>
+        {t('momo.soon')}
       </button>
     );
   }
   return (
     <button className={styles.btnSecondary} disabled={disabled} onClick={onClick}>
-      Pay via MoMo
+      {t('momo.pay')}
     </button>
   );
 }
 
 export const Billing: React.FC = () => {
+  const { t } = useTranslation('billing');
   const { toast } = useToast();
+  const vatLabel = (rate: number) => t('invoices.vatIncl', { rate });
+  const cycleLabel = (cycle: string) => t(`cycle.${cycle}`, { defaultValue: cycle });
+  const priorityLabel = (priority: string, formatted = false) =>
+    t(`priority.${priority}`, { defaultValue: formatted ? formatTierName(priority) : priority });
   const [showUpgradeModal, setShowUpgradeModal] = useState(false);
   const [showCancelConfirm, setShowCancelConfirm] = useState(false);
   const [invoices, setInvoices] = useState<Invoice[]>([]);
@@ -194,7 +202,7 @@ export const Billing: React.FC = () => {
           ]);
           if (cancelled) return;
           if (nextSubscription) setSubscription(nextSubscription);
-          setInvoices(nextInvoices.map(toInvoiceRow));
+          setInvoices(nextInvoices.map((invoice) => toInvoiceRow(invoice, vatLabel)));
           if (nextCredit) setCreditBalance(nextCredit);
           if (nextLedger) setCreditLedger(nextLedger.items);
           setPaymentCheck('paid');
@@ -240,11 +248,11 @@ export const Billing: React.FC = () => {
         setSubscription(nextSubscription);
         setUsage(nextUsage);
         setProfile(nextProfile);
-        setInvoices(nextInvoices.map(toInvoiceRow));
+        setInvoices(nextInvoices.map((invoice) => toInvoiceRow(invoice, vatLabel)));
         setCreditBalance(nextCredit);
         if (nextLedger) setCreditLedger(nextLedger.items);
       })
-      .catch((caught) => toast(caught instanceof Error ? caught.message : 'Unable to load billing data.', 'error'))
+      .catch((caught) => toast(caught instanceof Error ? caught.message : t('toast.loadError'), 'error'))
       .finally(() => setLoading(false));
   }, [toast]);
 
@@ -264,14 +272,14 @@ export const Billing: React.FC = () => {
       plan,
       name: formatTierName(plan.tier),
       price: formatVnd(plan.price_vnd),
-      period: plan.billing_cycle ?? 'one time',
-      description: `${plan.bake_priority} bake priority`,
+      period: cycleLabel(plan.billing_cycle ?? 'one time'),
+      description: t('plan.bakePriority', { priority: priorityLabel(plan.bake_priority) }),
       features: [
-        plan.max_projects === null ? 'Unlimited projects' : `${plan.max_projects} active projects`,
-        plan.max_exports_per_month === null ? 'Unlimited exports' : `${plan.max_exports_per_month} exports / month`,
-        `Formats: ${plan.allowed_export_formats.join(', ') || 'none'}`,
+        plan.max_projects === null ? t('plan.unlimitedProjects') : t('plan.activeProjects', { count: plan.max_projects }),
+        plan.max_exports_per_month === null ? t('plan.unlimitedExports') : t('plan.exportsPerMonth', { count: plan.max_exports_per_month }),
+        t('plan.formats', { formats: plan.allowed_export_formats.join(', ') || t('plan.noFormats') }),
       ],
-      cta: isCurrent ? 'Current Plan' : 'Choose Plan',
+      cta: isCurrent ? t('plan.current') : t('plan.choose'),
       popular: plan.tier.toLowerCase().includes('basic'),
       isCurrent,
     };
@@ -283,7 +291,7 @@ export const Billing: React.FC = () => {
       window.location.assign(checkoutUrl);
       setShowUpgradeModal(false);
     } catch (caught) {
-      toast(caught instanceof Error ? caught.message : 'Unable to start checkout.', 'error');
+      toast(caught instanceof Error ? caught.message : t('toast.checkoutError'), 'error');
     }
   };
 
@@ -294,7 +302,7 @@ export const Billing: React.FC = () => {
       window.location.assign(checkoutUrl);
       setShowBuyCreditModal(false);
     } catch (caught) {
-      toast(caught instanceof Error ? caught.message : 'Unable to start Credit checkout.', 'error');
+      toast(caught instanceof Error ? caught.message : t('toast.creditCheckoutError'), 'error');
     } finally {
       setBuyingCredit(false);
     }
@@ -317,12 +325,12 @@ export const Billing: React.FC = () => {
       if (Object.keys(previews).length === 0) {
         setAppliedCoupon(null);
         setCouponPreviews({});
-        toast('This code is not valid for any plan.', 'error');
+        toast(t('toast.couponInvalid'), 'error');
         return;
       }
       setAppliedCoupon(code);
       setCouponPreviews(previews);
-      toast('Coupon applied. Discounted prices are shown on eligible plans.');
+      toast(t('toast.couponApplied'));
     } finally {
       setApplyingCoupon(false);
     }
@@ -340,7 +348,7 @@ export const Billing: React.FC = () => {
       const receipt = await billingApi.getReceipt(invoiceId);
       window.open(receipt.download_url, '_blank', 'noopener');
     } catch (caught) {
-      toast(caught instanceof Error ? caught.message : 'Unable to download the receipt.', 'error');
+      toast(caught instanceof Error ? caught.message : t('toast.receiptError'), 'error');
     } finally {
       setDownloadingReceipt(null);
     }
@@ -349,39 +357,42 @@ export const Billing: React.FC = () => {
   const handleCancelSubscription = async () => {
     try {
       await api.cancelSubscription(false);
-      toast('Cancellation requested. Access remains active until the period ends.');
+      toast(t('toast.cancelRequested'));
     } catch (caught) {
-      toast(caught instanceof Error ? caught.message : 'Unable to cancel subscription.', 'error');
+      toast(caught instanceof Error ? caught.message : t('toast.cancelError'), 'error');
     }
   };
 
   // Determine top status badge for subscription
   const subscriptionStatusInfo = useMemo(() => {
     if (!subscription || subscription.tier === 'free') {
-      return { status: 'neutral' as const, label: 'Free plan' };
+      return { status: 'neutral' as const, label: t('status.free') };
     }
     if (subscription.status === 'grace') {
-      return { status: 'warning' as const, label: 'Grace period' };
+      return { status: 'warning' as const, label: t('status.grace') };
     }
     if (subscription.status === 'active') {
-      return { status: 'success' as const, label: 'Active subscription' };
+      return { status: 'success' as const, label: t('status.active') };
     }
-    return { status: 'neutral' as const, label: subscription.status };
-  }, [subscription]);
+    return {
+      status: 'neutral' as const,
+      label: t(`headerStatus.${subscription.status}`, { defaultValue: subscription.status }),
+    };
+  }, [subscription, t]);
 
   return (
     <div className={styles.container}>
       {/* Page Header - docs/DESIGN.md Section 6.1 (Row 1: 56px, max 1 primary button) */}
       <div className={styles.pageHeader}>
         <div className={styles.headerTitleGroup}>
-          <h1 className={styles.title}>Billing & Subscriptions</h1>
+          <h1 className={styles.title}>{t('title')}</h1>
           <StatusIndicator status={subscriptionStatusInfo.status} label={subscriptionStatusInfo.label} />
         </div>
         <button
           className={styles.btnPrimary}
           onClick={() => setShowUpgradeModal(true)}
         >
-          {subscription && subscription.tier !== 'free' ? 'Change plan' : 'Upgrade plan'}
+          {subscription && subscription.tier !== 'free' ? t('changePlan') : t('upgradePlan')}
         </button>
       </div>
 
@@ -389,40 +400,40 @@ export const Billing: React.FC = () => {
       {cancelledAtGateway && (
         <div className={`${styles.banner} ${styles.bannerWarning}`}>
           <AlertTriangle size={16} className={styles.bannerIcon} />
-          <span>The payment was cancelled. You have not been charged.</span>
+          <span>{t('banner.cancelled')}</span>
         </div>
       )}
       {paymentCheck === 'checking' && (
         <div className={styles.banner}>
           <Loader2 size={16} className={`${styles.bannerIcon} ${styles.spin}`} />
-          <span>Confirming your payment with the provider…</span>
+          <span>{t('banner.checking')}</span>
         </div>
       )}
       {paymentCheck === 'paid' && (
         <div className={`${styles.banner} ${styles.bannerSuccess}`}>
           <Check size={16} className={styles.bannerIcon} />
-          <span>Payment confirmed. Your plan is active and your receipt is available below.</span>
+          <span>{t('banner.paid')}</span>
         </div>
       )}
       {paymentCheck === 'failed' && (
         <div className={`${styles.banner} ${styles.bannerDanger}`}>
           <AlertTriangle size={16} className={styles.bannerIcon} />
-          <span>The payment did not go through. You have not been charged.</span>
+          <span>{t('banner.failed')}</span>
         </div>
       )}
       {paymentCheck === 'timeout' && (
         <div className={`${styles.banner} ${styles.bannerWarning}`}>
           <AlertTriangle size={16} className={styles.bannerIcon} />
-          <span>Payment confirmation is taking longer than usual. Please refresh in a moment.</span>
+          <span>{t('banner.timeout')}</span>
         </div>
       )}
       {subscription?.status === 'grace' && subscription.expires_at && (
         <div className={`${styles.banner} ${styles.bannerWarning}`}>
           <AlertTriangle size={16} className={styles.bannerIcon} />
           <span>
-            Your plan has expired. Editing remains active until{' '}
-            {formatDate(new Date(new Date(subscription.expires_at).getTime() + GRACE_DAYS * 86_400_000))},
-            but exports are paused. Renew to keep full access.
+            {t('banner.grace', {
+              date: formatDate(new Date(new Date(subscription.expires_at).getTime() + GRACE_DAYS * 86_400_000)),
+            })}
           </span>
         </div>
       )}
@@ -435,12 +446,12 @@ export const Billing: React.FC = () => {
           <div className={styles.card}>
             <div className={styles.cardHeader}>
               <h2 className={styles.cardTitle}>
-                <CreditCard size={16} className={styles.cardIcon} /> Active Subscription
+                <CreditCard size={16} className={styles.cardIcon} /> {t('card.subscription')}
               </h2>
               {subscription && (
                 <StatusIndicator
                   status={subscription.status === 'active' ? 'success' : subscription.status === 'grace' ? 'warning' : 'neutral'}
-                  label={subscription.status.toUpperCase()}
+                  label={t(`subStatus.${subscription.status}`, { defaultValue: subscription.status.toUpperCase() })}
                 />
               )}
             </div>
@@ -451,50 +462,52 @@ export const Billing: React.FC = () => {
                   {loading ? <LoadingDots inline size="sm" /> : formatTierName(currentPlan?.tier ?? subscription?.tier ?? 'free')}
                 </div>
                 <p className={styles.planDescription}>
-                  {currentPlan ? `${formatTierName(currentPlan.bake_priority)} bake priority` : 'Standard shoe design capabilities'}
+                  {currentPlan
+                    ? t('plan.bakePriority', { priority: priorityLabel(currentPlan.bake_priority, true) })
+                    : t('plan.standardCapabilities')}
                 </p>
               </div>
 
               <div className={styles.planPriceWrapper}>
                 <span className={styles.planPrice}>{formatVnd(currentPlan?.price_vnd ?? 0)}</span>
-                <span className={styles.planCycle}>/ {currentPlan?.billing_cycle ?? 'month'}</span>
+                <span className={styles.planCycle}>/ {cycleLabel(currentPlan?.billing_cycle ?? 'month')}</span>
               </div>
             </div>
 
             <div className={styles.metaList}>
               <div className={styles.metaItem}>
-                <span className={styles.metaKey}>Period status</span>
+                <span className={styles.metaKey}>{t('meta.period')}</span>
                 <span className={styles.metaVal}>
-                  {subscription?.expires_at ? `Expires ${formatDate(subscription.expires_at)}` : 'Continuous access (Free)'}
+                  {subscription?.expires_at ? t('meta.expires', { date: formatDate(subscription.expires_at) }) : t('meta.continuous')}
                 </span>
               </div>
               <div className={styles.metaItem}>
-                <span className={styles.metaKey}>Payment provider</span>
+                <span className={styles.metaKey}>{t('meta.provider')}</span>
                 <span className={styles.metaVal}>
                   {currentPlan && currentPlan.tier !== 'free'
-                    ? 'PayOS / MoMo (pay-per-cycle, no card stored)'
-                    : 'None — Free plan, nothing to charge'}
+                    ? t('meta.providerPaid')
+                    : t('meta.providerFree')}
                 </span>
               </div>
               <div className={styles.metaItem}>
-                <span className={styles.metaKey}>Included exports</span>
+                <span className={styles.metaKey}>{t('meta.exports')}</span>
                 <span className={styles.metaVal}>
-                  {currentPlan?.max_exports_per_month === null ? 'Unlimited exports' : `${currentPlan?.max_exports_per_month ?? 5} / month`}
+                  {currentPlan?.max_exports_per_month === null ? t('plan.unlimitedExports') : t('meta.perMonth', { count: currentPlan?.max_exports_per_month ?? 5 })}
                 </span>
               </div>
             </div>
 
             <div className={styles.actionRow}>
               <button className={styles.btnSecondary} onClick={() => setShowUpgradeModal(true)}>
-                Compare & Change Plan
+                {t('comparePlans')}
               </button>
 
               {subscription && subscription.tier !== 'free' && (
                 <div className={styles.cancelWrap}>
                   <button className={`${styles.btnText} ${styles.btnTextDanger}`} onClick={() => setShowCancelConfirm(true)}>
-                    Cancel plan
+                    {t('cancelPlan')}
                   </button>
-                  <span className={styles.microCopy}>Access remains active until billing period ends</span>
+                  <span className={styles.microCopy}>{t('cancelNote')}</span>
                 </div>
               )}
             </div>
@@ -504,7 +517,7 @@ export const Billing: React.FC = () => {
           <div className={styles.tableCard}>
             <div className={styles.tableHeader}>
               <h2 className={styles.cardTitle}>
-                <FileText size={16} className={styles.cardIcon} /> Invoices & Receipts
+                <FileText size={16} className={styles.cardIcon} /> {t('invoices.title')}
                 <span className={styles.cardTitleCount}>({invoices.length})</span>
               </h2>
             </div>
@@ -513,25 +526,25 @@ export const Billing: React.FC = () => {
               <table className={styles.table}>
                 <thead>
                   <tr>
-                    <th>Invoice</th>
-                    <th>Date</th>
-                    <th>Amount</th>
-                    <th>Status</th>
-                    <th style={{ textAlign: 'right' }}>Receipt</th>
+                    <th>{t('invoices.colInvoice')}</th>
+                    <th>{t('invoices.colDate')}</th>
+                    <th>{t('invoices.colAmount')}</th>
+                    <th>{t('invoices.colStatus')}</th>
+                    <th style={{ textAlign: 'right' }}>{t('invoices.colReceipt')}</th>
                   </tr>
                 </thead>
                 <tbody>
                   {loading && (
                     <tr>
                       <td colSpan={5} style={{ padding: '24px 0', textAlign: 'center' }}>
-                        <LoadingDots center label="Loading invoices…" />
+                        <LoadingDots center label={t('invoices.loading')} />
                       </td>
                     </tr>
                   )}
                   {!loading && invoices.length === 0 && (
                     <tr>
                       <td colSpan={5} className={styles.tableEmpty}>
-                        No invoices found.
+                        {t('invoices.empty')}
                       </td>
                     </tr>
                   )}
@@ -554,18 +567,18 @@ export const Billing: React.FC = () => {
                                   ? 'danger'
                                   : 'neutral'
                           }
-                          label={inv.status}
+                          label={t(`invoiceStatus.${inv.status}`)}
                         />
                       </td>
                       <td style={{ textAlign: 'right' }}>
                         <button
                           className={`${styles.btnSecondary} ${styles.btnSm}`}
                           disabled={!inv.receiptNumber || downloadingReceipt === inv.id}
-                          title={inv.receiptNumber ? 'Download receipt PDF' : 'Receipt issued upon successful payment'}
+                          title={inv.receiptNumber ? t('invoices.downloadPdf') : t('invoices.receiptLater')}
                           onClick={() => downloadReceipt(inv.id)}
                         >
                           <FileText size={12} />
-                          <span>{downloadingReceipt === inv.id ? 'Opening…' : 'Receipt'}</span>
+                          <span>{downloadingReceipt === inv.id ? t('invoices.opening') : t('invoices.colReceipt')}</span>
                         </button>
                       </td>
                     </tr>
@@ -580,7 +593,7 @@ export const Billing: React.FC = () => {
             <div className={styles.tableCard}>
               <div className={styles.tableHeader}>
                 <h2 className={styles.cardTitle}>
-                  <Gem size={16} className={styles.cardIcon} /> Scan Credit Transactions
+                  <Gem size={16} className={styles.cardIcon} /> {t('ledger.title')}
                   <span className={styles.cardTitleCount}>({creditLedger.length})</span>
                 </h2>
               </div>
@@ -589,9 +602,9 @@ export const Billing: React.FC = () => {
                 <table className={styles.table}>
                   <thead>
                     <tr>
-                      <th>Purchased</th>
-                      <th>Expires</th>
-                      <th>Status</th>
+                      <th>{t('ledger.purchased')}</th>
+                      <th>{t('ledger.expires')}</th>
+                      <th>{t('invoices.colStatus')}</th>
                     </tr>
                   </thead>
                   <tbody>
@@ -602,7 +615,7 @@ export const Billing: React.FC = () => {
                         <td>
                           <StatusIndicator
                             status={item.status.toLowerCase() === 'available' ? 'success' : item.status.toLowerCase() === 'used' ? 'neutral' : 'danger'}
-                            label={item.status}
+                            label={t(`ledgerStatus.${item.status.toLowerCase()}`, { defaultValue: item.status })}
                           />
                         </td>
                       </tr>
@@ -620,26 +633,26 @@ export const Billing: React.FC = () => {
           <div className={styles.card}>
             <div className={styles.cardHeader}>
               <h2 className={styles.cardTitle}>
-                <HardDrive size={16} className={styles.cardIcon} /> Cloud Quotas
+                <HardDrive size={16} className={styles.cardIcon} /> {t('quota.title')}
               </h2>
             </div>
 
             {loading ? (
-              <LoadingDots center label="Loading quotas…" />
+              <LoadingDots center label={t('quota.loading')} />
             ) : (
               <div className={styles.meterList}>
                 <UsageMeter
-                  label="Active projects"
+                  label={t('quota.projects')}
                   used={usage?.projects_count ?? 0}
                   limit={usage?.max_projects}
                 />
                 <UsageMeter
-                  label="Monthly exports"
+                  label={t('quota.exports')}
                   used={usage?.exports_count ?? 0}
                   limit={usage?.max_exports_per_month}
                 />
                 <UsageMeter
-                  label="AI generation credits"
+                  label={t('quota.ai')}
                   used={usage?.ai_credits_used ?? 0}
                   limit={usage?.ai_credits_limit}
                 />
@@ -647,8 +660,17 @@ export const Billing: React.FC = () => {
             )}
 
             <div className={styles.cardFooterMeta}>
-              <span>Current plan: <strong>{formatTierName(usage?.tier ?? 'free')}</strong></span>
-              <span>Status: <strong>{subscription?.status ?? 'active'}</strong></span>
+              <span>
+                <Trans t={t} i18nKey="quota.currentPlan" values={{ plan: formatTierName(usage?.tier ?? 'free') }} components={{ strong: <strong /> }} />
+              </span>
+              <span>
+                <Trans
+                  t={t}
+                  i18nKey="quota.status"
+                  values={{ status: t(`headerStatus.${subscription?.status ?? 'active'}`, { defaultValue: subscription?.status ?? 'active' }) }}
+                  components={{ strong: <strong /> }}
+                />
+              </span>
             </div>
           </div>
 
@@ -656,7 +678,7 @@ export const Billing: React.FC = () => {
           <div className={styles.card}>
             <div className={styles.cardHeader}>
               <h2 className={styles.cardTitle}>
-                <Gem size={16} className={styles.cardIcon} /> Scan Credits
+                <Gem size={16} className={styles.cardIcon} /> {t('credits.title')}
               </h2>
             </div>
 
@@ -664,46 +686,46 @@ export const Billing: React.FC = () => {
               <>
                 <div className={styles.metaList} style={{ borderTop: 'none', paddingTop: 0 }}>
                   <div className={styles.metaItem}>
-                    <span className={styles.metaKey}>Available</span>
+                    <span className={styles.metaKey}>{t('credits.available')}</span>
                     <span className={styles.metaVal}>{creditBalance.available}</span>
                   </div>
                   <div className={styles.metaItem}>
-                    <span className={styles.metaKey}>Used</span>
+                    <span className={styles.metaKey}>{t('credits.used')}</span>
                     <span className={styles.metaVal}>{creditBalance.used}</span>
                   </div>
                   <div className={styles.metaItem}>
-                    <span className={styles.metaKey}>Expired</span>
+                    <span className={styles.metaKey}>{t('credits.expired')}</span>
                     <span className={styles.metaVal}>{creditBalance.expired}</span>
                   </div>
                   <div className={styles.metaItem}>
-                    <span className={styles.metaKey}>Purchased this cycle</span>
+                    <span className={styles.metaKey}>{t('credits.purchased')}</span>
                     <span className={styles.metaVal}>
-                      {creditBalance.purchased_this_cycle} of {creditBalance.max_per_cycle}
+                      {t('meter.of', { used: creditBalance.purchased_this_cycle, limit: creditBalance.max_per_cycle })}
                     </span>
                   </div>
                   {creditBalance.next_expires_at && (
                     <div className={styles.metaItem}>
-                      <span className={styles.metaKey}>Next expiry</span>
+                      <span className={styles.metaKey}>{t('credits.nextExpiry')}</span>
                       <span className={styles.metaVal}>{formatDate(creditBalance.next_expires_at)}</span>
                     </div>
                   )}
                 </div>
 
                 <p className={styles.planDescription}>
-                  {formatVnd(creditBalance.price_vnd)} per extra scan. Credits remain valid for 12 months.
+                  {t('credits.priceNote', { price: formatVnd(creditBalance.price_vnd) })}
                 </p>
 
                 <button
                   className={styles.btnSecondary}
                   onClick={() => setShowBuyCreditModal(true)}
                   disabled={!creditBalance.can_purchase}
-                  title={creditBalance.can_purchase ? undefined : 'Available on active Basic/Pro plans, up to per-cycle limit'}
+                  title={creditBalance.can_purchase ? undefined : t('credits.buyHint')}
                 >
-                  <Plus size={14} /> Buy Credit
+                  <Plus size={14} /> {t('credits.buy')}
                 </button>
               </>
             ) : (
-              <LoadingDots center label="Loading scan credits…" />
+              <LoadingDots center label={t('credits.loading')} />
             )}
           </div>
 
@@ -711,25 +733,25 @@ export const Billing: React.FC = () => {
           <div className={styles.card}>
             <div className={styles.cardHeader}>
               <h2 className={styles.cardTitle}>
-                <Building size={16} className={styles.cardIcon} /> Billing Profile
+                <Building size={16} className={styles.cardIcon} /> {t('profile.title')}
               </h2>
             </div>
 
             <div className={styles.metaList} style={{ borderTop: 'none', borderBottom: 'none', padding: 0 }}>
               <div className={styles.metaItem}>
-                <span className={styles.metaKey}>Owner</span>
+                <span className={styles.metaKey}>{t('profile.owner')}</span>
                 <span className={styles.metaVal}>{profileDisplayName(profile)}</span>
               </div>
               <div className={styles.metaItem}>
-                <span className={styles.metaKey}>Email</span>
+                <span className={styles.metaKey}>{t('profile.email')}</span>
                 <span className={styles.metaVal}>{profile?.email ?? '—'}</span>
               </div>
               <div className={styles.metaItem}>
-                <span className={styles.metaKey}>Account code</span>
+                <span className={styles.metaKey}>{t('profile.code')}</span>
                 <span className={styles.metaVal}>{profile?.account_code ?? '—'}</span>
               </div>
               <div className={styles.metaItem}>
-                <span className={styles.metaKey}>Account status</span>
+                <span className={styles.metaKey}>{t('profile.status')}</span>
                 <span className={styles.metaVal}>{profile?.status ?? '—'}</span>
               </div>
             </div>
@@ -749,11 +771,11 @@ export const Billing: React.FC = () => {
               transition={{ duration: 0.15 }}
             >
               <div className={styles.modalHeader}>
-                <h3 className={styles.modalTitle}>Buy Scan Credits</h3>
+                <h3 className={styles.modalTitle}>{t('buy.title')}</h3>
                 <button
                   className={styles.modalCloseBtn}
                   onClick={() => setShowBuyCreditModal(false)}
-                  aria-label="Close"
+                  aria-label={t('close')}
                 >
                   <X size={16} />
                 </button>
@@ -761,12 +783,14 @@ export const Billing: React.FC = () => {
 
               <div className={styles.modalBody}>
                 <p className={styles.planDescription}>
-                  {formatVnd(creditBalance.price_vnd)} per scan, up to {creditBalance.max_per_cycle - creditBalance.purchased_this_cycle} more this cycle.
-                  Credits expire in 12 months and are non-refundable once used.
+                  {t('buy.note', {
+                    price: formatVnd(creditBalance.price_vnd),
+                    remaining: creditBalance.max_per_cycle - creditBalance.purchased_this_cycle,
+                  })}
                 </p>
 
                 <div className={styles.creditQtyRow}>
-                  <label htmlFor="credit-qty">Quantity</label>
+                  <label htmlFor="credit-qty">{t('buy.quantity')}</label>
                   <input
                     id="credit-qty"
                     type="number"
@@ -780,7 +804,7 @@ export const Billing: React.FC = () => {
                 </div>
 
                 <div className={styles.creditTotalRow}>
-                  Total: {formatVnd(buyQuantity * creditBalance.price_vnd)}
+                  {t('buy.total', { total: formatVnd(buyQuantity * creditBalance.price_vnd) })}
                 </div>
               </div>
 
@@ -790,7 +814,7 @@ export const Billing: React.FC = () => {
                   disabled={buyingCredit}
                   onClick={() => handleBuyCredit('payos')}
                 >
-                  {buyingCredit ? 'Connecting…' : 'Pay via PayOS'}
+                  {buyingCredit ? t('connecting') : t('payos')}
                 </button>
                 <MomoButton
                   enabled={momoEnabled}
@@ -815,11 +839,11 @@ export const Billing: React.FC = () => {
               transition={{ duration: 0.15 }}
             >
               <div className={styles.modalHeader}>
-                <h3 className={styles.modalTitle}>Compare Cloud Plans</h3>
+                <h3 className={styles.modalTitle}>{t('compare.title')}</h3>
                 <button
                   className={styles.modalCloseBtn}
                   onClick={() => setShowUpgradeModal(false)}
-                  aria-label="Close"
+                  aria-label={t('close')}
                 >
                   <X size={16} />
                 </button>
@@ -831,22 +855,22 @@ export const Billing: React.FC = () => {
                   <Tag size={14} className={styles.cardIcon} />
                   <input
                     className={styles.couponInput}
-                    placeholder="Enter promo code"
+                    placeholder={t('promo.placeholder')}
                     value={couponInput}
                     onChange={(event) => setCouponInput(event.target.value.toUpperCase())}
                     maxLength={40}
-                    aria-label="Promo code"
+                    aria-label={t('promo.label')}
                   />
                   <button
                     type="submit"
                     className={styles.btnSecondary}
                     disabled={applyingCoupon || !couponInput.trim()}
                   >
-                    {applyingCoupon ? 'Checking…' : 'Apply code'}
+                    {applyingCoupon ? t('promo.checking') : t('promo.apply')}
                   </button>
                   {appliedCoupon && (
                     <button type="button" className={styles.couponClearBtn} onClick={clearCoupon}>
-                      Remove {appliedCoupon}
+                      {t('promo.remove', { code: appliedCoupon })}
                     </button>
                   )}
                 </form>
@@ -860,7 +884,7 @@ export const Billing: React.FC = () => {
                         tier.isCurrent ? styles.planCardCurrent : ''
                       }`}
                     >
-                      {tier.popular && <span className={styles.recommendedBadge}>RECOMMENDED</span>}
+                      {tier.popular && <span className={styles.recommendedBadge}>{t('compare.recommended')}</span>}
 
                       <div className={styles.tierHeading}>
                         <h4 className={styles.tierTitle}>{tier.name}</h4>
@@ -881,7 +905,7 @@ export const Billing: React.FC = () => {
                         </div>
                         {couponPreviews[tier.plan.id]?.vat.enabled && (
                           <div className={styles.vatNote}>
-                            Incl. {couponPreviews[tier.plan.id].vat.rate_percent}% VAT
+                            {t('compare.vatIncl', { rate: couponPreviews[tier.plan.id].vat.rate_percent })}
                           </div>
                         )}
                       </div>
@@ -898,7 +922,7 @@ export const Billing: React.FC = () => {
                       <div className={styles.tierButtonGroup}>
                         {tier.isCurrent || tier.plan.tier === 'free' ? (
                           <button className={styles.btnSecondary} disabled>
-                            {tier.isCurrent ? 'Current Plan' : 'Free tier'}
+                            {tier.isCurrent ? t('plan.current') : t('compare.freeTier')}
                           </button>
                         ) : (
                           <>
@@ -906,7 +930,7 @@ export const Billing: React.FC = () => {
                               className={tier.popular ? styles.btnPrimary : styles.btnSecondary}
                               onClick={() => handleChoosePlan(tier.plan, 'payos')}
                             >
-                              Pay via PayOS
+                              {t('payos')}
                             </button>
                             <MomoButton
                               enabled={momoEnabled}
@@ -928,10 +952,10 @@ export const Billing: React.FC = () => {
       <ConfirmDialog
         open={showCancelConfirm}
         onOpenChange={setShowCancelConfirm}
-        title="Cancel subscription?"
-        description="Your access remains active until the end of the current billing cycle."
-        confirmLabel="Cancel Subscription"
-        cancelLabel="Keep Plan"
+        title={t('cancelDialog.title')}
+        description={t('cancelDialog.desc')}
+        confirmLabel={t('cancelDialog.confirm')}
+        cancelLabel={t('cancelDialog.keep')}
         onConfirm={handleCancelSubscription}
       />
     </div>

@@ -1,6 +1,7 @@
 import React, { useCallback, useEffect, useState } from 'react';
 import { Download, ExternalLink, FileBox } from 'lucide-react';
 import { motion } from 'framer-motion';
+import { useTranslation } from 'react-i18next';
 import { Select } from '../../components/Select/Select';
 import { useToast } from '../../context/ToastContext';
 import { api, type ExportFormat, type ExportHistoryItem } from '../../api/client';
@@ -12,13 +13,6 @@ interface ExportsProps {
   onOpenProject: (projectId: string) => void;
 }
 
-const FORMAT_OPTIONS = [
-  { value: 'all', label: 'All formats' },
-  { value: 'glb', label: 'GLB' },
-  { value: 'obj', label: 'OBJ' },
-  { value: 'zip', label: 'ZIP' },
-];
-
 function formatBytes(bytes: number | null): string {
   if (bytes === null) return '—';
   return `${(bytes / 1024 / 1024).toFixed(1)} MB`;
@@ -26,6 +20,7 @@ function formatBytes(bytes: number | null): string {
 
 /** Every 3D export of the account (GET /api/v1/exports), across projects. */
 export const Exports: React.FC<ExportsProps> = ({ onOpenProject }) => {
+  const { t } = useTranslation('details');
   const { toast } = useToast();
   const [format, setFormat] = useState<ExportFormat | null>(null);
   const [items, setItems] = useState<ExportHistoryItem[]>([]);
@@ -34,6 +29,13 @@ export const Exports: React.FC<ExportsProps> = ({ onOpenProject }) => {
   const [loadingMore, setLoadingMore] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [downloadingId, setDownloadingId] = useState<string | null>(null);
+
+  const formatOptions = [
+    { value: 'all', label: t('exports.all') },
+    { value: 'glb', label: 'GLB' },
+    { value: 'obj', label: 'OBJ' },
+    { value: 'zip', label: 'ZIP' },
+  ];
 
   const load = useCallback(
     async (cursor: string | null) => {
@@ -45,13 +47,13 @@ export const Exports: React.FC<ExportsProps> = ({ onOpenProject }) => {
         setItems((prev) => (cursor ? [...prev, ...page.items] : page.items));
         setNextCursor(page.hasNext ? page.nextCursor : null);
       } catch (caught) {
-        setError(caught instanceof Error ? caught.message : 'Unable to load exports.');
+        setError(caught instanceof Error ? caught.message : t('exports.loadError'));
       } finally {
         setLoading(false);
         setLoadingMore(false);
       }
     },
-    [format],
+    [format, t],
   );
 
   useEffect(() => {
@@ -66,7 +68,7 @@ export const Exports: React.FC<ExportsProps> = ({ onOpenProject }) => {
         prev.map((row) => (row.id === item.id ? { ...row, download_count: row.download_count + 1 } : row)),
       );
     } catch (caught) {
-      toast(caught instanceof Error ? caught.message : 'Unable to create download URL.', 'error');
+      toast(caught instanceof Error ? caught.message : t('exports.downloadError'), 'error');
     } finally {
       setDownloadingId(null);
     }
@@ -76,24 +78,24 @@ export const Exports: React.FC<ExportsProps> = ({ onOpenProject }) => {
     <div className={styles.container}>
       <div className={styles.header}>
         <div>
-          <h1 className={styles.title}>Exports</h1>
-          <p className={styles.subtitle}>Every 3D file exported from KusStudio, across all your projects.</p>
+          <h1 className={styles.title}>{t('exports.title')}</h1>
+          <p className={styles.subtitle}>{t('exports.subtitle')}</p>
         </div>
         <Select
           value={format ?? 'all'}
           onValueChange={(value) => setFormat(value === 'all' ? null : (value as ExportFormat))}
-          options={FORMAT_OPTIONS}
-          ariaLabel="Filter by format"
+          options={formatOptions}
+          ariaLabel={t('exports.filter')}
         />
       </div>
 
       {loading ? (
-        <p className={styles.loadingText}>Loading exports…</p>
+        <p className={styles.loadingText}>{t('exports.loading')}</p>
       ) : error ? (
         <div role="alert" className={`${styles.emptyState} glass-panel`}>
           <p className={styles.emptyText}>{error}</p>
           <button className="btn-outline" onClick={() => void load(null)}>
-            Retry
+            {t('exports.retry')}
           </button>
         </div>
       ) : items.length === 0 ? (
@@ -105,11 +107,11 @@ export const Exports: React.FC<ExportsProps> = ({ onOpenProject }) => {
           <div className={styles.emptyIconRing}>
             <FileBox size={30} />
           </div>
-          <h2 className={styles.emptyTitle}>No exports yet</h2>
+          <h2 className={styles.emptyTitle}>{t('exports.emptyTitle')}</h2>
           <p className={styles.emptyText}>
             {format
-              ? `No ${format.toUpperCase()} exports. Try another format.`
-              : 'Export a design from KusStudio and the file shows up here.'}
+              ? t('exports.emptyFormat', { format: format.toUpperCase() })
+              : t('exports.emptyAll')}
           </p>
         </motion.div>
       ) : (
@@ -117,12 +119,12 @@ export const Exports: React.FC<ExportsProps> = ({ onOpenProject }) => {
           <table className={styles.table}>
             <thead>
               <tr>
-                <th>Project</th>
-                <th>Format</th>
-                <th>Size</th>
-                <th>Downloads</th>
-                <th>Exported</th>
-                <th>Actions</th>
+                <th>{t('exports.colProject')}</th>
+                <th>{t('exports.colFormat')}</th>
+                <th>{t('exports.colSize')}</th>
+                <th>{t('exports.colDownloads')}</th>
+                <th>{t('exports.colExported')}</th>
+                <th>{t('exports.colActions')}</th>
               </tr>
             </thead>
             <tbody>
@@ -131,13 +133,13 @@ export const Exports: React.FC<ExportsProps> = ({ onOpenProject }) => {
                   <td>
                     <span className={styles.rowProjectName}>{item.project_name}</span>
                   </td>
-                  <td data-label="Format">
+                  <td data-label={t('exports.colFormat')}>
                     {item.format.toUpperCase()}
-                    {item.is_watermarked && ' · watermarked'}
+                    {item.is_watermarked && t('exports.watermarked')}
                   </td>
-                  <td data-label="Size">{formatBytes(item.file_size_bytes)}</td>
-                  <td data-label="Downloads">{item.download_count}</td>
-                  <td data-label="Exported">{formatDateTime(item.created_at)}</td>
+                  <td data-label={t('exports.colSize')}>{formatBytes(item.file_size_bytes)}</td>
+                  <td data-label={t('exports.colDownloads')}>{item.download_count}</td>
+                  <td data-label={t('exports.colExported')}>{formatDateTime(item.created_at)}</td>
                   <td>
                     <div className={styles.rowActions}>
                       <button
@@ -146,11 +148,11 @@ export const Exports: React.FC<ExportsProps> = ({ onOpenProject }) => {
                         disabled={downloadingId === item.id}
                       >
                         <Download size={14} />
-                        Download
+                        {t('exports.download')}
                       </button>
                       <button className={styles.actionBtn} onClick={() => onOpenProject(item.project_id)}>
                         <ExternalLink size={14} />
-                        Project
+                        {t('exports.project')}
                       </button>
                     </div>
                   </td>
@@ -164,7 +166,7 @@ export const Exports: React.FC<ExportsProps> = ({ onOpenProject }) => {
       {!loading && !error && nextCursor && (
         <div style={{ textAlign: 'center' }}>
           <button className="btn-outline" onClick={() => void load(nextCursor)} disabled={loadingMore}>
-            {loadingMore ? 'Loading…' : 'Load more'}
+            {loadingMore ? t('exports.loadingMore') : t('exports.loadMore')}
           </button>
         </div>
       )}

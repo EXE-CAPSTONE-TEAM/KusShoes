@@ -1,5 +1,6 @@
 import React from 'react';
 import * as AlertDialog from '@radix-ui/react-alert-dialog';
+import { useTranslation } from 'react-i18next';
 import styles from './ConfirmDialog.module.css';
 
 interface ConfirmDialogProps {
@@ -20,12 +21,13 @@ export const ConfirmDialog: React.FC<ConfirmDialogProps> = ({
   onOpenChange,
   title,
   description,
-  confirmLabel = 'Confirm',
-  cancelLabel = 'Cancel',
+  confirmLabel,
+  cancelLabel,
   danger = true,
   onConfirm,
   children,
 }) => {
+  const { t } = useTranslation('account');
   return (
     <AlertDialog.Root open={open} onOpenChange={onOpenChange}>
       <AlertDialog.Portal>
@@ -38,14 +40,14 @@ export const ConfirmDialog: React.FC<ConfirmDialogProps> = ({
           {children}
           <div className={styles.actions}>
             <AlertDialog.Cancel asChild>
-              <button className="btn-outline">{cancelLabel}</button>
+              <button className="btn-outline">{cancelLabel ?? t('confirm.cancel')}</button>
             </AlertDialog.Cancel>
             <AlertDialog.Action asChild>
               <button
                 className={danger ? styles.dangerBtn : 'btn-neon-orange'}
                 onClick={onConfirm}
               >
-                {confirmLabel}
+                {confirmLabel ?? t('confirm.confirm')}
               </button>
             </AlertDialog.Action>
           </div>

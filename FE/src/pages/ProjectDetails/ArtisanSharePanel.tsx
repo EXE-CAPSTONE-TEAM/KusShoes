@@ -1,5 +1,6 @@
 import React, { useCallback, useEffect, useState } from 'react';
 import { Copy, FileText, Link2, RefreshCw, Share2 } from 'lucide-react';
+import { useTranslation } from 'react-i18next';
 import { ApiError } from '../../api/client';
 import { studioApi, type ArtisanLink, type CreatedArtisanLink } from '../../api/studio';
 import { useToast } from '../../context/ToastContext';
@@ -12,13 +13,11 @@ interface ArtisanSharePanelProps {
   onUpgrade?: () => void;
 }
 
-const REASONS: Record<string, string> = {
-  ARTISAN_LINK_PLAN_REQUIRED: 'Sharing with an artisan needs an active paid plan (not in the grace period).',
-  EXPORT_NOT_READY: 'Export this project first: the artisan link shares an exported file.',
-};
+const REASON_CODES = ['ARTISAN_LINK_PLAN_REQUIRED', 'EXPORT_NOT_READY'];
 
 /** Craftsperson handoff (UC-26): a private expiring download link plus a PDF reference pack. */
 export const ArtisanSharePanel: React.FC<ArtisanSharePanelProps> = ({ projectId, onUpgrade }) => {
+  const { t } = useTranslation('details');
   const { toast } = useToast();
   const [links, setLinks] = useState<ArtisanLink[] | null>(null);
   const [fresh, setFresh] = useState<CreatedArtisanLink | null>(null);
@@ -29,9 +28,9 @@ export const ArtisanSharePanel: React.FC<ArtisanSharePanelProps> = ({ projectId,
     try {
       setLinks(await studioApi.listArtisanLinks(projectId));
     } catch (caught) {
-      toast(caught instanceof Error ? caught.message : 'Unable to load share links.', 'error');
+      toast(caught instanceof Error ? caught.message : t('share.loadError'), 'error');
     }
-  }, [projectId, toast]);
+  }, [projectId, toast, t]);
 
   useEffect(() => {
     void load();
@@ -42,13 +41,13 @@ export const ArtisanSharePanel: React.FC<ArtisanSharePanelProps> = ({ projectId,
     setBlocked(null);
     try {
       setFresh(await studioApi.createArtisanLink(projectId));
-      toast('Share link created. Copy it now: it is shown only once.', 'info');
+      toast(t('share.created'), 'info');
       await load();
     } catch (caught) {
-      if (caught instanceof ApiError && caught.code && REASONS[caught.code]) {
-        setBlocked(REASONS[caught.code]);
+      if (caught instanceof ApiError && caught.code && REASON_CODES.includes(caught.code)) {
+        setBlocked(caught.code);
       } else {
-        toast(caught instanceof Error ? caught.message : 'Unable to create the link.', 'error');
+        toast(caught instanceof Error ? caught.message : t('share.createError'), 'error');
       }
     } finally {
       setBusy(false);
@@ -62,7 +61,7 @@ export const ArtisanSharePanel: React.FC<ArtisanSharePanelProps> = ({ projectId,
       toast(success);
       await load();
     } catch (caught) {
-      toast(caught instanceof Error ? caught.message : 'Action failed.', 'error');
+      toast(caught instanceof Error ? caught.message : t('share.actionFailed'), 'error');
     } finally {
       setBusy(false);
     }
@@ -72,9 +71,9 @@ export const ArtisanSharePanel: React.FC<ArtisanSharePanelProps> = ({ projectId,
     if (!fresh) return;
     try {
       await navigator.clipboard.writeText(fresh.url);
-      toast('Link copied.');
+      toast(t('share.copied'));
     } catch {
-      toast('Unable to copy. Please select the link manually.', 'error');
+      toast(t('share.copyError'), 'error');
     }
   };
 
@@ -83,7 +82,7 @@ export const ArtisanSharePanel: React.FC<ArtisanSharePanelProps> = ({ projectId,
     try {
       await studioApi.downloadReferencePack(projectId, fresh?.token);
     } catch (caught) {
-      toast(caught instanceof Error ? caught.message : 'Unable to build the reference pack.', 'error');
+      toast(caught instanceof Error ? caught.message : t('share.packError'), 'error');
     } finally {
       setBusy(false);
     }
@@ -95,22 +94,21 @@ export const ArtisanSharePanel: React.FC<ArtisanSharePanelProps> = ({ projectId,
         <div className={styles.panelHeader}>
           <Share2 size={20} className={styles.panelIcon} />
           <div>
-            <h4 className={styles.panelTitle}>Share with an artisan</h4>
+            <h4 className={styles.panelTitle}>{t('share.title')}</h4>
             <p className={styles.panelDesc}>
-              Create a private link to your latest export. It works for 30 days and up to 20 downloads, and you can
-              revoke it at any time.
+              {t('share.desc')}
             </p>
           </div>
           <button type="button" className={`${styles.btnPrimary} ${styles.headerAction}`} onClick={create} disabled={busy}>
-            <Link2 size={16} /> New link
+            <Link2 size={16} /> {t('share.newLink')}
           </button>
         </div>
 
         {blocked && (
           <div className={`${styles.notice} ${styles.noticeDanger}`} role="alert">
-            <span>{blocked}</span>
-            {onUpgrade && blocked === REASONS.ARTISAN_LINK_PLAN_REQUIRED && (
-              <button type="button" className={styles.btnSecondary} onClick={onUpgrade}>See plans</button>
+            <span>{t(`share.reasons.${blocked}`)}</span>
+            {onUpgrade && blocked === 'ARTISAN_LINK_PLAN_REQUIRED' && (
+              <button type="button" className={styles.btnSecondary} onClick={onUpgrade}>{t('share.seePlans')}</button>
             )}
           </div>
         )}
@@ -120,22 +118,22 @@ export const ArtisanSharePanel: React.FC<ArtisanSharePanelProps> = ({ projectId,
             <div className={styles.linkBox}>
               <span className={styles.linkText}>{fresh.url}</span>
               <button type="button" className={`${styles.btnSecondary} ${styles.btnSm}`} onClick={copyLink}>
-                <Copy size={14} /> Copy
+                <Copy size={14} /> {t('share.copy')}
               </button>
             </div>
             <span className={styles.muted}>
-              Anyone with this link can download the file until {formatDate(fresh.expires_at)}.
+              {t('share.anyoneCan', { date: formatDate(fresh.expires_at) })}
             </span>
           </div>
         )}
 
         {links === null ? (
-          <LoadingDots center label="Loading links…" />
+          <LoadingDots center label={t('share.loading')} />
         ) : links.length === 0 ? (
-          <p className={styles.muted}>No links yet.</p>
+          <p className={styles.muted}>{t('share.empty')}</p>
         ) : (
           links.map((link) => {
-            const statusLabel = link.revoked_at ? 'Revoked' : link.is_active ? 'Active' : 'Expired';
+            const statusLabel = link.revoked_at ? t('share.revoked') : link.is_active ? t('share.active') : t('share.expired');
             const statusColor = link.revoked_at
               ? 'var(--danger)'
               : link.is_active
@@ -145,14 +143,14 @@ export const ArtisanSharePanel: React.FC<ArtisanSharePanelProps> = ({ projectId,
               <div key={link.id} className={styles.row}>
                 <div className={styles.rowMain}>
                   <span className={styles.rowTitle}>
-                    Created link
+                    {t('share.createdLink')}
                     <span className={styles.statusIndicator}>
                       <span className={styles.statusDot} style={{ backgroundColor: statusColor }} />
                       {statusLabel}
                     </span>
                   </span>
                   <span className={styles.rowMeta}>
-                    {link.download_count} / {link.max_downloads} downloads · expires {formatDate(link.expires_at)}
+                    {t('share.meta', { count: link.download_count, max: link.max_downloads, date: formatDate(link.expires_at) })}
                   </span>
                 </div>
                 <div className={styles.rowActions}>
@@ -161,9 +159,9 @@ export const ArtisanSharePanel: React.FC<ArtisanSharePanelProps> = ({ projectId,
                       type="button"
                       className={`${styles.btnSecondary} ${styles.btnSm}`}
                       disabled={busy}
-                      onClick={() => void act(() => studioApi.renewArtisanLink(link.id), 'Link renewed for another 30 days.')}
+                      onClick={() => void act(() => studioApi.renewArtisanLink(link.id), t('share.renewed'))}
                     >
-                      <RefreshCw size={14} /> Renew
+                      <RefreshCw size={14} /> {t('share.renew')}
                     </button>
                   )}
                   {link.is_active && (
@@ -171,9 +169,9 @@ export const ArtisanSharePanel: React.FC<ArtisanSharePanelProps> = ({ projectId,
                       type="button"
                       className={`${styles.btnSecondary} ${styles.btnSm}`}
                       disabled={busy}
-                      onClick={() => void act(() => studioApi.revokeArtisanLink(link.id), 'Link revoked.')}
+                      onClick={() => void act(() => studioApi.revokeArtisanLink(link.id), t('share.revokedToast'))}
                     >
-                      Revoke
+                      {t('share.revoke')}
                     </button>
                   )}
                 </div>
@@ -187,10 +185,10 @@ export const ArtisanSharePanel: React.FC<ArtisanSharePanelProps> = ({ projectId,
         <div className={styles.panelHeader}>
           <FileText size={20} className={styles.panelIcon} />
           <div>
-            <h4 className={styles.panelTitle}>Reference pack (PDF)</h4>
+            <h4 className={styles.panelTitle}>{t('share.packTitle')}</h4>
             <p className={styles.panelDesc}>
-              Colours, text and fonts, and the layer list for the workshop.
-              {fresh ? ' It will include a QR code for the link you just created.' : ''}
+              {t('share.packDesc')}
+              {fresh ? t('share.packQr') : ''}
             </p>
           </div>
           <button
@@ -199,7 +197,7 @@ export const ArtisanSharePanel: React.FC<ArtisanSharePanelProps> = ({ projectId,
             onClick={downloadPack}
             disabled={busy}
           >
-            Download PDF
+            {t('share.packDownload')}
           </button>
         </div>
       </div>

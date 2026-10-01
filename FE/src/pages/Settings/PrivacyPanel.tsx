@@ -1,4 +1,5 @@
 import React, { useCallback, useEffect, useRef, useState } from 'react';
+import { useTranslation } from 'react-i18next';
 import { AlertTriangle, Download, Upload } from 'lucide-react';
 import {
   accountApi,
@@ -14,26 +15,22 @@ import { formatDateTime } from '../../utils/format';
 import styles from './Settings.module.css';
 import panel from './AccountPanels.module.css';
 
-const PRIVACY_OPTIONS: { key: keyof PrivacySettings; title: string; desc: string }[] = [
-  { key: 'is_profile_public', title: 'Public profile', desc: 'Let other people view your designer profile.' },
-  { key: 'show_designs_publicly', title: 'Show my designs publicly', desc: 'Display your designs in the community showcase.' },
-  { key: 'is_searchable', title: 'Appear in search', desc: 'Allow your profile to be found by name or username.' },
-  { key: 'allow_analytics', title: 'Usage analytics', desc: 'Share anonymous usage data to help us improve KusShoes.' },
-  { key: 'allow_ads_personalization', title: 'Personalised offers', desc: 'Use your activity to tailor promotions we show you.' },
+const PRIVACY_KEYS: (keyof PrivacySettings)[] = [
+  'is_profile_public',
+  'show_designs_publicly',
+  'is_searchable',
+  'allow_analytics',
+  'allow_ads_personalization',
 ];
 
-const CONSENT_OPTIONS: { type: ConsentType; title: string; desc: string }[] = [
-  { type: 'marketing_content', title: 'Marketing content', desc: 'Allow KusShoes to feature your designs or videos in marketing.' },
-  { type: 'academic_report', title: 'Academic reporting', desc: 'Allow your shortened name to appear in project reports.' },
-  { type: 'cookie_analytics', title: 'Analytics cookies', desc: 'Allow non-essential cookies used for analytics.' },
-];
+const CONSENT_TYPES: ConsentType[] = ['marketing_content', 'academic_report', 'cookie_analytics'];
 
-const Toggle: React.FC<{ on: boolean; disabled?: boolean; label: string; onChange: (next: boolean) => void }> = ({
-  on,
-  disabled,
-  label,
-  onChange,
-}) => (
+const Toggle: React.FC<{
+  on: boolean;
+  disabled?: boolean;
+  label: string;
+  onChange: (next: boolean) => void;
+}> = ({ on, disabled, label, onChange }) => (
   <button
     type="button"
     role="switch"
@@ -48,6 +45,7 @@ const Toggle: React.FC<{ on: boolean; disabled?: boolean; label: string; onChang
 );
 
 export const PrivacyPanel: React.FC = () => {
+  const { t } = useTranslation('account');
   const { toast } = useToast();
   const [privacy, setPrivacy] = useState<PrivacySettings | null>(null);
   const [consents, setConsents] = useState<ConsentRecord[] | null>(null);
@@ -60,21 +58,24 @@ export const PrivacyPanel: React.FC = () => {
 
   const load = useCallback(async () => {
     try {
-      const [settings, records] = await Promise.all([accountApi.getPrivacy(), accountApi.listConsents()]);
+      const [settings, records] = await Promise.all([
+        accountApi.getPrivacy(),
+        accountApi.listConsents(),
+      ]);
       setPrivacy(settings);
       setConsents(records);
     } catch (caught) {
-      toast(caught instanceof Error ? caught.message : 'Unable to load privacy settings.', 'error');
+      toast(caught instanceof Error ? caught.message : t('privacy.loadError'), 'error');
     }
-  }, [toast]);
+  }, [toast, t]);
 
   const loadImportHistory = useCallback(async () => {
     try {
       setImportHistory(await accountApi.listDataImports());
     } catch (caught) {
-      toast(caught instanceof Error ? caught.message : 'Unable to load import history.', 'error');
+      toast(caught instanceof Error ? caught.message : t('privacy.importHistoryError'), 'error');
     }
-  }, [toast]);
+  }, [toast, t]);
 
   useEffect(() => {
     void load();
@@ -89,7 +90,7 @@ export const PrivacyPanel: React.FC = () => {
       await accountApi.updatePrivacy({ [key]: next });
     } catch (caught) {
       setPrivacy(previous);
-      toast(caught instanceof Error ? caught.message : 'Unable to save that setting.', 'error');
+      toast(caught instanceof Error ? caught.message : t('privacy.saveError'), 'error');
     }
   };
 
@@ -102,7 +103,7 @@ export const PrivacyPanel: React.FC = () => {
       await accountApi.recordConsent(type, granted);
       setConsents(await accountApi.listConsents());
     } catch (caught) {
-      toast(caught instanceof Error ? caught.message : 'Unable to save your choice.', 'error');
+      toast(caught instanceof Error ? caught.message : t('privacy.consentError'), 'error');
     } finally {
       setBusy(false);
     }
@@ -113,9 +114,9 @@ export const PrivacyPanel: React.FC = () => {
     try {
       const result = await accountApi.requestDataExport();
       window.open(result.download_url, '_blank', 'noopener');
-      toast('Your data export is ready. The link expires in 15 minutes.', 'info');
+      toast(t('privacy.exportReady'), 'info');
     } catch (caught) {
-      toast(caught instanceof Error ? caught.message : 'Unable to prepare your export.', 'error');
+      toast(caught instanceof Error ? caught.message : t('privacy.exportError'), 'error');
     } finally {
       setBusy(false);
     }
@@ -130,16 +131,16 @@ export const PrivacyPanel: React.FC = () => {
         headers: { 'Content-Type': 'application/zip' },
         body: file,
       });
-      if (!putResponse.ok) throw new Error('Unable to upload the backup file.');
+      if (!putResponse.ok) throw new Error(t('privacy.uploadError'));
       const result = await accountApi.confirmDataImport(upload.import_id);
       if (result.status === 'completed') {
-        toast(`Imported ${result.projects_imported} project(s) as new copies.`, 'info');
+        toast(t('privacy.imported', { count: result.projects_imported }), 'info');
       } else {
-        toast(result.message || 'The backup could not be imported.', 'error');
+        toast(result.message || t('privacy.importRejected'), 'error');
       }
       await loadImportHistory();
     } catch (caught) {
-      toast(caught instanceof Error ? caught.message : 'Unable to restore from backup.', 'error');
+      toast(caught instanceof Error ? caught.message : t('privacy.restoreError'), 'error');
     } finally {
       setImporting(false);
       if (fileInputRef.current) fileInputRef.current.value = '';
@@ -150,11 +151,11 @@ export const PrivacyPanel: React.FC = () => {
     setBusy(true);
     try {
       await accountApi.deleteAccount(deletePassword);
-      toast('Account deleted. You can restore it within 30 days from the sign-in page.', 'info');
+      toast(t('privacy.deleted'), 'info');
       await api.logout();
       window.setTimeout(() => window.location.assign('/'), 1200);
     } catch (caught) {
-      toast(caught instanceof Error ? caught.message : 'Unable to delete the account.', 'error');
+      toast(caught instanceof Error ? caught.message : t('privacy.deleteError'), 'error');
       setBusy(false);
     } finally {
       setDeletePassword('');
@@ -165,20 +166,20 @@ export const PrivacyPanel: React.FC = () => {
     <div className={panel.grid2}>
       <div className={panel.panel}>
         <div>
-          <h4 className={panel.panelTitle}>Profile visibility</h4>
-          <p className={panel.panelDesc}>Everything is private by default. Turn on only what you want to share.</p>
+          <h4 className={panel.panelTitle}>{t('privacy.visibilityTitle')}</h4>
+          <p className={panel.panelDesc}>{t('privacy.visibilityDesc')}</p>
         </div>
-        {PRIVACY_OPTIONS.map((option) => (
-          <div key={option.key} className={styles.toggleRow}>
+        {PRIVACY_KEYS.map((key) => (
+          <div key={key} className={styles.toggleRow}>
             <div>
-              <h4 className={styles.toggleLabel}>{option.title}</h4>
-              <p className={styles.toggleDesc}>{option.desc}</p>
+              <h4 className={styles.toggleLabel}>{t(`privacy.${key}_title`)}</h4>
+              <p className={styles.toggleDesc}>{t(`privacy.${key}_desc`)}</p>
             </div>
             <Toggle
-              on={Boolean(privacy?.[option.key])}
+              on={Boolean(privacy?.[key])}
               disabled={!privacy}
-              label={option.title}
-              onChange={(next) => void togglePrivacy(option.key, next)}
+              label={t(`privacy.${key}_title`)}
+              onChange={(next) => void togglePrivacy(key, next)}
             />
           </div>
         ))}
@@ -186,20 +187,20 @@ export const PrivacyPanel: React.FC = () => {
 
       <div className={panel.panel}>
         <div>
-          <h4 className={panel.panelTitle}>Consents</h4>
-          <p className={panel.panelDesc}>Optional permissions you can grant or withdraw at any time.</p>
+          <h4 className={panel.panelTitle}>{t('privacy.consentsTitle')}</h4>
+          <p className={panel.panelDesc}>{t('privacy.consentsDesc')}</p>
         </div>
-        {CONSENT_OPTIONS.map((option) => (
-          <div key={option.type} className={styles.toggleRow}>
+        {CONSENT_TYPES.map((type) => (
+          <div key={type} className={styles.toggleRow}>
             <div>
-              <h4 className={styles.toggleLabel}>{option.title}</h4>
-              <p className={styles.toggleDesc}>{option.desc}</p>
+              <h4 className={styles.toggleLabel}>{t(`privacy.${type}_title`)}</h4>
+              <p className={styles.toggleDesc}>{t(`privacy.${type}_desc`)}</p>
             </div>
             <Toggle
-              on={isGranted(option.type)}
+              on={isGranted(type)}
               disabled={busy || consents === null}
-              label={option.title}
-              onChange={(next) => void toggleConsent(option.type, next)}
+              label={t(`privacy.${type}_title`)}
+              onChange={(next) => void toggleConsent(type, next)}
             />
           </div>
         ))}
@@ -207,25 +208,20 @@ export const PrivacyPanel: React.FC = () => {
 
       <div className={panel.panel}>
         <div>
-          <h4 className={panel.panelTitle}>Your data</h4>
-          <p className={panel.panelDesc}>
-            Download a copy of your profile, projects, consents and sign-in history. One export every 24 hours.
-          </p>
+          <h4 className={panel.panelTitle}>{t('privacy.dataTitle')}</h4>
+          <p className={panel.panelDesc}>{t('privacy.dataDesc')}</p>
         </div>
         <div className={panel.actions}>
           <button type="button" className={panel.secondaryBtn} onClick={exportData} disabled={busy}>
-            <Download size={14} /> Export my data
+            <Download size={14} /> {t('privacy.exportBtn')}
           </button>
         </div>
       </div>
 
       <div className={panel.panel}>
         <div>
-          <h4 className={panel.panelTitle}>Restore from backup</h4>
-          <p className={panel.panelDesc}>
-            Upload a .zip export previously downloaded from KusShoes. Projects are restored as new copies and never
-            overwrite existing ones; binary assets (GLB/textures) are not part of the backup.
-          </p>
+          <h4 className={panel.panelTitle}>{t('privacy.restoreTitle')}</h4>
+          <p className={panel.panelDesc}>{t('privacy.restoreDesc')}</p>
         </div>
         <div className={panel.actions}>
           <input
@@ -244,17 +240,17 @@ export const PrivacyPanel: React.FC = () => {
             onClick={() => fileInputRef.current?.click()}
             disabled={importing}
           >
-            <Upload size={14} /> {importing ? 'Restoring…' : 'Restore from backup'}
+            <Upload size={14} /> {importing ? t('privacy.restoring') : t('privacy.restoreTitle')}
           </button>
         </div>
         {importHistory !== null && importHistory.length > 0 && (
           <table className={panel.table}>
             <thead>
               <tr>
-                <th>Date</th>
-                <th>Status</th>
-                <th>Projects</th>
-                <th>Note</th>
+                <th>{t('privacy.colDate')}</th>
+                <th>{t('privacy.colStatus')}</th>
+                <th>{t('privacy.colProjects')}</th>
+                <th>{t('privacy.colNote')}</th>
               </tr>
             </thead>
             <tbody>
@@ -274,14 +270,15 @@ export const PrivacyPanel: React.FC = () => {
       <div className={styles.dangerZone}>
         <div className={styles.dangerHeader}>
           <AlertTriangle size={16} className={styles.dangerIcon} />
-          <h4 className={styles.dangerTitle}>Danger Zone</h4>
+          <h4 className={styles.dangerTitle}>{t('privacy.dangerTitle')}</h4>
         </div>
-        <p className={styles.dangerDesc}>
-          Delete your account and all 3D shoe designs. You can restore the account within 30 days; after that it is
-          erased permanently.
-        </p>
-        <button type="button" className={styles.deleteAccountBtn} onClick={() => setConfirmDeleteOpen(true)}>
-          Delete Account
+        <p className={styles.dangerDesc}>{t('privacy.dangerDesc')}</p>
+        <button
+          type="button"
+          className={styles.deleteAccountBtn}
+          onClick={() => setConfirmDeleteOpen(true)}
+        >
+          {t('privacy.deleteBtn')}
         </button>
       </div>
 
@@ -291,15 +288,15 @@ export const PrivacyPanel: React.FC = () => {
           setConfirmDeleteOpen(open);
           if (!open) setDeletePassword('');
         }}
-        title="Delete your account?"
-        description="Your profile, projects and designs will be removed after 30 days. Enter your password to confirm (skip it if you sign in with Google)."
-        confirmLabel="Delete Account"
+        title={t('privacy.confirmTitle')}
+        description={t('privacy.confirmDesc')}
+        confirmLabel={t('privacy.deleteBtn')}
         onConfirm={() => void deleteAccount()}
       >
         <input
           type="password"
           className={styles.input}
-          placeholder="Password"
+          placeholder={t('privacy.password')}
           autoComplete="current-password"
           value={deletePassword}
           onChange={(event) => setDeletePassword(event.target.value)}

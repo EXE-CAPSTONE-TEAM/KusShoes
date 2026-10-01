@@ -2,6 +2,9 @@
 // The backend remains the source of truth (uniqueness, race conditions, timing-safe login);
 // this module only catches obvious mistakes early and renders field-level messages.
 import { ApiError } from '../api/client';
+import i18n from '../i18n';
+
+const t = (key: string, options?: Record<string, unknown>) => i18n.t(`account:validation.${key}`, options);
 
 const EMAIL_MAX_LENGTH = 254;
 const EMAIL_FORMAT = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
@@ -39,18 +42,18 @@ export function normalizeFullName(raw: string): string {
 
 export function validateEmail(rawEmail: string): string | null {
   const email = normalizeEmail(rawEmail);
-  if (!email) return 'Email is required.';
-  if (email.length > EMAIL_MAX_LENGTH) return `Email must be at most ${EMAIL_MAX_LENGTH} characters.`;
-  if (!EMAIL_FORMAT.test(email)) return 'Enter a valid email address.';
+  if (!email) return t('emailRequired');
+  if (email.length > EMAIL_MAX_LENGTH) return t('emailTooLong', { max: EMAIL_MAX_LENGTH });
+  if (!EMAIL_FORMAT.test(email)) return t('emailInvalid');
   return null;
 }
 
 export function validateUsername(rawUsername: string): string | null {
   const username = normalizeUsername(rawUsername);
-  if (!username) return 'Username is required.';
-  if (username.length < 3 || username.length > 30) return 'Username must be 3-30 characters.';
+  if (!username) return t('usernameRequired');
+  if (username.length < 3 || username.length > 30) return t('usernameLength');
   if (!USERNAME_FORMAT.test(username)) {
-    return 'Username must start with a letter or underscore and contain only letters, numbers, and underscores.';
+    return t('usernameFormat');
   }
   return null;
 }
@@ -68,25 +71,25 @@ function containsControlChar(value: string): boolean {
 
 // Password is never trimmed/normalized - whitespace is significant.
 export function validatePassword(password: string): string | null {
-  if (!password) return 'Password is required.';
-  if (password.length < 8) return 'Password must be at least 8 characters.';
-  if (utf8ByteLength(password) > 72) return 'Password is too long.';
-  if (!/[A-Z]/.test(password)) return 'Password must contain at least one uppercase letter.';
-  if (!/[0-9]/.test(password)) return 'Password must contain at least one number.';
+  if (!password) return t('passwordRequired');
+  if (password.length < 8) return t('passwordShort');
+  if (utf8ByteLength(password) > 72) return t('passwordLong');
+  if (!/[A-Z]/.test(password)) return t('passwordUpper');
+  if (!/[0-9]/.test(password)) return t('passwordNumber');
   return null;
 }
 
 export function validateConfirmPassword(password: string, confirmPassword: string): string | null {
-  if (!confirmPassword) return 'Please confirm your password.';
-  if (confirmPassword !== password) return 'Passwords do not match.';
+  if (!confirmPassword) return t('confirmRequired');
+  if (confirmPassword !== password) return t('confirmMismatch');
   return null;
 }
 
 export function validateFullName(rawFullName: string): string | null {
-  if (!rawFullName.trim()) return 'Full name is required.';
-  if (containsControlChar(rawFullName)) return 'Full name contains invalid characters.';
+  if (!rawFullName.trim()) return t('nameRequired');
+  if (containsControlChar(rawFullName)) return t('nameInvalid');
   const fullName = normalizeFullName(rawFullName);
-  if (fullName.length < 2 || fullName.length > 100) return 'Full name must be 2-100 characters.';
+  if (fullName.length < 2 || fullName.length > 100) return t('nameLength');
   return null;
 }
 
@@ -117,7 +120,7 @@ export function validateLoginForm(fields: LoginFields): LoginFieldErrors {
   const emailError = validateEmail(fields.email);
   if (emailError) errors.email = emailError;
 
-  if (!fields.password) errors.password = 'Password is required.';
+  if (!fields.password) errors.password = t('passwordRequired');
 
   return errors;
 }
@@ -140,15 +143,15 @@ export type AuthErrorResult = {
 export function describeAuthApiError(error: ApiError): AuthErrorResult {
   switch (error.code) {
     case 'AUTH_EMAIL_TAKEN':
-      return { field: 'email', message: 'This email is already registered.' };
+      return { field: 'email', message: t('emailTaken') };
     case 'AUTH_USERNAME_TAKEN':
-      return { field: 'username', message: 'This username is already taken.' };
+      return { field: 'username', message: t('usernameTaken') };
     case 'AUTH_INVALID_CREDENTIALS':
-      return { message: 'Email hoặc mật khẩu không đúng' };
+      return { message: t('badCredentials') };
     case 'AUTH_ACCOUNT_BANNED':
-      return { message: 'Your account has been suspended.' };
+      return { message: t('banned') };
     case 'AUTH_GOOGLE_ONLY':
-      return { message: 'This account only supports signing in with Google.' };
+      return { message: t('googleOnly') };
     default:
       break;
   }

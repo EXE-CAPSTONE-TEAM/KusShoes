@@ -1,0 +1,181 @@
+{
+  "invoices": {
+    "vatIncl": "đã gồm {{rate}}% VAT",
+    "title": "Hoá đơn & Biên nhận",
+    "colInvoice": "Hoá đơn",
+    "colDate": "Ngày",
+    "colAmount": "Số tiền",
+    "colStatus": "Trạng thái",
+    "colReceipt": "Biên nhận",
+    "loading": "Đang tải hoá đơn…",
+    "empty": "Chưa có hoá đơn nào.",
+    "downloadPdf": "Tải biên nhận PDF",
+    "receiptLater": "Biên nhận được cấp sau khi thanh toán thành công",
+    "opening": "Đang mở…"
+  },
+  "meter": {
+    "of": "{{used}}/{{limit}}",
+    "unlimited": "{{used}} (không giới hạn)"
+  },
+  "momo": {
+    "soonTitle": "Thanh toán qua MoMo sắp ra mắt",
+    "soon": "MoMo (Sắp ra mắt)",
+    "pay": "Thanh toán bằng MoMo"
+  },
+  "cycle": {
+    "monthly": "tháng",
+    "yearly": "năm",
+    "month": "tháng",
+    "year": "năm",
+    "one time": "một lần"
+  },
+  "priority": {
+    "standard": "tiêu chuẩn",
+    "high": "cao",
+    "priority": "ưu tiên",
+    "low": "thấp"
+  },
+  "toast": {
+    "loadError": "Không tải được thông tin thanh toán.",
+    "checkoutError": "Không thể bắt đầu thanh toán.",
+    "creditCheckoutError": "Không thể bắt đầu thanh toán lượt quét.",
+    "couponInvalid": "Mã này không áp dụng cho gói nào.",
+    "couponApplied": "Đã áp dụng mã. Giá ưu đãi được hiển thị ở các gói phù hợp.",
+    "receiptError": "Không tải được biên nhận.",
+    "cancelRequested": "Đã gửi yêu cầu huỷ. Bạn vẫn dùng được gói đến hết kỳ.",
+    "cancelError": "Không thể huỷ gói."
+  },
+  "plan": {
+    "bakePriority": "Ưu tiên xử lý {{priority}}",
+    "unlimitedProjects": "Không giới hạn dự án",
+    "activeProjects": "{{count}} dự án đang hoạt động",
+    "unlimitedExports": "Không giới hạn lượt xuất",
+    "exportsPerMonth": "{{count}} lượt xuất / tháng",
+    "formats": "Định dạng: {{formats}}",
+    "noFormats": "không có",
+    "current": "Gói hiện tại",
+    "choose": "Chọn gói",
+    "standardCapabilities": "Tính năng thiết kế giày cơ bản"
+  },
+  "status": {
+    "free": "Gói miễn phí",
+    "grace": "Thời gian gia hạn",
+    "active": "Gói đang hoạt động"
+  },
+  "headerStatus": {
+    "expired": "đã hết hạn",
+    "cancelled": "đã huỷ",
+    "past_due": "quá hạn",
+    "pending": "chờ xử lý",
+    "active": "đang hoạt động",
+    "grace": "gia hạn"
+  },
+  "subStatus": {
+    "active": "ĐANG HOẠT ĐỘNG",
+    "grace": "GIA HẠN",
+    "expired": "HẾT HẠN",
+    "cancelled": "ĐÃ HUỶ",
+    "past_due": "QUÁ HẠN",
+    "pending": "CHỜ XỬ LÝ"
+  },
+  "title": "Thanh toán & Gói dịch vụ",
+  "changePlan": "Đổi gói",
+  "upgradePlan": "Nâng cấp gói",
+  "banner": {
+    "cancelled": "Thanh toán đã bị huỷ. Bạn chưa bị trừ tiền.",
+    "checking": "Đang xác nhận thanh toán với cổng thanh toán…",
+    "paid": "Đã xác nhận thanh toán. Gói của bạn đã kích hoạt, biên nhận có ở bên dưới.",
+    "failed": "Thanh toán không thành công. Bạn chưa bị trừ tiền.",
+    "timeout": "Xác nhận thanh toán đang lâu hơn bình thường. Vui lòng tải lại trang sau ít phút.",
+    "grace": "Gói của bạn đã hết hạn. Bạn vẫn chỉnh sửa được đến {{date}}, nhưng việc xuất file bị tạm dừng. Hãy gia hạn để dùng đầy đủ."
+  },
+  "card": {
+    "subscription": "Gói đang dùng"
+  },
+  "meta": {
+    "period": "Thời hạn",
+    "expires": "Hết hạn {{date}}",
+    "continuous": "Dùng liên tục (Miễn phí)",
+    "provider": "Cổng thanh toán",
+    "providerPaid": "PayOS / MoMo (trả theo kỳ, không lưu thẻ)",
+    "providerFree": "Không có — gói miễn phí, không tính phí",
+    "exports": "Lượt xuất đã gồm",
+    "perMonth": "{{count}} / tháng"
+  },
+  "comparePlans": "So sánh & đổi gói",
+  "cancelPlan": "Huỷ gói",
+  "cancelNote": "Bạn vẫn dùng được đến hết kỳ thanh toán",
+  "invoiceStatus": {
+    "Paid": "Đã thanh toán",
+    "Pending": "Chờ thanh toán",
+    "Failed": "Thất bại",
+    "Cancelled": "Đã huỷ",
+    "Refunded": "Đã hoàn tiền"
+  },
+  "ledger": {
+    "title": "Lịch sử lượt quét",
+    "purchased": "Ngày mua",
+    "expires": "Hết hạn"
+  },
+  "ledgerStatus": {
+    "available": "Còn dùng được",
+    "used": "Đã dùng",
+    "expired": "Hết hạn"
+  },
+  "quota": {
+    "title": "Hạn mức lưu trữ",
+    "loading": "Đang tải hạn mức…",
+    "projects": "Dự án đang hoạt động",
+    "exports": "Lượt xuất mỗi tháng",
+    "ai": "Lượt tạo bằng AI",
+    "currentPlan": "Gói hiện tại: <strong>{{plan}}</strong>",
+    "status": "Trạng thái: <strong>{{status}}</strong>"
+  },
+  "credits": {
+    "title": "Lượt quét",
+    "available": "Còn lại",
+    "used": "Đã dùng",
+    "expired": "Đã hết hạn",
+    "nextExpiry": "Hết hạn gần nhất",
+    "purchased": "Đã mua trong kỳ này",
+    "priceNote": "{{price}} mỗi lượt quét thêm. Lượt quét có hiệu lực 12 tháng.",
+    "buyHint": "Dành cho gói Basic/Pro đang hoạt động, tối đa theo giới hạn mỗi kỳ",
+    "buy": "Mua lượt quét",
+    "loading": "Đang tải lượt quét…"
+  },
+  "profile": {
+    "title": "Thông tin thanh toán",
+    "owner": "Chủ tài khoản",
+    "email": "Email",
+    "code": "Mã tài khoản",
+    "status": "Trạng thái tài khoản"
+  },
+  "buy": {
+    "title": "Mua lượt quét",
+    "note": "{{price}} mỗi lượt quét, mua thêm tối đa {{remaining}} lượt trong kỳ này. Lượt quét hết hạn sau 12 tháng và không hoàn tiền khi đã dùng.",
+    "quantity": "Số lượng",
+    "total": "Tổng cộng: {{total}}"
+  },
+  "close": "Đóng",
+  "connecting": "Đang kết nối…",
+  "payos": "Thanh toán bằng PayOS",
+  "compare": {
+    "title": "So sánh các gói",
+    "recommended": "NÊN CHỌN",
+    "vatIncl": "Đã gồm {{rate}}% VAT",
+    "freeTier": "Gói miễn phí"
+  },
+  "promo": {
+    "placeholder": "Nhập mã ưu đãi",
+    "label": "Mã ưu đãi",
+    "checking": "Đang kiểm tra…",
+    "apply": "Áp dụng",
+    "remove": "Bỏ mã {{code}}"
+  },
+  "cancelDialog": {
+    "title": "Huỷ gói dịch vụ?",
+    "desc": "Bạn vẫn dùng được gói đến hết kỳ thanh toán hiện tại.",
+    "confirm": "Huỷ gói",
+    "keep": "Giữ lại gói"
+  }
+}

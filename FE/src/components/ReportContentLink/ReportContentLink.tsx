@@ -1,5 +1,6 @@
 import React, { useState } from 'react';
 import { Flag, X } from 'lucide-react';
+import { useTranslation } from 'react-i18next';
 import { accountApi, type ContentReportReason } from '../../api/account';
 import styles from './ReportContentLink.module.css';
 
@@ -14,12 +15,7 @@ interface ReportContentLinkProps {
   evidenceUrl?: string;
 }
 
-const REASONS: { value: ContentReportReason; label: string }[] = [
-  { value: 'copyright', label: 'Copyright infringement' },
-  { value: 'trademark', label: 'Trademark violation' },
-  { value: 'inappropriate', label: 'Inappropriate content' },
-  { value: 'other', label: 'Other' },
-];
+const REASONS: ContentReportReason[] = ['copyright', 'trademark', 'inappropriate', 'other'];
 
 /**
  * BR-77 / UC-24: a signed-in user's "flag this" action for content someone else made —
@@ -32,6 +28,7 @@ export const ReportContentLink: React.FC<ReportContentLinkProps> = ({
   contextLabel,
   evidenceUrl,
 }) => {
+  const { t } = useTranslation('account');
   const [open, setOpen] = useState(false);
   const [reason, setReason] = useState<ContentReportReason>('copyright');
   const [details, setDetails] = useState('');
@@ -43,7 +40,7 @@ export const ReportContentLink: React.FC<ReportContentLinkProps> = ({
   const handleSubmit = async (event: React.FormEvent) => {
     event.preventDefault();
     if (details.trim().length < 20) {
-      setError('Please describe the issue in at least 20 characters.');
+      setError(t('report.tooShort'));
       return;
     }
     setSubmitting(true);
@@ -60,7 +57,7 @@ export const ReportContentLink: React.FC<ReportContentLinkProps> = ({
       });
       setReportId(result.report_id);
     } catch (caught) {
-      setError(caught instanceof Error ? caught.message : 'Unable to submit this report.');
+      setError(caught instanceof Error ? caught.message : t('report.submitError'));
     } finally {
       setSubmitting(false);
     }
@@ -69,7 +66,7 @@ export const ReportContentLink: React.FC<ReportContentLinkProps> = ({
   if (reportId) {
     return (
       <p className={styles.confirmed}>
-        Report submitted — thanks for flagging it. Reference: <code>{reportId.slice(0, 8)}</code>
+        {t('report.confirmed')} <code>{reportId.slice(0, 8)}</code>
       </p>
     );
   }
@@ -78,7 +75,7 @@ export const ReportContentLink: React.FC<ReportContentLinkProps> = ({
     return (
       <button type="button" className={styles.trigger} onClick={() => setOpen(true)}>
         <Flag size={13} />
-        Report {contextLabel}
+        {t('report.trigger', { label: contextLabel })}
       </button>
     );
   }
@@ -86,12 +83,12 @@ export const ReportContentLink: React.FC<ReportContentLinkProps> = ({
   return (
     <form className={styles.form} onSubmit={(event) => void handleSubmit(event)}>
       <div className={styles.formHeader}>
-        <span>Report content</span>
+        <span>{t('report.header')}</span>
         <button
           type="button"
           className={styles.closeBtn}
           onClick={() => setOpen(false)}
-          aria-label="Close"
+          aria-label={t('report.close')}
         >
           <X size={14} />
         </button>
@@ -102,14 +99,14 @@ export const ReportContentLink: React.FC<ReportContentLinkProps> = ({
         onChange={(event) => setReason(event.target.value as ContentReportReason)}
       >
         {REASONS.map((option) => (
-          <option key={option.value} value={option.value}>
-            {option.label}
+          <option key={option} value={option}>
+            {t(`report.${option}`)}
           </option>
         ))}
       </select>
       <textarea
         className={styles.textarea}
-        placeholder="Describe the issue (min. 20 characters)…"
+        placeholder={t('report.details')}
         value={details}
         onChange={(event) => setDetails(event.target.value)}
         rows={3}
@@ -117,13 +114,13 @@ export const ReportContentLink: React.FC<ReportContentLinkProps> = ({
       <input
         type="email"
         className={styles.input}
-        placeholder="Your email (optional, for follow-up)"
+        placeholder={t('report.email')}
         value={email}
         onChange={(event) => setEmail(event.target.value)}
       />
       {error && <p className={styles.error}>{error}</p>}
       <button type="submit" className="btn-outline" disabled={submitting}>
-        {submitting ? 'Submitting…' : 'Submit report'}
+        {submitting ? t('report.submitting') : t('report.submit')}
       </button>
     </form>
   );

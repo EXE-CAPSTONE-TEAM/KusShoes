@@ -1,4 +1,5 @@
 import React, { useState, useEffect, useRef, useCallback } from 'react';
+import { useTranslation } from 'react-i18next';
 import {
   ArrowLeft, Laptop, RefreshCw, Check, Download, FileText,
   Terminal, Share2, History, Lock, Droplets, Box
@@ -35,6 +36,7 @@ export const ProjectDetails: React.FC<ProjectDetailsProps> = ({
   onBack,
   setProjects
 }) => {
+  const { t } = useTranslation('details');
   const { toast } = useToast();
   const [activeTab, setActiveTab] = useState<DetailTab>(() => tabFromSearch(window.location.search));
   const [confirmResetOpen, setConfirmResetOpen] = useState(false);
@@ -73,9 +75,9 @@ export const ProjectDetails: React.FC<ProjectDetailsProps> = ({
       setCanonicalModelAssetId(updated.canonicalModelAssetId);
       setProjects((prev) => prev.map((item) => (item.id === updated.id ? updated : item)));
     } catch (caught) {
-      toast(caught instanceof Error ? caught.message : 'Unable to refresh the project.', 'error');
+      toast(caught instanceof Error ? caught.message : t('page.refreshError'), 'error');
     }
-  }, [project.id, setProjects, toast]);
+  }, [project.id, setProjects, toast, t]);
 
   useEffect(() => {
     setCanonicalModelAssetId(project.canonicalModelAssetId);
@@ -85,8 +87,8 @@ export const ProjectDetails: React.FC<ProjectDetailsProps> = ({
   useEffect(() => {
     api.listProjectExports(project.id)
       .then(setExports)
-      .catch((caught) => toast(caught instanceof Error ? caught.message : 'Unable to load exports.', 'error'));
-  }, [project.id, toast]);
+      .catch((caught) => toast(caught instanceof Error ? caught.message : t('page.exportsError'), 'error'));
+  }, [project.id, toast, t]);
 
   // BR-65/67: informational only — Free-tier renders carry a watermark.
   useEffect(() => {
@@ -97,12 +99,12 @@ export const ProjectDetails: React.FC<ProjectDetailsProps> = ({
     try {
       window.location.assign(await api.createExportDownloadUrl(item.id));
     } catch (caught) {
-      toast(caught instanceof Error ? caught.message : 'Unable to create download URL.', 'error');
+      toast(caught instanceof Error ? caught.message : t('page.downloadError'), 'error');
     }
   };
 
   const formatBytes = (bytes: number | null) => {
-    if (bytes === null) return 'Size pending';
+    if (bytes === null) return t('page.sizePending');
     return `${(bytes / 1024 / 1024).toFixed(1)} MB`;
   };
 
@@ -110,13 +112,13 @@ export const ProjectDetails: React.FC<ProjectDetailsProps> = ({
     if (syncStatus === 'connecting') return;
     setSyncStatus('connecting');
     setLaunchError(null);
-    setLogs([`[${new Date().toLocaleTimeString()}] Requesting a secure one-time launch ticket...`]);
+    setLogs([t('page.logRequesting', { time: new Date().toLocaleTimeString() })]);
 
     try {
       const launch = await api.createEditorLaunch(project.id);
       setLogs(prev => [
         ...prev,
-        `[${new Date().toLocaleTimeString()}] Ticket ready (${launch.expiresIn}s). Opening KusStudio...`,
+        t('page.logTicket', { time: new Date().toLocaleTimeString(), seconds: launch.expiresIn }),
       ]);
       setDesktopMaybeMissing(false);
       let handedOff = false;
@@ -133,9 +135,9 @@ export const ProjectDetails: React.FC<ProjectDetailsProps> = ({
       window.location.assign(launch.desktopUrl);
       setSyncStatus('launched');
     } catch (caught) {
-      const message = caught instanceof Error ? caught.message : 'Unable to open KusStudio.';
+      const message = caught instanceof Error ? caught.message : t('page.launchError');
       setLaunchError(message);
-      setLogs(prev => [...prev, `[${new Date().toLocaleTimeString()}] Launch failed: ${message}`]);
+      setLogs(prev => [...prev, t('page.logFailed', { time: new Date().toLocaleTimeString(), message })]);
       setSyncStatus('error');
       toast(message, 'error');
     }
@@ -150,7 +152,7 @@ export const ProjectDetails: React.FC<ProjectDetailsProps> = ({
     setLogs([]);
     setLaunchError(null);
     setDesktopMaybeMissing(false);
-    toast('Local launch status reset. Project data was not changed.', 'info');
+    toast(t('page.resetToast'), 'info');
   };
 
   return (
@@ -159,7 +161,7 @@ export const ProjectDetails: React.FC<ProjectDetailsProps> = ({
       <div className={styles.navHeader}>
         <button className={styles.backBtn} onClick={onBack}>
           <ArrowLeft size={16} />
-          <span>Back to Directory</span>
+          <span>{t('page.back')}</span>
         </button>
       </div>
 
@@ -178,20 +180,20 @@ export const ProjectDetails: React.FC<ProjectDetailsProps> = ({
             <div className={styles.hudOverlay}>
               <div className={styles.hudHeader}>
                 <span className={styles.hudPulseDot} />
-                <span className={styles.hudTextMono}>SCAN_ACQUISITION_ONLINE</span>
+                <span className={styles.hudTextMono}>{t('page.hudOnline')}</span>
               </div>
               
               <div className={styles.hudFooter}>
                 <div className={styles.hudRow}>
-                  <span>GRID_DIM:</span>
+                  <span>{t('page.hudDim')}</span>
                   <span>325.2 x 124.5 x 202.1 mm</span>
                 </div>
                 <div className={styles.hudRow}>
-                  <span>VERT_DENSITY:</span>
+                  <span>{t('page.hudDensity')}</span>
                   <span>{project.verticesCount}</span>
                 </div>
                 <div className={styles.hudRow}>
-                  <span>HARDWARE:</span>
+                  <span>{t('page.hudHardware')}</span>
                   <span>{project.device}</span>
                 </div>
               </div>
@@ -210,18 +212,18 @@ export const ProjectDetails: React.FC<ProjectDetailsProps> = ({
                 {project.status}
               </span>
               {project.isLocked && (
-                <span className={styles.statusBadge} title="Read-only after a plan downgrade. Upgrade to edit it again.">
-                  <Lock size={12} /> Read-only
+                <span className={styles.statusBadge} title={t('page.readOnlyTitle')}>
+                  <Lock size={12} /> {t('page.readOnly')}
                 </span>
               )}
               {watermarkPolicy?.required && (
-                <span className={styles.statusBadge} title="Free-tier renders carry a watermark. Upgrade to export clean.">
-                  <Droplets size={12} /> Watermarked
+                <span className={styles.statusBadge} title={t('page.watermarkedTitle')}>
+                  <Droplets size={12} /> {t('page.watermarked')}
                 </span>
               )}
             </div>
             <p className={styles.projectSubtitle}>
-              Base Model: <strong>{project.baseModel}</strong>
+              {t('page.baseModel')} <strong>{project.baseModel}</strong>
             </p>
           </div>
 
@@ -232,28 +234,28 @@ export const ProjectDetails: React.FC<ProjectDetailsProps> = ({
               onClick={() => setActiveTab('overview')}
             >
               <FileText size={14} />
-              Overview
+              {t('page.tabOverview')}
             </button>
             <button
               className={`${styles.tabBtn} ${activeTab === 'model' ? styles.tabBtnActive : ''}`}
               onClick={() => setActiveTab('model')}
             >
               <Box size={14} />
-              Model 3D
+              {t('page.tabModel')}
             </button>
             <button
               className={`${styles.tabBtn} ${activeTab === 'history' ? styles.tabBtnActive : ''}`}
               onClick={() => setActiveTab('history')}
             >
               <History size={14} />
-              History &amp; Templates
+              {t('page.tabHistory')}
             </button>
             <button
               className={`${styles.tabBtn} ${activeTab === 'share' ? styles.tabBtnActive : ''}`}
               onClick={() => setActiveTab('share')}
             >
               <Share2 size={14} />
-              Share with artisan
+              {t('page.tabShare')}
             </button>
           </div>
 
@@ -263,20 +265,20 @@ export const ProjectDetails: React.FC<ProjectDetailsProps> = ({
               {/* Description */}
               <div className={styles.descSection}>
                 <p className={styles.descriptionText}>
-                  {project.description || 'No description provided for this sneaker reconstruction scan. Open in KusStudio Desktop to write annotations and build textures.'}
+                  {project.description || t('page.noDescription')}
                 </p>
               </div>
 
               {/* Technical Specs */}
               <div className={styles.sectionBlock}>
-                <h3 className={styles.sectionHeading}>Reconstruction Metadata</h3>
+                <h3 className={styles.sectionHeading}>{t('page.metaHeading')}</h3>
                 <div className={styles.metadataGrid}>
                   <div className={styles.metaRow}>
-                    <span>Reconstruction Density</span>
+                    <span>{t('page.metaDensity')}</span>
                     <span>{project.verticesCount}</span>
                   </div>
                   <div className={styles.metaRow}>
-                    <span>Updated timestamp</span>
+                    <span>{t('page.metaUpdated')}</span>
                     <span>{project.updatedAt}</span>
                   </div>
                 </div>
@@ -284,9 +286,9 @@ export const ProjectDetails: React.FC<ProjectDetailsProps> = ({
 
               {/* Download Formats */}
               <div className={styles.sectionBlock}>
-                <h3 className={styles.sectionHeading}>Mesh Download Formats</h3>
+                <h3 className={styles.sectionHeading}>{t('page.formatsHeading')}</h3>
                 <div className={styles.downloadsGrid}>
-                  {exports.length === 0 && <span>No completed exports are available.</span>}
+                  {exports.length === 0 && <span>{t('page.noExports')}</span>}
                   {exports.map((item) => (
                     <button
                       key={item.id}
@@ -298,7 +300,7 @@ export const ProjectDetails: React.FC<ProjectDetailsProps> = ({
                         <span className={styles.dlFormat}>.{item.format.toUpperCase()}</span>
                       </div>
                       <div className={styles.dlBody}>
-                        <span className={styles.dlType}>Generated export</span>
+                        <span className={styles.dlType}>{t('page.generatedExport')}</span>
                         <span className={styles.dlSize}>{formatBytes(item.file_size_bytes)}</span>
                       </div>
                       <Download size={14} className={styles.dlArrow} />
@@ -312,8 +314,8 @@ export const ProjectDetails: React.FC<ProjectDetailsProps> = ({
                 <div className={styles.panelHeader}>
                   <Laptop size={18} className={styles.panelIcon} />
                   <div>
-                    <h4 className={styles.panelTitle}>KusStudio Desktop Client</h4>
-                    <p className={styles.panelDesc}>Open this project in KusStudio using a short-lived, one-time secure handoff.</p>
+                    <h4 className={styles.panelTitle}>{t('page.studioTitle')}</h4>
+                    <p className={styles.panelDesc}>{t('page.studioDesc')}</p>
                   </div>
                 </div>
 
@@ -351,7 +353,7 @@ export const ProjectDetails: React.FC<ProjectDetailsProps> = ({
                       aria-describedby={launchError ? 'kusstudio-launch-error' : undefined}
                     >
                       <Laptop size={16} />
-                      <span>{syncStatus === 'error' ? 'Retry secure launch' : 'Open in KusStudio Desktop'}</span>
+                      <span>{syncStatus === 'error' ? t('page.retryLaunch') : t('page.openDesktop')}</span>
                     </button>
                   )}
                   {launchError && (
@@ -362,26 +364,26 @@ export const ProjectDetails: React.FC<ProjectDetailsProps> = ({
                   {syncStatus === 'connecting' && (
                     <div className={styles.syncConnectingLoader} role="status" aria-live="polite">
                       <RefreshCw className={styles.spinIcon} size={16} />
-                      <span>Preparing a secure desktop session...</span>
+                      <span>{t('page.preparing')}</span>
                     </div>
                   )}
                   {syncStatus === 'launched' && (
                     <div className={styles.syncLaunchedGroup}>
                       <div className={styles.syncConnectedBanner} role="status" aria-live="polite">
                         <Check size={16} className={styles.checkIcon} />
-                        <span>Launch request sent. KusStudio will complete secure sign-in.</span>
+                        <span>{t('page.launched')}</span>
                       </div>
                       {desktopMaybeMissing && (
                         <p className={styles.desktopInstallHint} role="status">
-                          KusStudio didn&apos;t open?{' '}
+                          {t('page.notOpened')}{' '}
                           <a href={DESKTOP_INSTALLER_URL} download>
-                            Download KusShoes Editor for Windows
+                            {t('page.downloadEditor')}
                           </a>
-                          , install it, then click &ldquo;Open in KusStudio Desktop&rdquo; again.
+                          {t('page.afterInstall')}
                         </p>
                       )}
                       <button className={styles.disconnectBtn} onClick={handleResetConnection}>
-                        Reset launch status
+                        {t('page.resetStatus')}
                       </button>
                     </div>
                   )}
@@ -417,9 +419,9 @@ export const ProjectDetails: React.FC<ProjectDetailsProps> = ({
       <ConfirmDialog
         open={confirmResetOpen}
         onOpenChange={setConfirmResetOpen}
-        title="Reset local launch status?"
-        description="This only resets the portal message. It does not close KusStudio or change project data."
-        confirmLabel="Reset Status"
+        title={t('page.confirmTitle')}
+        description={t('page.confirmDesc')}
+        confirmLabel={t('page.confirmLabel')}
         onConfirm={confirmResetConnection}
       />
     </div>
