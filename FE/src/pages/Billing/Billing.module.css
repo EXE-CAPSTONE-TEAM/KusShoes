@@ -2,6 +2,7 @@
 
 .container {
   max-width: 1152px;
+  width: 100%;
   margin: 0 auto;
   padding: 0 32px 48px;
   width: 100%;
