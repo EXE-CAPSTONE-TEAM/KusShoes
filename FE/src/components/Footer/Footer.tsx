@@ -39,6 +39,9 @@ export const Footer: React.FC<FooterProps> = ({ navigate }) => {
             <img
               src={theme === 'dark' ? '/KusShoes_Logo_Dark_Mode_cropped.png' : '/KusShoes_Logo_cropped.png'}
               alt="KusShoes"
+              width={450}
+              height={140}
+              loading="lazy"
               className={styles.logoImage}
             />
           </div>
@@ -47,7 +50,7 @@ export const Footer: React.FC<FooterProps> = ({ navigate }) => {
 
         {/* Col 2: Products */}
         <div className={styles.footerLinkCol}>
-          <h4>{t('footer.productsHeading')}</h4>
+          <h3>{t('footer.productsHeading')}</h3>
           <a href="#products" onClick={(e) => handleScrollLink(e, 'products')}>{t('footer.scanner')}</a>
           <a href="#products" onClick={(e) => handleScrollLink(e, 'products')}>{t('footer.studioClient')}</a>
           <a href="/pricing" onClick={handlePricingClick}>{t('footer.cloudPackages')}</a>
@@ -55,7 +58,7 @@ export const Footer: React.FC<FooterProps> = ({ navigate }) => {
 
         {/* Col 3: Resources */}
         <div className={styles.footerLinkCol}>
-          <h4>{t('footer.resourcesHeading')}</h4>
+          <h3>{t('footer.resourcesHeading')}</h3>
           <a href="#docs" onClick={(e) => { e.preventDefault(); toast(t('footer.toastDocsComingSoon'), 'info'); }}>{t('footer.documentation')}</a>
           <a href="#about" onClick={(e) => { e.preventDefault(); toast(t('footer.toastAboutComingSoon'), 'info'); }}>{t('footer.developerTeam')}</a>
           <a href="#releases" onClick={(e) => { e.preventDefault(); toast(t('footer.toastReleasesComingSoon'), 'info'); }}>{t('footer.releaseNotes')}</a>
@@ -63,7 +66,7 @@ export const Footer: React.FC<FooterProps> = ({ navigate }) => {
 
         {/* Col 4: Support & Security */}
         <div className={styles.footerLinkCol}>
-          <h4>{t('footer.supportHeading')}</h4>
+          <h3>{t('footer.supportHeading')}</h3>
           <a href="/terms" onClick={(e) => { e.preventDefault(); navigate('/terms'); }}>{t('footer.terms')}</a>
           <a href="/privacy" onClick={(e) => { e.preventDefault(); navigate('/privacy'); }}>{t('footer.privacy')}</a>
           <a href="/pricing" onClick={handlePricingClick}>{t('footer.faqs')}</a>

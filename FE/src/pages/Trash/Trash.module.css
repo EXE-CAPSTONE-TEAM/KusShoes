@@ -17,7 +17,7 @@
 }
 
 .title {
-  font-family: 'Space Grotesk', sans-serif;
+  font-family: 'Space Grotesk Variable', 'Space Grotesk', sans-serif;
   font-size: clamp(1.6rem, 1.1rem + 2vw, 2.2rem);
   font-weight: 800;
   letter-spacing: -0.5px;
@@ -90,7 +90,7 @@
 
 .rowProjectName {
   display: block;
-  font-family: 'Space Grotesk', sans-serif;
+  font-family: 'Space Grotesk Variable', 'Space Grotesk', sans-serif;
   font-weight: 700;
   font-size: 0.95rem;
 }
@@ -167,7 +167,7 @@
 }
 
 .emptyTitle {
-  font-family: 'Space Grotesk', sans-serif;
+  font-family: 'Space Grotesk Variable', 'Space Grotesk', sans-serif;
   font-size: 1.4rem;
   font-weight: 700;
   color: var(--text-primary);

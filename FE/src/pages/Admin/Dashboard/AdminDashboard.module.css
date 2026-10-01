@@ -48,7 +48,7 @@
 }
 
 .bannerTitle {
-  font-family: var(--font-admin, 'Roboto', sans-serif);
+  font-family: var(--font-admin, 'Roboto Variable', 'Roboto', sans-serif);
   font-size: 1.45rem;
   font-weight: 800;
   color: var(--text-primary);
@@ -121,7 +121,7 @@
   background-color: var(--bg-tertiary);
   border: 1px solid var(--glass-border);
   color: var(--text-primary);
-  font-family: var(--font-admin, 'Roboto', sans-serif);
+  font-family: var(--font-admin, 'Roboto Variable', 'Roboto', sans-serif);
   font-size: 0.82rem;
   font-weight: 600;
   cursor: pointer;
@@ -218,7 +218,7 @@
 }
 
 .actionValue {
-  font-family: var(--font-admin, 'Roboto', sans-serif);
+  font-family: var(--font-admin, 'Roboto Variable', 'Roboto', sans-serif);
   font-size: 1.35rem;
   font-weight: 800;
   color: var(--tone-color, var(--text-primary));
@@ -353,7 +353,7 @@
 }
 
 .kpiValue {
-  font-family: var(--font-admin, 'Roboto', sans-serif);
+  font-family: var(--font-admin, 'Roboto Variable', 'Roboto', sans-serif);
   font-size: 1.65rem;
   font-weight: 800;
   color: var(--text-primary);
@@ -428,7 +428,7 @@
 }
 
 .sectionTitle {
-  font-family: var(--font-admin, 'Roboto', sans-serif);
+  font-family: var(--font-admin, 'Roboto Variable', 'Roboto', sans-serif);
   font-size: 0.98rem;
   font-weight: 800;
   text-transform: uppercase;
@@ -479,7 +479,7 @@
 }
 
 .chartTitle {
-  font-family: var(--font-admin, 'Roboto', sans-serif);
+  font-family: var(--font-admin, 'Roboto Variable', 'Roboto', sans-serif);
   font-size: 0.98rem;
   font-weight: 800;
   color: var(--text-primary);
@@ -513,7 +513,7 @@
   color: var(--text-secondary);
   padding: 5px 11px;
   border-radius: var(--border-radius-sm);
-  font-family: var(--font-admin, 'Roboto', sans-serif);
+  font-family: var(--font-admin, 'Roboto Variable', 'Roboto', sans-serif);
   font-size: 0.76rem;
   font-weight: 600;
   cursor: pointer;
@@ -591,7 +591,7 @@
   border: none;
   outline: none;
   color: var(--text-primary);
-  font-family: var(--font-admin, 'Roboto', sans-serif);
+  font-family: var(--font-admin, 'Roboto Variable', 'Roboto', sans-serif);
   font-size: 0.82rem;
   width: 100%;
 }

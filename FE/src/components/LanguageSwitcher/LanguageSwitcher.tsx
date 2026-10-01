@@ -24,7 +24,8 @@ export const LanguageSwitcher: React.FC<LanguageSwitcherProps> = ({ className })
         if (api.hasToken()) api.updateProfile({ language: next }).catch(() => undefined);
       }}
       title={t('language.switchTo', { language: t(`language.${next}`) })}
-      aria-label={t('language.switchTo', { language: t(`language.${next}`) })}
+      // Starts with the visible text so voice-control users can say what they see.
+      aria-label={`${current.toUpperCase()}: ${t('language.switchTo', { language: t(`language.${next}`) })}`}
     >
       {current.toUpperCase()}
     </button>

@@ -107,6 +107,8 @@ export const Navbar: React.FC<NavbarProps> = ({ navigate, currentPage }) => {
         <img
           src={theme === 'dark' ? '/KusShoes_Logo_Dark_Mode_cropped.png' : '/KusShoes_Logo_cropped.png'}
           alt="KusShoes"
+          width={450}
+          height={140}
           className={styles.logoImage}
         />
       </div>

@@ -64,7 +64,7 @@ export const HorizontalBarList: React.FC<HorizontalBarListProps> = ({ items, for
               <div style={{ display: 'flex', alignItems: 'center', gap: 8, flexShrink: 0 }}>
                 <span
                   style={{
-                    fontFamily: "var(--font-admin, 'Roboto', sans-serif)",
+                    fontFamily: "var(--font-admin, 'Roboto Variable', 'Roboto', sans-serif)",
                     color: 'var(--text-primary)',
                     fontWeight: 700,
                     fontVariantNumeric: 'tabular-nums',

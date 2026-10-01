@@ -312,7 +312,7 @@
 }
 
 .subItemTitle {
-  font-family: 'Space Grotesk', sans-serif;
+  font-family: 'Space Grotesk Variable', 'Space Grotesk', sans-serif;
   font-size: 0.88rem;
   font-weight: 700;
   color: var(--text-primary);

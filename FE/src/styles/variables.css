@@ -2,8 +2,8 @@
   color-scheme: dark;
 
   /* Fonts */
-  --font-sans: 'Outfit', 'Inter', system-ui, -apple-system, sans-serif;
-  --font-admin: 'Roboto', -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
+  --font-sans: 'Outfit Variable', 'Outfit', 'Inter', system-ui, -apple-system, sans-serif;
+  --font-admin: 'Roboto Variable', 'Roboto', -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
   --font-mono: 'Space Mono', 'Fira Code', monospace;
 
   /* Color Palette - Streetwear Dark System */

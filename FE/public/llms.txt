@@ -1,8 +1,8 @@
 # KusShoes
 
-> KusShoes là nền tảng số hóa và tùy biến sneaker 3D: quét giày thật từ điện thoại thành mô hình 3D trên đám mây, chỉnh sửa chi tiết trong KusStudio và xuất file chuẩn chế tác hoặc trải nghiệm thực tế ảo AR.
+> KusShoes là nền tảng số hóa và tùy biến sneaker 3D: quét giày thật từ điện thoại thành mô hình 3D trên đám mây, chỉnh sửa chi tiết trong KusStudio và xuất file 3D (GLB/OBJ) kèm bản tham khảo để nhờ nghệ nhân làm giày thật.
 
-KusShoes cung cấp giải pháp trọn gói từ khâu quét video thực tế bằng điện thoại di động (tích hợp KIRI Engine photogrammetry), làm sạch lưới tự động bằng Blender pipeline, chỉnh sửa vật liệu/màu sắc/decal trong studio 3D thời gian thực (Three.js/React Three Fiber), cho đến thử giày thực tế tăng cường (AR Try-on).
+KusShoes cung cấp giải pháp trọn gói từ khâu quét video thực tế bằng điện thoại di động (tích hợp KIRI Engine photogrammetry), làm sạch lưới tự động bằng Blender pipeline, chỉnh sửa vật liệu/màu sắc/decal trong studio 3D thời gian thực (Three.js/React Three Fiber), cho đến xuất file 3D, ảnh render và bản tham khảo PDF.
 
 ## Liên kết chính
 
@@ -16,4 +16,4 @@ KusShoes cung cấp giải pháp trọn gói từ khâu quét video thực tế 
 
 - **3D Scanning Pipeline**: Tải lên video quét góc quay thực tế, trích xuất khung hình và tái tạo mô hình 3D dạng GLB/OBJ.
 - **3D Customizer (KusStudio)**: Tùy biến vật liệu (Roughness, Metalness, BaseColor), đính nhãn decal SVG/Text, và bóc tách mặt cắt giày trực quan.
-- **AR Experience**: Xem trước mô hình trên không gian thực tế thông qua camera di động với tỷ lệ thực 1:1.
+- **3D Export**: Xuất mô hình GLB (mọi gói trả phí) và OBJ (gói Pro), ảnh render chất lượng cao và bản tham khảo PDF ghi mã màu, kích thước, vị trí sticker.

@@ -4,7 +4,7 @@ import { useAdminAuth } from '../../../context/AdminAuthContext';
 import { useTheme } from '../../../context/ThemeContext';
 import { useToast } from '../../../context/ToastContext';
 import { AdminApiError } from '../../../api/adminClient';
-import backgroundImage from '../../../assets/admin/admin-login-bg.jpg';
+import backgroundImage from '../../../assets/admin/admin-login-bg.webp';
 import styles from './AdminLogin.module.css';
 
 export const AdminLogin: React.FC = () => {
