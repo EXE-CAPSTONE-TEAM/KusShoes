@@ -38,6 +38,9 @@ const bundledAvatars = import.meta.glob('../../assets/avatars/*.{jpg,jpeg,png,we
   import: 'default',
 }) as Record<string, string>;
 
+// Illustrative display names shown under the preset avatars (matched by sort order).
+const PRESET_AVATAR_NAMES = ['Linh Lace', 'Khoa Sole', 'Mai Mesh', 'Minh Stride', 'Vy Velvet'];
+
 const PRESET_AVATARS: PresetAvatar[] = Object.keys(bundledAvatars).length
   ? Object.entries(bundledAvatars)
       .sort(([a], [b]) => a.localeCompare(b, undefined, { numeric: true }))
@@ -696,6 +699,9 @@ export const Settings: React.FC<SettingsProps> = ({
                   }}
                 >
                   <img src={preset.url} alt="" className={styles.gridAvatarImg} />
+                  {PRESET_AVATAR_NAMES[index] && (
+                    <span className={styles.gridAvatarName}>{PRESET_AVATAR_NAMES[index]}</span>
+                  )}
                 </div>
               ))}
             </div>
