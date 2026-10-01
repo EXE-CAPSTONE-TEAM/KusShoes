@@ -488,7 +488,7 @@ export const Settings: React.FC<SettingsProps> = ({
                           onChange={(e) =>
                             setProfileData({ ...profileData, instagram: e.target.value })
                           }
-                          placeholder="@duy.sneaker"
+                          placeholder="@ten.studio"
                         />
                       </div>
                     </div>
@@ -504,7 +504,7 @@ export const Settings: React.FC<SettingsProps> = ({
                           onChange={(e) =>
                             setProfileData({ ...profileData, behance: e.target.value })
                           }
-                          placeholder="duynguyen"
+                          placeholder="ten-studio"
                         />
                       </div>
                     </div>
@@ -520,7 +520,7 @@ export const Settings: React.FC<SettingsProps> = ({
                           onChange={(e) =>
                             setProfileData({ ...profileData, tiktok: e.target.value })
                           }
-                          placeholder="@duy.hypebeast"
+                          placeholder="@ten.studio"
                         />
                       </div>
                     </div>
