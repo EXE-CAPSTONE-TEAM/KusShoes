@@ -1,5 +1,5 @@
-import React, { useCallback, useState } from 'react';
-import { ArrowDownCircle, RotateCcw, ShieldAlert, RotateCw } from 'lucide-react';
+import React, { useCallback, useEffect, useState } from 'react';
+import { ArrowDownCircle, Download, Eye, RotateCcw, ShieldAlert, RotateCw } from 'lucide-react';
 import * as Tabs from '@radix-ui/react-tabs';
 import { Select } from '../../../components/Select/Select';
 import { ConfirmDialog } from '../../../components/ConfirmDialog/ConfirmDialog';
@@ -11,7 +11,9 @@ import { useAdminAuth } from '../../../context/AdminAuthContext';
 import { adminBilling, AdminApiError, type SubscriptionListQuery, type InvoiceListQuery } from '../../../api/adminClient';
 import { useCursorList } from '../../../hooks/useCursorList';
 import { isValidUuid } from '../../../utils/validators';
-import type { AdminSubscription, AdminInvoice } from '../../../types/admin';
+import type { AdminSubscription, AdminInvoice, InvoiceSummary } from '../../../types/admin';
+import { InvoiceDetailDialog, InvoiceSummaryPanel } from './InvoiceInsights';
+import { CYCLE_LABEL, formatDateTime, METHOD_LABEL, tierLabel } from './invoiceFormat';
 import shared from '../admin-shared.module.css';
 
 const TIER_OPTIONS = [
@@ -40,6 +42,23 @@ const INVOICE_STATUS_OPTIONS = [
   { value: 'cancelled', label: 'Cancelled' },
   { value: 'refunded', label: 'Refunded' },
 ];
+
+const METHOD_OPTIONS = [
+  { value: 'all', label: 'Tất cả phương thức' },
+  { value: 'payos', label: 'PayOS' },
+  { value: 'momo', label: 'MoMo' },
+  { value: 'manual', label: 'Thủ công' },
+];
+
+// date inputs give YYYY-MM-DD; the API treats date_to as exclusive, so send the next midnight.
+const startOfDayIso = (day: string) => new Date(`${day}T00:00:00`).toISOString();
+const endOfDayIso = (day: string) => {
+  const next = new Date(`${day}T00:00:00`);
+  next.setDate(next.getDate() + 1);
+  return next.toISOString();
+};
+
+const csvCell = (value: string | number | null | undefined) => `"${String(value ?? '').replace(/"/g, '""')}"`;
 
 const formatVnd = (v: number) => `${v.toLocaleString('vi-VN')} VNĐ`;
 const formatDate = (iso: string | null) => (iso ? new Date(iso).toLocaleDateString('vi-VN') : '—');
@@ -74,6 +93,10 @@ export const AdminBilling: React.FC = () => {
   const [invoiceUserIdInput, setInvoiceUserIdInput] = useState('');
   const [invoiceUserId, setInvoiceUserId] = useState<string | undefined>(undefined);
   const [invoiceUserIdError, setInvoiceUserIdError] = useState<string | null>(null);
+  const [invoiceMethod, setInvoiceMethod] = useState('all');
+  const [dateFrom, setDateFrom] = useState('');
+  const [dateTo, setDateTo] = useState('');
+  const [detailTarget, setDetailTarget] = useState<AdminInvoice | null>(null);
   const [refundTarget, setRefundTarget] = useState<AdminInvoice | null>(null);
   const [refundReason, setRefundReason] = useState('');
   const [refundOverride, setRefundOverride] = useState(false);
@@ -81,6 +104,59 @@ export const AdminBilling: React.FC = () => {
   const invoiceQuery: InvoiceListQuery = {
     status: invoiceStatus === 'all' ? undefined : invoiceStatus,
     user_id: invoiceUserId,
+    payment_method: invoiceMethod === 'all' ? undefined : (invoiceMethod as InvoiceListQuery['payment_method']),
+    date_from: dateFrom ? startOfDayIso(dateFrom) : undefined,
+    date_to: dateTo ? endOfDayIso(dateTo) : undefined,
+  };
+
+  // Revenue overview for the same window/method (status and user filters only narrow the table).
+  const [summary, setSummary] = useState<InvoiceSummary | null>(null);
+  const [summaryLoading, setSummaryLoading] = useState(false);
+  const [summaryError, setSummaryError] = useState<string | null>(null);
+  const loadSummary = useCallback(
+    (signal?: AbortSignal) => {
+      setSummaryLoading(true);
+      setSummaryError(null);
+      return adminBilling
+        .invoiceSummary(
+          {
+            payment_method: invoiceMethod === 'all' ? undefined : (invoiceMethod as InvoiceListQuery['payment_method']),
+            date_from: dateFrom ? startOfDayIso(dateFrom) : undefined,
+            date_to: dateTo ? endOfDayIso(dateTo) : undefined,
+          },
+          signal,
+        )
+        .then(setSummary)
+        .catch((err) => {
+          if (signal?.aborted) return;
+          setSummaryError(err instanceof AdminApiError ? err.message : 'Không tải được tổng quan doanh thu.');
+        })
+        .finally(() => {
+          if (!signal?.aborted) setSummaryLoading(false);
+        });
+    },
+    [invoiceMethod, dateFrom, dateTo],
+  );
+  useEffect(() => {
+    const controller = new AbortController();
+    void loadSummary(controller.signal);
+    return () => controller.abort();
+  }, [loadSummary]);
+
+  const exportInvoicesCsv = () => {
+    const header = ['Mã giao dịch', 'Mã đơn', 'Khách hàng', 'Gói', 'Chu kỳ', 'Giá niêm yết', 'Giảm giá', 'Số tiền', 'Phương thức', 'Trạng thái', 'Số biên nhận', 'Ngày tạo', 'Ngày thanh toán'];
+    const lines = invoices.map((inv) => [
+      inv.id, inv.order_code, inv.user_email ?? inv.user_id, tierLabel(inv.plan_tier),
+      CYCLE_LABEL[inv.billing_cycle] ?? inv.billing_cycle, inv.listed_price_vnd, inv.discount_vnd, inv.amount_vnd,
+      METHOD_LABEL[inv.payment_method] ?? inv.payment_method, inv.status, inv.receipt_number, inv.created_at, inv.paid_at,
+    ]);
+    const csv = [header, ...lines].map((row) => row.map(csvCell).join(',')).join('\n');
+    const url = URL.createObjectURL(new Blob(['\ufeff' + csv], { type: 'text/csv;charset=utf-8;' }));
+    const link = document.createElement('a');
+    link.href = url;
+    link.download = `giao-dich-${new Date().toISOString().slice(0, 10)}.csv`;
+    link.click();
+    URL.revokeObjectURL(url);
   };
   const invoiceFetcher = useCallback(
     (q: InvoiceListQuery & { cursor?: string; limit?: number }, signal: AbortSignal) =>
@@ -136,6 +212,7 @@ export const AdminBilling: React.FC = () => {
       setRefundReason('');
       setRefundOverride(false);
       reloadInvoices();
+      void loadSummary();
     } catch (err) {
       if (err instanceof AdminApiError) toast(err.message, 'error');
     } finally {
@@ -255,15 +332,22 @@ export const AdminBilling: React.FC = () => {
               onKeyDown={(e) => { if (e.key === 'Enter') submitInvoiceUserId(); }}
               onBlur={submitInvoiceUserId}
             />
-            {(invoiceStatus !== 'all' || invoiceUserId) && (
+            <Select value={invoiceMethod} onValueChange={setInvoiceMethod} options={METHOD_OPTIONS} ariaLabel="Lọc phương thức thanh toán" />
+            <input type="date" className={shared.filterInput} aria-label="Từ ngày" value={dateFrom} max={dateTo || undefined} onChange={(e) => setDateFrom(e.target.value)} />
+            <input type="date" className={shared.filterInput} aria-label="Đến ngày" value={dateTo} min={dateFrom || undefined} onChange={(e) => setDateTo(e.target.value)} />
+            {(invoiceStatus !== 'all' || invoiceUserId || invoiceMethod !== 'all' || dateFrom || dateTo) && (
               <button
                 className={shared.clearFiltersBtn}
-                onClick={() => { setInvoiceStatus('all'); setInvoiceUserIdInput(''); setInvoiceUserId(undefined); setInvoiceUserIdError(null); }}
+                onClick={() => { setInvoiceStatus('all'); setInvoiceUserIdInput(''); setInvoiceUserId(undefined); setInvoiceUserIdError(null); setInvoiceMethod('all'); setDateFrom(''); setDateTo(''); }}
               >
                 Xóa bộ lọc
               </button>
             )}
+            <button className="btn-outline" onClick={exportInvoicesCsv} disabled={invoices.length === 0} title="Xuất các giao dịch đang hiển thị">
+              <Download size={14} /> Xuất CSV
+            </button>
           </div>
+          <InvoiceSummaryPanel summary={summary} loading={summaryLoading} error={summaryError} />
           {invoiceUserIdError && <p className={shared.errorMessage} style={{ marginTop: -8, marginBottom: 12 }}>{invoiceUserIdError}</p>}
           {invoiceError ? (
             <div className={shared.errorState}>
@@ -275,12 +359,14 @@ export const AdminBilling: React.FC = () => {
               <table className={shared.table}>
                 <thead>
                   <tr>
+                    <th>Mã đơn</th>
                     <th>User</th>
                     <th>Gói</th>
                     <th>Chu kỳ</th>
                     <th>Số tiền</th>
                     <th>Phương thức</th>
                     <th>Trạng thái</th>
+                    <th>Ngày tạo</th>
                     <th>Ngày thanh toán</th>
                     <th>Hành động</th>
                   </tr>
@@ -288,14 +374,19 @@ export const AdminBilling: React.FC = () => {
                 <tbody>
                   {invoices.map(inv => (
                     <tr key={inv.id}>
+                      <td className={shared.mutedCell}>{inv.order_code}</td>
                       <td className={shared.mutedCell} title={inv.user_id}>{inv.user_email ?? inv.user_id}</td>
-                      <td className={shared.mutedCell} style={{ textTransform: 'capitalize' }}>{inv.plan_tier}</td>
-                      <td className={shared.mutedCell}>{inv.billing_cycle}</td>
+                      <td className={shared.mutedCell}>{tierLabel(inv.plan_tier)}</td>
+                      <td className={shared.mutedCell}>{CYCLE_LABEL[inv.billing_cycle] ?? inv.billing_cycle}</td>
                       <td>{formatVnd(inv.amount_vnd)}</td>
-                      <td className={shared.mutedCell}>{inv.payment_method}</td>
+                      <td className={shared.mutedCell}>{METHOD_LABEL[inv.payment_method] ?? inv.payment_method}</td>
                       <td><StatusBadge status={inv.status} /></td>
-                      <td className={shared.mutedCell}>{formatDate(inv.paid_at)}</td>
+                      <td className={shared.mutedCell}>{formatDateTime(inv.created_at)}</td>
+                      <td className={shared.mutedCell}>{formatDateTime(inv.paid_at)}</td>
                       <td>
+                        <button className={shared.iconBtn} title="Xem chi tiết" onClick={() => setDetailTarget(inv)}>
+                          <Eye size={14} />
+                        </button>
                         <button
                           className={shared.iconBtn}
                           title={isAdmin ? 'Hoàn tiền' : 'Chỉ Admin mới được thực hiện'}
@@ -308,10 +399,10 @@ export const AdminBilling: React.FC = () => {
                     </tr>
                   ))}
                   {!invoiceLoading && invoices.length === 0 && (
-                    <tr><td colSpan={8}><div className={shared.emptyState}>Không có hóa đơn phù hợp.</div></td></tr>
+                    <tr><td colSpan={10}><div className={shared.emptyState}>Không có hóa đơn phù hợp.</div></td></tr>
                   )}
                   {invoiceLoading && invoices.length === 0 && (
-                    <tr><td colSpan={8}><div className={shared.emptyState}>Đang tải...</div></td></tr>
+                    <tr><td colSpan={10}><div className={shared.emptyState}>Đang tải...</div></td></tr>
                   )}
                 </tbody>
               </table>
@@ -340,6 +431,8 @@ export const AdminBilling: React.FC = () => {
         confirmLabel="Hạ xuống Free"
         onConfirm={handleForceDowngrade}
       />
+
+      <InvoiceDetailDialog invoice={detailTarget} onOpenChange={(open) => !open && setDetailTarget(null)} />
 
       <AdminDialog
         open={refundTarget !== null}

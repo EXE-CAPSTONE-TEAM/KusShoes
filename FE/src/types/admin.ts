@@ -124,6 +124,22 @@ export interface AdminInvoice {
   vat: { enabled: boolean; rate_percent: number; vat_vnd: number; net_vnd: number };
 }
 
+export interface InvoiceSummary {
+  total_count: number;
+  settled_count: number;
+  gross_vnd: number;
+  refunded_vnd: number;
+  refund_count: number;
+  net_vnd: number;
+  discount_vnd: number;
+  listed_vnd: number;
+  average_order_vnd: number;
+  success_rate_percent: number | null;
+  by_status: { status: InvoiceStatus; count: number; amount_vnd: number }[];
+  by_method: { payment_method: AdminInvoice['payment_method']; count: number; amount_vnd: number }[];
+  by_plan: { plan_tier: AdminInvoice['plan_tier']; billing_cycle: AdminInvoice['billing_cycle']; count: number; amount_vnd: number }[];
+}
+
 export type ProjectStatus = 'draft' | 'in_progress' | 'baking' | 'completed';
 
 export interface AdminProjectSummary {

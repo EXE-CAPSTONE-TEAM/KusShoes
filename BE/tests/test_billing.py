@@ -358,3 +358,41 @@ async def test_admin_billing_list_and_force_downgrade(client, db, authenticated_
 
     sub = await subscription_repo.get_by_user(db, authenticated_user.id)
     assert sub.tier == "free"
+
+
+@pytest.mark.asyncio
+async def test_admin_invoice_summary_aggregates_from_db(client, db, authenticated_user):
+    from app.repositories import invoice_repo, plan_repo
+
+    admin = await _make_admin(db)
+    admin_headers = {"Authorization": f"Bearer {create_access_token(str(admin.id), role='admin')}"}
+    plan = await plan_repo.get_by_tier_and_cycle(db, "basic", "monthly")
+
+    paid = await invoice_repo.create_pending(
+        db, user_id=authenticated_user.id, plan_id=plan.id, plan_tier="basic",
+        billing_cycle="monthly", order_code=910001, listed_price_vnd=plan.price_vnd,
+        amount_vnd=plan.price_vnd, payment_method="payos",
+    )
+    paid.status = "paid"
+    await invoice_repo.create_pending(
+        db, user_id=authenticated_user.id, plan_id=plan.id, plan_tier="basic",
+        billing_cycle="monthly", order_code=910002, listed_price_vnd=plan.price_vnd,
+        amount_vnd=plan.price_vnd, payment_method="momo",
+    )
+    await db.commit()
+
+    response = await client.get("/api/v1/admin/billing/invoices/summary", headers=admin_headers)
+    assert response.status_code == 200
+    body = response.json()
+    assert body["total_count"] == 2
+    assert body["settled_count"] == 1
+    assert body["gross_vnd"] == plan.price_vnd
+    assert body["net_vnd"] == plan.price_vnd
+    assert body["average_order_vnd"] == plan.price_vnd
+    assert body["success_rate_percent"] == 100.0
+    assert [m["payment_method"] for m in body["by_method"]] == ["payos"]
+
+    only_momo = await client.get(
+        "/api/v1/admin/billing/invoices/summary?payment_method=momo", headers=admin_headers
+    )
+    assert only_momo.json()["gross_vnd"] == 0

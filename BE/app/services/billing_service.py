@@ -39,7 +39,14 @@ from app.repositories import (
     subscription_repo,
     user_repo,
 )
-from app.schemas.subscription import AdminInvoiceResponse, AdminSubscriptionResponse
+from app.schemas.subscription import (
+    AdminInvoiceResponse,
+    AdminSubscriptionResponse,
+    InvoiceMethodTotal,
+    InvoicePlanTotal,
+    InvoiceStatusTotal,
+    InvoiceSummaryResponse,
+)
 from app.services import (
     coupon_service,
     credit_service,
@@ -417,6 +424,55 @@ async def admin_list_invoices(
         before_id=before_id,
     )
     return [to_admin_invoice(invoice, user_email) for invoice, user_email in rows]
+
+
+async def admin_invoice_summary(
+    db: AsyncSession,
+    *,
+    payment_method: str | None = None,
+    exclude_internal: bool = False,
+    date_from: datetime | None = None,
+    date_to: datetime | None = None,
+) -> InvoiceSummaryResponse:
+    raw = await invoice_repo.summarize(
+        db,
+        payment_method=payment_method,
+        exclude_internal=exclude_internal,
+        date_from=date_from,
+        date_to=date_to,
+    )
+    status_rows = {status: (count, amount, discount, listed) for status, count, amount, discount, listed in raw["by_status"]}
+    total_count = sum(v[0] for v in status_rows.values())
+    settled = [status_rows[s] for s in ("paid", "refunded") if s in status_rows]
+    settled_count = sum(v[0] for v in settled)
+    gross = sum(v[1] for v in settled)
+    discount = sum(v[2] for v in settled)
+    listed = sum(v[3] for v in settled)
+    # Pending / awaiting-approval invoices are still in flight, so exclude them from the rate.
+    resolved = sum(status_rows[s][0] for s in ("paid", "refunded", "failed", "cancelled") if s in status_rows)
+    refunded = raw["refund_vnd"]
+    return InvoiceSummaryResponse(
+        total_count=total_count,
+        settled_count=settled_count,
+        gross_vnd=gross,
+        refunded_vnd=refunded,
+        refund_count=raw["refund_count"],
+        net_vnd=gross - refunded,
+        discount_vnd=discount,
+        listed_vnd=listed,
+        average_order_vnd=round(gross / settled_count) if settled_count else 0,
+        success_rate_percent=round(settled_count * 100 / resolved, 1) if resolved else None,
+        by_status=[
+            InvoiceStatusTotal(status=s, count=v[0], amount_vnd=v[1]) for s, v in sorted(status_rows.items())
+        ],
+        by_method=[
+            InvoiceMethodTotal(payment_method=m, count=c, amount_vnd=a) for m, c, a in raw["by_method"]
+        ],
+        by_plan=[
+            InvoicePlanTotal(plan_tier=t, billing_cycle=b, count=c, amount_vnd=a)
+            for t, b, c, a in raw["by_plan"]
+        ],
+    )
 
 
 async def admin_force_downgrade(db: AsyncSession, admin, user_id: uuid.UUID) -> None:

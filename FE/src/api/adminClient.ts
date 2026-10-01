@@ -28,6 +28,7 @@ import type {
   AdminPlan,
   AdminSubscription,
   AdminInvoice,
+  InvoiceSummary,
   AdminProjectSummary,
   AdminProjectDetail,
   AdminBakeJob,
@@ -240,9 +241,13 @@ export interface InvoiceListQuery {
   is_manual?: boolean;
   payment_method?: 'payos' | 'momo' | 'manual';
   exclude_internal?: boolean;
+  date_from?: string;
+  date_to?: string;
   limit?: number;
   cursor?: string;
 }
+
+export type InvoiceSummaryQuery = Pick<InvoiceListQuery, 'payment_method' | 'exclude_internal' | 'date_from' | 'date_to'>;
 
 export const adminBilling = {
   subscriptions: (
@@ -256,6 +261,8 @@ export const adminBilling = {
     }),
   invoices: (query: InvoiceListQuery = {}, signal?: AbortSignal): Promise<CursorPage<AdminInvoice>> =>
     request(`/api/v1/admin/billing/invoices${queryString(query)}`, { signal }),
+  invoiceSummary: (query: InvoiceSummaryQuery = {}, signal?: AbortSignal): Promise<InvoiceSummary> =>
+    request(`/api/v1/admin/billing/invoices/summary${queryString(query)}`, { signal }),
   refund: (
     invoiceId: string,
     body: { amount_vnd: number; reason: string; override?: boolean },

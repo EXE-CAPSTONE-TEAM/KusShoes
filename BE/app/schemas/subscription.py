@@ -92,6 +92,45 @@ class AdminInvoiceResponse(InvoiceResponse):
     approved_by: uuid.UUID | None = None
 
 
+class InvoiceStatusTotal(BaseModel):
+    status: str
+    count: int
+    amount_vnd: int
+
+
+class InvoiceMethodTotal(BaseModel):
+    payment_method: str
+    count: int
+    amount_vnd: int
+
+
+class InvoicePlanTotal(BaseModel):
+    plan_tier: str
+    billing_cycle: str
+    count: int
+    amount_vnd: int
+
+
+class InvoiceSummaryResponse(BaseModel):
+    """Revenue overview computed from invoices in the window (by created_at).
+
+    gross = paid + refunded invoices (money that came in); net = gross - refunds."""
+
+    total_count: int
+    settled_count: int
+    gross_vnd: int
+    refunded_vnd: int
+    refund_count: int
+    net_vnd: int
+    discount_vnd: int
+    listed_vnd: int
+    average_order_vnd: int
+    success_rate_percent: float | None
+    by_status: list[InvoiceStatusTotal]
+    by_method: list[InvoiceMethodTotal]
+    by_plan: list[InvoicePlanTotal]
+
+
 class RefundRequest(BaseModel):
     amount_vnd: int = Field(gt=0)
     reason: str = Field(min_length=1, max_length=500)

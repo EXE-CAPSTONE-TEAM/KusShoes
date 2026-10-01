@@ -26,7 +26,12 @@ from app.schemas.finance import (
     ReportingPeriodCreate,
     ReportingPeriodResponse,
 )
-from app.schemas.subscription import AdminInvoiceResponse, AdminSubscriptionResponse, RefundRequest
+from app.schemas.subscription import (
+    AdminInvoiceResponse,
+    AdminSubscriptionResponse,
+    InvoiceSummaryResponse,
+    RefundRequest,
+)
 from app.services import (
     billing_service,
     coupon_service,
@@ -104,6 +109,24 @@ async def list_invoices(
         last = items[-1]
         next_cursor = encode_cursor(last.created_at, last.id)
     return CursorPage(items=items, next_cursor=next_cursor)
+
+
+@router.get("/billing/invoices/summary", response_model=InvoiceSummaryResponse)
+async def invoice_summary(
+    payment_method: Literal["payos", "momo", "manual"] | None = None,
+    exclude_internal: bool = False,
+    date_from: datetime | None = None,
+    date_to: datetime | None = None,
+    db: AsyncSession = Depends(get_db),
+    admin=Depends(get_current_admin),
+):
+    return await billing_service.admin_invoice_summary(
+        db,
+        payment_method=payment_method,
+        exclude_internal=exclude_internal,
+        date_from=date_from,
+        date_to=date_to,
+    )
 
 
 @router.post("/billing/subscriptions/{user_id}/force-downgrade")

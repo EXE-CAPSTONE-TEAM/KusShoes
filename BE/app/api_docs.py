@@ -107,6 +107,7 @@ DOCS: dict[str, tuple[str, str]] = {
     "POST /api/v1/admin/auth/logout": ("Đăng xuất quản trị", "Thu hồi phiên quản trị hiện tại. " + _A),
     # ---- Admin Billing ----
     "GET /api/v1/admin/billing/subscriptions": ("Danh sách đăng ký", "Lọc theo trạng thái/gói, phân trang con trỏ. " + _A),
+    "GET /api/v1/admin/billing/invoices/summary": ("Tổng quan doanh thu giao dịch", "Tổng hợp từ DB theo khoảng ngày tạo hóa đơn: doanh thu gộp/ròng, hoàn tiền, giảm giá, giá trị trung bình, tỷ lệ thành công, phân rã theo trạng thái, hình thức thanh toán và gói. " + _A),
     "GET /api/v1/admin/billing/invoices": ("Danh sách giao dịch", "Lọc theo trạng thái, hình thức thanh toán, giao dịch thủ công, cờ nội bộ, khoảng ngày; phân trang con trỏ. " + _A),
     "POST /api/v1/admin/billing/subscriptions/{user_id}/force-downgrade": ("Ép hạ về Free", "Hạ gói của người dùng về Free ngay (khóa dự án vượt hạn mức, BR-27). Ghi audit. " + _AW),
     "POST /api/v1/admin/billing/invoices/{invoice_id}/refund": ("Hoàn tiền một giao dịch", "Tạo bút toán hoàn tiền (không gọi cổng thanh toán). Tự động chỉ khi ≤7 ngày và chưa xuất file; ngoài chính sách cần `override=true` (BR-97). Hoàn toàn bộ gói hiện tại sẽ hạ về Free. Bị chặn nếu ngày thanh toán nằm trong kỳ đã khóa (`PERIOD_LOCKED`). " + _AW),

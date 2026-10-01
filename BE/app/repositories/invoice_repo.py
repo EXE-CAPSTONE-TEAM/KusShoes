@@ -1,10 +1,11 @@
 import uuid
 from datetime import datetime
 
-from sqlalchemy import select, text
+from sqlalchemy import func, select, text
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.models.invoice import Invoice
+from app.models.refund import Refund
 from app.models.user import User
 
 
@@ -213,3 +214,104 @@ async def create_manual(
 
 async def next_receipt_seq(db: AsyncSession) -> int:
     return (await db.execute(text("SELECT nextval('receipt_number_seq')"))).scalar_one()
+
+
+def _summary_filters(
+    *,
+    payment_method: str | None,
+    exclude_internal: bool,
+    date_from: datetime | None,
+    date_to: datetime | None,
+) -> list:
+    conditions = []
+    if payment_method is not None:
+        conditions.append(Invoice.payment_method == payment_method)
+    if exclude_internal:
+        conditions.append(User.is_internal.is_(False))
+    if date_from is not None:
+        conditions.append(Invoice.created_at >= date_from)
+    if date_to is not None:
+        conditions.append(Invoice.created_at < date_to)
+    return conditions
+
+
+async def summarize(
+    db: AsyncSession,
+    *,
+    payment_method: str | None = None,
+    exclude_internal: bool = False,
+    date_from: datetime | None = None,
+    date_to: datetime | None = None,
+) -> dict:
+    """Aggregate invoices (same filters as list_all) straight from the DB."""
+    conditions = _summary_filters(
+        payment_method=payment_method,
+        exclude_internal=exclude_internal,
+        date_from=date_from,
+        date_to=date_to,
+    )
+
+    def scoped(query):
+        query = query.select_from(Invoice).outerjoin(User, User.id == Invoice.user_id)
+        return query.where(*conditions) if conditions else query
+
+    by_status = (
+        await db.execute(
+            scoped(
+                select(
+                    Invoice.status,
+                    func.count(),
+                    func.coalesce(func.sum(Invoice.amount_vnd), 0),
+                    func.coalesce(func.sum(Invoice.discount_vnd), 0),
+                    func.coalesce(func.sum(Invoice.listed_price_vnd), 0),
+                )
+            ).group_by(Invoice.status)
+        )
+    ).all()
+
+    # Money that actually came in: paid + later refunded invoices (refund rows offset it).
+    settled = Invoice.status.in_(("paid", "refunded"))
+    by_method = (
+        await db.execute(
+            scoped(
+                select(
+                    Invoice.payment_method,
+                    func.count(),
+                    func.coalesce(func.sum(Invoice.amount_vnd), 0),
+                )
+            )
+            .where(settled)
+            .group_by(Invoice.payment_method)
+        )
+    ).all()
+    by_plan = (
+        await db.execute(
+            scoped(
+                select(
+                    Invoice.plan_tier,
+                    Invoice.billing_cycle,
+                    func.count(),
+                    func.coalesce(func.sum(Invoice.amount_vnd), 0),
+                )
+            )
+            .where(settled)
+            .group_by(Invoice.plan_tier, Invoice.billing_cycle)
+        )
+    ).all()
+
+    refund_row = (
+        await db.execute(
+            scoped(
+                select(func.count(Refund.id), func.coalesce(func.sum(Refund.amount_vnd), 0))
+            )
+            .join(Refund, Refund.invoice_id == Invoice.id)
+        )
+    ).one()
+
+    return {
+        "by_status": [tuple(r) for r in by_status],
+        "by_method": [tuple(r) for r in by_method],
+        "by_plan": [tuple(r) for r in by_plan],
+        "refund_count": int(refund_row[0]),
+        "refund_vnd": int(refund_row[1]),
+    }
