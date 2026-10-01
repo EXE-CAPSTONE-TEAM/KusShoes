@@ -28,6 +28,7 @@ import {
 import { billingApi, type CouponPreview, type CreditBalance, type CreditLedgerItem } from '../../api/billing';
 import { formatVnd, formatDate } from '../../utils/format';
 import { LoadingDots } from '../../components/LoadingDots/LoadingDots';
+import { pushAnalyticsEvent } from '../../analytics';
 import styles from './Billing.module.css';
 
 type InvoiceStatus = 'Paid' | 'Pending' | 'Failed' | 'Cancelled' | 'Refunded';
@@ -182,6 +183,8 @@ export const Billing: React.FC = () => {
     returnedFromGateway ? 'checking' : 'idle',
   );
 
+  const purchasePushedRef = React.useRef(false);
+
   useEffect(() => {
     if (!returnedFromGateway) return;
     let attempts = 0;
@@ -206,6 +209,33 @@ export const Billing: React.FC = () => {
           if (nextCredit) setCreditBalance(nextCredit);
           if (nextLedger) setCreditLedger(nextLedger.items);
           setPaymentCheck('paid');
+
+          if (!purchasePushedRef.current) {
+            purchasePushedRef.current = true;
+            const searchParams = new URLSearchParams(window.location.search);
+            const orderCode = searchParams.get('orderCode') || searchParams.get('id') || latest?.id || `tx_${Date.now()}`;
+            let val = latest?.amount_vnd ?? 0;
+            let planCode = latest?.plan_tier ?? 'subscription';
+            let currency = 'VND';
+            const lastCheckout = sessionStorage.getItem('kusshoes_last_checkout');
+            if (lastCheckout) {
+              try {
+                const parsed = JSON.parse(lastCheckout);
+                val = val || parsed.value || 0;
+                planCode = parsed.plan_code || planCode;
+                currency = parsed.currency || currency;
+              } catch {
+                // ignore
+              }
+              sessionStorage.removeItem('kusshoes_last_checkout');
+            }
+            pushAnalyticsEvent('purchase', {
+              transaction_id: String(orderCode),
+              value: val,
+              currency,
+              plan_code: planCode,
+            });
+          }
         } else if (status === 'failed' || status === 'cancelled') {
           window.clearInterval(timer);
           setPaymentCheck('failed');
@@ -287,6 +317,19 @@ export const Billing: React.FC = () => {
 
   const handleChoosePlan = async (plan: Plan, gateway: 'payos' | 'momo') => {
     try {
+      pushAnalyticsEvent('begin_checkout', {
+        plan_code: `${plan.tier}_${plan.billing_cycle ?? 'monthly'}`,
+        value: plan.price_vnd,
+        currency: 'VND',
+      });
+      sessionStorage.setItem(
+        'kusshoes_last_checkout',
+        JSON.stringify({
+          plan_code: `${plan.tier}_${plan.billing_cycle ?? 'monthly'}`,
+          value: plan.price_vnd,
+          currency: 'VND',
+        }),
+      );
       const checkoutUrl = await api.createCheckout(plan.tier, plan.billing_cycle ?? 'monthly', gateway, appliedCoupon);
       window.location.assign(checkoutUrl);
       setShowUpgradeModal(false);
@@ -298,6 +341,21 @@ export const Billing: React.FC = () => {
   const handleBuyCredit = async (gateway: 'payos' | 'momo') => {
     setBuyingCredit(true);
     try {
+      const unitPrice = creditBalance?.price_vnd ?? 2000;
+      const totalVal = buyQuantity * unitPrice;
+      pushAnalyticsEvent('begin_checkout', {
+        plan_code: `credits_${buyQuantity}`,
+        value: totalVal,
+        currency: 'VND',
+      });
+      sessionStorage.setItem(
+        'kusshoes_last_checkout',
+        JSON.stringify({
+          plan_code: `credits_${buyQuantity}`,
+          value: totalVal,
+          currency: 'VND',
+        }),
+      );
       const checkoutUrl = await billingApi.createCreditCheckout(buyQuantity, gateway);
       window.location.assign(checkoutUrl);
       setShowBuyCreditModal(false);

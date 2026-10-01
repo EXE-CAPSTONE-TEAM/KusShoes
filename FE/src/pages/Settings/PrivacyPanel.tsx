@@ -11,6 +11,7 @@ import {
 import { api } from '../../api/client';
 import { useToast } from '../../context/ToastContext';
 import { ConfirmDialog } from '../../components/ConfirmDialog/ConfirmDialog';
+import { updateAnalyticsConsent } from '../../analytics';
 import { formatDateTime } from '../../utils/format';
 import styles from './Settings.module.css';
 import panel from './AccountPanels.module.css';
@@ -64,6 +65,10 @@ export const PrivacyPanel: React.FC = () => {
       ]);
       setPrivacy(settings);
       setConsents(records);
+      updateAnalyticsConsent({
+        analytics: settings.allow_analytics,
+        ads: settings.allow_ads_personalization,
+      });
     } catch (caught) {
       toast(caught instanceof Error ? caught.message : t('privacy.loadError'), 'error');
     }
@@ -86,10 +91,22 @@ export const PrivacyPanel: React.FC = () => {
     if (!privacy) return;
     const previous = privacy;
     setPrivacy({ ...privacy, [key]: next }); // optimistic; rolled back if the server refuses
+    if (key === 'allow_analytics' || key === 'allow_ads_personalization') {
+      updateAnalyticsConsent({
+        analytics: key === 'allow_analytics' ? next : privacy.allow_analytics,
+        ads: key === 'allow_ads_personalization' ? next : privacy.allow_ads_personalization,
+      });
+    }
     try {
       await accountApi.updatePrivacy({ [key]: next });
     } catch (caught) {
       setPrivacy(previous);
+      if (key === 'allow_analytics' || key === 'allow_ads_personalization') {
+        updateAnalyticsConsent({
+          analytics: previous.allow_analytics,
+          ads: previous.allow_ads_personalization,
+        });
+      }
       toast(caught instanceof Error ? caught.message : t('privacy.saveError'), 'error');
     }
   };
@@ -99,10 +116,20 @@ export const PrivacyPanel: React.FC = () => {
 
   const toggleConsent = async (type: ConsentType, granted: boolean) => {
     setBusy(true);
+    if (type === 'cookie_analytics') {
+      updateAnalyticsConsent({
+        analytics: granted,
+      });
+    }
     try {
       await accountApi.recordConsent(type, granted);
       setConsents(await accountApi.listConsents());
     } catch (caught) {
+      if (type === 'cookie_analytics') {
+        updateAnalyticsConsent({
+          analytics: !granted,
+        });
+      }
       toast(caught instanceof Error ? caught.message : t('privacy.consentError'), 'error');
     } finally {
       setBusy(false);

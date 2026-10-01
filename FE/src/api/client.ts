@@ -1,5 +1,6 @@
 import type { User } from '../types';
 import { toast as notifyToast } from '../context/ToastContext';
+import { getStoredAttribution, pushAnalyticsEvent, type AttributionData } from '../analytics';
 
 if (import.meta.env.PROD && !import.meta.env.VITE_API_BASE_URL) {
   // Falling through to the dev fallback below would silently point at a nonexistent
@@ -64,6 +65,7 @@ export type RegisterInput = {
   confirmPassword: string;
   fullName: string;
   ageConfirmed: boolean;
+  attribution?: AttributionData | null;
 };
 
 export type RegisterResult = {
@@ -576,6 +578,7 @@ export const api = {
   },
 
   async register(input: RegisterInput): Promise<RegisterResult> {
+    const attribution = input.attribution ?? getStoredAttribution();
     const payload = await request<{ user_id: string; email: string; message: string }>(
       '/api/v1/auth/register',
       {
@@ -587,9 +590,18 @@ export const api = {
           confirm_password: input.confirmPassword,
           full_name: input.fullName,
           age_confirmed: input.ageConfirmed,
+          attribution: attribution || undefined,
+          utm_source: attribution?.utm_source,
+          utm_campaign: attribution?.utm_campaign,
         }),
       },
     );
+    pushAnalyticsEvent('sign_up', {
+      method: 'password',
+      user_id: payload.user_id,
+      utm_source: attribution?.utm_source,
+      utm_campaign: attribution?.utm_campaign,
+    });
     return { userId: payload.user_id, email: payload.email, message: payload.message };
   },
 
@@ -598,7 +610,15 @@ export const api = {
    * `consent`: the user ticked the 18+ / Terms / Privacy box, required to create a new account.
    */
   startGoogleLogin(options: { consent?: boolean } = {}): void {
-    const query = options.consent ? '?consent=true' : '';
+    const params = new URLSearchParams();
+    if (options.consent) {
+      params.set('consent', 'true');
+    }
+    const attribution = getStoredAttribution();
+    if (attribution) {
+      params.set('attribution', JSON.stringify(attribution));
+    }
+    const query = params.toString() ? `?${params.toString()}` : '';
     window.location.href = `${API_BASE_URL}/api/v1/auth/google${query}`;
   },
 
@@ -627,6 +647,7 @@ export const api = {
     }
     if (!result.access_token) throw new ApiError('Sign-in did not return a session.', 500);
     saveTokens({ access_token: result.access_token, token_type: result.token_type }, remember);
+    pushAnalyticsEvent('login', { method: 'password' });
     return { mfaRequired: false };
   },
 
@@ -646,6 +667,7 @@ export const api = {
       }),
     });
     saveTokens(tokens, remember);
+    pushAnalyticsEvent('login', { method: 'password' });
   },
 
   async verifyOtp(userId: string, otpCode: string, remember = true): Promise<void> {

@@ -15,6 +15,7 @@ if TYPE_CHECKING:
     from app.models.project import Project
     from app.models.refresh_token import RefreshToken
     from app.models.subscription import Subscription
+    from app.models.user_attribution import UserAttribution
 
 
 class User(Base, TimestampMixin):
@@ -96,6 +97,9 @@ class User(Base, TimestampMixin):
     )
     monthly_usages: Mapped[list["MonthlyUsage"]] = relationship(
         back_populates="user", cascade="all, delete-orphan"
+    )
+    attribution: Mapped["UserAttribution | None"] = relationship(
+        back_populates="user", uselist=False, cascade="all, delete-orphan"
     )
 
     @property

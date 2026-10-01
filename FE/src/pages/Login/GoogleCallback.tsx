@@ -2,6 +2,7 @@ import React, { useEffect, useState } from 'react';
 import { Loader2 } from 'lucide-react';
 import { useTranslation } from 'react-i18next';
 import { api } from '../../api/client';
+import { getStoredAttribution, pushAnalyticsEvent } from '../../analytics';
 import { LoginBackdrop } from './LoginBackdrop';
 import styles from './Login.module.css';
 
@@ -23,6 +24,7 @@ export const GoogleCallback: React.FC<GoogleCallbackProps> = ({ setPage }) => {
     const params = new URLSearchParams(hash);
     const accessToken = params.get('access_token');
     const tokenType = params.get('token_type') ?? 'bearer';
+    const isNewUser = params.get('is_new_user') === 'true';
     // Drop the token out of the URL/history immediately, whether or not it parsed.
     window.history.replaceState({}, '', '/auth/google/callback');
 
@@ -37,6 +39,16 @@ export const GoogleCallback: React.FC<GoogleCallbackProps> = ({ setPage }) => {
       return;
     }
     api.completeGoogleLogin(accessToken, tokenType);
+
+    const storedAttribution = getStoredAttribution();
+    if (isNewUser) {
+      pushAnalyticsEvent('sign_up', {
+        method: 'google',
+        utm_source: storedAttribution?.utm_source,
+        utm_campaign: storedAttribution?.utm_campaign,
+      });
+    }
+    pushAnalyticsEvent('login', { method: 'google' });
 
     let returnToDesktop = false;
     try {

@@ -60,6 +60,7 @@ from app.infrastructure import (
 )
 from app.policy import ACCOUNT_RESTORE_DAYS
 from app.repositories import (
+    attribution_repo,
     login_history_repo,
     monthly_usage_repo,
     plan_repo,
@@ -69,6 +70,7 @@ from app.repositories import (
     user_repo,
 )
 from app.schemas.auth import (
+    AttributionPayloadSchema,
     EditorLaunchClaimResponse,
     EditorLaunchCreateResponse,
     EditorLaunchExchangeResponse,
@@ -119,6 +121,7 @@ async def register_user(
     utm_campaign: str | None = None,
     referral_code: str | None = None,
     client: str = "web",
+    attribution: AttributionPayloadSchema | None = None,
 ) -> RegisterResponse:
     from app.config import settings
 
@@ -149,11 +152,36 @@ async def register_user(
     )
 
     # BR-84/85: first-touch attribution, captured once at registration.
-    if utm_source or utm_campaign or referral_code:
-        user.acquisition_channel = "referral" if referral_code else (utm_source or "direct")
-        user.utm_source = utm_source
-        user.utm_campaign = utm_campaign
+    eff_source = (attribution.utm_source if attribution and attribution.utm_source else None) or utm_source
+    eff_campaign = (attribution.utm_campaign if attribution and attribution.utm_campaign else None) or utm_campaign
+    if eff_source or eff_campaign or referral_code:
+        user.acquisition_channel = "referral" if referral_code else (eff_source or "direct")
+        user.utm_source = eff_source
+        user.utm_campaign = eff_campaign
         user.referral_code = referral_code
+
+    if attribution:
+        await attribution_repo.create(
+            db,
+            user_id=user.id,
+            utm_source=attribution.utm_source or utm_source,
+            utm_medium=attribution.utm_medium,
+            utm_campaign=attribution.utm_campaign or utm_campaign,
+            utm_term=attribution.utm_term,
+            utm_content=attribution.utm_content,
+            fbclid=attribution.fbclid,
+            ttclid=attribution.ttclid,
+            gclid=attribution.gclid,
+            initial_referrer=attribution.initial_referrer,
+            landing_page=attribution.landing_page,
+        )
+    elif utm_source or utm_campaign:
+        await attribution_repo.create(
+            db,
+            user_id=user.id,
+            utm_source=utm_source,
+            utm_campaign=utm_campaign,
+        )
 
     # Create free subscription
     free_plan = await plan_repo.get_free_plan(db)
@@ -441,12 +469,15 @@ async def get_google_auth_url(
     client: str = GOOGLE_CLIENT_WEB,
     code_challenge: str | None = None,
     consent: bool = False,
+    attribution: str | None = None,
 ) -> str:
     state = secrets.token_hex(32)
     record = {"client": client}
     if consent:
         # Ticked the 18+ / ToS / privacy box before starting; needed to create a new account.
         record["consent"] = "1"
+    if attribution:
+        record["attribution"] = attribution
     if client in (GOOGLE_CLIENT_MOBILE, GOOGLE_CLIENT_DESKTOP):
         record["code_challenge"] = code_challenge or ""
     await redis.set(f"oauth:state:{state}", json.dumps(record, separators=(",", ":")), ex=600)
@@ -643,6 +674,33 @@ async def handle_google_callback(
             by_email.id,
             channel="mobile" if started.get("client") == GOOGLE_CLIENT_MOBILE else "web",
         )
+        attr_raw = started.get("attribution")
+        attr_dict: dict | None = None
+        if attr_raw:
+            if isinstance(attr_raw, str):
+                try:
+                    attr_dict = json.loads(attr_raw)
+                except Exception:
+                    attr_dict = None
+            elif isinstance(attr_raw, dict):
+                attr_dict = attr_raw
+        if attr_dict:
+            existing_attr = await attribution_repo.get_by_user_id(db, by_email.id)
+            if not existing_attr:
+                await attribution_repo.create(
+                    db,
+                    user_id=by_email.id,
+                    utm_source=attr_dict.get("utm_source"),
+                    utm_medium=attr_dict.get("utm_medium"),
+                    utm_campaign=attr_dict.get("utm_campaign"),
+                    utm_term=attr_dict.get("utm_term"),
+                    utm_content=attr_dict.get("utm_content"),
+                    fbclid=attr_dict.get("fbclid"),
+                    ttclid=attr_dict.get("ttclid"),
+                    gclid=attr_dict.get("gclid"),
+                    initial_referrer=attr_dict.get("initial_referrer"),
+                    landing_page=attr_dict.get("landing_page"),
+                )
         await otp_store.delete_otp(redis, str(by_email.id))
         tokens = await _issue_tokens(db, by_email, user_agent=user_agent, ip_address=ip_address)
         return {**tokens.__dict__, "is_new_user": True, "linked": False}
@@ -659,6 +717,34 @@ async def handle_google_callback(
         last_name=family_name or "",
         username=username,
     )
+    attr_raw = started.get("attribution")
+    attr_dict = None
+    if attr_raw:
+        if isinstance(attr_raw, str):
+            try:
+                attr_dict = json.loads(attr_raw)
+            except Exception:
+                attr_dict = None
+        elif isinstance(attr_raw, dict):
+            attr_dict = attr_raw
+    if attr_dict:
+        new_user.acquisition_channel = attr_dict.get("utm_source") or "google"
+        new_user.utm_source = attr_dict.get("utm_source")
+        new_user.utm_campaign = attr_dict.get("utm_campaign")
+        await attribution_repo.create(
+            db,
+            user_id=new_user.id,
+            utm_source=attr_dict.get("utm_source"),
+            utm_medium=attr_dict.get("utm_medium"),
+            utm_campaign=attr_dict.get("utm_campaign"),
+            utm_term=attr_dict.get("utm_term"),
+            utm_content=attr_dict.get("utm_content"),
+            fbclid=attr_dict.get("fbclid"),
+            ttclid=attr_dict.get("ttclid"),
+            gclid=attr_dict.get("gclid"),
+            initial_referrer=attr_dict.get("initial_referrer"),
+            landing_page=attr_dict.get("landing_page"),
+        )
     await legal_service.record_legal_consent(
         db,
         new_user.id,

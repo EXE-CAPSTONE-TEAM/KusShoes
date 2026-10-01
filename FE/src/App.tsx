@@ -10,6 +10,7 @@ import { TopProgressBar } from './components/TopProgressBar/TopProgressBar';
 import { api, ApiError, type PortalProject } from './api/client';
 import { getSettingTabFromSearch, type SettingTab } from './pages/Settings/settingsNavigation';
 import { useDocumentMeta } from './seo/useDocumentMeta';
+import { useAnalyticsPageView } from './analytics';
 
 // Everything except the public entry points (Landing, Login) is code-split. The importers are
 // kept in one map so the first page of a full load can be registered as a boot task.
@@ -180,6 +181,7 @@ function App() {
 
   useEffect(() => markAppMounted(), []);
   useDocumentMeta(activePage);
+  useAnalyticsPageView(activePage);
 
   // Intercept state changes and push history
   const navigate = (pageOrPath: string) => {

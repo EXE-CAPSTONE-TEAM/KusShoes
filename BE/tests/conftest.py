@@ -45,6 +45,7 @@ _TestSession = async_sessionmaker(_test_engine, expire_on_commit=False, autocomm
 
 _TRUNCATED_TABLES = (
     "refresh_tokens",
+    "user_attributions",
     "monthly_usage",
     "subscriptions",
     "users",

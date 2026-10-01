@@ -111,6 +111,7 @@ async def register(
         utm_campaign=body.utm_campaign,
         referral_code=body.referral_code,
         client=body.client,
+        attribution=body.attribution,
     )
 
 
@@ -195,6 +196,7 @@ async def google_login(
     client: Literal["web", "mobile", "desktop"] = "web",
     code_challenge: str | None = Query(default=None, pattern=r"^[A-Za-z0-9_-]{43}$"),
     consent: bool = False,
+    attribution: str | None = Query(default=None),
     redis: aioredis.Redis = Depends(get_redis),
 ):
     """Start Google sign-in. Mobile and desktop apps pass `client=mobile|desktop` plus PKCE S256 challenge.
@@ -214,7 +216,7 @@ async def google_login(
             ]
         )
     url = await auth_service.get_google_auth_url(
-        redis, client=client, code_challenge=code_challenge, consent=consent
+        redis, client=client, code_challenge=code_challenge, consent=consent, attribution=attribution
     )
     return RedirectResponse(url=url)
 

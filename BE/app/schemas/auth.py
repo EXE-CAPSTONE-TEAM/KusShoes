@@ -6,6 +6,19 @@ from typing import Literal
 from pydantic import BaseModel, EmailStr, Field, field_validator, model_validator
 
 
+class AttributionPayloadSchema(BaseModel):
+    utm_source: str | None = None
+    utm_medium: str | None = None
+    utm_campaign: str | None = None
+    utm_term: str | None = None
+    utm_content: str | None = None
+    fbclid: str | None = None
+    ttclid: str | None = None
+    gclid: str | None = None
+    initial_referrer: str | None = None
+    landing_page: str | None = None
+
+
 class RegisterRequest(BaseModel):
     email: EmailStr
     username: str
@@ -20,6 +33,7 @@ class RegisterRequest(BaseModel):
     utm_source: str | None = None
     utm_campaign: str | None = None
     referral_code: str | None = None
+    attribution: AttributionPayloadSchema | None = None
 
     @field_validator("age_confirmed")
     @classmethod

@@ -28,9 +28,11 @@ from app.models.reporting_period import ReportingPeriod
 from app.models.scan_credit import ScanCredit
 from app.models.subscription import Subscription
 from app.models.user import User
+from app.models.user_attribution import UserAttribution
 
 __all__ = [
     "User",
+    "UserAttribution",
     "RefreshToken",
     "Plan",
     "Subscription",
