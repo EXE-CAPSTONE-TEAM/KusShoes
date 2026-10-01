@@ -10,7 +10,16 @@
   <link rel="apple-touch-icon" sizes="180x180" href="/apple-touch-icon.png" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
   <meta name="google-site-verification" content="Famxi1gD0ANnvlfTkIqVv4RAMw0LTb9DnQzmY1071os" />
-  <!-- Google Tag Manager & DataLayer Initializer -->
+  <!-- Google Tag Manager -->
+  <script>(function(w,d,s,l,i){w[l]=w[l]||[];w[l].push({'gtm.start':
+  new Date().getTime(),event:'gtm.js'});var f=d.getElementsByTagName(s)[0],
+  j=d.createElement(s),dl=l!='dataLayer'?'&l='+l:'';j.async=true;j.src=
+  'https://www.googletagmanager.com/gtm.js?id='+i+dl;f.parentNode.insertBefore(j,f);
+  })(window,document,'script','dataLayer','GTM-NFVKQXLB');</script>
+  <!-- End Google Tag Manager -->
+
+  <!-- Google tag (gtag.js) -->
+  <script async src="https://www.googletagmanager.com/gtag/js?id=G-ZB62H02JZW"></script>
   <script>
     window.dataLayer = window.dataLayer || [];
     function gtag(){dataLayer.push(arguments);}
@@ -20,16 +29,11 @@
       'ad_user_data': 'granted',
       'ad_personalization': 'granted'
     });
-    (function(w,d,s,l,i){
-      var gtmId = '%VITE_GTM_ID%';
-      if (!gtmId || gtmId === '%VITE_GTM_ID%') return;
-      w[l]=w[l]||[];w[l].push({'gtm.start': new Date().getTime(),event:'gtm.js'});
-      var f=d.getElementsByTagName(s)[0],
-          j=d.createElement(s),dl=l!='dataLayer'?'&l='+l:'';
-      j.async=true;j.src='https://www.googletagmanager.com/gtm.js?id='+gtmId+dl;
-      f.parentNode.insertBefore(j,f);
-    })(window,document,'script','dataLayer','%VITE_GTM_ID%');
+    gtag('js', new Date());
+
+    gtag('config', 'G-ZB62H02JZW');
   </script>
+  <!-- End Google tag (gtag.js) -->
   <!-- Filled per route at build time by vite-plugin-seo.ts (data: src/seo/pages.ts) -->
   <!--seo:head--><!--/seo:head-->
   <link rel="preconnect" href="https://fonts.googleapis.com">
@@ -53,8 +57,9 @@
 
 <body>
   <!-- Google Tag Manager (noscript) -->
-  <noscript><iframe src="https://www.googletagmanager.com/ns.html?id=%VITE_GTM_ID%"
+  <noscript><iframe src="https://www.googletagmanager.com/ns.html?id=GTM-NFVKQXLB"
   height="0" width="0" style="display:none;visibility:hidden"></iframe></noscript>
+  <!-- End Google Tag Manager (noscript) -->
   <div id="root"><!--seo:body--><!--/seo:body--></div>
   <style>
     #boot{position:fixed;inset:0;z-index:9999;display:grid;place-items:center;background:#0F0F0F;transition:opacity .2s}
