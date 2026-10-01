@@ -153,6 +153,8 @@ export const AdminDashboard: React.FC<AdminDashboardProps> = ({ navigate }) => {
   const [newReports, setNewReports] = useState<CountResult>({ count: 0, hasMore: false });
   const [newFeedback, setNewFeedback] = useState(0);
   const [apiBudget, setApiBudget] = useState<AdminApiBudget | null>(null);
+  const [lastSynced, setLastSynced] = useState<Date | null>(null);
+  const [actionFailed, setActionFailed] = useState(false);
 
   const loadCore = useCallback(
     () =>
@@ -162,34 +164,31 @@ export const AdminDashboard: React.FC<AdminDashboardProps> = ({ navigate }) => {
         adminDashboard.recentUsers(5).then(setRecentUsers),
         adminSystem.health().then(setHealth),
         adminAuditLogs.list({ limit: 6 }).then((page) => setActivity(page.items)),
-      ]),
+      ]).then(() => setLastSynced(new Date())),
     [],
   );
 
-  const loadActionCenter = useCallback(
-    () =>
-      Promise.all([
-        adminBilling
-          .invoices({ status: 'awaiting_approval', limit: 50 })
-          .then((page) =>
-            setPendingInvoices({ count: page.items.length, hasMore: !!page.next_cursor }),
-          )
-          .catch(() => {}),
-        adminModeration
-          .listReports({ status: 'new', limit: 50 })
-          .then((page) => setNewReports({ count: page.items.length, hasMore: !!page.next_cursor }))
-          .catch(() => {}),
-        adminFeedback
-          .summary()
-          .then((s) => setNewFeedback(s.by_status['new'] ?? 0))
-          .catch(() => {}),
-        adminApiCost
-          .budget()
-          .then(setApiBudget)
-          .catch(() => {}),
-      ]),
-    [],
-  );
+  const loadActionCenter = useCallback(() => {
+    setActionFailed(false);
+    const failed = () => setActionFailed(true);
+    return Promise.all([
+      adminBilling
+        .invoices({ status: 'awaiting_approval', limit: 50 })
+        .then((page) =>
+          setPendingInvoices({ count: page.items.length, hasMore: !!page.next_cursor }),
+        )
+        .catch(failed),
+      adminModeration
+        .listReports({ status: 'new', limit: 50 })
+        .then((page) => setNewReports({ count: page.items.length, hasMore: !!page.next_cursor }))
+        .catch(failed),
+      adminFeedback
+        .summary()
+        .then((s) => setNewFeedback(s.by_status['new'] ?? 0))
+        .catch(failed),
+      adminApiCost.budget().then(setApiBudget).catch(failed),
+    ]);
+  }, []);
 
   const loadRevenue = useCallback((months: number) => {
     setRevenueLoading(true);
@@ -262,7 +261,7 @@ export const AdminDashboard: React.FC<AdminDashboardProps> = ({ navigate }) => {
             ? 'ok'
             : 'neutral';
 
-    return [
+    const items = [
       {
         key: 'pending-invoices',
         label: 'Hóa đơn chờ duyệt thủ công',
@@ -302,7 +301,16 @@ export const AdminDashboard: React.FC<AdminDashboardProps> = ({ navigate }) => {
         onClick: () => navigate?.('billing'),
       },
     ];
-  }, [pendingInvoices, newReports, newFeedback, apiBudget, navigate]);
+    // A failed request must not read as "0 pending": show it as unknown instead.
+    return actionFailed
+      ? items.map((item) => ({
+          ...item,
+          value: '—',
+          tone: 'neutral' as ActionTone,
+          caption: 'Không tải được dữ liệu. Bấm Làm mới để thử lại.',
+        }))
+      : items;
+  }, [pendingInvoices, newReports, newFeedback, apiBudget, navigate, actionFailed]);
 
   const filteredUsers = useMemo(() => {
     const q = userSearch.trim().toLowerCase();
@@ -334,7 +342,9 @@ export const AdminDashboard: React.FC<AdminDashboardProps> = ({ navigate }) => {
               <h1 className={styles.bannerTitle}>Tổng quan hệ thống KusShoes</h1>
               <span className={styles.liveBadge}>
                 <span className={styles.liveDot} />
-                Live Sync
+                {lastSynced
+                  ? `Cập nhật lúc ${lastSynced.toLocaleTimeString('vi-VN', { hour: '2-digit', minute: '2-digit' })}`
+                  : 'Đang đồng bộ…'}
               </span>
             </div>
             <p className={styles.bannerSubtitle}>
