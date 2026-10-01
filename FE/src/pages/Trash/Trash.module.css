@@ -1,7 +1,7 @@
 .container {
   flex-grow: 1;
-  padding: 40px;
-  max-width: 1400px;
+  padding: clamp(16px, 4vw, 40px);
+  max-width: min(1400px, 100%); /* never wider than the screen; the table then scrolls inside */
   margin: 0 auto;
   display: flex;
   flex-direction: column;
@@ -17,7 +17,7 @@
 
 .title {
   font-family: 'Space Grotesk', sans-serif;
-  font-size: 2.2rem;
+  font-size: clamp(1.6rem, 1.1rem + 2vw, 2.2rem);
   font-weight: 800;
   letter-spacing: -0.5px;
 }
@@ -183,4 +183,80 @@
   color: var(--text-secondary);
   padding: 24px;
   text-align: center;
+}
+
+/* Phone + tablet portrait: each table row becomes a stacked card (cells carry a data-label for
+   the left column). The 6-column Exports table needs ~850px, so this starts at 860px. */
+@media (max-width: 860px) {
+  .table thead {
+    position: absolute;
+    width: 1px;
+    height: 1px;
+    overflow: hidden;
+    clip: rect(0, 0, 0, 0);
+  }
+
+  .table,
+  .table tbody,
+  .table tr,
+  .table td {
+    display: block;
+    width: 100%;
+    box-sizing: border-box;
+  }
+
+  .tableRow {
+    padding: 12px 16px;
+  }
+
+  .table td {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 12px;
+    padding: 6px 0;
+    text-align: right;
+  }
+
+  .table td[data-label]::before {
+    content: attr(data-label);
+    flex-shrink: 0;
+    font-size: 0.75rem;
+    font-weight: 700;
+    letter-spacing: 0.5px;
+    text-transform: uppercase;
+    text-align: left;
+    color: var(--text-secondary);
+  }
+
+  .table td:not([data-label]) {
+    justify-content: flex-start;
+    text-align: left;
+  }
+
+  .rowActions {
+    flex-wrap: wrap;
+  }
+
+  .actionBtn {
+    min-height: 44px;
+  }
+
+  .emptyState {
+    padding: 40px 20px;
+  }
+}
+
+/* Phone + tablet: a flex item with auto margins shrink-wraps its widest child (the table), which
+   pushed the page wider than the screen. Desktop keeps its original shrink-to-fit centring. */
+@media (max-width: 1023px) {
+  .container {
+    width: 100%;
+    box-sizing: border-box;
+  }
+
+  .header {
+    flex-wrap: wrap;
+    gap: 16px;
+  }
 }

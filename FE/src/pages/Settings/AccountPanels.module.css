@@ -344,3 +344,25 @@
     grid-template-columns: 1fr;
   }
 }
+
+@media (max-width: 1023px) {
+  .primaryBtn,
+  .secondaryBtn {
+    min-height: 44px;
+  }
+}
+
+/* Narrow phones: a title plus an action button no longer fit on one line */
+@media (max-width: 600px) {
+  .panel {
+    padding: 16px;
+  }
+
+  .panelHeader {
+    flex-wrap: wrap;
+  }
+
+  .row {
+    flex-wrap: wrap;
+  }
+}

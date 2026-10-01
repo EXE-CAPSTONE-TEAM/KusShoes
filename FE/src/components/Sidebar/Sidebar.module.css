@@ -563,3 +563,134 @@
   background-color: var(--glass-border);
   margin: 6px 0;
 }
+
+/* ---- Phone + tablet: the sidebar becomes an off-canvas drawer opened from a top bar ---------- */
+
+.mobileBar,
+.drawerClose,
+.backdrop {
+  display: none;
+}
+
+@media (max-width: 1023px) {
+  .mobileBar {
+    position: fixed;
+    top: 0;
+    left: 0;
+    right: 0;
+    z-index: 90;
+    height: 56px;
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    padding-inline: max(8px, env(safe-area-inset-left)) max(8px, env(safe-area-inset-right));
+    background-color: var(--bg-secondary);
+    border-bottom: 1px solid var(--glass-border);
+  }
+
+  .menuBtn,
+  .drawerClose {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    width: 44px;
+    height: 44px;
+    flex-shrink: 0;
+    border: none;
+    border-radius: var(--border-radius-sm);
+    background: transparent;
+    color: var(--text-primary);
+    cursor: pointer;
+  }
+
+  .menuBtn:hover,
+  .drawerClose:hover {
+    background-color: var(--hover-bg-item);
+  }
+
+  .menuBtn:focus-visible,
+  .drawerClose:focus-visible {
+    outline: 2px solid var(--color-orange);
+    outline-offset: 2px;
+  }
+
+  .mobileLogo {
+    height: 28px;
+    width: auto;
+    object-fit: contain;
+    cursor: pointer;
+  }
+
+  .backdrop {
+    display: block;
+    position: fixed;
+    inset: 0;
+    z-index: 140;
+    background: rgba(0, 0, 0, 0.5);
+  }
+
+  .sidebar {
+    position: fixed;
+    top: 0;
+    bottom: 0;
+    left: 0;
+    z-index: 150;
+    width: min(280px, 86vw);
+    height: 100vh;
+    height: 100dvh;
+    padding-top: max(24px, env(safe-area-inset-top));
+    padding-bottom: max(24px, env(safe-area-inset-bottom));
+    overscroll-behavior: contain;
+    /* Closed: off screen and out of the tab order / accessibility tree */
+    transform: translateX(-100%);
+    visibility: hidden;
+    transition:
+      transform 0.25s ease,
+      visibility 0s linear 0.25s;
+  }
+
+  .sidebar.drawerOpen {
+    transform: none;
+    visibility: visible;
+    transition:
+      transform 0.25s ease,
+      visibility 0s;
+  }
+
+  .drawerClose {
+    position: absolute;
+    top: 10px;
+    right: 10px;
+    z-index: 1;
+  }
+
+  .collapseToggle {
+    display: none;
+  }
+
+  /* Touch targets: 44px rows inside the drawer */
+  .navItem,
+  .recentItem {
+    height: 44px;
+  }
+
+  .settingsSubItem,
+  .viewAllLink,
+  .userInfo,
+  .logoutBtn,
+  .quickAddBtn {
+    min-height: 44px;
+  }
+
+  .quickAddBtn,
+  .logoutBtn {
+    min-width: 44px;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .sidebar,
+  .sidebar.drawerOpen {
+    transition: none;
+  }
+}

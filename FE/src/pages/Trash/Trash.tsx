@@ -137,8 +137,8 @@ export const Trash: React.FC<TrashProps> = ({ setProjects }) => {
                           <span className={styles.rowProjectName}>{item.name}</span>
                         </div>
                       </td>
-                      <td>{formatDate(item.deletedAt)}</td>
-                      <td>
+                      <td data-label="Deleted On">{formatDate(item.deletedAt)}</td>
+                      <td data-label="Purge Date">
                         <span
                           className={`${styles.daysLeftBadge} ${daysLeft <= 7 ? styles.daysLeftUrgent : styles.daysLeftNormal}`}
                         >

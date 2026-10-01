@@ -329,10 +329,11 @@ function App() {
 
       {/* Main Content Area */}
       <main
+        data-portal={isPortalView ? '' : undefined}
         style={{
           flexGrow: 1,
           backgroundColor: 'var(--bg-primary)',
-          height: isPortalView ? '100vh' : 'auto',
+          height: isPortalView ? undefined : 'auto',
           minHeight: '100vh',
           overflowY: isPortalView ? 'auto' : undefined,
           display: 'flex',

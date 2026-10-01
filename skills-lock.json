@@ -48,6 +48,12 @@
       "sourceType": "github",
       "skillPath": "skills/gsap-utils/SKILL.md",
       "computedHash": "72af4a036d417d6eaef7478eca2f28e760631fb78db822ba34a9c706797aab62"
+    },
+    "responsive-adapter": {
+      "source": "sergeyizmailov/knowledge-delta-skills",
+      "sourceType": "github",
+      "skillPath": "skills/frontend/responsive-adapter/SKILL.md",
+      "computedHash": "e928d124d0d30d57c2893b2692a5a6b751cb814f31009124442e5e1969f0eeae"
     }
   }
 }

@@ -335,3 +335,16 @@
   font-size: 13px;
   margin: 0;
 }
+
+/* Touch: 44px stars, categories and submit button */
+@media (max-width: 1023px) {
+  .star {
+    min-width: 44px;
+    min-height: 44px;
+  }
+
+  .group,
+  .btnPrimary {
+    min-height: 44px;
+  }
+}

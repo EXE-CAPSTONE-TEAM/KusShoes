@@ -1,4 +1,4 @@
-import React from 'react';
+import React, { useSyncExternalStore } from 'react';
 import {
   LayoutDashboard,
   FolderKanban,
@@ -18,6 +18,8 @@ import {
   MessageSquare,
   PanelLeftClose,
   PanelLeftOpen,
+  Menu,
+  X,
 } from 'lucide-react';
 import * as Tooltip from '@radix-ui/react-tooltip';
 import * as Separator from '@radix-ui/react-separator';
@@ -31,6 +33,23 @@ import { api, type PortalProject, type UserProfile } from '../../api/client';
 import type { SettingTab } from '../../pages/Settings/settingsNavigation';
 import styles from './Sidebar.module.css';
 
+// Below this width the sidebar becomes an off-canvas drawer opened from a top bar
+const DRAWER_QUERY = '(max-width: 1023px)';
+
+const subscribeDrawerQuery = (onChange: () => void) => {
+  if (typeof window.matchMedia !== 'function') return () => {};
+  const mq = window.matchMedia(DRAWER_QUERY);
+  mq.addEventListener('change', onChange);
+  return () => mq.removeEventListener('change', onChange);
+};
+
+const useIsDrawer = () =>
+  useSyncExternalStore(
+    subscribeDrawerQuery,
+    () => typeof window.matchMedia === 'function' && window.matchMedia(DRAWER_QUERY).matches,
+    () => false
+  );
+
 interface SidebarProps {
   activePage: string;
   setActivePage: (page: string) => void;
@@ -41,7 +60,7 @@ interface SidebarProps {
 
 export const Sidebar: React.FC<SidebarProps> = ({
   activePage,
-  setActivePage,
+  setActivePage: navigatePage,
   onLogout,
   projects,
   activeSettingTab,
@@ -50,13 +69,23 @@ export const Sidebar: React.FC<SidebarProps> = ({
   const { theme } = useTheme();
   const isSettingsActive = activePage.split('?')[0] === 'settings';
   const [settingsExpanded, setSettingsExpanded] = React.useState(isSettingsActive);
-  const [collapsed, setCollapsed] = React.useState<boolean>(() => {
+  const isDrawer = useIsDrawer();
+  const [drawerOpen, setDrawerOpen] = React.useState(false);
+  const menuBtnRef = React.useRef<HTMLButtonElement>(null);
+  const closeBtnRef = React.useRef<HTMLButtonElement>(null);
+  const setActivePage = (page: string) => {
+    setDrawerOpen(false);
+    navigatePage(page);
+  };
+  const [collapsedPref, setCollapsed] = React.useState<boolean>(() => {
     try {
       return localStorage.getItem('kusshoes.sidebar.collapsed') === '1';
     } catch {
       return false;
     }
   });
+  // The icon-only rail is a desktop affordance; the drawer always shows full labels
+  const collapsed = collapsedPref && !isDrawer;
   const toggleCollapsed = () => {
     setCollapsed((prev) => {
       const next = !prev;
@@ -87,6 +116,24 @@ export const Sidebar: React.FC<SidebarProps> = ({
   React.useEffect(() => {
     setSettingsExpanded(isSettingsActive);
   }, [isSettingsActive]);
+
+  // Drawer: Escape closes it, and focus moves in on open / back to the menu button on close
+  React.useEffect(() => {
+    if (!isDrawer) setDrawerOpen(false);
+  }, [isDrawer]);
+  React.useEffect(() => {
+    if (!drawerOpen) return;
+    const menuBtn = menuBtnRef.current;
+    closeBtnRef.current?.focus();
+    const onKey = (e: KeyboardEvent) => {
+      if (e.key === 'Escape') setDrawerOpen(false);
+    };
+    document.addEventListener('keydown', onKey);
+    return () => {
+      document.removeEventListener('keydown', onKey);
+      menuBtn?.focus();
+    };
+  }, [drawerOpen]);
 
   const [storageUsed, setStorageUsed] = React.useState<number | null>(null);
 
@@ -203,7 +250,46 @@ export const Sidebar: React.FC<SidebarProps> = ({
 
   return (
     <Tooltip.Provider delayDuration={300}>
-      <aside className={`${styles.sidebar} ${collapsed ? styles.collapsed : ''}`}>
+      {/* Phone / tablet: top bar with the menu button (hidden on desktop by CSS) */}
+      <header className={styles.mobileBar}>
+        <button
+          ref={menuBtnRef}
+          type="button"
+          className={styles.menuBtn}
+          onClick={() => setDrawerOpen(true)}
+          aria-label={t('sidebar.openMenu')}
+          aria-expanded={drawerOpen}
+          aria-controls="portal-sidebar"
+        >
+          <Menu size={20} aria-hidden="true" />
+        </button>
+        <img
+          src={
+            theme === 'dark' ? '/KusShoes_Logo_Dark_Mode_cropped.png' : '/KusShoes_Logo_cropped.png'
+          }
+          alt="KusShoes"
+          className={styles.mobileLogo}
+          onClick={() => setActivePage('dashboard')}
+        />
+      </header>
+      {drawerOpen && (
+        <div className={styles.backdrop} onClick={() => setDrawerOpen(false)} aria-hidden="true" />
+      )}
+
+      <aside
+        id="portal-sidebar"
+        className={`${styles.sidebar} ${collapsed ? styles.collapsed : ''} ${drawerOpen ? styles.drawerOpen : ''}`}
+      >
+        <button
+          ref={closeBtnRef}
+          type="button"
+          className={styles.drawerClose}
+          onClick={() => setDrawerOpen(false)}
+          aria-label={t('sidebar.closeMenu')}
+        >
+          <X size={20} aria-hidden="true" />
+        </button>
+
         {/* Brand Header */}
         {!collapsed && (
           <div className={styles.logoSection}>
