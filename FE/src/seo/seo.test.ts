@@ -71,6 +71,17 @@ describe('build renderers', () => {
     );
   });
 
+  it('preloads the responsive LCP candidates with the same sizes as the <img>', () => {
+    const head = renderHead(HOME_PAGE, {
+      lcpImage: '/assets/hero-abc.webp',
+      lcpImageSrcset: '/assets/hero-sm.webp 640w, /assets/hero-abc.webp 900w',
+      lcpImageSizes: '(max-width: 900px) 85vw, 680px',
+    });
+    expect(head).toContain(
+      '<link rel="preload" as="image" href="/assets/hero-abc.webp" imagesrcset="/assets/hero-sm.webp 640w, /assets/hero-abc.webp 900w" imagesizes="(max-width: 900px) 85vw, 680px" fetchpriority="high" />',
+    );
+  });
+
   it('publishes the landing FAQ as FAQPage structured data', () => {
     const head = renderHead(HOME_PAGE);
     const json = head.match(/<script type="application\/ld\+json">(.*)<\/script>/)![1];

@@ -1,4 +1,5 @@
 import { addBootTask, finishBoot } from './boot/boot'
+import { applyStylesheets } from './boot/stylesheets'
 import { StrictMode } from 'react'
 import { createRoot } from 'react-dom/client'
 import { I18nextProvider } from 'react-i18next'
@@ -25,8 +26,9 @@ addBootTask(document.fonts.ready)
 void finishBoot()
 
 // Wait for i18next to finish (translations + language detection) before the first render, so
-// no component can ever render mid-init and see a half-ready `t()`.
-void i18nReady.then(() => {
+// no component can ever render mid-init and see a half-ready `t()`. The entry CSS is loaded
+// without blocking the first paint (vite-plugin-async-css.ts), so it is applied here too.
+void Promise.all([i18nReady, applyStylesheets()]).then(() => {
   createRoot(document.getElementById('root')!).render(
     <StrictMode>
       {/*

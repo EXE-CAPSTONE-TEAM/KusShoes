@@ -425,7 +425,7 @@
 .showcaseTabBtnActive {
   background: var(--color-orange);
   border-color: var(--color-orange);
-  color: #ffffff;
+  color: var(--text-on-accent);
   box-shadow: var(--shadow-neon);
 }
 
@@ -546,7 +546,7 @@
   font-size: 0.75rem;
   font-weight: 600;
   letter-spacing: 0.5px;
-  color: #fff;
+  color: var(--text-on-accent);
   background: rgba(255, 90, 54, 0.85);
   padding: 4px 10px;
   border-radius: var(--border-radius-sm);

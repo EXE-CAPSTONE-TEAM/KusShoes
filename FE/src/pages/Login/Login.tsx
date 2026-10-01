@@ -291,7 +291,7 @@ export const Login: React.FC<LoginProps> = ({ setPage }) => {
         {/* Brand */}
         <div className={styles.brandHeader}>
           <img
-            src={theme === 'dark' ? '/KusShoes_Logo_Dark_Mode_cropped.png' : '/KusShoes_Logo_cropped.png'}
+            src={theme === 'dark' ? '/KusShoes_Logo_Dark_Mode_cropped.webp' : '/KusShoes_Logo_cropped.webp'}
             alt="KusShoes"
             className={styles.logoImage}
           />

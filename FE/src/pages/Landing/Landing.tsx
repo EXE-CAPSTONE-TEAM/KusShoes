@@ -17,7 +17,7 @@ import {
   Sparkles,
   ChevronRight,
 } from 'lucide-react';
-import { motion, AnimatePresence, useInView } from 'framer-motion';
+import { m, AnimatePresence, LazyMotion, useInView } from 'framer-motion';
 import { Trans, useTranslation } from 'react-i18next';
 import { useTheme } from '../../context/ThemeContext';
 import { Navbar } from '../../components/Navbar/Navbar';
@@ -30,7 +30,7 @@ import { api, type Plan } from '../../api/client';
 import dashboardShowcase from '../../assets/showcase/dashboard-screenshot.webp';
 import projectsShowcase from '../../assets/showcase/projects-screenshot.webp';
 import mobileScan from '../../assets/showcase/mobile-scan.webp';
-import mobileAppIcon from '../../assets/kusshoes-mobile-app-icon.webp';
+import mobileAppIcon from '../../assets/kusshoes-mobile-app-icon-128.webp';
 import mobileMockup from '../../assets/kusshoes-mobile-mockup.webp';
 import sneakerHero from '../../assets/sneaker-hero.webp';
 import heroEdgeLeft from '../../assets/edge-art/hero-left.webp';
@@ -53,9 +53,14 @@ import galleryStudioClassic from '../../assets/gallery/studio-classic-angle.webp
 import galleryBlockEdition from '../../assets/gallery/block-edition-single.webp';
 import galleryDetailFocus from '../../assets/gallery/detail-focus-single.webp';
 import galleryTagDetail from '../../assets/gallery/tag-detail-pair.webp';
-import { addBootTask, preloadImage } from '../../boot/boot';
+import { addBootTask, afterNextPaint, preloadImage } from '../../boot/boot';
 import { useBootDone } from '../../boot/useBootDone';
 import styles from './Landing.module.css';
+
+const loadMotionFeatures = () =>
+  afterNextPaint()
+    .then(() => import('./motionFeatures'))
+    .then((mod) => mod.default);
 
 // Scroll-triggered reveal: headings stay hidden (blurred, offset, transparent) until they
 // scroll into view, then ease into place — nothing on the page is fully drawn before the
@@ -71,14 +76,14 @@ const revealUp = {
 
 /** Headline reveal where each word eases in on its own beat — a standout moment, used once. */
 const RevealWords: React.FC<{ text: string; className?: string }> = ({ text, className }) => (
-  <motion.h2
+  <m.h2
     className={className}
     initial="hidden"
     whileInView="visible"
     viewport={{ once: true, amount: 0.4 }}
   >
     {text.split(' ').map((word, i) => (
-      <motion.span
+      <m.span
         key={i}
         style={{ display: 'inline-block', marginRight: '0.28em' }}
         variants={{
@@ -92,9 +97,9 @@ const RevealWords: React.FC<{ text: string; className?: string }> = ({ text, cla
         }}
       >
         {word}
-      </motion.span>
+      </m.span>
     ))}
-  </motion.h2>
+  </m.h2>
 );
 
 const SHOWCASE_TAB_META = [
@@ -216,7 +221,7 @@ const GalleryTile: React.FC<{
   const current = frames[frameIndex];
 
   return (
-    <motion.div
+    <m.div
       className={styles.galleryItem}
       initial={{ opacity: 0, y: 20 }}
       whileInView={{ opacity: 1, y: 0 }}
@@ -224,7 +229,7 @@ const GalleryTile: React.FC<{
       transition={{ duration: 0.5, delay: (index % 4) * 0.08 }}
     >
       <AnimatePresence>
-        <motion.img
+        <m.img
           key={current.img}
           src={current.img}
           alt={current.tag}
@@ -238,7 +243,7 @@ const GalleryTile: React.FC<{
       </AnimatePresence>
       <div className={styles.galleryOverlay}>
         <AnimatePresence mode="wait">
-          <motion.span
+          <m.span
             key={current.tag}
             className={styles.galleryTag}
             initial={{ opacity: 0 }}
@@ -247,10 +252,10 @@ const GalleryTile: React.FC<{
             transition={{ duration: 0.4 }}
           >
             {current.tag}
-          </motion.span>
+          </m.span>
         </AnimatePresence>
       </div>
-    </motion.div>
+    </m.div>
   );
 };
 
@@ -266,14 +271,14 @@ const WebsiteShowcase: React.FC = () => {
   return (
     <section id="showcase" className={styles.showcaseSection}>
       <div className={styles.sectionHeader}>
-        <motion.h2 className={styles.sectionTitle} {...revealUp}>{t('showcase.title')}</motion.h2>
-        <motion.p
+        <m.h2 className={styles.sectionTitle} {...revealUp}>{t('showcase.title')}</m.h2>
+        <m.p
           className={styles.sectionSubtitle}
           {...revealUp}
           transition={{ ...revealUp.transition, delay: 0.12 }}
         >
           {t('showcase.subtitle')}
-        </motion.p>
+        </m.p>
       </div>
 
       <div className={styles.showcaseTabs}>
@@ -289,7 +294,7 @@ const WebsiteShowcase: React.FC = () => {
         ))}
       </div>
 
-      <motion.div
+      <m.div
         className={styles.showcaseFrameWrapper}
         initial={{ opacity: 0, y: 30 }}
         whileInView={{ opacity: 1, y: 0 }}
@@ -309,7 +314,7 @@ const WebsiteShowcase: React.FC = () => {
           </div>
           <div className={styles.browserContent}>
             <AnimatePresence mode="wait">
-              <motion.img
+              <m.img
                 key={active.key}
                 src={active.img}
                 alt={t('showcase.screenshotAlt', { label: active.label })}
@@ -324,7 +329,7 @@ const WebsiteShowcase: React.FC = () => {
             </AnimatePresence>
           </div>
         </div>
-      </motion.div>
+      </m.div>
     </section>
   );
 };
@@ -374,7 +379,7 @@ interface LandingProps {
   navigate: (path: string) => void;
 }
 
-export const Landing: React.FC<LandingProps> = ({ navigate }) => {
+const LandingContent: React.FC<LandingProps> = ({ navigate }) => {
   const { t } = useTranslation('landing');
   const { theme } = useTheme();
   useBootDone();
@@ -383,7 +388,7 @@ export const Landing: React.FC<LandingProps> = ({ navigate }) => {
   // below 1100px, so skipped there) and the navbar logo. Failures resolve, never block.
   useLayoutEffect(() => {
     const logo =
-      theme === 'dark' ? '/KusShoes_Logo_Dark_Mode_cropped.png' : '/KusShoes_Logo_cropped.png';
+      theme === 'dark' ? '/KusShoes_Logo_Dark_Mode_cropped.webp' : '/KusShoes_Logo_cropped.webp';
     addBootTask(preloadImage(logo));
     if (window.matchMedia?.('(min-width: 1101px)').matches) {
       const dark = theme === 'dark';
@@ -544,19 +549,19 @@ export const Landing: React.FC<LandingProps> = ({ navigate }) => {
           <section id="products" className={styles.productsSection}>
             <EdgeArt variant="products" />
             <div className={styles.sectionHeader}>
-              <motion.h2 className={styles.sectionTitle} {...revealUp}>{t('products.title')}</motion.h2>
-              <motion.p
+              <m.h2 className={styles.sectionTitle} {...revealUp}>{t('products.title')}</m.h2>
+              <m.p
                 className={styles.sectionSubtitle}
                 {...revealUp}
                 transition={{ ...revealUp.transition, delay: 0.12 }}
               >
                 {t('products.subtitle')}
-              </motion.p>
+              </m.p>
             </div>
 
             <div className={styles.productsGrid}>
               {/* KusShoes Mobile */}
-              <motion.div
+              <m.div
                 className={`${styles.productCard} glass-panel`}
                 initial={{ opacity: 0, x: -30 }}
                 whileInView={{ opacity: 1, x: 0 }}
@@ -585,10 +590,10 @@ export const Landing: React.FC<LandingProps> = ({ navigate }) => {
                     decoding="async"
                   />
                 </div>
-              </motion.div>
+              </m.div>
 
               {/* KusStudio Desktop */}
-              <motion.div
+              <m.div
                 className={`${styles.productCard} glass-panel`}
                 initial={{ opacity: 0, x: 30 }}
                 whileInView={{ opacity: 1, x: 0 }}
@@ -636,7 +641,7 @@ export const Landing: React.FC<LandingProps> = ({ navigate }) => {
                     </div>
                   </div>
                 </div>
-              </motion.div>
+              </m.div>
             </div>
           </section>
 
@@ -644,14 +649,14 @@ export const Landing: React.FC<LandingProps> = ({ navigate }) => {
           <section id="gallery" className={styles.gallerySection}>
             <EdgeArt variant="gallery" />
             <div className={styles.sectionHeader}>
-              <motion.h2 className={styles.sectionTitle} {...revealUp}>{t('gallery.title')}</motion.h2>
-              <motion.p
+              <m.h2 className={styles.sectionTitle} {...revealUp}>{t('gallery.title')}</m.h2>
+              <m.p
                 className={styles.sectionSubtitle}
                 {...revealUp}
                 transition={{ ...revealUp.transition, delay: 0.12 }}
               >
                 {t('gallery.subtitle')}
-              </motion.p>
+              </m.p>
             </div>
 
             <div className={styles.galleryGrid}>
@@ -668,15 +673,15 @@ export const Landing: React.FC<LandingProps> = ({ navigate }) => {
           <section id="workflow" className={styles.workflowSection}>
             <EdgeArt variant="workflow" />
             <div className={styles.sectionHeader}>
-              <motion.span className={styles.sectionEyebrow} {...revealUp}>{t('workflow.eyebrow')}</motion.span>
+              <m.span className={styles.sectionEyebrow} {...revealUp}>{t('workflow.eyebrow')}</m.span>
               <RevealWords className={styles.sectionTitle} text={t('workflow.title')} />
-              <motion.p
+              <m.p
                 className={styles.sectionSubtitle}
                 {...revealUp}
                 transition={{ ...revealUp.transition, delay: 0.3 }}
               >
                 {t('workflow.subtitle')}
-              </motion.p>
+              </m.p>
             </div>
 
             <div className={styles.stepsGridWrapper}>
@@ -694,7 +699,7 @@ export const Landing: React.FC<LandingProps> = ({ navigate }) => {
                   const MetaIcon = step.MetaIcon;
                   return (
                     <React.Fragment key={step.num}>
-                      <motion.div
+                      <m.div
                         className={`${styles.stepCard} ${step.dashed ? styles.stepCardDashed : ''}`}
                         initial={{ opacity: 0, y: 20 }}
                         whileInView={{ opacity: 1, y: 0 }}
@@ -755,7 +760,7 @@ export const Landing: React.FC<LandingProps> = ({ navigate }) => {
                             <span>{step.metaText}</span>
                           </div>
                         </div>
-                      </motion.div>
+                      </m.div>
 
                       {index < steps.length - 1 && (
                         <div className={styles.stepConnectorMobile} aria-hidden="true">
@@ -783,7 +788,7 @@ export const Landing: React.FC<LandingProps> = ({ navigate }) => {
 
             <div className={styles.proofInner}>
               <header className={styles.proofHeader}>
-                <motion.h2 className={styles.proofHeadline} {...revealUp}>
+                <m.h2 className={styles.proofHeadline} {...revealUp}>
                   {t('socialProof.headlinePrefix')}{' '}
                   <span className={styles.proofHeadlineAccent}>
                     {t('socialProof.headlineAccent')}
@@ -802,8 +807,8 @@ export const Landing: React.FC<LandingProps> = ({ navigate }) => {
                     </svg>
                   </span>{' '}
                   {t('socialProof.headlineSuffix')}
-                </motion.h2>
-                <motion.p
+                </m.h2>
+                <m.p
                   className={styles.proofSubtitle}
                   {...revealUp}
                   transition={{ ...revealUp.transition, delay: 0.12 }}
@@ -813,11 +818,11 @@ export const Landing: React.FC<LandingProps> = ({ navigate }) => {
                     t={t}
                     components={{ brand: <span className={styles.proofSubtitleBrand} /> }}
                   />
-                </motion.p>
+                </m.p>
               </header>
 
               {/* Trust bar — real avatar photos + rating, one compact line */}
-              <motion.div
+              <m.div
                 className={styles.trustBar}
                 initial={{ opacity: 0, y: 12 }}
                 whileInView={{ opacity: 1, y: 0 }}
@@ -843,11 +848,11 @@ export const Landing: React.FC<LandingProps> = ({ navigate }) => {
                     <BadgeCheck size={13} /> {t('socialProof.reviewsCount')}
                   </span>
                 </div>
-              </motion.div>
+              </m.div>
 
               {/* Compact stat tiles */}
               <div className={styles.statTileGrid}>
-                <motion.div
+                <m.div
                   className={styles.statTile}
                   initial={{ opacity: 0, y: 16 }}
                   whileInView={{ opacity: 1, y: 0 }}
@@ -859,8 +864,8 @@ export const Landing: React.FC<LandingProps> = ({ navigate }) => {
                     <StatCounter target={12400} suffix="+" />
                   </span>
                   <span className={styles.statTileLabel}>{t('socialProof.statDesigns')}</span>
-                </motion.div>
-                <motion.div
+                </m.div>
+                <m.div
                   className={styles.statTile}
                   initial={{ opacity: 0, y: 16 }}
                   whileInView={{ opacity: 1, y: 0 }}
@@ -872,8 +877,8 @@ export const Landing: React.FC<LandingProps> = ({ navigate }) => {
                     <StatCounter target={3150} suffix="+" />
                   </span>
                   <span className={styles.statTileLabel}>{t('socialProof.statScanned')}</span>
-                </motion.div>
-                <motion.div
+                </m.div>
+                <m.div
                   className={styles.statTile}
                   initial={{ opacity: 0, y: 16 }}
                   whileInView={{ opacity: 1, y: 0 }}
@@ -885,8 +890,8 @@ export const Landing: React.FC<LandingProps> = ({ navigate }) => {
                     <StatCounter target={980} suffix="+" />
                   </span>
                   <span className={styles.statTileLabel}>{t('socialProof.statCreators')}</span>
-                </motion.div>
-                <motion.div
+                </m.div>
+                <m.div
                   className={styles.statTile}
                   initial={{ opacity: 0, y: 16 }}
                   whileInView={{ opacity: 1, y: 0 }}
@@ -896,13 +901,13 @@ export const Landing: React.FC<LandingProps> = ({ navigate }) => {
                   <TrendingUp size={18} className={styles.statTileIcon} />
                   <span className={styles.statTileValue}>+24%</span>
                   <span className={styles.statTileLabel}>{t('socialProof.statOutput')}</span>
-                </motion.div>
+                </m.div>
               </div>
 
               {/* Compact testimonials — real avatar photos, short quotes */}
               <div className={styles.testimonialRow}>
                 {testimonials.map((t, i) => (
-                  <motion.div
+                  <m.div
                     key={t.handle}
                     className={styles.testimonialCard}
                     initial={{ opacity: 0, y: 16 }}
@@ -923,7 +928,7 @@ export const Landing: React.FC<LandingProps> = ({ navigate }) => {
                         <span className={styles.testimonialHandle}>{t.handle}</span>
                       </div>
                     </div>
-                  </motion.div>
+                  </m.div>
                 ))}
               </div>
 
@@ -963,14 +968,14 @@ export const Landing: React.FC<LandingProps> = ({ navigate }) => {
           {/* Pricing Section (NEW) */}
           <section id="pricing" className={styles.pricingSection}>
             <div className={styles.sectionHeader}>
-              <motion.h2 className={styles.sectionTitle} {...revealUp}>{t('pricingSection.title')}</motion.h2>
-              <motion.p
+              <m.h2 className={styles.sectionTitle} {...revealUp}>{t('pricingSection.title')}</m.h2>
+              <m.p
                 className={styles.sectionSubtitle}
                 {...revealUp}
                 transition={{ ...revealUp.transition, delay: 0.12 }}
               >
                 {t('pricingSection.subtitle')}
-              </motion.p>
+              </m.p>
 
               {/* Toggle billing — only shown when yearly plans are actually on sale */}
               {hasAnnualPlans && (
@@ -997,7 +1002,7 @@ export const Landing: React.FC<LandingProps> = ({ navigate }) => {
                 const cycleText = isAnnual ? t('pricingSection.perYear') : t('pricingSection.perMonth');
 
                 return (
-                  <motion.div
+                  <m.div
                     key={plan.id}
                     className={`${styles.priceCard} ${plan.popular ? styles.popularCard : ''} glass-panel`}
                     initial={{ opacity: 0, y: 24 }}
@@ -1031,7 +1036,7 @@ export const Landing: React.FC<LandingProps> = ({ navigate }) => {
                     >
                       {t('pricingSection.getStarted')}
                     </button>
-                  </motion.div>
+                  </m.div>
                 );
               })}
             </div>
@@ -1051,21 +1056,21 @@ export const Landing: React.FC<LandingProps> = ({ navigate }) => {
           {/* FAQ Section */}
           <section id="faq" className={styles.faqSection}>
             <div className={styles.sectionHeader}>
-              <motion.h2 className={styles.sectionTitle} {...revealUp}>{t('faqSection.title')}</motion.h2>
-              <motion.p
+              <m.h2 className={styles.sectionTitle} {...revealUp}>{t('faqSection.title')}</m.h2>
+              <m.p
                 className={styles.sectionSubtitle}
                 {...revealUp}
                 transition={{ ...revealUp.transition, delay: 0.12 }}
               >
                 {t('faqSection.subtitle')}
-              </motion.p>
+              </m.p>
             </div>
 
             <div className={styles.faqList}>
               {faqs.map((faq, index) => {
                 const isOpen = openFaqIndex === index;
                 return (
-                  <motion.div
+                  <m.div
                     key={faq.q}
                     className={`${styles.faqItem} glass-panel`}
                     initial={{ opacity: 0, y: 16 }}
@@ -1086,7 +1091,7 @@ export const Landing: React.FC<LandingProps> = ({ navigate }) => {
                     </button>
                     <AnimatePresence>
                       {isOpen && (
-                        <motion.div
+                        <m.div
                           initial={{ height: 0, opacity: 0 }}
                           animate={{ height: 'auto', opacity: 1 }}
                           exit={{ height: 0, opacity: 0 }}
@@ -1094,10 +1099,10 @@ export const Landing: React.FC<LandingProps> = ({ navigate }) => {
                           style={{ overflow: 'hidden' }}
                         >
                           <p className={styles.faqAnswer}>{faq.a}</p>
-                        </motion.div>
+                        </m.div>
                       )}
                     </AnimatePresence>
-                  </motion.div>
+                  </m.div>
                 );
               })}
             </div>
@@ -1110,3 +1115,11 @@ export const Landing: React.FC<LandingProps> = ({ navigate }) => {
     </div>
   );
 };
+
+// The `m` components above render their initial styles straight away; LazyMotion adds the
+// animation features once motionFeatures.ts has loaded.
+export const Landing: React.FC<LandingProps> = (props) => (
+  <LazyMotion features={loadMotionFeatures}>
+    <LandingContent {...props} />
+  </LazyMotion>
+);

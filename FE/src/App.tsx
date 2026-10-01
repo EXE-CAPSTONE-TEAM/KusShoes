@@ -7,6 +7,7 @@ import { api, ApiError, type PortalProject } from './api/client';
 import { getSettingTabFromSearch, type SettingTab } from './pages/Settings/settingsNavigation';
 import { useDocumentMeta } from './seo/useDocumentMeta';
 import { useAnalyticsPageView } from './analytics';
+import i18n, { i18nReady, LAZY_NAMESPACES } from './i18n';
 
 // Everything except the home page (Landing) is code-split, so the landing bundle stays small.
 // The importers are kept in one map so the first page of a full load can be registered as a
@@ -134,9 +135,13 @@ const getPageFromPath = (path: string): string => {
   }
 };
 
-// A full load that lands on a lazy page: make the boot loader wait for its chunk.
+// A full load that lands on a lazy page: make the boot loader wait for its chunk and for the
+// translations the landing bundle leaves out (see src/i18n/index.ts).
 const initialImporter = pageImporters[getPageFromPath(window.location.pathname)];
-if (initialImporter) addBootTask(initialImporter());
+if (initialImporter) {
+  addBootTask(initialImporter());
+  addBootTask(i18nReady.then(() => i18n.loadNamespaces([...LAZY_NAMESPACES])));
+}
 
 // Helper to convert page key to URL path
 const getPathFromPage = (page: string): string => {

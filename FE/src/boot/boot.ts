@@ -53,6 +53,14 @@ export const markAppMounted = () => resolveMounted();
 
 const nextFrame = () => new Promise<void>((r) => requestAnimationFrame(() => r()));
 
+/**
+ * Resolves just after the next frame has been painted. For code-split work the first screen can
+ * paint without (behind the boot overlay): starting it here keeps it off the critical path of
+ * the first paint and LCP.
+ */
+export const afterNextPaint = () =>
+  new Promise<void>((r) => requestAnimationFrame(() => setTimeout(r, 0)));
+
 export async function finishBoot(): Promise<void> {
   // Child useLayoutEffects (page task registration) run before App's useEffect.
   await Promise.race([appMounted, wait(MAX_MS)]);

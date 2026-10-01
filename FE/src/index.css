@@ -89,7 +89,7 @@ body {
   align-items: center;
   gap: 8px;
   background-color: var(--color-orange);
-  color: var(--text-primary);
+  color: var(--text-on-accent);
   font-family: var(--font-sans);
   font-weight: 600;
   font-size: 0.95rem;
