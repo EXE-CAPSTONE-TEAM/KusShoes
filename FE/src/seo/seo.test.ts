@@ -48,6 +48,8 @@ describe('build renderers', () => {
     expect(head).toContain(`<title>${pricing.title.vi}</title>`);
     expect(head).toContain(`<link rel="canonical" href="${SITE_URL}/pricing" />`);
     expect(head).toContain('property="og:image"');
+    expect(head).toContain('name="keywords"');
+    expect(head).toContain('name="theme-color"');
     expect(head).not.toContain('application/ld+json');
     expect(head).not.toContain('google-site-verification');
   });
@@ -55,6 +57,7 @@ describe('build renderers', () => {
   it('adds structured data only to the home page and verification only when given', () => {
     const head = renderHead(HOME_PAGE, { googleSiteVerification: 'abc"123' });
     expect(head).toContain('application/ld+json');
+    expect(head).toContain('SoftwareApplication');
     expect(head).toContain('<meta name="google-site-verification" content="abc&quot;123" />');
   });
 
@@ -75,12 +78,15 @@ describe('build renderers', () => {
   it('links every public page from the fallback content', () => {
     const html = renderFallback(HOME_PAGE);
     for (const page of SEO_PAGES) expect(html).toContain(`href="${page.path}"`);
+    expect(html).toContain('<h2>Quy trình số hoá giày 3D và tuỳ biến thời trang</h2>');
   });
 
-  it('lists every public page in the sitemap', () => {
+  it('lists every public page in the sitemap with priority and changefreq', () => {
     const xml = renderSitemap('2026-09-29');
     for (const page of SEO_PAGES) expect(xml).toContain(`<loc>${canonicalUrl(page)}</loc>`);
     expect(xml).toContain('<lastmod>2026-09-29</lastmod>');
+    expect(xml).toContain('<priority>1.0</priority>');
+    expect(xml).toContain('<changefreq>daily</changefreq>');
   });
 
   it('keeps crawlers out of private areas and points them at the sitemap', () => {
