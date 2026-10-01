@@ -10,7 +10,9 @@ import classicOrangeNoBg from '../../assets/classic-orange-nobg.png';
 import streetGraffitiNoBg from '../../assets/street-graffiti-nobg.png';
 import neonAlleyNoBg from '../../assets/neon-alley-nobg.png';
 import webCrimsonNoBg from '../../assets/web-crimson-nobg.png';
+import mobileAppIcon from '../../assets/kusshoes-mobile-app-icon.jpeg';
 import { EdgeArt } from '../EdgeArt/EdgeArt';
+import { TypingText } from '../TypingText/TypingText';
 import styles from './ShoeHeroExperience.module.css';
 
 gsap.registerPlugin(ScrollTrigger, useGSAP);
@@ -46,6 +48,8 @@ export const ShoeHeroExperience: React.FC<ShoeHeroExperienceProps> = ({
   const beat4Ref = useRef<HTMLDivElement>(null);
   const indicatorRef = useRef<HTMLDivElement>(null);
 
+  // Which step card is on screen (0 = none); drives the typing animation
+  const [activeStep, setActiveStep] = useState(0);
   const [activeColorway, setActiveColorway] = useState<string>('orange');
   const [selectedImg, setSelectedImg] = useState<string>(heroSneakerAltNoBg);
 
@@ -247,6 +251,16 @@ export const ShoeHeroExperience: React.FC<ShoeHeroExperienceProps> = ({
         )
         .addLabel('beat4');
 
+      // A step's text types out while its card is visible, and replays when scrolling back to it
+      const stepFor = (time: number) => {
+        const { beat1, beat2, beat3 } = tl.labels;
+        if (time >= beat3 + 0.7) return 3;
+        if (time >= beat2 + 0.65 && time < beat3 + 0.3) return 2;
+        if (time >= beat1 + 0.55 && time < beat2 + 0.3) return 1;
+        return 0;
+      };
+      tl.eventCallback('onUpdate', () => setActiveStep(stepFor(tl.time())));
+
       const refreshTimer = setTimeout(() => {
         ScrollTrigger.refresh();
       }, 100);
@@ -323,11 +337,25 @@ export const ShoeHeroExperience: React.FC<ShoeHeroExperienceProps> = ({
           {/* Beat 2: scan */}
           <div ref={beat2Ref} className={styles.beat2Card}>
             <div className={styles.card}>
-              <p className={styles.eyebrow}>{t('workflow.stepLabel', { number: 1 })}</p>
-              <h2 className={styles.cardTitle}>{t('workflow.step1.title')}</h2>
-              <p className={styles.cardDesc}>{t('workflow.step1.description')}</p>
+              <div className={styles.stepHead}>
+                <img className={styles.appLogo} src={mobileAppIcon} alt="KusShoes Mobile" />
+                <p className={`${styles.eyebrow} ${styles.stepEyebrow}`}>
+                  {t('workflow.stepLabel', { number: 1 })}
+                </p>
+              </div>
+              <h2 className={styles.cardTitle}>
+                <TypingText text={t('workflow.step1.title')} active={activeStep === 1} />
+              </h2>
+              <p className={styles.cardDesc}>
+                <TypingText
+                  text={t('workflow.step1.description')}
+                  active={activeStep === 1}
+                  delay={t('workflow.step1.title').length * 28 + 150}
+                  speed={16}
+                />
+              </p>
               <p className={styles.cardMeta}>
-                <Smartphone size={14} aria-hidden="true" />
+                <Smartphone size={14} aria-hidden="true" className={styles.metaIcon} />
                 {t('workflow.step1.metaText')}
               </p>
             </div>
@@ -336,11 +364,24 @@ export const ShoeHeroExperience: React.FC<ShoeHeroExperienceProps> = ({
           {/* Beat 3: cloud */}
           <div ref={beat3Ref} className={styles.beat3Card}>
             <div className={styles.card}>
-              <p className={styles.eyebrow}>{t('workflow.stepLabel', { number: 2 })}</p>
-              <h2 className={styles.cardTitle}>{t('workflow.step2.title')}</h2>
-              <p className={styles.cardDesc}>{t('workflow.step2.description')}</p>
+              <div className={styles.stepHead}>
+                <p className={`${styles.eyebrow} ${styles.stepEyebrow}`}>
+                  {t('workflow.stepLabel', { number: 2 })}
+                </p>
+              </div>
+              <h2 className={styles.cardTitle}>
+                <TypingText text={t('workflow.step2.title')} active={activeStep === 2} />
+              </h2>
+              <p className={styles.cardDesc}>
+                <TypingText
+                  text={t('workflow.step2.description')}
+                  active={activeStep === 2}
+                  delay={t('workflow.step2.title').length * 28 + 150}
+                  speed={16}
+                />
+              </p>
               <p className={styles.cardMeta}>
-                <Cloud size={14} aria-hidden="true" />
+                <Cloud size={14} aria-hidden="true" className={styles.metaIcon} />
                 {t('workflow.step2.metaText')}
               </p>
             </div>
@@ -349,9 +390,22 @@ export const ShoeHeroExperience: React.FC<ShoeHeroExperienceProps> = ({
           {/* Beat 4: KusStudio + colorways */}
           <div ref={beat4Ref} className={styles.beat4Card}>
             <div className={styles.card}>
-              <p className={styles.eyebrow}>{t('workflow.stepLabel', { number: 3 })}</p>
-              <h2 className={styles.cardTitle}>{t('workflow.step3.title')}</h2>
-              <p className={styles.cardDesc}>{t('workflow.step3.description')}</p>
+              <div className={styles.stepHead}>
+                <p className={`${styles.eyebrow} ${styles.stepEyebrow}`}>
+                  {t('workflow.stepLabel', { number: 3 })}
+                </p>
+              </div>
+              <h2 className={styles.cardTitle}>
+                <TypingText text={t('workflow.step3.title')} active={activeStep === 3} />
+              </h2>
+              <p className={styles.cardDesc}>
+                <TypingText
+                  text={t('workflow.step3.description')}
+                  active={activeStep === 3}
+                  delay={t('workflow.step3.title').length * 28 + 150}
+                  speed={16}
+                />
+              </p>
 
               <div className={styles.swatchRow}>
                 <span className={styles.swatchLabel}>{t('workflow.colorway')}</span>
@@ -378,7 +432,7 @@ export const ShoeHeroExperience: React.FC<ShoeHeroExperienceProps> = ({
                 </button>
               </div>
               <p className={styles.cardMeta}>
-                <Monitor size={14} aria-hidden="true" />
+                <Monitor size={14} aria-hidden="true" className={styles.metaIcon} />
                 {t('workflow.step3.metaText')}
               </p>
             </div>

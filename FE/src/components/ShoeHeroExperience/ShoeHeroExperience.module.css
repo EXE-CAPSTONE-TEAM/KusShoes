@@ -204,6 +204,56 @@
   color: var(--icon-muted);
 }
 
+.cardMeta .metaIcon {
+  color: var(--accent);
+}
+
+/* Orange accents on the step cards */
+.stepHead {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  margin: 0 0 14px;
+}
+
+.stepHead .eyebrow {
+  margin: 0;
+}
+
+.appLogo {
+  flex-shrink: 0;
+  width: 44px;
+  height: 44px;
+  object-fit: cover;
+  border-radius: 11px;
+  border: 1px solid var(--border);
+}
+
+.stepEyebrow {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  font-weight: 600;
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+  color: var(--accent);
+}
+
+.stepEyebrow::before {
+  content: '';
+  width: 6px;
+  height: 6px;
+  border-radius: 50%;
+  background: var(--accent);
+  animation: stepDotPulse 1.8s ease-in-out infinite;
+}
+
+@keyframes stepDotPulse {
+  50% {
+    opacity: 0.35;
+  }
+}
+
 /* Colorway selector: 12px-style swatch from DESIGN 5.8, enlarged to stay tappable */
 .swatchRow {
   display: flex;
@@ -311,7 +361,8 @@
 }
 
 @media (prefers-reduced-motion: reduce) {
-  .scrollThumb {
+  .scrollThumb,
+  .stepEyebrow::before {
     animation: none;
   }
 }
