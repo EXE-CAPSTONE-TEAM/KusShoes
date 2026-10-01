@@ -9,12 +9,13 @@
   <link rel="icon" type="image/png" sizes="48x48" href="/favicon-48x48.png" />
   <link rel="apple-touch-icon" sizes="180x180" href="/apple-touch-icon.png" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  <!-- Consent Mode v2 defaults. Must run before Google Tag Manager and gtag.js below: nothing
-       is stored until the visitor accepts in the cookie banner, and a saved choice
-       (src/analytics/consent.ts, same key and version) applies before any tag fires. -->
+  <!-- Google Tag Manager (GTM-NFVKQXLB) + Google tag (gtag.js, G-ZB62H02JZW) -->
   <script>
     window.dataLayer = window.dataLayer || [];
     function gtag(){window.dataLayer.push(arguments);}
+    // Consent Mode v2 defaults come first: nothing is stored until the visitor accepts in the
+    // cookie banner, and a saved choice (src/analytics/consent.ts, same key and version) applies
+    // before any tag fires.
     (function () {
       var analytics = 'denied', ads = 'denied';
       try {
@@ -31,30 +32,34 @@
         'ad_personalization': ads
       });
     })();
+    window.dataLayer.push({'gtm.start': new Date().getTime(), event: 'gtm.js'});
+    gtag('js', new Date());
+    gtag('config', 'G-ZB62H02JZW');
+    // gtm.js and gtag.js are fetched once the page has loaded, so third-party tags don't compete
+    // with the first render on slow phones. Everything pushed to dataLayer before then (consent,
+    // gtm.start, config, app events) is queued and processed when the scripts arrive.
+    (function(w,d){
+      function add(src){
+        var j=d.createElement('script');j.async=true;j.src=src;d.head.appendChild(j);
+      }
+      function load(){
+        add('https://www.googletagmanager.com/gtm.js?id=GTM-NFVKQXLB');
+        add('https://www.googletagmanager.com/gtag/js?id=G-ZB62H02JZW');
+      }
+      if (d.readyState === 'complete') load();
+      else w.addEventListener('load', function(){ setTimeout(load, 0); });
+    })(window,document);
   </script>
-
-  <!-- Google Tag Manager -->
-  <script>(function(w,d,s,l,i){w[l]=w[l]||[];w[l].push({'gtm.start':
-  new Date().getTime(),event:'gtm.js'});var f=d.getElementsByTagName(s)[0],
-  j=d.createElement(s),dl=l!='dataLayer'?'&l='+l:'';j.async=true;j.src=
-  'https://www.googletagmanager.com/gtm.js?id='+i+dl;f.parentNode.insertBefore(j,f);
-  })(window,document,'script','dataLayer','GTM-NFVKQXLB');</script>
-  <!-- End Google Tag Manager -->
-
-  <!-- Google tag (gtag.js) -->
-  <script async src="https://www.googletagmanager.com/gtag/js?id=G-ZB62H02JZW"></script>
-  <script>
-    window.gtag('js', new Date());
-
-    window.gtag('config', 'G-ZB62H02JZW');
-  </script>
-  <!-- End Google tag (gtag.js) -->
+  <!-- End Google Tag Manager + Google tag -->
   <!-- Filled per route at build time by vite-plugin-seo.ts (data: src/seo/pages.ts) -->
   <!--seo:head--><!--/seo:head-->
   <style>
-    /* Crawler fallback text sits under the boot overlay; a system font keeps the bundle's
-       webfont swap from shifting it (CLS). React replaces it on first render. */
-    .seo-fallback{font-family:system-ui,-apple-system,'Segoe UI',sans-serif}
+    /* Crawler fallback text: it only exists for HTML-only crawlers and always sits under the boot
+       overlay until React replaces it. The app CSS arrives after the first paint
+       (vite-plugin-async-css.ts) and its reset would move this text around, so it is never
+       rendered visibly; that keeps it out of CLS. */
+    body{margin:0}
+    .seo-fallback{visibility:hidden;font-family:system-ui,-apple-system,'Segoe UI',sans-serif}
   </style>
   <script>
     (function () {
@@ -81,22 +86,24 @@
   <style>
     #boot{position:fixed;inset:0;z-index:9999;display:grid;place-items:center;background:#0F0F0F;transition:opacity .2s}
     [data-theme="light"] #boot{background:#FAFAFA}
-    #boot .box{display:flex;flex-direction:column;align-items:center;gap:20px;opacity:0;animation:boot-in .2s .15s forwards}
+    /* The logo shows on the very first frame (it is the page's first contentful paint); only the
+       progress track fades in, and only if loading takes a moment. */
+    #boot .box{display:flex;flex-direction:column;align-items:center;gap:20px}
     #boot img{height:32px}
     #boot .logo-light{display:none}
     [data-theme="light"] #boot .logo-light{display:block}
     [data-theme="light"] #boot .logo-dark{display:none}
-    #boot .track{width:160px;height:2px;background:#2A2A2A;overflow:hidden}
+    #boot .track{width:160px;height:2px;background:#2A2A2A;overflow:hidden;opacity:0;animation:boot-in .2s .15s forwards}
     [data-theme="light"] #boot .track{background:#E5E5E5}
     #boot .bar{height:100%;background:#FF6B35;transform:scaleX(var(--p,0));transform-origin:left;transition:transform .3s cubic-bezier(.2,0,0,1)}
     #boot.done{opacity:0;pointer-events:none}
     @keyframes boot-in{to{opacity:1}}
-    @media (prefers-reduced-motion:reduce){#boot,#boot .bar{transition:none}#boot .box{animation-duration:0s;animation-delay:.15s}}
+    @media (prefers-reduced-motion:reduce){#boot,#boot .bar{transition:none}#boot .track{animation-duration:0s;animation-delay:.15s}}
   </style>
   <div id="boot" role="progressbar" aria-label="Loading KusShoes" aria-valuemin="0" aria-valuemax="100" aria-valuenow="0">
     <div class="box">
-      <img class="logo-dark" src="/KusShoes_Logo_Dark_Mode_cropped.png" alt="" width="103" height="32">
-      <img class="logo-light" src="/KusShoes_Logo_cropped.png" alt="" width="103" height="32">
+      <img class="logo-dark" src="/KusShoes_Logo_Dark_Mode_cropped.webp" alt="" width="103" height="32">
+      <img class="logo-light" src="/KusShoes_Logo_cropped.webp" alt="" width="103" height="32">
       <div class="track"><div class="bar"></div></div>
     </div>
   </div>

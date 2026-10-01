@@ -2,28 +2,51 @@ import i18n from 'i18next';
 import { initReactI18next } from 'react-i18next';
 import LanguageDetector from 'i18next-browser-languagedetector';
 
+import type { BackendModule } from 'i18next';
+
+// Namespaces the first screen of any page can need are bundled; the rest are fetched on first use
+// (useTranslation suspends until they arrive), keeping the landing bundle small.
 import commonEn from './locales/en/common.json';
 import commonVi from './locales/vi/common.json';
 import landingEn from './locales/en/landing.json';
 import landingVi from './locales/vi/landing.json';
 import pricingEn from './locales/en/pricing.json';
 import pricingVi from './locales/vi/pricing.json';
-import productsEn from './locales/en/products.json';
-import productsVi from './locales/vi/products.json';
-import authEn from './locales/en/auth.json';
-import authVi from './locales/vi/auth.json';
-import artisanEn from './locales/en/artisan.json';
-import artisanVi from './locales/vi/artisan.json';
-import portalEn from './locales/en/portal.json';
-import portalVi from './locales/vi/portal.json';
-import billingEn from './locales/en/billing.json';
-import billingVi from './locales/vi/billing.json';
-import projectsEn from './locales/en/projects.json';
-import projectsVi from './locales/vi/projects.json';
-import detailsEn from './locales/en/details.json';
-import detailsVi from './locales/vi/details.json';
+// Used outside React (ErrorBoundary, utils/format.ts, utils/authValidation.ts) and by the
+// always-mounted ImpersonationBanner, so it can't wait for a fetch.
 import accountEn from './locales/en/account.json';
 import accountVi from './locales/vi/account.json';
+
+export const LAZY_NAMESPACES = [
+  'products',
+  'auth',
+  'artisan',
+  'portal',
+  'billing',
+  'projects',
+  'details',
+] as const;
+
+const lazyResources = import.meta.glob<Record<string, unknown>>(
+  './locales/*/{products,auth,artisan,portal,billing,projects,details}.json',
+  { import: 'default' },
+);
+
+const lazyBackend: BackendModule = {
+  type: 'backend',
+  init() {},
+  read(language, namespace, callback) {
+    const load = lazyResources[`./locales/${language}/${namespace}.json`];
+    if (!load) {
+      callback(null, {});
+      return;
+    }
+    load().then(
+      (data) => callback(null, data),
+      (error: unknown) => callback(error as Error, false),
+    );
+  },
+};
 
 export const defaultNS = 'common';
 export const LANGUAGE_STORAGE_KEY = 'kusshoes_lang';
@@ -34,6 +57,7 @@ export const LANGUAGE_STORAGE_KEY = 'kusshoes_lang';
 // e.g. Landing.tsx's FAQ list, where calling .map() on that string crashed the whole page.
 export const i18nReady = i18n
   .use(LanguageDetector)
+  .use(lazyBackend)
   .use(initReactI18next)
   .init({
     resources: {
@@ -41,33 +65,21 @@ export const i18nReady = i18n
         common: commonEn,
         landing: landingEn,
         pricing: pricingEn,
-        products: productsEn,
-        auth: authEn,
-        artisan: artisanEn,
-        portal: portalEn,
-        billing: billingEn,
-        projects: projectsEn,
-        details: detailsEn,
         account: accountEn,
       },
       vi: {
         common: commonVi,
         landing: landingVi,
         pricing: pricingVi,
-        products: productsVi,
-        auth: authVi,
-        artisan: artisanVi,
-        portal: portalVi,
-        billing: billingVi,
-        projects: projectsVi,
-        details: detailsVi,
         account: accountVi,
       },
     },
     fallbackLng: 'en',
     supportedLngs: ['en', 'vi'],
     defaultNS,
-    ns: ['common', 'landing', 'pricing', 'products', 'auth', 'artisan', 'portal', 'billing', 'projects', 'details', 'account'],
+    // Only the bundled namespaces load at init; LAZY_NAMESPACES come through lazyBackend.
+    ns: ['common', 'landing', 'pricing', 'account'],
+    partialBundledLanguages: true,
     interpolation: { escapeValue: false },
     detection: {
       order: ['localStorage', 'navigator'],

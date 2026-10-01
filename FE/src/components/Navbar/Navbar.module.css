@@ -166,6 +166,7 @@
   background: rgba(0, 0, 0, 0.45);
   -webkit-backdrop-filter: blur(2px);
   backdrop-filter: blur(2px);
+  animation: menu-fade-in 0.22s ease both;
 }
 
 .mobileMenu {
@@ -180,6 +181,32 @@
   border-radius: var(--border-radius-md);
   max-height: calc(100dvh - 100px - env(safe-area-inset-top));
   overflow-y: auto;
+  animation: menu-drop-in 0.22s ease both;
+}
+
+/* Close: Navbar.tsx unmounts the menu on the nav's animationend */
+.menuBackdrop.menuClosing {
+  animation-name: menu-fade-out;
+}
+
+.mobileMenu.menuClosing {
+  animation-name: menu-drop-out;
+}
+
+@keyframes menu-fade-in {
+  from { opacity: 0; }
+}
+
+@keyframes menu-fade-out {
+  to { opacity: 0; }
+}
+
+@keyframes menu-drop-in {
+  from { opacity: 0; transform: translateY(-12px); }
+}
+
+@keyframes menu-drop-out {
+  to { opacity: 0; transform: translateY(-12px); }
 }
 
 .mobileMenu > a {

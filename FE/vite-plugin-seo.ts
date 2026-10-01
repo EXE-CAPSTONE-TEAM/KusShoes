@@ -3,7 +3,8 @@
 // and emits sitemap.xml + robots.txt. Page data lives in src/seo/pages.ts.
 import { readFile, writeFile } from 'node:fs/promises';
 import path from 'node:path';
-import type { Plugin } from 'vite';
+import type { Plugin, Rollup } from 'vite';
+import { HERO_IMAGE_SIZES, heroSrcSet } from './src/components/ShoeHeroExperience/heroImage.ts';
 import { HOME_PAGE, SEO_PAGES } from './src/seo/pages.ts';
 import {
   applySeo,
@@ -13,8 +14,19 @@ import {
   type HeadOptions,
 } from './src/seo/render.ts';
 
-/** Source of the home page's LCP image (ShoeHeroExperience's primary sneaker). */
+/** Source of the home page's LCP image (ShoeHeroExperience's primary sneaker) + small variant. */
 const LCP_IMAGE_SOURCE = 'src/assets/hero-sneaker-nobg.webp';
+const LCP_IMAGE_SMALL_SOURCE = 'src/assets/hero-sneaker-nobg-640.webp';
+
+function builtAssetUrl(bundle: Rollup.OutputBundle | undefined, source: string) {
+  const file = bundle
+    ? Object.values(bundle).find(
+        (output) =>
+          output.type === 'asset' && output.originalFileNames.some((name) => name.endsWith(source)),
+      )
+    : undefined;
+  return file ? `/${file.fileName}` : undefined;
+}
 
 export function seoPlugin(options: HeadOptions = {}): Plugin {
   let outDir = 'dist';
@@ -26,15 +38,13 @@ export function seoPlugin(options: HeadOptions = {}): Plugin {
     transformIndexHtml(html, ctx) {
       // Preload the hero sneaker (the home page's LCP element) so the browser fetches it with
       // the document instead of waiting for the JS bundle to render the <img>.
-      const hero = ctx.bundle
-        ? Object.values(ctx.bundle).find(
-            (file) =>
-              file.type === 'asset' &&
-              file.originalFileNames.some((name) => name.endsWith(LCP_IMAGE_SOURCE)),
-          )
-        : undefined;
-      const lcpImage = hero ? `/${hero.fileName}` : undefined;
-      return applySeo(html, HOME_PAGE, { ...options, lcpImage });
+      const lcpImage = builtAssetUrl(ctx.bundle, LCP_IMAGE_SOURCE);
+      const lcpImageSmall = builtAssetUrl(ctx.bundle, LCP_IMAGE_SMALL_SOURCE);
+      const responsive =
+        lcpImage && lcpImageSmall
+          ? { lcpImageSrcset: heroSrcSet(lcpImageSmall, lcpImage), lcpImageSizes: HERO_IMAGE_SIZES }
+          : {};
+      return applySeo(html, HOME_PAGE, { ...options, lcpImage, ...responsive });
     },
     generateBundle() {
       const lastmod = new Date().toISOString().slice(0, 10);

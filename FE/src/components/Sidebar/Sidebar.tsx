@@ -265,7 +265,7 @@ export const Sidebar: React.FC<SidebarProps> = ({
         </button>
         <img
           src={
-            theme === 'dark' ? '/KusShoes_Logo_Dark_Mode_cropped.png' : '/KusShoes_Logo_cropped.png'
+            theme === 'dark' ? '/KusShoes_Logo_Dark_Mode_cropped.webp' : '/KusShoes_Logo_cropped.webp'
           }
           alt="KusShoes"
           className={styles.mobileLogo}
@@ -296,8 +296,8 @@ export const Sidebar: React.FC<SidebarProps> = ({
             <img
               src={
                 theme === 'dark'
-                  ? '/KusShoes_Logo_Dark_Mode_cropped.png'
-                  : '/KusShoes_Logo_cropped.png'
+                  ? '/KusShoes_Logo_Dark_Mode_cropped.webp'
+                  : '/KusShoes_Logo_cropped.webp'
               }
               alt="KusShoes"
               className={styles.logoImage}

@@ -101,6 +101,13 @@
   will-change: opacity, transform;
 }
 
+/* Steps 2-4 start hidden (GSAP sets the same), so a late-loading timeline never shows them stacked */
+.beat2Card,
+.beat3Card,
+.beat4Card {
+  opacity: 0;
+}
+
 .beat1Hero {
   left: 6%;
   top: 50%;

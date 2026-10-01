@@ -38,7 +38,7 @@ export const Footer: React.FC<FooterProps> = ({ navigate }) => {
         <div className={styles.footerBrandBlock}>
           <div className={styles.navBrand} onClick={() => navigate('/')}>
             <img
-              src={theme === 'dark' ? '/KusShoes_Logo_Dark_Mode_cropped.png' : '/KusShoes_Logo_cropped.png'}
+              src={theme === 'dark' ? '/KusShoes_Logo_Dark_Mode_cropped.webp' : '/KusShoes_Logo_cropped.webp'}
               alt="KusShoes"
               width={450}
               height={140}

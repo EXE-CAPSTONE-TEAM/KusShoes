@@ -1,6 +1,5 @@
 import React, { useState, useEffect, useRef } from 'react';
 import { Sun, Moon, Menu, X } from 'lucide-react';
-import { AnimatePresence, motion } from 'framer-motion';
 import { createPortal } from 'react-dom';
 import { useTranslation } from 'react-i18next';
 import { useTheme } from '../../context/ThemeContext';
@@ -17,6 +16,9 @@ export const Navbar: React.FC<NavbarProps> = ({ navigate, currentPage }) => {
   const { theme, toggleTheme } = useTheme();
   const [hidden, setHidden] = useState(false);
   const [menuOpen, setMenuOpen] = useState(false);
+  // The menu stays mounted while its close animation plays (keyframes in Navbar.module.css).
+  const [menuMounted, setMenuMounted] = useState(false);
+  if (menuOpen && !menuMounted) setMenuMounted(true);
   const lastScrollY = useRef(0);
   const menuOpenRef = useRef(false);
   menuOpenRef.current = menuOpen;
@@ -105,7 +107,7 @@ export const Navbar: React.FC<NavbarProps> = ({ navigate, currentPage }) => {
     <header className={`${styles.navbar} ${hidden ? styles.navbarHidden : ''} glass-panel`}>
       <div className={styles.navBrand} onClick={() => navigate('/')}>
         <img
-          src={theme === 'dark' ? '/KusShoes_Logo_Dark_Mode_cropped.png' : '/KusShoes_Logo_cropped.png'}
+          src={theme === 'dark' ? '/KusShoes_Logo_Dark_Mode_cropped.webp' : '/KusShoes_Logo_cropped.webp'}
           alt="KusShoes"
           width={450}
           height={140}
@@ -242,42 +244,36 @@ export const Navbar: React.FC<NavbarProps> = ({ navigate, currentPage }) => {
         </button>
       </div>
 
-      <AnimatePresence>
-        {menuOpen && (
-          <>
-            {/* Portalled: the navbar is transformed, which would otherwise trap a fixed backdrop inside it */}
-            {createPortal(
-              <motion.div
-                className={styles.menuBackdrop}
-                initial={{ opacity: 0 }}
-                animate={{ opacity: 1 }}
-                exit={{ opacity: 0 }}
-                onClick={closeMenu}
-              />,
-              document.body,
-            )}
-            <motion.nav
-              id="mobile-menu"
-              className={`${styles.mobileMenu} glass-panel`}
-              aria-label={t('nav.mainMenu')}
-              initial={{ opacity: 0, y: -12 }}
-              animate={{ opacity: 1, y: 0 }}
-              exit={{ opacity: 0, y: -12 }}
-              transition={{ duration: 0.22 }}
-            >
-              <a href="/products" className={currentPage === 'products' ? styles.mobileActive : ''} onClick={(e) => { e.preventDefault(); goFromMenu('/products'); }}>{t('nav.products')}</a>
-              <a href="#workflow" onClick={(e) => { e.preventDefault(); goFromMenu('#workflow'); }}>{t('nav.workflow')}</a>
-              <a href="#features" onClick={(e) => { e.preventDefault(); goFromMenu('#features'); }}>{t('nav.features')}</a>
-              <a href="/pricing" className={currentPage === 'pricing' ? styles.mobileActive : ''} onClick={(e) => { e.preventDefault(); goFromMenu('/pricing'); }}>{t('nav.pricing')}</a>
-              <div className={styles.mobileActions}>
-                <LanguageSwitcher className="btn-outline" />
-                <button type="button" className="btn-outline" onClick={() => goFromMenu('/login')}>{t('nav.signIn')}</button>
-                <button type="button" className="btn-neon-orange" onClick={() => goFromMenu('/login')}>{t('nav.register')}</button>
-              </div>
-            </motion.nav>
-          </>
-        )}
-      </AnimatePresence>
+      {menuMounted && (
+        <>
+          {/* Portalled: the navbar is transformed, which would otherwise trap a fixed backdrop inside it */}
+          {createPortal(
+            <div
+              className={`${styles.menuBackdrop} ${menuOpen ? '' : styles.menuClosing}`}
+              onClick={closeMenu}
+            />,
+            document.body,
+          )}
+          <nav
+            id="mobile-menu"
+            className={`${styles.mobileMenu} ${menuOpen ? '' : styles.menuClosing} glass-panel`}
+            aria-label={t('nav.mainMenu')}
+            onAnimationEnd={(e) => {
+              if (!menuOpen && e.target === e.currentTarget) setMenuMounted(false);
+            }}
+          >
+            <a href="/products" className={currentPage === 'products' ? styles.mobileActive : ''} onClick={(e) => { e.preventDefault(); goFromMenu('/products'); }}>{t('nav.products')}</a>
+            <a href="#workflow" onClick={(e) => { e.preventDefault(); goFromMenu('#workflow'); }}>{t('nav.workflow')}</a>
+            <a href="#features" onClick={(e) => { e.preventDefault(); goFromMenu('#features'); }}>{t('nav.features')}</a>
+            <a href="/pricing" className={currentPage === 'pricing' ? styles.mobileActive : ''} onClick={(e) => { e.preventDefault(); goFromMenu('/pricing'); }}>{t('nav.pricing')}</a>
+            <div className={styles.mobileActions}>
+              <LanguageSwitcher className="btn-outline" />
+              <button type="button" className="btn-outline" onClick={() => goFromMenu('/login')}>{t('nav.signIn')}</button>
+              <button type="button" className="btn-neon-orange" onClick={() => goFromMenu('/login')}>{t('nav.register')}</button>
+            </div>
+          </nav>
+        </>
+      )}
     </header>
   );
 };

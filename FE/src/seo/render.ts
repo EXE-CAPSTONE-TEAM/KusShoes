@@ -91,6 +91,9 @@ export interface HeadOptions {
   googleSiteVerification?: string;
   /** Built URL of the page's LCP image, preloaded with high priority (home page only). */
   lcpImage?: string;
+  /** Responsive candidates of the LCP image; must match the <img srcset>/<img sizes>. */
+  lcpImageSrcset?: string;
+  lcpImageSizes?: string;
 }
 
 export function renderHead(page: SeoPage, options: HeadOptions = {}): string {
@@ -126,8 +129,12 @@ export function renderHead(page: SeoPage, options: HeadOptions = {}): string {
     );
   }
   if (options.lcpImage) {
+    const responsive =
+      options.lcpImageSrcset && options.lcpImageSizes
+        ? ` imagesrcset="${escapeHtml(options.lcpImageSrcset)}" imagesizes="${escapeHtml(options.lcpImageSizes)}"`
+        : '';
     lines.push(
-      `<link rel="preload" as="image" href="${escapeHtml(options.lcpImage)}" fetchpriority="high" />`,
+      `<link rel="preload" as="image" href="${escapeHtml(options.lcpImage)}"${responsive} fetchpriority="high" />`,
     );
   }
   if (page === HOME_PAGE) lines.push(structuredData());
