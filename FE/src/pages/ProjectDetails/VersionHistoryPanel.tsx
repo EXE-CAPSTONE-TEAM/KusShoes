@@ -1,5 +1,6 @@
 import React, { useCallback, useEffect, useState } from 'react';
 import { History, LayoutTemplate, Pin, RotateCcw } from 'lucide-react';
+import { useTranslation } from 'react-i18next';
 import { studioApi, type DesignTemplate, type DesignVersion } from '../../api/studio';
 import { ConfirmDialog } from '../../components/ConfirmDialog/ConfirmDialog';
 import { ReportContentLink } from '../../components/ReportContentLink/ReportContentLink';
@@ -15,6 +16,7 @@ interface VersionHistoryPanelProps {
 
 /** Design version history (BR-46) and the template gallery, both of which rewrite the current design. */
 export const VersionHistoryPanel: React.FC<VersionHistoryPanelProps> = ({ projectId, locked }) => {
+  const { t } = useTranslation('details');
   const { toast } = useToast();
   const [versions, setVersions] = useState<DesignVersion[] | null>(null);
   const [templates, setTemplates] = useState<DesignTemplate[] | null>(null);
@@ -31,9 +33,9 @@ export const VersionHistoryPanel: React.FC<VersionHistoryPanelProps> = ({ projec
       setVersions(nextVersions);
       setTemplates(nextTemplates);
     } catch (caught) {
-      toast(caught instanceof Error ? caught.message : 'Unable to load design history.', 'error');
+      toast(caught instanceof Error ? caught.message : t('history.loadError'), 'error');
     }
-  }, [projectId, toast]);
+  }, [projectId, toast, t]);
 
   useEffect(() => {
     void load();
@@ -44,10 +46,10 @@ export const VersionHistoryPanel: React.FC<VersionHistoryPanelProps> = ({ projec
     setBusy(true);
     try {
       const restored = await studioApi.restoreVersion(projectId, restoreTarget.id);
-      toast(`Version ${restoreTarget.version_no} restored as version ${restored.version_no}.`);
+      toast(t('history.restored', { from: restoreTarget.version_no, to: restored.version_no }));
       await load();
     } catch (caught) {
-      toast(caught instanceof Error ? caught.message : 'Unable to restore that version.', 'error');
+      toast(caught instanceof Error ? caught.message : t('history.restoreError'), 'error');
     } finally {
       setBusy(false);
       setRestoreTarget(null);
@@ -59,10 +61,10 @@ export const VersionHistoryPanel: React.FC<VersionHistoryPanelProps> = ({ projec
     setBusy(true);
     try {
       await studioApi.applyTemplate(projectId, templateTarget.id);
-      toast(`Template “${templateTarget.name}” applied. Open KusStudio to continue editing.`);
+      toast(t('history.applied', { name: templateTarget.name }));
       await load();
     } catch (caught) {
-      toast(caught instanceof Error ? caught.message : 'Unable to apply that template.', 'error');
+      toast(caught instanceof Error ? caught.message : t('history.applyError'), 'error');
     } finally {
       setBusy(false);
       setTemplateTarget(null);
@@ -73,8 +75,7 @@ export const VersionHistoryPanel: React.FC<VersionHistoryPanelProps> = ({ projec
     <div className={styles.stack}>
       {locked && (
         <div className={`${styles.notice} ${styles.noticeWarning}`}>
-          This project is read-only after a plan downgrade, so versions cannot be restored and
-          templates cannot be applied.
+          {t('history.locked')}
         </div>
       )}
 
@@ -82,29 +83,28 @@ export const VersionHistoryPanel: React.FC<VersionHistoryPanelProps> = ({ projec
         <div className={styles.panelHeader}>
           <History size={20} className={styles.panelIcon} />
           <div>
-            <h4 className={styles.panelTitle}>Version history</h4>
+            <h4 className={styles.panelTitle}>{t('history.title')}</h4>
             <p className={styles.panelDesc}>
-              A version is saved each time the design changes. Versions sent to export are pinned
-              and never removed.
+              {t('history.desc')}
             </p>
           </div>
         </div>
         {versions === null ? (
-          <LoadingDots center label="Loading versions…" />
+          <LoadingDots center label={t('history.loadingVersions')} />
         ) : versions.length === 0 ? (
           <p className={styles.muted}>
-            No saved versions yet. Save a design in KusStudio to start the history.
+            {t('history.noVersions')}
           </p>
         ) : (
           versions.map((version, index) => (
             <div key={version.id} className={styles.row}>
               <div className={styles.rowMain}>
                 <span className={styles.rowTitle}>
-                  Version {version.version_no}
-                  {index === 0 && <span className={styles.chip}>Current</span>}
+                  {t('history.version', { n: version.version_no })}
+                  {index === 0 && <span className={styles.chip}>{t('history.current')}</span>}
                   {version.is_pinned && (
                     <span className={styles.chip}>
-                      <Pin size={10} /> Exported
+                      <Pin size={10} /> {t('history.exported')}
                     </span>
                   )}
                 </span>
@@ -117,7 +117,7 @@ export const VersionHistoryPanel: React.FC<VersionHistoryPanelProps> = ({ projec
                   disabled={locked || busy}
                   onClick={() => setRestoreTarget(version)}
                 >
-                  <RotateCcw size={14} /> Restore
+                  <RotateCcw size={14} /> {t('history.restore')}
                 </button>
               )}
             </div>
@@ -129,16 +129,16 @@ export const VersionHistoryPanel: React.FC<VersionHistoryPanelProps> = ({ projec
         <div className={styles.panelHeader}>
           <LayoutTemplate size={20} className={styles.panelIcon} />
           <div>
-            <h4 className={styles.panelTitle}>Start from a template</h4>
+            <h4 className={styles.panelTitle}>{t('history.tplTitle')}</h4>
             <p className={styles.panelDesc}>
-              Applying a template replaces the current design (the old one stays in the history).
+              {t('history.tplDesc')}
             </p>
           </div>
         </div>
         {templates === null ? (
-          <LoadingDots center label="Loading templates…" />
+          <LoadingDots center label={t('history.loadingTemplates')} />
         ) : templates.length === 0 ? (
-          <p className={styles.muted}>No templates are published yet.</p>
+          <p className={styles.muted}>{t('history.noTemplates')}</p>
         ) : (
           <div className={styles.templateGrid}>
             {templates.map((template) => (
@@ -147,8 +147,8 @@ export const VersionHistoryPanel: React.FC<VersionHistoryPanelProps> = ({ projec
                 <span className={styles.templateMeta}>
                   {[
                     template.category,
-                    `${template.layer_count} layers`,
-                    `${template.use_count} uses`,
+                    t('history.layers', { n: template.layer_count }),
+                    t('history.uses', { n: template.use_count }),
                   ]
                     .filter(Boolean)
                     .join(' · ')}
@@ -162,7 +162,7 @@ export const VersionHistoryPanel: React.FC<VersionHistoryPanelProps> = ({ projec
                   disabled={locked || busy}
                   onClick={() => setTemplateTarget(template)}
                 >
-                  Use template
+                  {t('history.useTemplate')}
                 </button>
                 <ReportContentLink
                   target={{ templateId: template.id }}
@@ -177,18 +177,18 @@ export const VersionHistoryPanel: React.FC<VersionHistoryPanelProps> = ({ projec
       <ConfirmDialog
         open={restoreTarget !== null}
         onOpenChange={(open) => !open && setRestoreTarget(null)}
-        title={`Restore version ${restoreTarget?.version_no ?? ''}?`}
-        description="The current design is replaced by this version. Nothing is lost: your current design stays in the history."
-        confirmLabel="Restore"
+        title={t('history.restoreTitle', { n: restoreTarget?.version_no ?? '' })}
+        description={t('history.restoreDesc')}
+        confirmLabel={t('history.restore')}
         danger={false}
         onConfirm={() => void restore()}
       />
       <ConfirmDialog
         open={templateTarget !== null}
         onOpenChange={(open) => !open && setTemplateTarget(null)}
-        title={`Apply “${templateTarget?.name ?? ''}”?`}
-        description="The current design is replaced by the template. It stays available in the version history."
-        confirmLabel="Apply template"
+        title={t('history.applyTitle', { name: templateTarget?.name ?? '' })}
+        description={t('history.applyDesc')}
+        confirmLabel={t('history.applyLabel')}
         danger={false}
         onConfirm={() => void applyTemplate()}
       />

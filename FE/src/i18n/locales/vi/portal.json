@@ -22,7 +22,8 @@
     "profile": "Hồ sơ",
     "logout": "Đăng xuất",
     "storage": "Dung lượng",
-    "storageUsed": "Đã dùng {{size}}"
+    "storageUsed": "Đã dùng {{size}}",
+    "userAvatar": "Ảnh đại diện"
   },
   "settings": {
     "title": "Cài đặt",
@@ -104,6 +105,7 @@
       "uploadCta": "Tải ảnh lên (.png, .jpg)",
       "removeCurrent": "Xoá ảnh đại diện hiện tại",
       "cancel": "Huỷ"
-    }
+    },
+    "closeDialog": "Đóng hộp thoại"
   }
 }

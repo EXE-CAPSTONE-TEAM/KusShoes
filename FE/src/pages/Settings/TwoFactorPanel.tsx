@@ -1,7 +1,21 @@
 import React, { useCallback, useEffect, useState } from 'react';
+import { useTranslation } from 'react-i18next';
 import { QRCodeSVG } from 'qrcode.react';
-import { Smartphone, Mail, Copy, Download, ShieldCheck, ShieldOff, AlertTriangle } from 'lucide-react';
-import { accountApi, type TwoFactorMethod, type TwoFactorSetup, type TwoFactorStatus } from '../../api/account';
+import {
+  Smartphone,
+  Mail,
+  Copy,
+  Download,
+  ShieldCheck,
+  ShieldOff,
+  AlertTriangle,
+} from 'lucide-react';
+import {
+  accountApi,
+  type TwoFactorMethod,
+  type TwoFactorSetup,
+  type TwoFactorStatus,
+} from '../../api/account';
 import { useToast } from '../../context/ToastContext';
 import styles from './Settings.module.css';
 import panel from './AccountPanels.module.css';
@@ -9,6 +23,7 @@ import panel from './AccountPanels.module.css';
 type View = 'idle' | 'choose' | 'confirm' | 'recoveryCodes' | 'disable';
 
 export const TwoFactorPanel: React.FC = () => {
+  const { t } = useTranslation('account');
   const { toast } = useToast();
   const [status, setStatus] = useState<TwoFactorStatus | null>(null);
   const [view, setView] = useState<View>('idle');
@@ -25,9 +40,9 @@ export const TwoFactorPanel: React.FC = () => {
     try {
       setStatus(await accountApi.twoFactorStatus());
     } catch (caught) {
-      toast(caught instanceof Error ? caught.message : 'Unable to load two-factor status.', 'error');
+      toast(caught instanceof Error ? caught.message : t('twoFactor.loadError'), 'error');
     }
-  }, [toast]);
+  }, [toast, t]);
 
   useEffect(() => {
     void refresh();
@@ -38,7 +53,7 @@ export const TwoFactorPanel: React.FC = () => {
     try {
       await action();
     } catch (caught) {
-      toast(caught instanceof Error ? caught.message : 'Something went wrong.', 'error');
+      toast(caught instanceof Error ? caught.message : t('twoFactor.genericError'), 'error');
     } finally {
       setBusy(false);
     }
@@ -49,7 +64,7 @@ export const TwoFactorPanel: React.FC = () => {
       setSetup(await accountApi.setupTwoFactor(method));
       setCode('');
       setView('confirm');
-      if (method === 'email') toast('We sent a verification code to your email.', 'info');
+      if (method === 'email') toast(t('twoFactor.emailSent'), 'info');
     });
 
   const enable = (event: React.FormEvent) => {
@@ -71,7 +86,7 @@ export const TwoFactorPanel: React.FC = () => {
         password: password || undefined,
         code: code.trim() || undefined,
       });
-      toast('Two-factor authentication turned off.');
+      toast(t('twoFactor.turnedOff'));
       setPassword('');
       setCode('');
       setView('idle');
@@ -83,7 +98,7 @@ export const TwoFactorPanel: React.FC = () => {
     event.preventDefault();
     void run(async () => {
       const result = await accountApi.setRecoveryEmail(recoveryEmail.trim());
-      toast(result.message || 'Verification code sent.', 'info');
+      toast(result.message || t('twoFactor.codeSent'), 'info');
       setAwaitingEmailCode(true);
       await refresh();
     });
@@ -93,7 +108,7 @@ export const TwoFactorPanel: React.FC = () => {
     event.preventDefault();
     void run(async () => {
       await accountApi.verifyRecoveryEmail(recoveryEmailCode.trim());
-      toast('Recovery email verified.');
+      toast(t('twoFactor.recoveryVerified'));
       setAwaitingEmailCode(false);
       setRecoveryEmailCode('');
       await refresh();
@@ -103,14 +118,16 @@ export const TwoFactorPanel: React.FC = () => {
   const copyCodes = async () => {
     try {
       await navigator.clipboard.writeText(recoveryCodes.join('\n'));
-      toast('Recovery codes copied.');
+      toast(t('twoFactor.codesCopied'));
     } catch {
-      toast('Unable to copy. Please select the codes manually.', 'error');
+      toast(t('twoFactor.copyError'), 'error');
     }
   };
 
   const downloadCodes = () => {
-    const url = URL.createObjectURL(new Blob([recoveryCodes.join('\n') + '\n'], { type: 'text/plain' }));
+    const url = URL.createObjectURL(
+      new Blob([recoveryCodes.join('\n') + '\n'], { type: 'text/plain' }),
+    );
     const anchor = document.createElement('a');
     anchor.href = url;
     anchor.download = 'kusshoes-recovery-codes.txt';
@@ -126,13 +143,22 @@ export const TwoFactorPanel: React.FC = () => {
       <div className={panel.panelHeader}>
         <Smartphone size={16} className={panel.panelIcon} />
         <div>
-          <h4 className={panel.panelTitle}>Two-Factor Authentication (2FA)</h4>
-          <p className={panel.panelDesc}>Require a second step when signing in, on top of your password.</p>
+          <h4 className={panel.panelTitle}>{t('twoFactor.title')}</h4>
+          <p className={panel.panelDesc}>{t('twoFactor.desc')}</p>
         </div>
         <div className={`${panel.statusGroup} ${panel.headerAction}`}>
-          <span className={`${panel.statusDot} ${enabled ? panel.statusDotOn : panel.statusDotOff}`} />
+          <span
+            className={`${panel.statusDot} ${enabled ? panel.statusDotOn : panel.statusDotOff}`}
+          />
           <span className={panel.statusText}>
-            {enabled ? `On · ${status?.method === 'email' ? 'Email' : 'Authenticator'}` : 'Off'}
+            {enabled
+              ? t('twoFactor.statusOn', {
+                  method:
+                    status?.method === 'email'
+                      ? t('twoFactor.methodEmail')
+                      : t('twoFactor.methodTotp'),
+                })
+              : t('twoFactor.statusOff')}
           </span>
         </div>
       </div>
@@ -141,11 +167,16 @@ export const TwoFactorPanel: React.FC = () => {
         <div className={panel.actions}>
           {enabled ? (
             <button type="button" className={panel.secondaryBtn} onClick={() => setView('disable')}>
-              <ShieldOff size={14} /> Turn off 2FA
+              <ShieldOff size={14} /> {t('twoFactor.turnOff')}
             </button>
           ) : (
-            <button type="button" className={panel.primaryBtn} onClick={() => setView('choose')} disabled={!status}>
-              <ShieldCheck size={14} /> Set up 2FA
+            <button
+              type="button"
+              className={panel.primaryBtn}
+              onClick={() => setView('choose')}
+              disabled={!status}
+            >
+              <ShieldCheck size={14} /> {t('twoFactor.setUp')}
             </button>
           )}
         </div>
@@ -163,8 +194,8 @@ export const TwoFactorPanel: React.FC = () => {
             >
               <Smartphone size={16} className={panel.panelIcon} />
               <div>
-                <h4 className={styles.radioTitle}>Authenticator app</h4>
-                <p className={styles.radioDesc}>Google Authenticator, 1Password, Authy… Works offline.</p>
+                <h4 className={styles.radioTitle}>{t('twoFactor.authApp')}</h4>
+                <p className={styles.radioDesc}>{t('twoFactor.authAppDesc')}</p>
               </div>
             </div>
             <div
@@ -175,23 +206,25 @@ export const TwoFactorPanel: React.FC = () => {
               onClick={() => {
                 if (busy) return;
                 if (!emailReady) {
-                  toast('Verify a recovery email below before using email codes.', 'info');
+                  toast(t('twoFactor.verifyEmailFirst'), 'info');
                   return;
                 }
                 void startSetup('email');
               }}
-              onKeyDown={(event) => event.key === 'Enter' && !busy && emailReady && void startSetup('email')}
+              onKeyDown={(event) =>
+                event.key === 'Enter' && !busy && emailReady && void startSetup('email')
+              }
             >
               <Mail size={16} className={panel.panelIcon} />
               <div>
-                <h4 className={styles.radioTitle}>Email code</h4>
-                <p className={styles.radioDesc}>We email a code each time you sign in. Needs a verified recovery email.</p>
+                <h4 className={styles.radioTitle}>{t('twoFactor.emailCode')}</h4>
+                <p className={styles.radioDesc}>{t('twoFactor.emailCodeDesc')}</p>
               </div>
             </div>
           </div>
           <div className={panel.actions}>
             <button type="button" className={panel.secondaryBtn} onClick={() => setView('idle')}>
-              Cancel
+              {t('twoFactor.cancel')}
             </button>
           </div>
         </>
@@ -201,9 +234,7 @@ export const TwoFactorPanel: React.FC = () => {
         <form onSubmit={enable} className={panel.stack}>
           {setup.method === 'totp' ? (
             <>
-              <p className={panel.panelDesc}>
-                Scan this QR code with your authenticator app (Google Authenticator, 1Password, Authy…).
-              </p>
+              <p className={panel.panelDesc}>{t('twoFactor.scanQr')}</p>
               {setup.provisioning_uri && (
                 <div className={panel.qrWrap}>
                   <QRCodeSVG value={setup.provisioning_uri} size={176} marginSize={2} />
@@ -211,22 +242,22 @@ export const TwoFactorPanel: React.FC = () => {
               )}
               {setup.provisioning_uri && (
                 <a className={panel.muted} href={setup.provisioning_uri}>
-                  On this device? Open directly in an authenticator app
+                  {t('twoFactor.openDirect')}
                 </a>
               )}
               {setup.totp_secret && (
                 <details className={panel.manualEntry}>
-                  <summary>Can&rsquo;t scan? Enter the code manually</summary>
+                  <summary>{t('twoFactor.cantScan')}</summary>
                   <div className={panel.codeBlock}>{setup.totp_secret}</div>
                 </details>
               )}
             </>
           ) : (
-            <p className={panel.panelDesc}>Enter the 6-digit code we just sent to your email.</p>
+            <p className={panel.panelDesc}>{t('twoFactor.enterEmailCode')}</p>
           )}
           <div className={panel.inlineForm}>
             <div className={panel.field}>
-              <label htmlFor="tfa-confirm-code">6-digit code</label>
+              <label htmlFor="tfa-confirm-code">{t('twoFactor.sixDigit')}</label>
               <input
                 id="tfa-confirm-code"
                 className={styles.input}
@@ -239,10 +270,15 @@ export const TwoFactorPanel: React.FC = () => {
               />
             </div>
             <button type="submit" className={panel.primaryBtn} disabled={busy || code.length !== 6}>
-              Turn on 2FA
+              {t('twoFactor.turnOn')}
             </button>
-            <button type="button" className={panel.secondaryBtn} onClick={() => setView('idle')} disabled={busy}>
-              Cancel
+            <button
+              type="button"
+              className={panel.secondaryBtn}
+              onClick={() => setView('idle')}
+              disabled={busy}
+            >
+              {t('twoFactor.cancel')}
             </button>
           </div>
         </form>
@@ -253,24 +289,23 @@ export const TwoFactorPanel: React.FC = () => {
           <div className={panel.warn}>
             <AlertTriangle size={16} />
             <div>
-              <strong>Save recovery codes</strong>
-              <span>
-                Save these one-time recovery codes now. Each works once if you lose access to your second factor, and
-                they will not be shown again.
-              </span>
+              <strong>{t('twoFactor.saveCodes')}</strong>
+              <span>{t('twoFactor.saveCodesDesc')}</span>
             </div>
           </div>
           <div className={panel.recoveryGrid}>
             {recoveryCodes.map((item) => (
-              <div key={item} className={panel.codeBlock}>{item}</div>
+              <div key={item} className={panel.codeBlock}>
+                {item}
+              </div>
             ))}
           </div>
           <div className={panel.actions}>
             <button type="button" className={panel.secondaryBtn} onClick={copyCodes}>
-              <Copy size={14} /> Copy
+              <Copy size={14} /> {t('twoFactor.copy')}
             </button>
             <button type="button" className={panel.secondaryBtn} onClick={downloadCodes}>
-              <Download size={14} /> Download
+              <Download size={14} /> {t('twoFactor.download')}
             </button>
             <button
               type="button"
@@ -280,7 +315,7 @@ export const TwoFactorPanel: React.FC = () => {
                 setView('idle');
               }}
             >
-              I have saved them
+              {t('twoFactor.saved')}
             </button>
           </div>
         </div>
@@ -288,12 +323,10 @@ export const TwoFactorPanel: React.FC = () => {
 
       {view === 'disable' && (
         <form onSubmit={disable} className={panel.stack}>
-          <p className={panel.panelDesc}>
-            Confirm with your password and a current 2FA code. Accounts that sign in with Google only need the code.
-          </p>
+          <p className={panel.panelDesc}>{t('twoFactor.disableDesc')}</p>
           <div className={panel.inlineForm}>
             <div className={panel.field}>
-              <label htmlFor="tfa-disable-password">Password</label>
+              <label htmlFor="tfa-disable-password">{t('twoFactor.password')}</label>
               <input
                 id="tfa-disable-password"
                 type="password"
@@ -304,7 +337,7 @@ export const TwoFactorPanel: React.FC = () => {
               />
             </div>
             <div className={panel.field}>
-              <label htmlFor="tfa-disable-code">2FA code</label>
+              <label htmlFor="tfa-disable-code">{t('twoFactor.code2fa')}</label>
               <input
                 id="tfa-disable-code"
                 className={styles.input}
@@ -316,11 +349,20 @@ export const TwoFactorPanel: React.FC = () => {
             </div>
           </div>
           <div className={panel.actions}>
-            <button type="submit" className={panel.primaryBtn} disabled={busy || (!password && code.length !== 6)}>
-              Turn off 2FA
+            <button
+              type="submit"
+              className={panel.primaryBtn}
+              disabled={busy || (!password && code.length !== 6)}
+            >
+              {t('twoFactor.turnOff')}
             </button>
-            <button type="button" className={panel.secondaryBtn} onClick={() => setView('idle')} disabled={busy}>
-              Cancel
+            <button
+              type="button"
+              className={panel.secondaryBtn}
+              onClick={() => setView('idle')}
+              disabled={busy}
+            >
+              {t('twoFactor.cancel')}
             </button>
           </div>
         </form>
@@ -329,18 +371,22 @@ export const TwoFactorPanel: React.FC = () => {
       {/* Recovery email */}
       <div className={panel.row}>
         <div className={panel.rowMain}>
-          <span className={panel.rowTitle}>Recovery email</span>
+          <span className={panel.rowTitle}>{t('twoFactor.recoveryEmail')}</span>
           <span className={panel.rowMeta}>
             {status?.recovery_email
-              ? `${status.recovery_email} · ${emailReady ? 'verified' : 'not verified'}`
-              : 'Not set'}
+              ? `${status.recovery_email} · ${emailReady ? t('twoFactor.verified') : t('twoFactor.notVerified')}`
+              : t('twoFactor.notSet')}
           </span>
         </div>
       </div>
       {awaitingEmailCode ? (
         <form onSubmit={verifyRecoveryEmail} className={panel.inlineForm}>
           <div className={panel.field}>
-            <label htmlFor="recovery-email-code">Code sent to {recoveryEmail || 'your recovery email'}</label>
+            <label htmlFor="recovery-email-code">
+              {t('twoFactor.codeSentTo', {
+                email: recoveryEmail || t('twoFactor.yourRecoveryEmail'),
+              })}
+            </label>
             <input
               id="recovery-email-code"
               className={styles.input}
@@ -350,17 +396,28 @@ export const TwoFactorPanel: React.FC = () => {
               onChange={(event) => setRecoveryEmailCode(event.target.value.replace(/\D/g, ''))}
             />
           </div>
-          <button type="submit" className={panel.primaryBtn} disabled={busy || recoveryEmailCode.length < 6}>
-            Verify
+          <button
+            type="submit"
+            className={panel.primaryBtn}
+            disabled={busy || recoveryEmailCode.length < 6}
+          >
+            {t('twoFactor.verify')}
           </button>
-          <button type="button" className={panel.secondaryBtn} onClick={() => setAwaitingEmailCode(false)} disabled={busy}>
-            Cancel
+          <button
+            type="button"
+            className={panel.secondaryBtn}
+            onClick={() => setAwaitingEmailCode(false)}
+            disabled={busy}
+          >
+            {t('twoFactor.cancel')}
           </button>
         </form>
       ) : (
         <form onSubmit={saveRecoveryEmail} className={panel.inlineForm}>
           <div className={panel.field}>
-            <label htmlFor="recovery-email">{status?.recovery_email ? 'Change recovery email' : 'Add a recovery email'}</label>
+            <label htmlFor="recovery-email">
+              {status?.recovery_email ? t('twoFactor.changeRecovery') : t('twoFactor.addRecovery')}
+            </label>
             <input
               id="recovery-email"
               type="email"
@@ -370,8 +427,12 @@ export const TwoFactorPanel: React.FC = () => {
               onChange={(event) => setRecoveryEmail(event.target.value)}
             />
           </div>
-          <button type="submit" className={panel.secondaryBtn} disabled={busy || !recoveryEmail.includes('@')}>
-            Send code
+          <button
+            type="submit"
+            className={panel.secondaryBtn}
+            disabled={busy || !recoveryEmail.includes('@')}
+          >
+            {t('twoFactor.sendCode')}
           </button>
         </form>
       )}

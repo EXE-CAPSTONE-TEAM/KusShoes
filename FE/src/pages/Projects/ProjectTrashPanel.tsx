@@ -1,6 +1,7 @@
 import React, { useEffect, useState } from 'react';
 import * as Dialog from '@radix-ui/react-dialog';
 import { RotateCcw, Trash2, X } from 'lucide-react';
+import { useTranslation } from 'react-i18next';
 import { api, type PortalProject, type TrashedProject } from '../../api/client';
 import { ConfirmDialog } from '../../components/ConfirmDialog/ConfirmDialog';
 import { useToast } from '../../context/ToastContext';
@@ -25,6 +26,7 @@ export const ProjectTrashPanel: React.FC<ProjectTrashPanelProps> = ({
   onOpenChange,
   onRestored,
 }) => {
+  const { t } = useTranslation('projects');
   const { toast } = useToast();
   const [items, setItems] = useState<TrashedProject[]>([]);
   const [loading, setLoading] = useState(false);
@@ -39,7 +41,7 @@ export const ProjectTrashPanel: React.FC<ProjectTrashPanelProps> = ({
       setItems((prev) => (cursor ? [...prev, ...page.items] : page.items));
       setNextCursor(page.hasNext ? page.nextCursor : null);
     } catch (caught) {
-      toast(caught instanceof Error ? caught.message : 'Unable to load trash.', 'error');
+      toast(caught instanceof Error ? caught.message : t('panel.loadFailed'), 'error');
     } finally {
       setLoading(false);
     }
@@ -57,9 +59,9 @@ export const ProjectTrashPanel: React.FC<ProjectTrashPanelProps> = ({
       const restored = await api.restoreProject(project.id);
       setItems((prev) => prev.filter((p) => p.id !== project.id));
       onRestored(restored);
-      toast(`"${restored.name}" restored.`);
+      toast(t('panel.restoredNamed', { name: restored.name }));
     } catch (caught) {
-      toast(caught instanceof Error ? caught.message : 'Unable to restore project.', 'error');
+      toast(caught instanceof Error ? caught.message : t('panel.restoreFailed'), 'error');
     } finally {
       setBusyId(null);
     }
@@ -73,9 +75,9 @@ export const ProjectTrashPanel: React.FC<ProjectTrashPanelProps> = ({
     try {
       await api.permanentlyDeleteProject(id);
       setItems((prev) => prev.filter((p) => p.id !== id));
-      toast('Project permanently deleted.');
+      toast(t('panel.permDeleted'));
     } catch (caught) {
-      toast(caught instanceof Error ? caught.message : 'Unable to delete project.', 'error');
+      toast(caught instanceof Error ? caught.message : t('panel.deleteFailed'), 'error');
     } finally {
       setBusyId(null);
     }
@@ -89,18 +91,18 @@ export const ProjectTrashPanel: React.FC<ProjectTrashPanelProps> = ({
         <Dialog.Portal>
           <Dialog.Overlay className={styles.overlay} />
           <Dialog.Content className={styles.content}>
-            <Dialog.Close className={styles.closeIcon} aria-label="Close">
+            <Dialog.Close className={styles.closeIcon} aria-label={t('panel.close')}>
               <X size={18} />
             </Dialog.Close>
-            <Dialog.Title className={styles.title}>Trash</Dialog.Title>
+            <Dialog.Title className={styles.title}>{t('panel.title')}</Dialog.Title>
             <Dialog.Description className={styles.description}>
-              Deleted projects stay here for 30 days before they&apos;re permanently removed.
+              {t('panel.desc')}
             </Dialog.Description>
 
             {loading && items.length === 0 ? (
-              <LoadingDots center label="Loading trashed projects…" />
+              <LoadingDots center label={t('panel.loading')} />
             ) : items.length === 0 ? (
-              <p className={styles.muted}>Trash is empty.</p>
+              <p className={styles.muted}>{t('panel.empty')}</p>
             ) : (
               <ul className={styles.list}>
                 {items.map((project) => (
@@ -110,8 +112,8 @@ export const ProjectTrashPanel: React.FC<ProjectTrashPanelProps> = ({
                       <span className={styles.rowName}>{project.name}</span>
                       <span className={styles.rowMeta}>
                         {daysUntil(project.purgeAt) <= 0
-                          ? 'Purging soon'
-                          : `${daysUntil(project.purgeAt)} day${daysUntil(project.purgeAt) === 1 ? '' : 's'} left to restore`}
+                          ? t('panel.purgingSoon')
+                          : t('panel.daysLeft', { count: daysUntil(project.purgeAt) })}
                       </span>
                     </div>
                     <div className={styles.rowActions}>
@@ -120,17 +122,17 @@ export const ProjectTrashPanel: React.FC<ProjectTrashPanelProps> = ({
                         className={styles.restoreBtn}
                         disabled={busyId === project.id}
                         onClick={() => void handleRestore(project)}
-                        title="Restore"
+                        title={t('panel.restore')}
                       >
                         <RotateCcw size={15} />
-                        Restore
+                        {t('panel.restore')}
                       </button>
                       <button
                         type="button"
                         className={styles.purgeBtn}
                         disabled={busyId === project.id}
                         onClick={() => setConfirmPurgeId(project.id)}
-                        title="Delete forever"
+                        title={t('panel.deleteForever')}
                       >
                         <Trash2 size={15} />
                       </button>
@@ -147,7 +149,7 @@ export const ProjectTrashPanel: React.FC<ProjectTrashPanelProps> = ({
                 onClick={() => void load(nextCursor)}
                 disabled={loading}
               >
-                {loading ? 'Loading…' : 'Load more'}
+                {loading ? t('panel.loadingShort') : t('panel.loadMore')}
               </button>
             )}
           </Dialog.Content>
@@ -159,9 +161,10 @@ export const ProjectTrashPanel: React.FC<ProjectTrashPanelProps> = ({
         onOpenChange={(next) => {
           if (!next) setConfirmPurgeId(null);
         }}
-        title="Delete permanently?"
-        description={`"${purgeTarget?.name ?? ''}" and its scanned assets will be permanently removed. This cannot be undone.`}
-        confirmLabel="Delete forever"
+        title={t('panel.confirmTitle')}
+        description={t('panel.confirmDesc', { name: purgeTarget?.name ?? '' })}
+        cancelLabel={t('panel.cancel')}
+        confirmLabel={t('panel.deleteForever')}
         onConfirm={() => void handlePurge()}
       />
     </>

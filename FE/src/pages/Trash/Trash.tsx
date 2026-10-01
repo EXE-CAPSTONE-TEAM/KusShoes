@@ -1,6 +1,7 @@
 import React, { useEffect, useState } from 'react';
 import { Trash2, RotateCcw, Clock } from 'lucide-react';
 import { motion, AnimatePresence } from 'framer-motion';
+import { useTranslation } from 'react-i18next';
 import { ConfirmDialog } from '../../components/ConfirmDialog/ConfirmDialog';
 import { useToast } from '../../context/ToastContext';
 import { api, type PortalProject, type TrashedProject } from '../../api/client';
@@ -10,9 +11,9 @@ interface TrashProps {
   setProjects: React.Dispatch<React.SetStateAction<PortalProject[]>>;
 }
 
-function formatDate(value: string): string {
+function formatDate(value: string, unknown: string): string {
   const date = new Date(value);
-  if (Number.isNaN(date.getTime())) return 'Unknown';
+  if (Number.isNaN(date.getTime())) return unknown;
   return date.toLocaleDateString(undefined, { year: 'numeric', month: 'short', day: 'numeric' });
 }
 
@@ -25,6 +26,7 @@ function daysUntil(value: string): number {
 }
 
 export const Trash: React.FC<TrashProps> = ({ setProjects }) => {
+  const { t } = useTranslation('projects');
   const { toast } = useToast();
   const [items, setItems] = useState<TrashedProject[]>([]);
   const [loading, setLoading] = useState(true);
@@ -45,7 +47,7 @@ export const Trash: React.FC<TrashProps> = ({ setProjects }) => {
         } while (cursor && !cancelled);
         if (!cancelled) setItems(allItems);
       } catch (caught) {
-        if (!cancelled) toast(caught instanceof Error ? caught.message : 'Unable to load trash.', 'error');
+        if (!cancelled) toast(caught instanceof Error ? caught.message : t('page.loadFailed'), 'error');
       } finally {
         if (!cancelled) setLoading(false);
       }
@@ -53,7 +55,7 @@ export const Trash: React.FC<TrashProps> = ({ setProjects }) => {
     return () => {
       cancelled = true;
     };
-  }, [toast]);
+  }, [toast, t]);
 
   const handleRestore = async (id: string) => {
     setRestoringId(id);
@@ -61,9 +63,9 @@ export const Trash: React.FC<TrashProps> = ({ setProjects }) => {
       const restored = await api.restoreProject(id);
       setItems((prev) => prev.filter((item) => item.id !== id));
       setProjects((prev) => [restored, ...prev.filter((p) => p.id !== restored.id)]);
-      toast('Project restored.');
+      toast(t('page.restored'));
     } catch (caught) {
-      toast(caught instanceof Error ? caught.message : 'Unable to restore project.', 'error');
+      toast(caught instanceof Error ? caught.message : t('page.restoreFailed'), 'error');
     } finally {
       setRestoringId(null);
     }
@@ -76,9 +78,9 @@ export const Trash: React.FC<TrashProps> = ({ setProjects }) => {
       await api.permanentlyDeleteProject(id);
       setItems((prev) => prev.filter((item) => item.id !== id));
       setConfirmPermanentId(null);
-      toast('Project permanently deleted.');
+      toast(t('page.permDeleted'));
     } catch (caught) {
-      toast(caught instanceof Error ? caught.message : 'Unable to delete project.', 'error');
+      toast(caught instanceof Error ? caught.message : t('page.deleteFailed'), 'error');
     }
   };
 
@@ -86,13 +88,13 @@ export const Trash: React.FC<TrashProps> = ({ setProjects }) => {
     <div className={styles.container}>
       <div className={styles.header}>
         <div>
-          <h1 className={styles.title}>Trash</h1>
-          <p className={styles.subtitle}>Deleted projects are kept for 30 days before being permanently removed.</p>
+          <h1 className={styles.title}>{t('page.title')}</h1>
+          <p className={styles.subtitle}>{t('page.subtitle')}</p>
         </div>
       </div>
 
       {loading ? (
-        <p className={styles.loadingText}>Loading trash…</p>
+        <p className={styles.loadingText}>{t('page.loading')}</p>
       ) : items.length === 0 ? (
         <motion.div
           className={`${styles.emptyState} glass-panel`}
@@ -102,9 +104,9 @@ export const Trash: React.FC<TrashProps> = ({ setProjects }) => {
           <div className={styles.emptyIconRing}>
             <Trash2 size={30} />
           </div>
-          <h2 className={styles.emptyTitle}>Trash is empty</h2>
+          <h2 className={styles.emptyTitle}>{t('page.emptyTitle')}</h2>
           <p className={styles.emptyText}>
-            Deleted projects show up here for 30 days before they&apos;re permanently removed.
+            {t('page.emptyText')}
           </p>
         </motion.div>
       ) : (
@@ -112,10 +114,10 @@ export const Trash: React.FC<TrashProps> = ({ setProjects }) => {
           <table className={styles.table}>
             <thead>
               <tr>
-                <th>Project Name</th>
-                <th>Deleted On</th>
-                <th>Purge Date</th>
-                <th>Actions</th>
+                <th>{t('page.colName')}</th>
+                <th>{t('page.colDeleted')}</th>
+                <th>{t('page.colPurge')}</th>
+                <th>{t('page.colActions')}</th>
               </tr>
             </thead>
             <tbody>
@@ -137,13 +139,13 @@ export const Trash: React.FC<TrashProps> = ({ setProjects }) => {
                           <span className={styles.rowProjectName}>{item.name}</span>
                         </div>
                       </td>
-                      <td data-label="Deleted On">{formatDate(item.deletedAt)}</td>
-                      <td data-label="Purge Date">
+                      <td data-label={t('page.colDeleted')}>{formatDate(item.deletedAt, t('page.unknown'))}</td>
+                      <td data-label={t('page.colPurge')}>
                         <span
                           className={`${styles.daysLeftBadge} ${daysLeft <= 7 ? styles.daysLeftUrgent : styles.daysLeftNormal}`}
                         >
                           <Clock size={11} style={{ marginRight: 4, verticalAlign: '-1px' }} />
-                          {daysLeft === 0 ? 'Purging soon' : `${daysLeft} day${daysLeft === 1 ? '' : 's'} left`}
+                          {daysLeft === 0 ? t('page.purgingSoon') : t('page.daysLeft', { count: daysLeft })}
                         </span>
                       </td>
                       <td>
@@ -154,14 +156,14 @@ export const Trash: React.FC<TrashProps> = ({ setProjects }) => {
                             disabled={restoringId === item.id}
                           >
                             <RotateCcw size={14} />
-                            Restore
+                            {t('page.restore')}
                           </button>
                           <button
                             className={`${styles.actionBtn} ${styles.deleteBtn}`}
                             onClick={() => setConfirmPermanentId(item.id)}
                           >
                             <Trash2 size={14} />
-                            Delete Forever
+                            {t('page.deleteForever')}
                           </button>
                         </div>
                       </td>
@@ -177,9 +179,10 @@ export const Trash: React.FC<TrashProps> = ({ setProjects }) => {
       <ConfirmDialog
         open={confirmPermanentId !== null}
         onOpenChange={(open) => !open && setConfirmPermanentId(null)}
-        title="Permanently delete this project?"
-        description="This will permanently remove the project and its scanned assets. This action cannot be undone."
-        confirmLabel="Delete Forever"
+        title={t('page.confirmTitle')}
+        description={t('page.confirmDesc')}
+        cancelLabel={t('page.cancel')}
+        confirmLabel={t('page.deleteForever')}
         onConfirm={confirmPermanentDelete}
       />
     </div>

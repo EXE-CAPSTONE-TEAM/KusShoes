@@ -21,6 +21,7 @@ import {
   Footprints,
 } from 'lucide-react';
 import { motion, AnimatePresence } from 'framer-motion';
+import { useTranslation } from 'react-i18next';
 import { Select } from '../../components/Select/Select';
 import { ConfirmDialog } from '../../components/ConfirmDialog/ConfirmDialog';
 import { useToast } from '../../context/ToastContext';
@@ -36,11 +37,7 @@ import { ProjectsEmptyState } from './ProjectsEmptyState';
 import { ProjectTrashPanel } from './ProjectTrashPanel';
 import styles from './Projects.module.css';
 
-const SORT_OPTIONS = [
-  { value: 'date', label: 'Last edited' },
-  { value: 'name', label: 'Alphabetical (A-Z)' },
-  { value: 'size', label: 'File Size' },
-];
+const SORT_VALUES: ProjectSortBy[] = ['date', 'name', 'size'];
 
 const BASE_MODEL_ALL = 'All';
 
@@ -64,7 +61,7 @@ interface ProjectsProps {
 }
 
 function isProjectSortBy(value: string): value is ProjectSortBy {
-  return SORT_OPTIONS.some((option) => option.value === value);
+  return SORT_VALUES.some((option) => option === value);
 }
 
 export const Projects: React.FC<ProjectsProps> = ({
@@ -74,7 +71,9 @@ export const Projects: React.FC<ProjectsProps> = ({
   initialFilter,
   loading = false,
 }) => {
+  const { t } = useTranslation('projects');
   const { toast } = useToast();
+  const sortOptions = SORT_VALUES.map((value) => ({ value, label: t(`list.sort.${value}`) }));
   // View states
   const [viewMode, setViewMode] = useState<ProjectViewMode>('grid');
   const [searchTerm, setSearchTerm] = useState('');
@@ -145,10 +144,10 @@ export const Projects: React.FC<ProjectsProps> = ({
       a.localeCompare(b),
     );
     return [
-      { value: BASE_MODEL_ALL, label: 'All base models' },
+      { value: BASE_MODEL_ALL, label: t('list.allBaseModels') },
       ...unique.map((model) => ({ value: model, label: model })),
     ];
-  }, [projects]);
+  }, [projects, t]);
 
   // Filter & Sort
   const filteredAndSortedProjects = useMemo(() => {
@@ -187,8 +186,8 @@ export const Projects: React.FC<ProjectsProps> = ({
     const deletedIds = ids.filter((_, index) => results[index].status === 'fulfilled');
     setProjects((prev) => prev.filter((p) => !deletedIds.includes(p.id)));
     setSelectedIds(ids.filter((id) => !deletedIds.includes(id)));
-    if (deletedIds.length) toast(`Deleted ${deletedIds.length} project(s).`);
-    if (deletedIds.length !== ids.length) toast('Some projects could not be deleted.', 'error');
+    if (deletedIds.length) toast(t('list.deletedCount', { count: deletedIds.length }));
+    if (deletedIds.length !== ids.length) toast(t('list.someNotDeleted'), 'error');
   };
 
   // Single Delete
@@ -204,9 +203,9 @@ export const Projects: React.FC<ProjectsProps> = ({
       setProjects((prev) => prev.filter((p) => p.id !== projectId));
       setActiveMenuId(null);
       setConfirmDeleteId(null);
-      toast('Project moved to trash.');
+      toast(t('list.movedToTrash'));
     } catch (caught) {
-      toast(caught instanceof Error ? caught.message : 'Unable to delete project.', 'error');
+      toast(caught instanceof Error ? caught.message : t('list.deleteFailed'), 'error');
     }
   };
 
@@ -219,9 +218,9 @@ export const Projects: React.FC<ProjectsProps> = ({
         setProjects((prev) => prev.map((p) => (p.id === updated.id ? updated : p)));
         setEditingProject(null);
         setRenameValue('');
-        toast('Project renamed.');
+        toast(t('list.renamed'));
       } catch (caught) {
-        toast(caught instanceof Error ? caught.message : 'Unable to rename project.', 'error');
+        toast(caught instanceof Error ? caught.message : t('list.renameFailed'), 'error');
       }
     }
   };
@@ -260,11 +259,11 @@ export const Projects: React.FC<ProjectsProps> = ({
       const file = e.target.files[0];
       e.target.value = '';
       if (!inferSourceModelContentType(file.name)) {
-        toast('Only .glb and .gltf files are supported for the 3D model.', 'error');
+        toast(t('list.onlyGlb'), 'error');
         return;
       }
       if (file.size > SOURCE_MODEL_MAX_BYTES) {
-        toast('This file is larger than the 500 MB limit for a 3D model.', 'error');
+        toast(t('list.tooLarge'), 'error');
         return;
       }
       setUploadedFile(file);
@@ -279,13 +278,13 @@ export const Projects: React.FC<ProjectsProps> = ({
   const handleWizardNext = () => {
     if (wizardStep === 1) {
       if (wizardSource === 'upload' && !uploadedFile) {
-        toast('Choose a .glb or .gltf file to upload.', 'error');
+        toast(t('list.chooseFile'), 'error');
         return;
       }
       setWizardStep(2);
     } else if (wizardStep === 2) {
       if (!wizardName.trim()) {
-        toast('Please enter a project name.', 'error');
+        toast(t('list.enterName'), 'error');
         return;
       }
       setWizardStep(3);
@@ -339,9 +338,9 @@ export const Projects: React.FC<ProjectsProps> = ({
       const launch = await api.createEditorLaunch(project.id);
       setWizardLaunchStep('launched');
       window.location.assign(launch.desktopUrl);
-      toast(`Project "${project.name}" was created. Opening KusStudio...`);
+      toast(t('list.created', { name: project.name }));
     } catch (caught) {
-      const message = caught instanceof Error ? caught.message : 'Something went wrong.';
+      const message = caught instanceof Error ? caught.message : t('list.genericError');
       setWizardLaunchStep('error');
       setWizardFailedStep(step);
       setWizardError(message);
@@ -358,9 +357,9 @@ export const Projects: React.FC<ProjectsProps> = ({
   const wizardLaunchOrder: WizardLaunchStep[] =
     wizardSource === 'upload' ? ['creating', 'uploading', 'launching'] : ['creating', 'launching'];
   const wizardLaunchLabels: Partial<Record<WizardLaunchStep, string>> = {
-    creating: `Create project "${wizardName.trim() || 'Untitled'}"`,
-    uploading: `Upload ${uploadedFile?.name ?? 'the 3D model'}`,
-    launching: 'Open KusStudio Desktop',
+    creating: t('list.stepCreate', { name: wizardName.trim() || t('list.untitled') }),
+    uploading: t('list.stepUpload', { file: uploadedFile?.name ?? t('list.modelFallback') }),
+    launching: t('list.stepLaunch'),
   };
   const wizardCurrentIndex =
     wizardLaunchStep === 'launched'
@@ -400,7 +399,7 @@ export const Projects: React.FC<ProjectsProps> = ({
             <div className={styles.fabInfo}>
               <CheckSquare size={16} className={styles.fabSelectedIcon} />
               <span>
-                <strong>{selectedIds.length}</strong> selected
+                <strong>{selectedIds.length}</strong> {t('list.selected')}
               </span>
             </div>
 
@@ -409,7 +408,7 @@ export const Projects: React.FC<ProjectsProps> = ({
                 className={`${styles.fabBtn} ${styles.fabDeleteBtn}`}
                 onClick={handleBulkDelete}
               >
-                Delete
+                {t('list.delete')}
               </button>
 
               <div className={styles.fabDivider} />
@@ -417,7 +416,7 @@ export const Projects: React.FC<ProjectsProps> = ({
               <button
                 className={styles.fabCancelBtn}
                 onClick={() => setSelectedIds([])}
-                title="Cancel selection"
+                title={t('list.cancelSelection')}
               >
                 <X size={16} />
               </button>
@@ -430,8 +429,8 @@ export const Projects: React.FC<ProjectsProps> = ({
       <div className={styles.headerBlock}>
         <div className={styles.headerTop}>
           <div className={styles.headerTitleGroup}>
-            <h1 className={styles.title}>Projects</h1>
-            <span className={styles.headerCount} aria-label={`${projects.length} projects`}>
+            <h1 className={styles.title}>{t('list.title')}</h1>
+            <span className={styles.headerCount} aria-label={t('list.countAria', { count: projects.length })}>
               {projects.length}
             </span>
           </div>
@@ -441,8 +440,8 @@ export const Projects: React.FC<ProjectsProps> = ({
               <Search size={14} className={styles.searchIcon} />
               <input
                 type="search"
-                placeholder="Search projects…"
-                aria-label="Search projects"
+                placeholder={t('list.searchPlaceholder')}
+                aria-label={t('list.searchAria')}
                 value={searchTerm}
                 onChange={(e) => setSearchTerm(e.target.value)}
                 className={styles.searchInput}
@@ -450,21 +449,21 @@ export const Projects: React.FC<ProjectsProps> = ({
             </label>
             <button className={styles.newProjectBtn} onClick={() => setIsCreateWizardOpen(true)}>
               <Plus size={14} />
-              New project
+              {t('list.newProject')}
             </button>
           </div>
         </div>
 
         {/* Row 2: All (+ Trash), base-model filter, sort, view toggle */}
         <div className={styles.toolbar}>
-          <nav className={styles.tabs} role="tablist" aria-label="Project filters">
+          <nav className={styles.tabs} role="tablist" aria-label={t('list.filtersAria')}>
             <button
               type="button"
               role="tab"
               aria-selected
               className={styles.tab}
             >
-              All
+              {t('list.all')}
             </button>
             <span className={styles.tabsDivider} aria-hidden="true" />
             <button
@@ -475,7 +474,7 @@ export const Projects: React.FC<ProjectsProps> = ({
               onClick={() => setIsTrashOpen(true)}
             >
               <Trash2 size={14} />
-              Trash
+              {t('list.trash')}
             </button>
           </nav>
 
@@ -484,7 +483,7 @@ export const Projects: React.FC<ProjectsProps> = ({
               value={baseModelFilter}
               onValueChange={setBaseModelFilter}
               options={baseModelOptions}
-              ariaLabel="Filter by base model"
+              ariaLabel={t('list.filterBaseAria')}
               triggerClassName={styles.controlTrigger}
             />
             <Select
@@ -492,15 +491,15 @@ export const Projects: React.FC<ProjectsProps> = ({
               onValueChange={(value) => {
                 if (isProjectSortBy(value)) setSortBy(value);
               }}
-              options={SORT_OPTIONS}
-              ariaLabel="Sort projects"
+              options={sortOptions}
+              ariaLabel={t('list.sortAria')}
               triggerClassName={styles.controlTrigger}
             />
-            <div className={styles.segmented} role="group" aria-label="View mode">
+            <div className={styles.segmented} role="group" aria-label={t('list.viewMode')}>
               <button
                 type="button"
                 aria-pressed={viewMode === 'grid'}
-                aria-label="Grid view"
+                aria-label={t('list.gridView')}
                 className={styles.segmentBtn}
                 onClick={() => setViewMode('grid')}
               >
@@ -509,7 +508,7 @@ export const Projects: React.FC<ProjectsProps> = ({
               <button
                 type="button"
                 aria-pressed={viewMode === 'list'}
-                aria-label="List view"
+                aria-label={t('list.listView')}
                 className={styles.segmentBtn}
                 onClick={() => setViewMode('list')}
               >
@@ -554,7 +553,7 @@ export const Projects: React.FC<ProjectsProps> = ({
                       <button
                         className={`${styles.cardCheck} ${isSelected ? styles.cardCheckActive : ''}`}
                         onClick={(e) => handleSelectCard(e, proj.id)}
-                        aria-label={isSelected ? 'Deselect project' : 'Select project'}
+                        aria-label={isSelected ? t('list.deselect') : t('list.select')}
                       >
                         {isSelected && <Check size={11} strokeWidth={3} />}
                       </button>
@@ -571,14 +570,14 @@ export const Projects: React.FC<ProjectsProps> = ({
                         {proj.isLocked && (
                           <span
                             className={styles.lockedBadge}
-                            title="Read-only after a plan downgrade. Upgrade to edit it again."
+                            title={t('list.readOnlyHint')}
                           >
-                            <Lock size={11} /> Read-only
+                            <Lock size={11} /> {t('list.readOnly')}
                           </span>
                         )}
                         <div className={styles.cardHeaderMenu}>
                           <button
-                            aria-label="More actions"
+                            aria-label={t('list.moreActions')}
                             className={styles.optionsBtn}
                             onClick={(e) => {
                               e.stopPropagation(); // Avoid opening project details.
@@ -595,14 +594,14 @@ export const Projects: React.FC<ProjectsProps> = ({
                             >
                               <button
                                 disabled={proj.isLocked}
-                                title={proj.isLocked ? 'Read-only project' : undefined}
+                                title={proj.isLocked ? t('list.readOnlyProject') : undefined}
                                 onClick={() => {
                                   setEditingProject(proj);
                                   setRenameValue(proj.name);
                                   setActiveMenuId(null);
                                 }}
                               >
-                                <Edit3 size={14} /> Rename
+                                <Edit3 size={14} /> {t('list.rename')}
                               </button>
                               <button
                                 onClick={() => {
@@ -610,7 +609,7 @@ export const Projects: React.FC<ProjectsProps> = ({
                                   onViewDetails(proj.id, 'share');
                                 }}
                               >
-                                <Share2 size={14} /> Share Link
+                                <Share2 size={14} /> {t('list.shareLink')}
                               </button>
 
                               <div className={styles.dropdownDivider} />
@@ -620,10 +619,10 @@ export const Projects: React.FC<ProjectsProps> = ({
                               <button
                                 className={styles.dropdownDeleteBtn}
                                 disabled={proj.isLocked}
-                                title={proj.isLocked ? 'Read-only project' : undefined}
+                                title={proj.isLocked ? t('list.readOnlyProject') : undefined}
                                 onClick={() => handleDelete(proj.id)}
                               >
-                                <Trash2 size={14} /> Delete
+                                <Trash2 size={14} /> {t('list.delete')}
                               </button>
                             </div>
                           )}
@@ -633,7 +632,7 @@ export const Projects: React.FC<ProjectsProps> = ({
                       <div className={styles.metaRowCompact}>
                         <Footprints size={12} className={styles.metaIcon} />
                         <span className={styles.metaText} title={formatDateTime(proj.updatedAt)}>
-                          {proj.baseModel} · Edited {formatRelativeTime(proj.updatedAt)}
+                          {proj.baseModel} · {t('list.edited', { time: formatRelativeTime(proj.updatedAt) })}
                         </span>
                       </div>
 
@@ -642,13 +641,13 @@ export const Projects: React.FC<ProjectsProps> = ({
                           <span
                             className={styles.swatch}
                             style={{ backgroundColor: proj.colorCode }}
-                            title={`Primary color ${proj.colorCode}`}
+                            title={t('list.primaryColor', { color: proj.colorCode })}
                           />
                           {proj.accentColor && (
                             <span
                               className={styles.swatch}
                               style={{ backgroundColor: proj.accentColor }}
-                              title={`Accent color ${proj.accentColor}`}
+                              title={t('list.accentColor', { color: proj.accentColor })}
                             />
                           )}
                         </div>
@@ -675,11 +674,11 @@ export const Projects: React.FC<ProjectsProps> = ({
                     )}
                   </button>
                 </th>
-                <th>Project Name</th>
-                <th>Base Sneaker</th>
-                <th>Source Device</th>
-                <th>File Size</th>
-                <th>Actions</th>
+                <th>{t('list.colName')}</th>
+                <th>{t('list.colBase')}</th>
+                <th>{t('list.colDevice')}</th>
+                <th>{t('list.colSize')}</th>
+                <th>{t('list.colActions')}</th>
               </tr>
             </thead>
             <tbody>
@@ -713,9 +712,9 @@ export const Projects: React.FC<ProjectsProps> = ({
                               {proj.isLocked && (
                                 <span
                                   className={styles.lockedBadge}
-                                  title="Read-only after a plan downgrade. Upgrade to edit it again."
+                                  title={t('list.readOnlyHint')}
                                 >
-                                  <Lock size={11} /> Read-only
+                                  <Lock size={11} /> {t('list.readOnly')}
                                 </span>
                               )}
                             </span>
@@ -723,7 +722,7 @@ export const Projects: React.FC<ProjectsProps> = ({
                               className={styles.rowProjectUpdated}
                               title={formatDateTime(proj.updatedAt)}
                             >
-                              Updated {formatRelativeTime(proj.updatedAt)}
+                              {t('list.updated', { time: formatRelativeTime(proj.updatedAt) })}
                             </span>
                           </div>
                         </div>
@@ -740,7 +739,7 @@ export const Projects: React.FC<ProjectsProps> = ({
                         <div className={styles.rowActions}>
                           <button
                             onClick={() => onViewDetails(proj.id, 'share')}
-                            title="Share link"
+                            title={t('list.shareLinkTitle')}
                           >
                             <Share2 size={14} />
                           </button>
@@ -748,7 +747,7 @@ export const Projects: React.FC<ProjectsProps> = ({
                             className={styles.rowDeleteBtn}
                             disabled={proj.isLocked}
                             onClick={() => handleDelete(proj.id)}
-                            title={proj.isLocked ? 'Read-only project' : 'Delete project'}
+                            title={proj.isLocked ? t('list.readOnlyProject') : t('list.deleteProject')}
                           >
                             <Trash2 size={14} />
                           </button>
@@ -768,7 +767,7 @@ export const Projects: React.FC<ProjectsProps> = ({
         <div className={styles.pagination}>
           <button className={styles.pageBtn} disabled>
             <ArrowLeft size={16} />
-            <span>Previous</span>
+            <span>{t('list.previous')}</span>
           </button>
 
           <div className={styles.pageNumbers}>
@@ -776,7 +775,7 @@ export const Projects: React.FC<ProjectsProps> = ({
           </div>
 
           <button className={styles.pageBtn} disabled>
-            <span>Next</span>
+            <span>{t('list.next')}</span>
             <ArrowRight size={16} />
           </button>
         </div>
@@ -809,7 +808,7 @@ export const Projects: React.FC<ProjectsProps> = ({
             initial={{ opacity: 0, scale: 0.95 }}
             animate={{ opacity: 1, scale: 1 }}
           >
-            <h3 className={styles.modalTitle}>Rename Project</h3>
+            <h3 className={styles.modalTitle}>{t('list.renameTitle')}</h3>
             <form onSubmit={handleRenameSubmit} className={styles.modalForm}>
               <input
                 type="text"
@@ -824,10 +823,10 @@ export const Projects: React.FC<ProjectsProps> = ({
                   className="btn-outline"
                   onClick={() => setEditingProject(null)}
                 >
-                  Cancel
+                  {t('list.cancel')}
                 </button>
                 <button type="submit" className="btn-neon-orange">
-                  Save changes
+                  {t('list.saveChanges')}
                 </button>
               </div>
             </form>
@@ -846,8 +845,8 @@ export const Projects: React.FC<ProjectsProps> = ({
             {/* Header */}
             <div className={styles.wizardHeader}>
               <div>
-                <span className={styles.wizardProgressText}>Step {wizardStep} of 3</span>
-                <h3 className={styles.wizardTitle}>Create New Project</h3>
+                <span className={styles.wizardProgressText}>{t('wizard.stepOf', { step: wizardStep })}</span>
+                <h3 className={styles.wizardTitle}>{t('wizard.title')}</h3>
               </div>
               <button className={styles.wizardCloseBtn} onClick={handleCloseWizard}>
                 <X size={18} />
@@ -867,9 +866,9 @@ export const Projects: React.FC<ProjectsProps> = ({
               {/* STEP 1: Select model source */}
               {wizardStep === 1 && (
                 <div className={styles.wizardStepContent}>
-                  <h4 className={styles.wizardStepSubTitle}>Select 3D Mesh Source</h4>
+                  <h4 className={styles.wizardStepSubTitle}>{t('wizard.sourceTitle')}</h4>
                   <p className={styles.wizardStepDesc}>
-                    Start from an empty project, or upload your own .glb / .gltf model.
+                    {t('wizard.sourceDesc')}
                   </p>
 
                   {/* Select sources tab */}
@@ -879,23 +878,21 @@ export const Projects: React.FC<ProjectsProps> = ({
                       onClick={() => setWizardSource('blank')}
                     >
                       <Plus size={16} />
-                      <span>Start empty</span>
+                      <span>{t('wizard.startEmpty')}</span>
                     </button>
                     <button
                       className={`${styles.sourceTab} ${wizardSource === 'upload' ? styles.sourceTabActive : ''}`}
                       onClick={() => setWizardSource('upload')}
                     >
                       <Laptop size={16} />
-                      <span>Upload a model</span>
+                      <span>{t('wizard.uploadModel')}</span>
                     </button>
                   </div>
 
                   {/* Sources Content */}
                   {wizardSource === 'blank' ? (
                     <div className={styles.sourceNote}>
-                      Creates an empty project and opens it in KusStudio, where you pick the base
-                      shoe. Phone scans don&apos;t need this wizard: each scan from the KusShoes app
-                      already shows up in your projects.
+                      {t('wizard.blankNote')}
                     </div>
                   ) : (
                     <div
@@ -908,7 +905,7 @@ export const Projects: React.FC<ProjectsProps> = ({
                         onChange={handleFileChange}
                         accept={SOURCE_MODEL_ACCEPT}
                         style={{ display: 'none' }}
-                        aria-label="Upload 3D model file"
+                        aria-label={t('wizard.uploadAria')}
                       />
                       <Laptop size={32} className={styles.uploadZoneIcon} />
                       {uploadedFile ? (
@@ -917,13 +914,13 @@ export const Projects: React.FC<ProjectsProps> = ({
                           <span className={styles.uploadedFileSize}>
                             {(uploadedFile.size / (1024 * 1024)).toFixed(2)} MB
                           </span>
-                          <span className={styles.uploadZoneTipActive}>Click to change file</span>
+                          <span className={styles.uploadZoneTipActive}>{t('wizard.clickChange')}</span>
                         </div>
                       ) : (
                         <div>
-                          <span className={styles.uploadZoneTitle}>Drag & Drop or browse file</span>
+                          <span className={styles.uploadZoneTitle}>{t('wizard.dragDrop')}</span>
                           <span className={styles.uploadZoneTip}>
-                            Supports .glb and .gltf models. Max 500 MB.
+                            {t('wizard.uploadTip')}
                           </span>
                         </div>
                       )}
@@ -935,31 +932,31 @@ export const Projects: React.FC<ProjectsProps> = ({
               {/* STEP 2: Metadata details */}
               {wizardStep === 2 && (
                 <div className={styles.wizardStepContent}>
-                  <h4 className={styles.wizardStepSubTitle}>Project Configuration</h4>
+                  <h4 className={styles.wizardStepSubTitle}>{t('wizard.configTitle')}</h4>
                   <p className={styles.wizardStepDesc}>
-                    Give your sneaker project a title, set the base style, and privacy levels.
+                    {t('wizard.configDesc')}
                   </p>
 
                   <div className={styles.wizardForm}>
                     <div className={styles.wizardInputGroup}>
-                      <label>Project Name</label>
+                      <label>{t('wizard.nameLabel')}</label>
                       <input
                         type="text"
                         value={wizardName}
                         onChange={(e) => setWizardName(e.target.value)}
                         className={styles.modalInput}
-                        placeholder="Air Force 1 Custom Classic"
+                        placeholder={t('wizard.namePlaceholder')}
                       />
                     </div>
 
                     <div className={styles.wizardInputGroup}>
-                      <label>Base Model Name</label>
+                      <label>{t('wizard.baseLabel')}</label>
                       <input
                         type="text"
                         value={wizardBaseModel}
                         onChange={(e) => setWizardBaseModel(e.target.value)}
                         className={styles.modalInput}
-                        placeholder="Nike Air Force 1"
+                        placeholder={t('wizard.basePlaceholder')}
                       />
                     </div>
                   </div>
@@ -969,18 +966,16 @@ export const Projects: React.FC<ProjectsProps> = ({
               {/* STEP 3: Create the project and open it in KusStudio */}
               {wizardStep === 3 && (
                 <div className={styles.wizardStepContent}>
-                  <h4 className={styles.wizardStepSubTitle}>Launch Design Studio</h4>
+                  <h4 className={styles.wizardStepSubTitle}>{t('wizard.launchTitle')}</h4>
                   <p className={styles.wizardStepDesc}>
-                    The project is created on the server
-                    {wizardSource === 'upload' ? ', your 3D model is uploaded to it,' : ''} and
-                    KusStudio Desktop opens with a one-time launch ticket.
+                    {t(wizardSource === 'upload' ? 'wizard.launchDescUpload' : 'wizard.launchDesc')}
                   </p>
 
                   <div className={styles.desktopConnectionWrapper}>
                     <div className={styles.mockupConnectionBox}>
                       <div className={`${styles.mockNode} ${styles.mockNodeActive}`}>
                         {wizardSource === 'upload' ? <Laptop size={20} /> : <Plus size={20} />}
-                        <span>{wizardSource === 'upload' ? 'Your model' : 'Web project'}</span>
+                        <span>{wizardSource === 'upload' ? t('wizard.nodeModel') : t('wizard.nodeWeb')}</span>
                       </div>
 
                       <div className={styles.mockLineConnection}>
@@ -1018,8 +1013,7 @@ export const Projects: React.FC<ProjectsProps> = ({
                       {wizardLaunchStep === 'launched' && (
                         <div className={styles.connLogItem}>
                           <span>
-                            KusStudio did not open? Install the desktop app, then use "Launch
-                            KusStudio" on the project page.
+                            {t('wizard.launchHint')}
                           </span>
                         </div>
                       )}
@@ -1034,23 +1028,23 @@ export const Projects: React.FC<ProjectsProps> = ({
               {wizardStep > 1 && !wizardCreatedProject ? (
                 <button className="btn-outline" onClick={handleWizardBack} disabled={wizardBusy}>
                   <ArrowLeft size={16} />
-                  <span>Back</span>
+                  <span>{t('wizard.back')}</span>
                 </button>
               ) : (
                 <button className="btn-outline" onClick={handleCloseWizard} disabled={wizardBusy}>
-                  {wizardCreatedProject ? 'Close' : 'Cancel'}
+                  {wizardCreatedProject ? t('wizard.close') : t('wizard.cancel')}
                 </button>
               )}
 
               {wizardStep < 3 ? (
                 <button className="btn-neon-orange" onClick={handleWizardNext}>
-                  <span>Next Step</span>
+                  <span>{t('wizard.nextStep')}</span>
                   <ArrowRight size={16} />
                 </button>
               ) : wizardLaunchStep === 'launched' ? (
                 <button className="btn-neon-orange" onClick={resetWizard}>
                   <Check size={18} />
-                  <span>Done</span>
+                  <span>{t('wizard.done')}</span>
                 </button>
               ) : (
                 <button
@@ -1064,16 +1058,16 @@ export const Projects: React.FC<ProjectsProps> = ({
                       <RefreshCw className={styles.spinIcon} size={18} />
                       <span>
                         {wizardLaunchStep === 'creating'
-                          ? 'Creating project...'
+                          ? t('wizard.creating')
                           : wizardLaunchStep === 'uploading'
-                            ? 'Uploading model...'
-                            : 'Opening KusStudio...'}
+                            ? t('wizard.uploading')
+                            : t('wizard.opening')}
                       </span>
                     </>
                   ) : (
                     <>
                       <Laptop size={18} />
-                      <span>{wizardLaunchStep === 'error' ? 'Retry' : 'Create & Launch KusStudio'}</span>
+                      <span>{wizardLaunchStep === 'error' ? t('wizard.retry') : t('wizard.createLaunch')}</span>
                     </>
                   )}
                 </button>
@@ -1086,18 +1080,20 @@ export const Projects: React.FC<ProjectsProps> = ({
       <ConfirmDialog
         open={confirmDeleteId !== null}
         onOpenChange={(open) => !open && setConfirmDeleteId(null)}
-        title="Delete this project?"
-        description="It will move to Trash and can be restored within 30 days. After that it's permanently removed."
-        confirmLabel="Move to Trash"
+        title={t('list.confirmDeleteTitle')}
+        description={t('list.confirmDeleteDesc')}
+        confirmLabel={t('list.moveToTrash')}
+        cancelLabel={t('list.cancel')}
         onConfirm={confirmSingleDelete}
       />
 
       <ConfirmDialog
         open={confirmBulkDeleteOpen}
         onOpenChange={setConfirmBulkDeleteOpen}
-        title={`Delete ${selectedIds.length} selected projects?`}
-        description="They will move to Trash and can be restored within 30 days. After that they're permanently removed."
-        confirmLabel="Move to Trash"
+        title={t('list.bulkDeleteTitle', { count: selectedIds.length })}
+        description={t('list.bulkDeleteDesc')}
+        confirmLabel={t('list.moveToTrash')}
+        cancelLabel={t('list.cancel')}
         onConfirm={confirmBulkDelete}
       />
 

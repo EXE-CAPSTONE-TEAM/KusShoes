@@ -1,5 +1,6 @@
 import React, { useEffect, useState } from 'react';
 import { Loader2 } from 'lucide-react';
+import { useTranslation } from 'react-i18next';
 import { api } from '../../api/client';
 import { LoginBackdrop } from './LoginBackdrop';
 import styles from './Login.module.css';
@@ -13,6 +14,7 @@ interface GoogleCallbackProps {
  * URL fragment (never sent to a server, unlike a query string) — see completeGoogleLogin.
  */
 export const GoogleCallback: React.FC<GoogleCallbackProps> = ({ setPage }) => {
+  const { t } = useTranslation('account');
   const [error, setError] = useState<string | null>(null);
 
   useEffect(() => {
@@ -30,7 +32,7 @@ export const GoogleCallback: React.FC<GoogleCallbackProps> = ({ setPage }) => {
       return;
     }
     if (!accessToken) {
-      setError('Google sign-in did not complete. Please try again.');
+      setError('googleCallback.failed');
       return;
     }
     api.completeGoogleLogin(accessToken, tokenType);
@@ -43,13 +45,13 @@ export const GoogleCallback: React.FC<GoogleCallbackProps> = ({ setPage }) => {
       <div style={{ position: 'relative', zIndex: 1, display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 16, textAlign: 'center' }}>
         {error ? (
           <>
-            <p>{error}</p>
-            <button className="btn-neon-orange" onClick={() => setPage('login')}>Back to sign in</button>
+            <p>{t(error)}</p>
+            <button className="btn-neon-orange" onClick={() => setPage('login')}>{t('googleCallback.back')}</button>
           </>
         ) : (
           <>
             <Loader2 size={28} className={styles.spin} />
-            <p>Completing sign-in…</p>
+            <p>{t('googleCallback.completing')}</p>
           </>
         )}
       </div>

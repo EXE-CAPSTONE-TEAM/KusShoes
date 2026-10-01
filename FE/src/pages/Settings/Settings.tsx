@@ -731,7 +731,7 @@ export const Settings: React.FC<SettingsProps> = ({
                 type="button"
                 className={styles.modalCloseBtn}
                 onClick={() => setIsAvatarModalOpen(false)}
-                aria-label="Close dialog"
+                aria-label={t('settings.closeDialog')}
               >
                 <X size={16} />
               </button>

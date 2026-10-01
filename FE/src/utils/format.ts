@@ -1,4 +1,9 @@
+import i18n from '../i18n';
+
 /** Small display helpers shared by the portal and admin pages. */
+
+const t = (key: string, options?: Record<string, unknown>) => i18n.t(`account:format.${key}`, options);
+const dateLocale = () => (i18n.language?.startsWith('vi') ? 'vi-VN' : undefined);
 
 export function formatVnd(amount: number): string {
   return `${amount.toLocaleString('vi-VN')} VNĐ`;
@@ -19,12 +24,12 @@ export function formatBytes(bytes: number): string {
 
 export function formatDate(value: string | Date | null | undefined): string {
   if (!value) return '—';
-  return new Date(value).toLocaleDateString();
+  return new Date(value).toLocaleDateString(dateLocale());
 }
 
 export function formatDateTime(value: string | Date | null | undefined): string {
   if (!value) return '—';
-  return new Date(value).toLocaleString();
+  return new Date(value).toLocaleString(dateLocale());
 }
 
 /**
@@ -46,10 +51,10 @@ export function formatRelativeTime(
   if (!Number.isFinite(ms)) return '—';
 
   const diffSec = Math.floor((now.getTime() - ms) / 1000);
-  if (diffSec < 60) return 'just now';
+  if (diffSec < 60) return t('justNow');
 
   const diffMin = Math.floor(diffSec / 60);
-  if (diffMin < 60) return `${diffMin}m ago`;
+  if (diffMin < 60) return t('minAgo', { n: diffMin });
 
   const startOfDay = (d: Date) => new Date(d.getFullYear(), d.getMonth(), d.getDate()).getTime();
   const dayDiff = Math.round((startOfDay(now) - startOfDay(date)) / 86_400_000);
@@ -58,13 +63,13 @@ export function formatRelativeTime(
   // is dayDiff 0 but could read almost 0h — diffMin already handled the sub-hour case above).
   if (dayDiff === 0) {
     const diffHour = Math.floor(diffMin / 60);
-    return `${diffHour}h ago`;
+    return t('hourAgo', { n: diffHour });
   }
-  if (dayDiff === 1) return 'yesterday';
-  if (dayDiff < 7) return `${dayDiff}d ago`;
+  if (dayDiff === 1) return t('yesterday');
+  if (dayDiff < 7) return t('dayAgo', { n: dayDiff });
 
   const sameYear = date.getFullYear() === now.getFullYear();
-  return date.toLocaleDateString('en-US', {
+  return date.toLocaleDateString(dateLocale() ?? 'en-US', {
     month: 'short',
     day: 'numeric',
     year: sameYear ? undefined : 'numeric',
@@ -73,7 +78,7 @@ export function formatRelativeTime(
 
 /** "Chrome on Windows"-style label from a raw user agent, falling back to the raw text. */
 export function describeUserAgent(userAgent: string | null): string {
-  if (!userAgent) return 'Unknown device';
+  if (!userAgent) return t('unknownDevice');
   const browser = /Edg\//.test(userAgent)
     ? 'Edge'
     : /Chrome\//.test(userAgent)
@@ -94,6 +99,6 @@ export function describeUserAgent(userAgent: string | null): string {
           : /Linux/.test(userAgent)
             ? 'Linux'
             : null;
-  if (browser && os) return `${browser} on ${os}`;
+  if (browser && os) return t('browserOn', { browser, os });
   return browser ?? os ?? userAgent.slice(0, 40);
 }

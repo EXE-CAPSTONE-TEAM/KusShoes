@@ -2,6 +2,8 @@ import React, { useEffect, useMemo, useState } from 'react';
 import * as Dialog from '@radix-ui/react-dialog';
 import { ArrowRight, Download, Plus, X } from 'lucide-react';
 import { motion } from 'framer-motion';
+import { useTranslation, Trans } from 'react-i18next';
+import type { TFunction } from 'i18next';
 import {
   api,
   type PortalProject,
@@ -19,10 +21,10 @@ interface DashboardProps {
   projects: PortalProject[];
 }
 
-function greetingForHour(hour: number): string {
-  if (hour < 12) return 'Good morning';
-  if (hour < 18) return 'Good afternoon';
-  return 'Good evening';
+function greetingForHour(hour: number, t: TFunction): string {
+  if (hour < 12) return t('dashboard.morning');
+  if (hour < 18) return t('dashboard.afternoon');
+  return t('dashboard.evening');
 }
 
 function formatTierLabel(tier: string): string {
@@ -38,21 +40,25 @@ const UsageMetric: React.FC<{
   used: number;
   max: number | null;
   percent: number;
-}> = ({ label, used, max, percent }) => (
-  <div className={styles.usageMetric}>
-    <div className={styles.usageMetricRow}>
-      <span>{label}</span>
-      <span className={styles.usageMetricValue}>
-        {max != null ? `${used} of ${max}` : `${used} used`}
-      </span>
+}> = ({ label, used, max, percent }) => {
+  const { t } = useTranslation('account');
+  return (
+    <div className={styles.usageMetric}>
+      <div className={styles.usageMetricRow}>
+        <span>{label}</span>
+        <span className={styles.usageMetricValue}>
+          {max != null ? t('dashboard.usedOf', { used, max }) : t('dashboard.usedOnly', { used })}
+        </span>
+      </div>
+      <div className={styles.usageBarBg}>
+        <div className={styles.usageBarFill} style={{ width: `${max != null ? percent : 0}%` }} />
+      </div>
     </div>
-    <div className={styles.usageBarBg}>
-      <div className={styles.usageBarFill} style={{ width: `${max != null ? percent : 0}%` }} />
-    </div>
-  </div>
-);
+  );
+};
 
 export const Dashboard: React.FC<DashboardProps> = ({ setActivePage, projects }) => {
+  const { t } = useTranslation('account');
   const desktopRelease = useDesktopRelease();
   const [profile, setProfile] = useState<UserProfile | null>(null);
   const [usage, setUsage] = useState<Usage | null>(null);
@@ -72,8 +78,8 @@ export const Dashboard: React.FC<DashboardProps> = ({ setActivePage, projects })
 
   const displayName = profile
     ? `${profile.first_name} ${profile.last_name}`.trim() || profile.username
-    : 'Creator';
-  const greeting = greetingForHour(new Date().getHours());
+    : t('dashboard.creator');
+  const greeting = greetingForHour(new Date().getHours(), t);
 
   const sortedByRecent = useMemo(
     () =>
@@ -120,14 +126,12 @@ export const Dashboard: React.FC<DashboardProps> = ({ setActivePage, projects })
           <p className={styles.statusLine}>
             <span className={styles.statusDot} />
             {lockedCount > 0 ? (
-              <>
-                <span className={styles.statusStrong}>{lockedCount}</span> project
-                {lockedCount === 1 ? '' : 's'} read-only after your plan changed
-              </>
+              <>{t('dashboard.readOnly', { count: lockedCount })}</>
             ) : (
               <>
-                All projects synced <span className={styles.statusDivider}>·</span>{' '}
-                <span className={styles.statusStrong}>{projects.length}</span> total
+                {t('dashboard.allSynced')} <span className={styles.statusDivider}>·</span>{' '}
+                <span className={styles.statusStrong}>{projects.length}</span>{' '}
+                {t('dashboard.total')}
               </>
             )}
           </p>
@@ -137,57 +141,67 @@ export const Dashboard: React.FC<DashboardProps> = ({ setActivePage, projects })
               onClick={() => setActivePage('projects?new=true')}
             >
               <Plus size={16} />
-              <span>New project</span>
+              <span>{t('dashboard.newProject')}</span>
             </button>
             <Dialog.Root>
               <Dialog.Trigger asChild>
                 <button className={styles.secondaryBtn}>
                   <Download size={16} />
-                  <span>Get Desktop App</span>
+                  <span>{t('dashboard.getDesktop')}</span>
                 </button>
               </Dialog.Trigger>
               <Dialog.Portal>
                 <Dialog.Overlay className={styles.dialogOverlay} />
                 <Dialog.Content className={styles.dialogContent}>
                   <Dialog.Title className={styles.dialogTitle}>
-                    KusShoes Editor
+                    {t('dashboard.editorTitle')}
                     {desktopRelease?.status === 'available' ? ` v${desktopRelease.version}` : ''}
                   </Dialog.Title>
                   <Dialog.Description className={styles.dialogDescription}>
-                    Edit, bake and export your scanned shoes on Windows 10/11 (64-bit).
+                    {t('dashboard.editorDesc')}
                   </Dialog.Description>
                   {desktopRelease?.status === 'none' ? (
-                    <p className={styles.dialogDescription}>
-                      The first installer is being prepared. Please check back soon.
-                    </p>
+                    <p className={styles.dialogDescription}>{t('dashboard.installerSoon')}</p>
                   ) : (
                     <ol className={styles.dialogSteps}>
-                      <li>Click <strong>Download</strong> and open the downloaded file.</li>
                       <li>
-                        If Windows shows &ldquo;Windows protected your PC&rdquo;, click{' '}
-                        <strong>More info</strong> then <strong>Run anyway</strong>.
+                        <Trans
+                          t={t}
+                          i18nKey="dashboard.step1"
+                          components={{ strong: <strong /> }}
+                        />
                       </li>
                       <li>
-                        Click <strong>Install</strong>. On first launch the app downloads its 3D
-                        renderer (about 400&nbsp;MB) and shows the progress.
+                        <Trans
+                          t={t}
+                          i18nKey="dashboard.step2"
+                          components={{ strong: <strong /> }}
+                        />
+                      </li>
+                      <li>
+                        <Trans
+                          t={t}
+                          i18nKey="dashboard.step3"
+                          components={{ strong: <strong /> }}
+                        />
                       </li>
                     </ol>
                   )}
                   <div className={styles.dialogActions}>
                     <Dialog.Close asChild>
-                      <button className={styles.secondaryBtn}>Cancel</button>
+                      <button className={styles.secondaryBtn}>{t('dashboard.cancel')}</button>
                     </Dialog.Close>
                     {desktopRelease?.status !== 'none' ? (
                       <Dialog.Close asChild>
                         <a className={styles.primaryBtn} href={DESKTOP_INSTALLER_URL} download>
                           <Download size={16} />
-                          <span>Download for Windows</span>
+                          <span>{t('dashboard.downloadWin')}</span>
                         </a>
                       </Dialog.Close>
                     ) : null}
                   </div>
                   <Dialog.Close asChild>
-                    <button className={styles.dialogCloseIcon} aria-label="Close">
+                    <button className={styles.dialogCloseIcon} aria-label={t('dashboard.close')}>
                       <X size={16} />
                     </button>
                   </Dialog.Close>
@@ -199,7 +213,7 @@ export const Dashboard: React.FC<DashboardProps> = ({ setActivePage, projects })
 
         {spotlightProject && (
           <div className={styles.heroRight}>
-            <div className={styles.spotlightLabel}>Last edited</div>
+            <div className={styles.spotlightLabel}>{t('dashboard.lastEdited')}</div>
             <div
               className={styles.spotlightThumb}
               role="button"
@@ -216,12 +230,14 @@ export const Dashboard: React.FC<DashboardProps> = ({ setActivePage, projects })
                   {spotlightProject.name}
                 </div>
                 <div className={styles.spotlightSub} title={formatDate(spotlightProject.updatedAt)}>
-                  {spotlightProject.baseModel} · Edited{' '}
-                  {formatRelativeTime(spotlightProject.updatedAt)}
+                  {spotlightProject.baseModel} ·{' '}
+                  {t('dashboard.editedAgo', {
+                    when: formatRelativeTime(spotlightProject.updatedAt),
+                  })}
                 </div>
               </div>
               <div className={styles.spotlightActions}>
-                <div className={styles.swatchRow} title="Colorway">
+                <div className={styles.swatchRow} title={t('dashboard.colorway')}>
                   <span
                     className={styles.swatch}
                     style={{ backgroundColor: spotlightProject.colorCode }}
@@ -234,7 +250,7 @@ export const Dashboard: React.FC<DashboardProps> = ({ setActivePage, projects })
                   )}
                 </div>
                 <button className={styles.openBtn} onClick={() => openProject(spotlightProject.id)}>
-                  <span>Open project</span>
+                  <span>{t('dashboard.openProject')}</span>
                   <ArrowRight size={12} />
                 </button>
               </div>
@@ -247,9 +263,9 @@ export const Dashboard: React.FC<DashboardProps> = ({ setActivePage, projects })
       {gridProjects.length > 0 && (
         <section>
           <div className={styles.sectionHeaderRow}>
-            <h2 className={styles.sectionTitle}>Continue designing</h2>
+            <h2 className={styles.sectionTitle}>{t('dashboard.continue')}</h2>
             <button className={styles.viewAllLink} onClick={() => setActivePage('projects')}>
-              <span>View all projects</span>
+              <span>{t('dashboard.viewAll')}</span>
               <ArrowRight size={12} />
             </button>
           </div>
@@ -272,9 +288,10 @@ export const Dashboard: React.FC<DashboardProps> = ({ setActivePage, projects })
                     {proj.name}
                   </div>
                   <div className={styles.projectMeta} title={formatDate(proj.updatedAt)}>
-                    {proj.baseModel} · Edited {formatRelativeTime(proj.updatedAt)}
+                    {proj.baseModel} ·{' '}
+                    {t('dashboard.editedAgo', { when: formatRelativeTime(proj.updatedAt) })}
                   </div>
-                  <div className={styles.swatchRow} title="Colorway">
+                  <div className={styles.swatchRow} title={t('dashboard.colorway')}>
                     <span className={styles.swatch} style={{ backgroundColor: proj.colorCode }} />
                     {proj.accentColor && (
                       <span
@@ -294,11 +311,11 @@ export const Dashboard: React.FC<DashboardProps> = ({ setActivePage, projects })
       <div className={styles.bottomGrid}>
         <div className={styles.activityCard}>
           <div className={styles.cardHeader}>
-            <h3 className={styles.cardTitle}>Recent activity</h3>
+            <h3 className={styles.cardTitle}>{t('dashboard.recent')}</h3>
           </div>
           <div className={styles.activityList}>
             {recentActivity.length === 0 && (
-              <div className={styles.emptyState}>No projects yet — create one to get started.</div>
+              <div className={styles.emptyState}>{t('dashboard.noProjects')}</div>
             )}
             {recentActivity.map((proj) => (
               <div key={proj.id} className={styles.activityRow}>
@@ -309,12 +326,12 @@ export const Dashboard: React.FC<DashboardProps> = ({ setActivePage, projects })
                       {proj.name}
                     </div>
                     <div className={styles.activityTime} title={formatDate(proj.updatedAt)}>
-                      Edited {formatRelativeTime(proj.updatedAt)}
+                      {t('dashboard.editedAgo', { when: formatRelativeTime(proj.updatedAt) })}
                     </div>
                   </div>
                 </div>
                 <button className={styles.activityOpenBtn} onClick={() => openProject(proj.id)}>
-                  Open
+                  {t('dashboard.open')}
                 </button>
               </div>
             ))}
@@ -328,43 +345,45 @@ export const Dashboard: React.FC<DashboardProps> = ({ setActivePage, projects })
                 <div className={styles.usageTier}>{formatTierLabel(usage?.tier ?? 'free')}</div>
                 {subscription?.expires_at && (
                   <div className={styles.usageRenew}>
-                    Renews {formatDate(subscription.expires_at)}
+                    {t('dashboard.renews', { date: formatDate(subscription.expires_at) })}
                   </div>
                 )}
               </div>
               <button className={styles.manageLink} onClick={() => setActivePage('billing')}>
-                Manage plan
+                {t('dashboard.managePlan')}
               </button>
             </div>
             <div className={styles.usageDivider} />
             <div className={styles.usageMetrics}>
               <UsageMetric
-                label="Projects"
+                label={t('dashboard.projects')}
                 used={projectsUsed}
                 max={maxProjects}
                 percent={projectPercent}
               />
               <UsageMetric
-                label="Exports this month"
+                label={t('dashboard.exportsMonth')}
                 used={exportsUsed}
                 max={maxExports}
                 percent={exportPercent}
               />
               <div className={styles.usageMetric}>
                 <div className={styles.usageMetricRow}>
-                  <span>Storage</span>
+                  <span>{t('dashboard.storage')}</span>
                   {/* No plan has a storage limit, so this is a used-only figure without a bar. */}
                   <span className={styles.usageMetricValue}>
-                    {usage ? `${formatBytes(usage.storage_used_bytes)} used` : '—'}
+                    {usage
+                      ? t('dashboard.storageUsed', { size: formatBytes(usage.storage_used_bytes) })
+                      : '—'}
                   </span>
                 </div>
               </div>
             </div>
           </div>
           <div className={styles.usageFooter}>
-            <span>Need extra quota?</span>
+            <span>{t('dashboard.needQuota')}</span>
             <button className={styles.manageLink} onClick={() => setActivePage('billing')}>
-              Add-on options
+              {t('dashboard.addOns')}
             </button>
           </div>
         </div>

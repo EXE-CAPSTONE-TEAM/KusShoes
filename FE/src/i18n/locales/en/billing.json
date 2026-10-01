@@ -1,0 +1,166 @@
+{
+  "invoices": {
+    "vatIncl": "incl. {{rate}}% VAT",
+    "title": "Invoices & Receipts",
+    "colInvoice": "Invoice",
+    "colDate": "Date",
+    "colAmount": "Amount",
+    "colStatus": "Status",
+    "colReceipt": "Receipt",
+    "loading": "Loading invoices…",
+    "empty": "No invoices found.",
+    "downloadPdf": "Download receipt PDF",
+    "receiptLater": "Receipt issued upon successful payment",
+    "opening": "Opening…"
+  },
+  "meter": {
+    "of": "{{used}} of {{limit}}",
+    "unlimited": "{{used}} (unlimited)"
+  },
+  "momo": {
+    "soonTitle": "MoMo payment is coming soon",
+    "soon": "MoMo (Coming Soon)",
+    "pay": "Pay via MoMo"
+  },
+  "toast": {
+    "loadError": "Unable to load billing data.",
+    "checkoutError": "Unable to start checkout.",
+    "creditCheckoutError": "Unable to start Credit checkout.",
+    "couponInvalid": "This code is not valid for any plan.",
+    "couponApplied": "Coupon applied. Discounted prices are shown on eligible plans.",
+    "receiptError": "Unable to download the receipt.",
+    "cancelRequested": "Cancellation requested. Access remains active until the period ends.",
+    "cancelError": "Unable to cancel subscription."
+  },
+  "plan": {
+    "bakePriority": "{{priority}} bake priority",
+    "unlimitedProjects": "Unlimited projects",
+    "activeProjects": "{{count}} active projects",
+    "unlimitedExports": "Unlimited exports",
+    "exportsPerMonth": "{{count}} exports / month",
+    "formats": "Formats: {{formats}}",
+    "noFormats": "none",
+    "current": "Current Plan",
+    "choose": "Choose Plan",
+    "standardCapabilities": "Standard shoe design capabilities"
+  },
+  "status": {
+    "free": "Free plan",
+    "grace": "Grace period",
+    "active": "Active subscription"
+  },
+  "headerStatus": {
+    "expired": "expired",
+    "cancelled": "cancelled",
+    "past_due": "past_due",
+    "pending": "pending"
+  },
+  "subStatus": {
+    "active": "ACTIVE",
+    "grace": "GRACE",
+    "expired": "EXPIRED",
+    "cancelled": "CANCELLED",
+    "past_due": "PAST_DUE",
+    "pending": "PENDING"
+  },
+  "title": "Billing & Subscriptions",
+  "changePlan": "Change plan",
+  "upgradePlan": "Upgrade plan",
+  "banner": {
+    "cancelled": "The payment was cancelled. You have not been charged.",
+    "checking": "Confirming your payment with the provider…",
+    "paid": "Payment confirmed. Your plan is active and your receipt is available below.",
+    "failed": "The payment did not go through. You have not been charged.",
+    "timeout": "Payment confirmation is taking longer than usual. Please refresh in a moment.",
+    "grace": "Your plan has expired. Editing remains active until {{date}}, but exports are paused. Renew to keep full access."
+  },
+  "card": {
+    "subscription": "Active Subscription"
+  },
+  "meta": {
+    "period": "Period status",
+    "expires": "Expires {{date}}",
+    "continuous": "Continuous access (Free)",
+    "provider": "Payment provider",
+    "providerPaid": "PayOS / MoMo (pay-per-cycle, no card stored)",
+    "providerFree": "None — Free plan, nothing to charge",
+    "exports": "Included exports",
+    "perMonth": "{{count}} / month"
+  },
+  "comparePlans": "Compare & Change Plan",
+  "cancelPlan": "Cancel plan",
+  "cancelNote": "Access remains active until billing period ends",
+  "invoiceStatus": {
+    "Paid": "Paid",
+    "Pending": "Pending",
+    "Failed": "Failed",
+    "Cancelled": "Cancelled",
+    "Refunded": "Refunded"
+  },
+  "ledger": {
+    "title": "Scan Credit Transactions",
+    "purchased": "Purchased",
+    "expires": "Expires"
+  },
+  "ledgerStatus": {
+    "available": "available",
+    "used": "used",
+    "expired": "expired"
+  },
+  "quota": {
+    "title": "Cloud Quotas",
+    "loading": "Loading quotas…",
+    "projects": "Active projects",
+    "exports": "Monthly exports",
+    "ai": "AI generation credits",
+    "currentPlan": "Current plan: <strong>{{plan}}</strong>",
+    "status": "Status: <strong>{{status}}</strong>"
+  },
+  "credits": {
+    "title": "Scan Credits",
+    "available": "Available",
+    "used": "Used",
+    "expired": "Expired",
+    "nextExpiry": "Next expiry",
+    "purchased": "Purchased this cycle",
+    "priceNote": "{{price}} per extra scan. Credits remain valid for 12 months.",
+    "buyHint": "Available on active Basic/Pro plans, up to per-cycle limit",
+    "buy": "Buy Credit",
+    "loading": "Loading scan credits…"
+  },
+  "profile": {
+    "title": "Billing Profile",
+    "owner": "Owner",
+    "email": "Email",
+    "code": "Account code",
+    "status": "Account status"
+  },
+  "buy": {
+    "title": "Buy Scan Credits",
+    "note": "{{price}} per scan, up to {{remaining}} more this cycle. Credits expire in 12 months and are non-refundable once used.",
+    "quantity": "Quantity",
+    "total": "Total: {{total}}"
+  },
+  "close": "Close",
+  "connecting": "Connecting…",
+  "payos": "Pay via PayOS",
+  "compare": {
+    "title": "Compare Cloud Plans",
+    "recommended": "RECOMMENDED",
+    "vatIncl": "Incl. {{rate}}% VAT",
+    "freeTier": "Free tier"
+  },
+  "promo": {
+    "placeholder": "Enter promo code",
+    "label": "Promo code",
+    "checking": "Checking…",
+    "apply": "Apply code",
+    "remove": "Remove {{code}}"
+  },
+  "cancelDialog": {
+    "title": "Cancel subscription?",
+    "desc": "Your access remains active until the end of the current billing cycle.",
+    "confirm": "Cancel Subscription",
+    "keep": "Keep Plan"
+  }
+}

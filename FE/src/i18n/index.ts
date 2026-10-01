@@ -16,6 +16,14 @@ import artisanEn from './locales/en/artisan.json';
 import artisanVi from './locales/vi/artisan.json';
 import portalEn from './locales/en/portal.json';
 import portalVi from './locales/vi/portal.json';
+import billingEn from './locales/en/billing.json';
+import billingVi from './locales/vi/billing.json';
+import projectsEn from './locales/en/projects.json';
+import projectsVi from './locales/vi/projects.json';
+import detailsEn from './locales/en/details.json';
+import detailsVi from './locales/vi/details.json';
+import accountEn from './locales/en/account.json';
+import accountVi from './locales/vi/account.json';
 
 export const defaultNS = 'common';
 export const LANGUAGE_STORAGE_KEY = 'kusshoes_lang';
@@ -37,6 +45,10 @@ export const i18nReady = i18n
         auth: authEn,
         artisan: artisanEn,
         portal: portalEn,
+        billing: billingEn,
+        projects: projectsEn,
+        details: detailsEn,
+        account: accountEn,
       },
       vi: {
         common: commonVi,
@@ -46,12 +58,16 @@ export const i18nReady = i18n
         auth: authVi,
         artisan: artisanVi,
         portal: portalVi,
+        billing: billingVi,
+        projects: projectsVi,
+        details: detailsVi,
+        account: accountVi,
       },
     },
     fallbackLng: 'en',
     supportedLngs: ['en', 'vi'],
     defaultNS,
-    ns: ['common', 'landing', 'pricing', 'products', 'auth', 'artisan', 'portal'],
+    ns: ['common', 'landing', 'pricing', 'products', 'auth', 'artisan', 'portal', 'billing', 'projects', 'details', 'account'],
     interpolation: { escapeValue: false },
     detection: {
       order: ['localStorage', 'navigator'],

@@ -1,5 +1,6 @@
 import React, { useEffect, useState } from 'react';
 import { UserCog } from 'lucide-react';
+import { useTranslation } from 'react-i18next';
 import { api, type ImpersonationSession } from '../../api/client';
 import styles from './ImpersonationBanner.module.css';
 
@@ -10,6 +11,7 @@ interface ImpersonationBannerProps {
 
 /** Persistent warning while an admin is acting as a customer (BR-80). */
 export const ImpersonationBanner: React.FC<ImpersonationBannerProps> = ({ onEnded }) => {
+  const { t } = useTranslation('account');
   const [session, setSession] = useState<ImpersonationSession | null>(api.impersonation());
   const [ending, setEnding] = useState(false);
   const [minutesLeft, setMinutesLeft] = useState<number | null>(null);
@@ -45,10 +47,10 @@ export const ImpersonationBanner: React.FC<ImpersonationBannerProps> = ({ onEnde
       <UserCog size={16} />
       <span className={styles.text}>
         {session.banner}
-        {minutesLeft !== null && ` · còn khoảng ${minutesLeft} phút`}
+        {minutesLeft !== null && ` · ${t('impersonation.minutesLeft', { n: minutesLeft })}`}
       </span>
       <button type="button" className={styles.endBtn} onClick={end} disabled={ending}>
-        {ending ? 'Đang kết thúc...' : 'Kết thúc phiên'}
+        {ending ? t('impersonation.ending') : t('impersonation.end')}
       </button>
     </div>
   );

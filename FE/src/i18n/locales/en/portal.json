@@ -22,7 +22,8 @@
     "profile": "Profile",
     "logout": "Log out",
     "storage": "Storage",
-    "storageUsed": "{{size}} used"
+    "storageUsed": "{{size}} used",
+    "userAvatar": "User avatar"
   },
   "settings": {
     "title": "Settings",
@@ -104,6 +105,7 @@
       "uploadCta": "Upload custom photo (.png, .jpg)",
       "removeCurrent": "Remove current avatar",
       "cancel": "Cancel"
-    }
+    },
+    "closeDialog": "Close dialog"
   }
 }
