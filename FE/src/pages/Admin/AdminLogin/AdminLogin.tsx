@@ -69,11 +69,10 @@ export const AdminLogin: React.FC = () => {
                 type="email"
                 value={email}
                 onChange={(e) => setEmail(e.target.value)}
-                placeholder="name@kusshoes.vn"
+                placeholder="name@company.com"
                 autoComplete="username"
                 required
               />
-              <span className={styles.domainHint}>@kusshoes.vn</span>
             </div>
           </div>
 
