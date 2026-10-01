@@ -11,6 +11,7 @@ vi.mock('../api/client', async () => {
     ...actual,
     api: {
       login: vi.fn(),
+      verifyOtp: vi.fn(),
       verifyTwoFactorLogin: vi.fn(),
       logout: vi.fn(),
       impersonation: vi.fn(() => null),
@@ -72,6 +73,7 @@ import { api, ApiError } from '../api/client';
 import { accountApi } from '../api/account';
 import { studioApi } from '../api/studio';
 import { adminAnalytics } from '../api/adminClient';
+import { getCookieConsent } from '../analytics';
 import { Login } from './Login/Login';
 import { TwoFactorPanel } from './Settings/TwoFactorPanel';
 import { PrivacyPanel } from './Settings/PrivacyPanel';
@@ -148,6 +150,54 @@ describe('Login with two-factor authentication', () => {
   });
 });
 
+describe('Login analytics events', () => {
+  const signIn = async () => {
+    fireEvent.change(screen.getByPlaceholderText('you@example.com'), { target: { value: 'a@b.co' } });
+    fireEvent.change(screen.getAllByPlaceholderText('••••••••')[0], { target: { value: 'Password1' } });
+    const submit = screen.getAllByRole('button', { name: /^sign in/i }).find((button) => button.getAttribute('type') === 'submit');
+    fireEvent.click(submit as HTMLElement);
+  };
+  const events = () => (window.dataLayer ?? []).filter((entry) => 'event' in entry);
+
+  beforeEach(() => {
+    window.dataLayer = [];
+  });
+
+  it('reports a password login, without a sign-up', async () => {
+    m(api.login).mockResolvedValue({ mfaRequired: false });
+    wrap(<Login setPage={vi.fn()} />);
+    await signIn();
+
+    await waitFor(() => expect(events()).toContainEqual(expect.objectContaining({ event: 'login', method: 'password' })));
+    expect(events().some((entry) => entry.event === 'sign_up')).toBe(false);
+  });
+
+  it('reports the login only once the second factor is verified', async () => {
+    m(api.login).mockResolvedValue({ mfaRequired: true, challengeToken: 'chal', method: 'totp' });
+    m(api.verifyTwoFactorLogin).mockResolvedValue(undefined);
+    wrap(<Login setPage={vi.fn()} />);
+    await signIn();
+    fireEvent.change(await screen.findByLabelText(/verification code/i), { target: { value: '123456' } });
+    expect(events().some((entry) => entry.event === 'login')).toBe(false);
+
+    fireEvent.click(screen.getByRole('button', { name: /verify & continue/i }));
+    await waitFor(() => expect(events()).toContainEqual(expect.objectContaining({ event: 'login', method: 'password' })));
+  });
+
+  it('reports a sign-up when the emailed code verifies a new account', async () => {
+    m(api.login).mockRejectedValue(new ApiError('verify first', 403, 'AUTH_EMAIL_NOT_VERIFIED', { user_id: 'u1' }));
+    m(api.verifyOtp).mockResolvedValue(undefined);
+    wrap(<Login setPage={vi.fn()} />);
+    await signIn();
+    fireEvent.change(await screen.findByLabelText(/verification code/i), { target: { value: '123456' } });
+    fireEvent.click(screen.getByRole('button', { name: /verify & continue/i }));
+
+    await waitFor(() => expect(api.verifyOtp).toHaveBeenCalledWith('u1', '123456', true));
+    await waitFor(() => expect(events()).toContainEqual(expect.objectContaining({ event: 'sign_up', method: 'password' })));
+    expect(events()).toContainEqual(expect.objectContaining({ event: 'login', method: 'password' }));
+  });
+});
+
 describe('TwoFactorPanel', () => {
   it('walks through setup and shows the recovery codes once', async () => {
     m(accountApi.twoFactorStatus).mockResolvedValue({ enabled: false, method: null, recovery_email: null, recovery_email_verified: false });
@@ -194,6 +244,21 @@ describe('PrivacyPanel', () => {
     fireEvent.click(toggle);
     await waitFor(() => expect(accountApi.updatePrivacy).toHaveBeenCalledWith({ is_profile_public: true }));
     await waitFor(() => expect(toggle).toHaveAttribute('aria-checked', 'false'));
+  });
+
+  it('saves the analytics toggle as this browser\'s cookie choice', async () => {
+    localStorage.clear();
+    m(accountApi.getPrivacy).mockResolvedValue({
+      is_profile_public: false, show_designs_publicly: false, is_searchable: false, allow_analytics: false, allow_ads_personalization: false,
+    });
+    m(accountApi.listConsents).mockResolvedValue([]);
+    m(accountApi.updatePrivacy).mockResolvedValue({});
+    wrap(<PrivacyPanel />);
+    const toggle = await screen.findByRole('switch', { name: /usage analytics/i });
+    await waitFor(() => expect(toggle).not.toBeDisabled());
+    fireEvent.click(toggle);
+    await waitFor(() => expect(accountApi.updatePrivacy).toHaveBeenCalledWith({ allow_analytics: true }));
+    expect(getCookieConsent()).toEqual({ analytics: true, ads: false });
   });
 
   it('records a consent change', async () => {

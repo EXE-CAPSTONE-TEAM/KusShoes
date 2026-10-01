@@ -4,6 +4,7 @@ import { motion } from 'framer-motion';
 import { useTranslation } from 'react-i18next';
 import { api, ApiError } from '../../api/client';
 import { useTheme } from '../../context/ThemeContext';
+import { getStoredAttribution, pushAnalyticsEvent } from '../../analytics';
 import {
   normalizeEmail,
   normalizeFullName,
@@ -118,7 +119,17 @@ export const Login: React.FC<LoginProps> = ({ setPage }) => {
       </span>
     ) : null;
 
-  const finishAuthentication = () => {
+  // `isNewAccount`: the emailed code just verified a fresh registration (mirrors GoogleCallback).
+  const finishAuthentication = (isNewAccount = false) => {
+    if (isNewAccount) {
+      const attribution = getStoredAttribution();
+      pushAnalyticsEvent('sign_up', {
+        method: 'password',
+        utm_source: attribution?.utm_source,
+        utm_campaign: attribution?.utm_campaign,
+      });
+    }
+    pushAnalyticsEvent('login', { method: 'password' });
     setSuccess(true);
     window.setTimeout(() => setPage('dashboard'), 900);
   };
@@ -212,7 +223,8 @@ export const Login: React.FC<LoginProps> = ({ setPage }) => {
     setLoading(true);
     try {
       await api.verifyOtp(pendingUserId, otpCode, rememberMe);
-      finishAuthentication();
+      // The code verifies the email of an account that was never signed into: a completed sign-up.
+      finishAuthentication(true);
     } catch (caught) {
       setError(caught instanceof Error ? caught.message : t('login.otpVerifyFailed'));
     } finally {

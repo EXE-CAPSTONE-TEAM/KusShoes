@@ -63,5 +63,21 @@
     "en": "English",
     "vi": "Tiếng Việt",
     "switchTo": "Switch language to {{language}}"
+  },
+  "cookieConsent": {
+    "title": "KusShoes uses cookies",
+    "body": "Necessary cookies keep the site working. With your consent we also use analytics cookies (Google Analytics) to improve the product and advertising cookies to measure our campaigns. You can change your choice at any time.",
+    "privacyLink": "Privacy Policy",
+    "acceptAll": "Accept all",
+    "rejectAll": "Necessary only",
+    "customize": "Customize",
+    "save": "Save choices",
+    "necessary": "Necessary",
+    "necessaryDesc": "Sign-in, security, language and theme. Always on.",
+    "analytics": "Analytics",
+    "analyticsDesc": "Anonymous visit statistics (Google Analytics) so we know which pages help.",
+    "ads": "Advertising",
+    "adsDesc": "Measure and personalise ads (Google, Facebook, TikTok).",
+    "settingsLink": "Cookie settings"
   }
 }

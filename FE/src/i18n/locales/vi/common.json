@@ -63,5 +63,21 @@
     "en": "English",
     "vi": "Tiếng Việt",
     "switchTo": "Chuyển ngôn ngữ sang {{language}}"
+  },
+  "cookieConsent": {
+    "title": "KusShoes dùng cookie",
+    "body": "Cookie cần thiết giúp trang web hoạt động. Với sự đồng ý của bạn, chúng tôi dùng thêm cookie phân tích (Google Analytics) để cải thiện sản phẩm và cookie quảng cáo để đo hiệu quả chiến dịch. Bạn có thể đổi lựa chọn bất cứ lúc nào.",
+    "privacyLink": "Chính sách bảo mật",
+    "acceptAll": "Chấp nhận tất cả",
+    "rejectAll": "Chỉ cookie cần thiết",
+    "customize": "Tuỳ chỉnh",
+    "save": "Lưu lựa chọn",
+    "necessary": "Cần thiết",
+    "necessaryDesc": "Đăng nhập, bảo mật, ngôn ngữ và giao diện. Luôn bật.",
+    "analytics": "Phân tích",
+    "analyticsDesc": "Thống kê lượt truy cập ẩn danh (Google Analytics) để biết trang nào hữu ích.",
+    "ads": "Quảng cáo",
+    "adsDesc": "Đo hiệu quả và cá nhân hoá quảng cáo (Google, Facebook, TikTok).",
+    "settingsLink": "Cài đặt cookie"
   }
 }
