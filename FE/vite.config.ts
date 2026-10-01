@@ -5,6 +5,7 @@ import { loadEnv } from 'vite'
 import { defineConfig } from 'vitest/config'
 import react from '@vitejs/plugin-react'
 import { seoPlugin } from './vite-plugin-seo.ts'
+import { asyncCssPlugin } from './vite-plugin-async-css.ts'
 
 // https://vite.dev/config/
 export default defineConfig(({ mode }) => {
@@ -17,7 +18,13 @@ export default defineConfig(({ mode }) => {
         googleSiteVerification:
           env.VITE_GOOGLE_SITE_VERIFICATION || 'Famxi1gD0ANnvlfTkIqVv4RAMw0LTb9DnQzmY1071os',
       }),
+      asyncCssPlugin(),
     ],
+    build: {
+      // Public source maps: readable stack traces in production (Sentry, DevTools) and lets
+      // Lighthouse attribute the bundle's cost to source files.
+      sourcemap: true,
+    },
     resolve: {
       alias: {
         '@': path.resolve(__dirname, './src'),

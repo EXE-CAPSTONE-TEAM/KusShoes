@@ -14,6 +14,9 @@
   /* Accent Colors (Sunset Orange & Crimson Red) */
   --color-orange: #FF5A36;
   --color-orange-rgb: 255, 90, 54;
+  /* Text on an orange fill: white only reaches 3.1:1 on #FF5A36, #1A1A1A reaches 6.2:1 (WCAG AA,
+     docs/DESIGN.md open decision #1, option c). Same in both themes. */
+  --text-on-accent: #1A1A1A;
   --color-crimson: #E61E43;
   --color-crimson-rgb: 230, 30, 67;
   
