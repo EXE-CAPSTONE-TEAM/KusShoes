@@ -19,9 +19,30 @@ interface SettingsProps {
 }
 
 interface PresetAvatar {
-  name: string;
   url: string;
 }
+
+// Preset avatars are whatever images sit in src/assets/avatars (sorted by file name). The folder
+// is empty until photos are dropped in, so the old stock portraits stay as the fallback.
+const FALLBACK_PRESET_AVATARS: PresetAvatar[] = [
+  'photo-1534528741775-53994a69daeb',
+  'photo-1507003211169-0a1dd7228f2d',
+  'photo-1570295999919-56ceb5ecca61',
+  'photo-1517841905240-472988babdf9',
+  'photo-1539571696357-5a69c17a67c6',
+].map((id) => ({ url: `https://images.unsplash.com/${id}?auto=format&fit=crop&w=120&q=80` }));
+
+const bundledAvatars = import.meta.glob('../../assets/avatars/*.{jpg,jpeg,png,webp}', {
+  eager: true,
+  query: '?url',
+  import: 'default',
+}) as Record<string, string>;
+
+const PRESET_AVATARS: PresetAvatar[] = Object.keys(bundledAvatars).length
+  ? Object.entries(bundledAvatars)
+      .sort(([a], [b]) => a.localeCompare(b, undefined, { numeric: true }))
+      .map(([, url]) => ({ url }))
+  : FALLBACK_PRESET_AVATARS;
 
 export const Settings: React.FC<SettingsProps> = ({
   activeTab = DEFAULT_SETTING_TAB,
@@ -47,29 +68,7 @@ export const Settings: React.FC<SettingsProps> = ({
     }
   };
 
-  // Curated Preset Avatars
-  const presetAvatars: PresetAvatar[] = [
-    {
-      name: 'Urban Hypebeast',
-      url: 'https://images.unsplash.com/photo-1534528741775-53994a69daeb?auto=format&fit=crop&w=120&q=80',
-    },
-    {
-      name: 'Techwear Goggles',
-      url: 'https://images.unsplash.com/photo-1507003211169-0a1dd7228f2d?auto=format&fit=crop&w=120&q=80',
-    },
-    {
-      name: 'Pixel Sneakerhead',
-      url: 'https://images.unsplash.com/photo-1570295999919-56ceb5ecca61?auto=format&fit=crop&w=120&q=80',
-    },
-    {
-      name: 'Graffiti Artist',
-      url: 'https://images.unsplash.com/photo-1517841905240-472988babdf9?auto=format&fit=crop&w=120&q=80',
-    },
-    {
-      name: 'Vaporwave Face',
-      url: 'https://images.unsplash.com/photo-1539571696357-5a69c17a67c6?auto=format&fit=crop&w=120&q=80',
-    },
-  ];
+  const presetAvatars = PRESET_AVATARS;
 
   // Profile data state
   const [profileData, setProfileData] = useState({
@@ -79,8 +78,7 @@ export const Settings: React.FC<SettingsProps> = ({
     phone: '',
     language: 'en' as 'en' | 'vi',
     role: '',
-    avatar:
-      'https://images.unsplash.com/photo-1534528741775-53994a69daeb?auto=format&fit=crop&w=100&q=80',
+    avatar: PRESET_AVATARS[0].url,
     studioName: '',
     location: '',
     bio: '',
@@ -685,19 +683,19 @@ export const Settings: React.FC<SettingsProps> = ({
 
             {/* Presets Grid */}
             <div className={styles.avatarGrid}>
-              {presetAvatars.map((preset) => (
+              {presetAvatars.map((preset, index) => (
                 <div
-                  key={preset.name}
+                  key={preset.url}
                   className={`${styles.avatarGridItem} ${profileData.avatar === preset.url ? styles.avatarItemActive : ''}`}
                   onClick={() => handleSelectPresetAvatar(preset.url)}
                   role="button"
                   tabIndex={0}
+                  aria-label={t('settings.avatarModal.presetLabel', { n: index + 1 })}
                   onKeyDown={(e) => {
                     if (e.key === 'Enter') handleSelectPresetAvatar(preset.url);
                   }}
                 >
-                  <img src={preset.url} alt={preset.name} className={styles.gridAvatarImg} />
-                  <span className={styles.gridAvatarName}>{preset.name}</span>
+                  <img src={preset.url} alt="" className={styles.gridAvatarImg} />
                 </div>
               ))}
             </div>
