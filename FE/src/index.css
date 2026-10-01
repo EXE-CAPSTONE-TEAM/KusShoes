@@ -44,6 +44,30 @@ body {
   min-width: 0;
 }
 
+/* Portal pages: the page itself never scrolls, <main> does. dvh keeps the bottom edge above the
+   mobile browser toolbar; below 1024px the sidebar is a drawer and a 56px top bar sits above. */
+#root > main[data-portal] {
+  height: 100vh;
+  height: 100dvh;
+  box-sizing: border-box;
+}
+
+@media (max-width: 1023px) {
+  #root > main[data-portal] {
+    padding-top: 56px;
+  }
+
+  /* Inputs under 16px make iOS Safari zoom the page on focus; 44px keeps them easy to hit */
+  #root > main[data-portal] :is(input:not([type='checkbox'], [type='radio'], [type='range'], [type='file'], [type='hidden']), select, textarea) {
+    font-size: 16px;
+  }
+
+  #root > main[data-portal] :is(input:not([type='checkbox'], [type='radio'], [type='range'], [type='file'], [type='hidden']), select) {
+    min-height: 44px;
+    min-width: 0; /* a 16px input's intrinsic width must not stop its grid / flex cell shrinking */
+  }
+}
+
 /* Glassmorphism card utility */
 .glass-panel {
   background: var(--glass-bg);

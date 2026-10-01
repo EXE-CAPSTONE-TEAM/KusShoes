@@ -456,7 +456,7 @@
 
 @media (max-width: 1000px) {
   .twoColGrid {
-    grid-template-columns: 1fr;
+    grid-template-columns: minmax(0, 1fr);
   }
 }
 
@@ -911,12 +911,37 @@
     padding: 24px 16px;
   }
   .formGrid {
-    grid-template-columns: 1fr;
+    grid-template-columns: minmax(0, 1fr);
   }
   .themeSelectorGrid {
-    grid-template-columns: 1fr;
+    grid-template-columns: minmax(0, 1fr);
   }
   .avatarGrid {
     grid-template-columns: repeat(3, 1fr);
+  }
+}
+
+/* Touch: 44px targets for tabs and actions; the switch keeps its look but gets a larger hit area */
+@media (max-width: 1023px) {
+  .tab {
+    min-height: 44px;
+    min-width: 44px;
+    justify-content: center;
+  }
+
+  .primaryBtn,
+  .secondaryBtn,
+  .deleteAccountBtn {
+    min-height: 44px;
+  }
+
+  .toggleBtn {
+    position: relative;
+  }
+
+  .toggleBtn::after {
+    content: '';
+    position: absolute;
+    inset: -12px -6px;
   }
 }

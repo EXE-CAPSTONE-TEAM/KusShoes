@@ -1,5 +1,7 @@
 {
   "sidebar": {
+    "openMenu": "Mở menu",
+    "closeMenu": "Đóng menu",
     "overview": "Tổng quan",
     "projects": "Dự án",
     "archives": "Lưu trữ",
@@ -94,6 +96,7 @@
       "toastLight": "Đã chuyển sang giao diện Premium Cream"
     },
     "avatarModal": {
+      "presetLabel": "Ảnh mẫu {{n}}",
       "title": "Chọn ảnh đại diện nhà thiết kế",
       "desc": "Chọn một trong các mẫu có sẵn hoặc tải lên ảnh tuỳ chỉnh.",
       "uploading": "Đang tải ảnh đại diện lên...",

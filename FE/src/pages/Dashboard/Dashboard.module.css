@@ -23,7 +23,7 @@
 
 .heroLeft {
   flex: 1 1 320px;
-  min-width: 280px;
+  min-width: min(280px, 100%);
   display: flex;
   flex-direction: column;
   justify-content: center;
@@ -122,7 +122,7 @@
 /* Hero right: last-edited spotlight */
 .heroRight {
   flex: 1 1 320px;
-  min-width: 260px;
+  min-width: min(260px, 100%);
   max-width: 420px;
 }
 
@@ -671,4 +671,21 @@
 
 a.primaryBtn {
   text-decoration: none;
+}
+
+/* Touch: 44px targets for the page's actions and links */
+@media (max-width: 1023px) {
+  .primaryBtn,
+  .secondaryBtn,
+  .openBtn,
+  .activityOpenBtn {
+    min-height: 44px;
+  }
+
+  .viewAllLink,
+  .manageLink {
+    min-height: 44px;
+    display: inline-flex;
+    align-items: center;
+  }
 }

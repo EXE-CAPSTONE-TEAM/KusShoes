@@ -131,13 +131,13 @@ export const Exports: React.FC<ExportsProps> = ({ onOpenProject }) => {
                   <td>
                     <span className={styles.rowProjectName}>{item.project_name}</span>
                   </td>
-                  <td>
+                  <td data-label="Format">
                     {item.format.toUpperCase()}
                     {item.is_watermarked && ' · watermarked'}
                   </td>
-                  <td>{formatBytes(item.file_size_bytes)}</td>
-                  <td>{item.download_count}</td>
-                  <td>{formatDateTime(item.created_at)}</td>
+                  <td data-label="Size">{formatBytes(item.file_size_bytes)}</td>
+                  <td data-label="Downloads">{item.download_count}</td>
+                  <td data-label="Exported">{formatDateTime(item.created_at)}</td>
                   <td>
                     <div className={styles.rowActions}>
                       <button

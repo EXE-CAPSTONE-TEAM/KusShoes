@@ -1,5 +1,7 @@
 {
   "sidebar": {
+    "openMenu": "Open menu",
+    "closeMenu": "Close menu",
     "overview": "Overview",
     "projects": "Projects",
     "archives": "Archives",
@@ -94,6 +96,7 @@
       "toastLight": "Theme set to Premium Cream"
     },
     "avatarModal": {
+      "presetLabel": "Sample photo {{n}}",
       "title": "Choose Designer Avatar",
       "desc": "Select one of the pre-designed presets or upload a custom image file.",
       "uploading": "Uploading mesh file avatar...",

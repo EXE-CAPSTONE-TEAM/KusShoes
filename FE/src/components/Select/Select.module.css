@@ -71,3 +71,9 @@
   align-items: center;
   color: var(--color-orange);
 }
+
+@media (max-width: 1023px) {
+  .trigger {
+    min-height: 44px;
+  }
+}

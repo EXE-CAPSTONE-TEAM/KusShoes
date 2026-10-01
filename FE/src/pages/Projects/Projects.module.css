@@ -1,7 +1,7 @@
 .container {
   flex-grow: 1;
-  padding: 40px;
-  max-width: 1400px;
+  padding: clamp(16px, 4vw, 40px);
+  max-width: min(1400px, 100%);
   margin: 0 auto;
   display: flex;
   flex-direction: column;
@@ -264,6 +264,44 @@
   .tabs {
     width: 100%;
     height: 40px;
+  }
+
+  /* The fixed 56px row cannot hold a wrapped title + search + button */
+  .headerTop {
+    height: auto;
+    min-height: 56px;
+    padding-block: 4px;
+  }
+
+  .toolbarControls {
+    flex-shrink: 1;
+    flex-wrap: wrap;
+  }
+}
+
+/* Phone / tablet touch sizing for the toolbar controls */
+@media (max-width: 1023px) {
+  .searchWrapper,
+  .newProjectBtn,
+  .controlTrigger,
+  .segmented {
+    height: 44px;
+  }
+
+  .segmentBtn {
+    width: 40px;
+    height: 38px;
+  }
+
+  .tab {
+    min-width: 44px;
+    justify-content: center;
+  }
+}
+
+@media (max-width: 600px) {
+  .headerTitleGroup {
+    flex-basis: 100%;
   }
 }
 
@@ -1439,4 +1477,54 @@
 .rowActions button:disabled {
   opacity: 0.4;
   cursor: not-allowed;
+}
+
+/* Phone: two cards per row instead of one very tall card. Placed after the base .grid rule so
+   it wins the cascade. */
+@media (max-width: 600px) {
+  .grid {
+    grid-template-columns: repeat(auto-fill, minmax(min(100%, 150px), 1fr));
+    gap: 12px;
+  }
+}
+
+/* Touch: 44px hit areas without changing how the small controls look */
+@media (max-width: 1023px) {
+  /* A 16px input is wider at its intrinsic size; let the search box shrink to the row */
+  .headerActions,
+  .searchWrapper {
+    min-width: 0;
+  }
+
+  .cardCheck::after,
+  .optionsBtn::after {
+    content: '';
+    position: absolute;
+    inset: -14px;
+  }
+
+  .optionsBtn {
+    position: relative;
+  }
+
+  .pageBtn,
+  .pageNumberBtn {
+    min-height: 44px;
+    min-width: 44px;
+  }
+}
+
+/* No hover on touch screens, so the selection checkbox cannot wait for one */
+@media (hover: none) {
+  .cardCheck {
+    opacity: 1;
+  }
+}
+
+/* Phone + tablet: stop the auto-margin container from shrink-wrapping past the screen */
+@media (max-width: 1023px) {
+  .container {
+    width: 100%;
+    box-sizing: border-box;
+  }
 }
