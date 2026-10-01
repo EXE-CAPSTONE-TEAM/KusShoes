@@ -389,7 +389,7 @@ export const MrrWaterfallChart: React.FC<MrrWaterfallChartProps> = ({
                   fill={isActive ? 'var(--text-primary)' : 'var(--text-secondary)'}
                   fontSize="10"
                   fontWeight={isActive ? '800' : '600'}
-                  fontFamily="var(--font-admin, 'Roboto', sans-serif)"
+                  fontFamily="var(--font-admin, 'Roboto Variable', 'Roboto', sans-serif)"
                 >
                   {item.label}
                 </text>

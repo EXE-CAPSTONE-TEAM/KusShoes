@@ -13,6 +13,9 @@ import {
   type HeadOptions,
 } from './src/seo/render.ts';
 
+/** Source of the home page's LCP image (ShoeHeroExperience's primary sneaker). */
+const LCP_IMAGE_SOURCE = 'src/assets/hero-sneaker-nobg.webp';
+
 export function seoPlugin(options: HeadOptions = {}): Plugin {
   let outDir = 'dist';
   return {
@@ -20,8 +23,18 @@ export function seoPlugin(options: HeadOptions = {}): Plugin {
     configResolved(config) {
       outDir = path.resolve(config.root, config.build.outDir);
     },
-    transformIndexHtml(html) {
-      return applySeo(html, HOME_PAGE, options);
+    transformIndexHtml(html, ctx) {
+      // Preload the hero sneaker (the home page's LCP element) so the browser fetches it with
+      // the document instead of waiting for the JS bundle to render the <img>.
+      const hero = ctx.bundle
+        ? Object.values(ctx.bundle).find(
+            (file) =>
+              file.type === 'asset' &&
+              file.originalFileNames.some((name) => name.endsWith(LCP_IMAGE_SOURCE)),
+          )
+        : undefined;
+      const lcpImage = hero ? `/${hero.fileName}` : undefined;
+      return applySeo(html, HOME_PAGE, { ...options, lcpImage });
     },
     generateBundle() {
       const lastmod = new Date().toISOString().slice(0, 10);

@@ -2,6 +2,13 @@ import { addBootTask, finishBoot } from './boot/boot'
 import { StrictMode } from 'react'
 import { createRoot } from 'react-dom/client'
 import { I18nextProvider } from 'react-i18next'
+// Self-hosted fonts (no render-blocking third-party stylesheet). @font-face only: each file is
+// downloaded on first use, so the admin-only Roboto costs nothing on the public pages.
+import '@fontsource-variable/outfit'
+import '@fontsource-variable/space-grotesk'
+import '@fontsource-variable/roboto'
+import '@fontsource/space-mono/400.css'
+import '@fontsource/space-mono/700.css'
 import './index.css'
 import i18n, { i18nReady } from './i18n'
 import App from './App.tsx'

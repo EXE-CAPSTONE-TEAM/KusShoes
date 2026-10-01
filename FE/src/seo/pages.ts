@@ -5,7 +5,12 @@
 /** Production origin. Canonical URLs always point here, so preview/alias hosts never compete. */
 export const SITE_URL = 'https://kusshoes.kietta.me';
 export const SITE_NAME = 'KusShoes';
-export const OG_IMAGE = `${SITE_URL}/landing_page_mockup.png`;
+/** 1200×630 social preview card (public/og-image.jpg). */
+export const OG_IMAGE = `${SITE_URL}/og-image.jpg`;
+
+/** robots meta for public pages; everything else is `noindex` (see applyDocumentMeta). */
+export const ROBOTS_INDEX = 'index, follow, max-image-preview:large';
+export const ROBOTS_NOINDEX = 'noindex, follow';
 
 export type SeoLang = 'vi' | 'en';
 

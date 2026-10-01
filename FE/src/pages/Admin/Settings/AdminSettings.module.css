@@ -9,7 +9,7 @@
 }
 
 .cardTitle {
-  font-family: var(--font-admin, 'Roboto', sans-serif);
+  font-family: var(--font-admin, 'Roboto Variable', 'Roboto', sans-serif);
   font-size: 0.95rem;
   font-weight: 700;
   color: var(--text-primary);

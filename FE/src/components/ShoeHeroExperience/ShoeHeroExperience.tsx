@@ -4,13 +4,13 @@ import { useTranslation } from 'react-i18next';
 import gsap from 'gsap';
 import { ScrollTrigger } from 'gsap/ScrollTrigger';
 import { useGSAP } from '@gsap/react';
-import heroSneakerNoBg from '../../assets/hero-sneaker-nobg.png';
-import heroSneakerAltNoBg from '../../assets/hero-sneaker-alt-nobg.png';
-import classicOrangeNoBg from '../../assets/classic-orange-nobg.png';
-import streetGraffitiNoBg from '../../assets/street-graffiti-nobg.png';
-import neonAlleyNoBg from '../../assets/neon-alley-nobg.png';
-import webCrimsonNoBg from '../../assets/web-crimson-nobg.png';
-import mobileAppIcon from '../../assets/kusshoes-mobile-app-icon.jpeg';
+import heroSneakerNoBg from '../../assets/hero-sneaker-nobg.webp';
+import heroSneakerAltNoBg from '../../assets/hero-sneaker-alt-nobg.webp';
+import classicOrangeNoBg from '../../assets/classic-orange-nobg.webp';
+import streetGraffitiNoBg from '../../assets/street-graffiti-nobg.webp';
+import neonAlleyNoBg from '../../assets/neon-alley-nobg.webp';
+import webCrimsonNoBg from '../../assets/web-crimson-nobg.webp';
+import mobileAppIcon from '../../assets/kusshoes-mobile-app-icon.webp';
 import { EdgeArt } from '../EdgeArt/EdgeArt';
 import { TypingText } from '../TypingText/TypingText';
 import styles from './ShoeHeroExperience.module.css';
@@ -301,6 +301,9 @@ export const ShoeHeroExperience: React.FC<ShoeHeroExperienceProps> = ({
               alt={t('hero.imageAlt')}
               className={styles.shoeImageLayer}
               loading="eager"
+              fetchPriority="high"
+              width={900}
+              height={900}
               draggable={false}
             />
 
@@ -312,6 +315,9 @@ export const ShoeHeroExperience: React.FC<ShoeHeroExperienceProps> = ({
               aria-hidden="true"
               className={styles.shoeAltImageLayer}
               loading="eager"
+              fetchPriority="low"
+              width={900}
+              height={900}
               draggable={false}
             />
           </div>

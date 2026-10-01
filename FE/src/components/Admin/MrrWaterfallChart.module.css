@@ -36,7 +36,7 @@
 }
 
 .summaryValInflow {
-  font-family: var(--font-admin, 'Roboto', sans-serif);
+  font-family: var(--font-admin, 'Roboto Variable', 'Roboto', sans-serif);
   font-size: 0.88rem;
   font-weight: 800;
   color: #10B981;
@@ -47,7 +47,7 @@
 }
 
 .summaryValOutflow {
-  font-family: var(--font-admin, 'Roboto', sans-serif);
+  font-family: var(--font-admin, 'Roboto Variable', 'Roboto', sans-serif);
   font-size: 0.88rem;
   font-weight: 800;
   color: #EF4444;
@@ -58,7 +58,7 @@
 }
 
 .summaryValNet {
-  font-family: var(--font-admin, 'Roboto', sans-serif);
+  font-family: var(--font-admin, 'Roboto Variable', 'Roboto', sans-serif);
   font-size: 0.88rem;
   font-weight: 800;
   font-variant-numeric: tabular-nums;
@@ -76,7 +76,7 @@
 }
 
 .summaryValCoverage {
-  font-family: var(--font-admin, 'Roboto', sans-serif);
+  font-family: var(--font-admin, 'Roboto Variable', 'Roboto', sans-serif);
   font-size: 0.88rem;
   font-weight: 800;
   color: var(--text-primary);
@@ -125,7 +125,7 @@
 }
 
 .tooltipValue {
-  font-family: var(--font-admin, 'Roboto', sans-serif);
+  font-family: var(--font-admin, 'Roboto Variable', 'Roboto', sans-serif);
   font-size: 0.85rem;
   font-weight: 800;
   font-variant-numeric: tabular-nums;

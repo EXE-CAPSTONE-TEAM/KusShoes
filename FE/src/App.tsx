@@ -1,10 +1,6 @@
 import { lazy, Suspense, useEffect, useState, useTransition } from 'react';
 import { addBootTask, markAppMounted } from './boot/boot';
 import { Landing } from './pages/Landing/Landing';
-import { Login } from './pages/Login/Login';
-import { GoogleCallback } from './pages/Login/GoogleCallback';
-import { LegalConsentGate } from './components/LegalConsentGate/LegalConsentGate';
-import { Sidebar } from './components/Sidebar/Sidebar';
 import { ImpersonationBanner } from './components/ImpersonationBanner/ImpersonationBanner';
 import { TopProgressBar } from './components/TopProgressBar/TopProgressBar';
 import { api, ApiError, type PortalProject } from './api/client';
@@ -12,8 +8,18 @@ import { getSettingTabFromSearch, type SettingTab } from './pages/Settings/setti
 import { useDocumentMeta } from './seo/useDocumentMeta';
 import { useAnalyticsPageView } from './analytics';
 
-// Everything except the public entry points (Landing, Login) is code-split. The importers are
-// kept in one map so the first page of a full load can be registered as a boot task.
+// Everything except the home page (Landing) is code-split, so the landing bundle stays small.
+// The importers are kept in one map so the first page of a full load can be registered as a
+// boot task.
+const importLogin = () => import('./pages/Login/Login').then((m) => ({ default: m.Login }));
+const importGoogleCallback = () =>
+  import('./pages/Login/GoogleCallback').then((m) => ({ default: m.GoogleCallback }));
+const importSidebar = () =>
+  import('./components/Sidebar/Sidebar').then((m) => ({ default: m.Sidebar }));
+const importLegalConsentGate = () =>
+  import('./components/LegalConsentGate/LegalConsentGate').then((m) => ({
+    default: m.LegalConsentGate,
+  }));
 const importDashboard = () =>
   import('./pages/Dashboard/Dashboard').then((m) => ({ default: m.Dashboard }));
 const importProjects = () =>
@@ -37,6 +43,10 @@ const importLegal = () =>
 const importArtisanViewer = () =>
   import('./pages/ArtisanViewer/ArtisanViewer').then((m) => ({ default: m.ArtisanViewer }));
 
+const Login = lazy(importLogin);
+const GoogleCallback = lazy(importGoogleCallback);
+const Sidebar = lazy(importSidebar);
+const LegalConsentGate = lazy(importLegalConsentGate);
 const Dashboard = lazy(importDashboard);
 const Projects = lazy(importProjects);
 const Trash = lazy(importTrash);
@@ -51,16 +61,22 @@ const AdminApp = lazy(importAdmin);
 const ArtisanViewer = lazy(importArtisanViewer);
 const LegalPage = lazy(importLegal);
 
+// Portal pages render inside the sidebar shell, so their first load also waits for it.
+const withPortalShell = (importPage: () => Promise<unknown>) => () =>
+  Promise.all([importPage(), importSidebar(), importLegalConsentGate()]);
+
 const pageImporters: Record<string, (() => Promise<unknown>) | undefined> = {
-  dashboard: importDashboard,
-  projects: importProjects,
-  archives: importProjects,
-  trash: importTrash,
-  exports: importExports,
-  billing: importBilling,
-  settings: importSettings,
-  feedback: importFeedback,
-  'project-details': importProjectDetails,
+  login: importLogin,
+  'google-callback': importGoogleCallback,
+  dashboard: withPortalShell(importDashboard),
+  projects: withPortalShell(importProjects),
+  archives: withPortalShell(importProjects),
+  trash: withPortalShell(importTrash),
+  exports: withPortalShell(importExports),
+  billing: withPortalShell(importBilling),
+  settings: withPortalShell(importSettings),
+  feedback: withPortalShell(importFeedback),
+  'project-details': withPortalShell(importProjectDetails),
   'products-info': importProducts,
   pricing: importPricing,
   admin: importAdmin,
