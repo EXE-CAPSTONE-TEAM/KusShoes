@@ -14,7 +14,7 @@
   align-items: center;
   gap: 8px;
   color: var(--color-orange);
-  font-family: 'Space Grotesk', sans-serif;
+  font-family: 'Space Grotesk Variable', 'Space Grotesk', sans-serif;
   font-weight: 700;
   font-size: 1.05rem;
   margin-bottom: 20px;
@@ -45,7 +45,7 @@
 }
 
 .title {
-  font-family: 'Space Grotesk', sans-serif;
+  font-family: 'Space Grotesk Variable', 'Space Grotesk', sans-serif;
   font-size: 1.4rem;
   font-weight: 700;
   color: var(--text-primary);

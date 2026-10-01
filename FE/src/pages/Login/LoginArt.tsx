@@ -1,8 +1,8 @@
 import React from 'react';
-import leftLight from '../../assets/login-art/login-left-light.png';
-import leftDark from '../../assets/login-art/login-left-dark.png';
-import rightLight from '../../assets/login-art/login-right-light.png';
-import rightDark from '../../assets/login-art/login-right-dark.png';
+import leftLight from '../../assets/login-art/login-left-light.webp';
+import leftDark from '../../assets/login-art/login-left-dark.webp';
+import rightLight from '../../assets/login-art/login-right-light.webp';
+import rightDark from '../../assets/login-art/login-right-dark.webp';
 import styles from './LoginArt.module.css';
 
 /**

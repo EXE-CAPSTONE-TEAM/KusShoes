@@ -248,7 +248,7 @@ export type ExportHistoryPage = {
   hasNext: boolean;
 };
 
-const FALLBACK_PROJECT_IMAGE = new URL('../assets/sneaker-hero.png', import.meta.url).href;
+const FALLBACK_PROJECT_IMAGE = new URL('../assets/sneaker-hero.webp', import.meta.url).href;
 const COMPLETED_PROJECT_STATUSES = new Set(['completed', 'ready', 'exported']);
 const DESIGNING_PROJECT_STATUSES = new Set(['in_progress', 'processing', 'queued', 'baking']);
 

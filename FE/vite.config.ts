@@ -12,7 +12,11 @@ export default defineConfig(({ mode }) => {
   return {
     plugins: [
       react(),
-      seoPlugin({ googleSiteVerification: env.VITE_GOOGLE_SITE_VERIFICATION }),
+      seoPlugin({
+        // Search Console HTML-tag token; override per deployment with VITE_GOOGLE_SITE_VERIFICATION.
+        googleSiteVerification:
+          env.VITE_GOOGLE_SITE_VERIFICATION || 'Famxi1gD0ANnvlfTkIqVv4RAMw0LTb9DnQzmY1071os',
+      }),
     ],
     resolve: {
       alias: {

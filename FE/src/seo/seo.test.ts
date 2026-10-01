@@ -2,7 +2,15 @@
 import { readFileSync } from 'node:fs';
 import path from 'node:path';
 import { beforeEach, describe, expect, it } from 'vitest';
-import { canonicalUrl, findSeoPage, HOME_PAGE, SEO_PAGES, SITE_URL } from './pages';
+import {
+  canonicalUrl,
+  findSeoPage,
+  HOME_PAGE,
+  ROBOTS_INDEX,
+  ROBOTS_NOINDEX,
+  SEO_PAGES,
+  SITE_URL,
+} from './pages';
 import {
   applySeo,
   htmlFileFor,
@@ -48,10 +56,29 @@ describe('build renderers', () => {
     expect(head).toContain(`<title>${pricing.title.vi}</title>`);
     expect(head).toContain(`<link rel="canonical" href="${SITE_URL}/pricing" />`);
     expect(head).toContain('property="og:image"');
-    expect(head).toContain('name="keywords"');
+    expect(head).toContain('<meta property="og:image:width" content="1200" />');
+    expect(head).not.toContain('name="keywords"');
     expect(head).toContain('name="theme-color"');
     expect(head).not.toContain('application/ld+json');
     expect(head).not.toContain('google-site-verification');
+    expect(head).not.toContain('rel="preload"');
+  });
+
+  it('preloads the LCP image with high priority when given', () => {
+    const head = renderHead(HOME_PAGE, { lcpImage: '/assets/hero-abc.webp' });
+    expect(head).toContain(
+      '<link rel="preload" as="image" href="/assets/hero-abc.webp" fetchpriority="high" />',
+    );
+  });
+
+  it('publishes the landing FAQ as FAQPage structured data', () => {
+    const head = renderHead(HOME_PAGE);
+    const json = head.match(/<script type="application\/ld\+json">(.*)<\/script>/)![1];
+    const graph: { '@type': string; mainEntity?: { name: string }[] }[] =
+      JSON.parse(json)['@graph'];
+    const faq = graph.find((node) => node['@type'] === 'FAQPage');
+    expect(faq?.mainEntity?.length).toBeGreaterThan(0);
+    expect(faq?.mainEntity?.[0].name).toBe('KusShoes là gì và hoạt động thế nào?');
   });
 
   it('adds structured data only to the home page and verification only when given', () => {
@@ -78,7 +105,19 @@ describe('build renderers', () => {
   it('links every public page from the fallback content', () => {
     const html = renderFallback(HOME_PAGE);
     for (const page of SEO_PAGES) expect(html).toContain(`href="${page.path}"`);
-    expect(html).toContain('<h2>Quy trình số hoá giày 3D và tuỳ biến thời trang</h2>');
+    expect(html).toContain('<h2>Quy trình số hoá giày 3D và tuỳ biến sneaker</h2>');
+    expect(html).toContain('<h2>Câu hỏi thường gặp</h2>');
+  });
+
+  it('describes plans and export formats the way the app does', () => {
+    const pricing = renderFallback(findSeoPage('/pricing')!);
+    expect(pricing).toContain('Gói Free không bao gồm quét giày');
+    expect(pricing).toContain('649.000đ/tháng');
+    const products = renderFallback(findSeoPage('/products')!);
+    expect(products).toContain('GLB và OBJ');
+    for (const html of [pricing, products, renderFallback(HOME_PAGE)]) {
+      expect(html).not.toMatch(/fbx|usdz/i);
+    }
   });
 
   it('lists every public page in the sitemap with priority and changefreq', () => {
@@ -122,6 +161,7 @@ describe('applyDocumentMeta', () => {
       '<link rel="canonical" href="" />',
       '<meta property="og:url" content="" />',
       '<meta property="og:title" content="" />',
+      '<meta name="robots" content="" />',
     ].join('');
   });
 
@@ -135,6 +175,16 @@ describe('applyDocumentMeta', () => {
     );
     expect(document.head.querySelector('link[rel="canonical"]')?.getAttribute('href')).toBe(
       `${SITE_URL}/pricing`,
+    );
+    expect(document.head.querySelector('meta[name="robots"]')?.getAttribute('content')).toBe(
+      ROBOTS_INDEX,
+    );
+  });
+
+  it('marks unknown and private paths noindex so they are not soft 404s', () => {
+    applyDocumentMeta('/does-not-exist', 'vi');
+    expect(document.head.querySelector('meta[name="robots"]')?.getAttribute('content')).toBe(
+      ROBOTS_NOINDEX,
     );
   });
 

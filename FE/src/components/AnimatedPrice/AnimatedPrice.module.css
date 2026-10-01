@@ -6,7 +6,7 @@
 
 .priceNum {
   display: inline-block;
-  font-family: 'Space Grotesk', sans-serif;
+  font-family: 'Space Grotesk Variable', 'Space Grotesk', sans-serif;
   font-size: 1.8rem;
   font-weight: 800;
   color: var(--text-primary);
