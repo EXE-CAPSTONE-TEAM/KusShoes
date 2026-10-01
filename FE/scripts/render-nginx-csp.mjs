@@ -2,10 +2,9 @@
 //
 // Usage: node scripts/render-nginx-csp.mjs <dist dir> <template> <output>
 //
-// Hashes every inline, executable <script> in the built HTML pages (the GTM/consent bootstrap
-// and the theme script in index.html; their text depends on build-time env such as
-// VITE_GTM_ID, so the hashes must be computed after `vite build`). JSON-LD blocks are data, not
-// scripts, and need no hash.
+// Hashes every inline, executable <script> in the built HTML pages (the consent/GTM/gtag
+// bootstrap and the theme script in index.html), so the CSP always matches what was built. JSON-LD
+// blocks are data, not scripts, and need no hash.
 import { createHash } from 'node:crypto';
 import { readdirSync, readFileSync, writeFileSync } from 'node:fs';
 import path from 'node:path';
@@ -35,7 +34,7 @@ export function renderCsp(distDir, template) {
     }
   }
   if (hashes.size === 0) throw new Error(`no inline scripts found in ${distDir}/*.html`);
-  return template.replace(PLACEHOLDER, [...hashes].sort().join(' '));
+  return template.replace(PLACEHOLDER, [...hashes].sort((a, b) => a.localeCompare(b)).join(' '));
 }
 
 if (import.meta.url === `file://${process.argv[1]}`) {

@@ -26,7 +26,9 @@ describe('render-nginx-csp', () => {
     writeFileSync(path.join(dist, 'index.html'), '<script>a()</script>');
     writeFileSync(path.join(dist, 'pricing.html'), '<script>a()</script><script>b()</script>');
     const out = renderCsp(dist, "script-src 'self' __CSP_SCRIPT_HASHES__ https://x;");
-    expect(out).toBe(`script-src 'self' ${[sha('a()'), sha('b()')].sort().join(' ')} https://x;`);
+    expect(out).toBe(
+      `script-src 'self' ${[sha('a()'), sha('b()')].sort((a, b) => a.localeCompare(b)).join(' ')} https://x;`,
+    );
   });
 
   it('refuses a template without exactly one placeholder', () => {
