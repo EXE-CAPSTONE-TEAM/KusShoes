@@ -1,8 +1,9 @@
-/* Fixed card in the bottom-left corner: overlays the page, so it never shifts layout (CLS). */
+/* Fixed card in the bottom-left corner: overlays the page, so it never shifts layout (CLS).
+   A non-modal <dialog open>: the UA centring (inset, margin) is reset. */
 .banner {
   position: fixed;
-  left: 16px;
-  bottom: 16px;
+  inset: auto auto 16px 16px;
+  margin: 0;
   z-index: 1900;
   width: min(440px, calc(100vw - 32px));
   max-height: calc(100vh - 32px);

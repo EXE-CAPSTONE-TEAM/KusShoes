@@ -55,7 +55,7 @@ export const CookieConsentBanner: React.FC<CookieConsentBannerProps> = ({ naviga
   if (!open) return null;
 
   return (
-    <section className={styles.banner} role="dialog" aria-labelledby="cookie-consent-title">
+    <dialog open className={styles.banner} aria-labelledby="cookie-consent-title">
       <h2 id="cookie-consent-title" className={styles.title}>
         {t('cookieConsent.title')}
       </h2>
@@ -76,7 +76,7 @@ export const CookieConsentBanner: React.FC<CookieConsentBannerProps> = ({ naviga
         <ul className={styles.categories}>
           <li>
             <label className={styles.category}>
-              <input type="checkbox" checked disabled />
+              <input type="checkbox" checked disabled readOnly />
               <span>
                 <strong>{t('cookieConsent.necessary')}</strong>
                 <small>{t('cookieConsent.necessaryDesc')}</small>
@@ -137,6 +137,6 @@ export const CookieConsentBanner: React.FC<CookieConsentBannerProps> = ({ naviga
           {t('cookieConsent.acceptAll')}
         </button>
       </div>
-    </section>
+    </dialog>
   );
 };
