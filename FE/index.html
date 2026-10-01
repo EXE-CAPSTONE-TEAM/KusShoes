@@ -14,7 +14,7 @@
        (src/analytics/consent.ts, same key and version) applies before any tag fires. -->
   <script>
     window.dataLayer = window.dataLayer || [];
-    function gtag(){dataLayer.push(arguments);}
+    function gtag(){window.dataLayer.push(arguments);}
     (function () {
       var analytics = 'denied', ads = 'denied';
       try {
@@ -44,9 +44,9 @@
   <!-- Google tag (gtag.js) -->
   <script async src="https://www.googletagmanager.com/gtag/js?id=G-ZB62H02JZW"></script>
   <script>
-    gtag('js', new Date());
+    window.gtag('js', new Date());
 
-    gtag('config', 'G-ZB62H02JZW');
+    window.gtag('config', 'G-ZB62H02JZW');
   </script>
   <!-- End Google tag (gtag.js) -->
   <!-- Filled per route at build time by vite-plugin-seo.ts (data: src/seo/pages.ts) -->

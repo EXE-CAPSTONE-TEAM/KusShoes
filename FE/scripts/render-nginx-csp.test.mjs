@@ -1,7 +1,9 @@
+// @vitest-environment node
 import { createHash } from 'node:crypto';
 import { mkdtempSync, readFileSync, writeFileSync } from 'node:fs';
 import { tmpdir } from 'node:os';
 import path from 'node:path';
+import { fileURLToPath } from 'node:url';
 import { describe, expect, it } from 'vitest';
 import { inlineScriptHashes, renderCsp } from './render-nginx-csp.mjs';
 
@@ -39,7 +41,7 @@ describe('render-nginx-csp', () => {
 
   it('keeps the nginx template usable', () => {
     const template = readFileSync(
-      path.resolve(__dirname, '../nginx-security-headers.conf'),
+      fileURLToPath(new URL('../nginx-security-headers.conf', import.meta.url)),
       'utf8',
     );
     expect(template.split('__CSP_SCRIPT_HASHES__')).toHaveLength(2);
