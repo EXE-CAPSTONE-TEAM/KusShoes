@@ -1,5 +1,15 @@
 import React, { useEffect, useState } from 'react';
-import { Smartphone, Save, Key, Instagram, Globe, X, Upload, RefreshCw } from 'lucide-react';
+import {
+  Smartphone,
+  Save,
+  Key,
+  Instagram,
+  Globe,
+  X,
+  Upload,
+  RefreshCw,
+  Images,
+} from 'lucide-react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { useTranslation } from 'react-i18next';
 import styles from './Settings.module.css';
@@ -118,13 +128,17 @@ export const Settings: React.FC<SettingsProps> = ({
         }));
       })
       .catch((caught) =>
-        toast(caught instanceof Error ? caught.message : t('settings.profile.toastLoadError'), 'error'),
+        toast(
+          caught instanceof Error ? caught.message : t('settings.profile.toastLoadError'),
+          'error',
+        ),
       );
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [toast]);
 
   // Avatar Modal State
   const [isAvatarModalOpen, setIsAvatarModalOpen] = useState(false);
+  const [showPresets, setShowPresets] = useState(false);
   const [uploadProgress, setUploadProgress] = useState(false);
 
   // Security settings
@@ -158,7 +172,10 @@ export const Settings: React.FC<SettingsProps> = ({
       void i18n.changeLanguage(profileData.language);
       toast(t('settings.profile.toastSaved'));
     } catch (caught) {
-      toast(caught instanceof Error ? caught.message : t('settings.profile.toastSaveError'), 'error');
+      toast(
+        caught instanceof Error ? caught.message : t('settings.profile.toastSaveError'),
+        'error',
+      );
     } finally {
       setSaving(false);
     }
@@ -176,11 +193,18 @@ export const Settings: React.FC<SettingsProps> = ({
       toast(message || t('settings.security.toastUpdated'));
       setPasswordForm({ currentPassword: '', newPassword: '', confirmPassword: '' });
     } catch (caught) {
-      toast(caught instanceof Error ? caught.message : t('settings.security.toastUpdateError'), 'error');
+      toast(
+        caught instanceof Error ? caught.message : t('settings.security.toastUpdateError'),
+        'error',
+      );
     } finally {
       setSaving(false);
     }
   };
+
+  useEffect(() => {
+    if (!isAvatarModalOpen) setShowPresets(false);
+  }, [isAvatarModalOpen]);
 
   const handleSelectPresetAvatar = (url: string) => {
     setProfileData((prev) => ({ ...prev, avatar: url }));
@@ -201,7 +225,10 @@ export const Settings: React.FC<SettingsProps> = ({
       setIsAvatarModalOpen(false);
       toast(t('settings.profile.toastUploaded'));
     } catch (caught) {
-      toast(caught instanceof Error ? caught.message : t('settings.profile.toastUploadError'), 'error');
+      toast(
+        caught instanceof Error ? caught.message : t('settings.profile.toastUploadError'),
+        'error',
+      );
     } finally {
       setUploadProgress(false);
       event.target.value = '';
@@ -216,7 +243,10 @@ export const Settings: React.FC<SettingsProps> = ({
       setProfileData((prev) => ({ ...prev, avatar: presetAvatars[0].url }));
       toast(t('settings.profile.toastRemoved'));
     } catch (caught) {
-      toast(caught instanceof Error ? caught.message : t('settings.profile.toastRemoveError'), 'error');
+      toast(
+        caught instanceof Error ? caught.message : t('settings.profile.toastRemoveError'),
+        'error',
+      );
     } finally {
       setUploadProgress(false);
     }
@@ -282,7 +312,9 @@ export const Settings: React.FC<SettingsProps> = ({
                   />
                 </div>
                 <div className={styles.avatarDetails}>
-                  <span className={styles.avatarName}>{profileData.name || t('settings.profile.designerFallback')}</span>
+                  <span className={styles.avatarName}>
+                    {profileData.name || t('settings.profile.designerFallback')}
+                  </span>
                   <span className={styles.avatarEmail}>{profileData.email}</span>
                   <div className={styles.avatarActions}>
                     <button
@@ -310,7 +342,9 @@ export const Settings: React.FC<SettingsProps> = ({
               <form onSubmit={handleProfileSave} className={styles.form}>
                 {/* Group A: Designer Identity */}
                 <div className={styles.formSectionGroup}>
-                  <h4 className={styles.formGroupTitle}>{t('settings.profile.designerIdentity')}</h4>
+                  <h4 className={styles.formGroupTitle}>
+                    {t('settings.profile.designerIdentity')}
+                  </h4>
                   <div className={styles.formGrid}>
                     <div className={styles.inputGroup}>
                       <label htmlFor="designer-name">{t('settings.profile.designerName')}</label>
@@ -339,7 +373,9 @@ export const Settings: React.FC<SettingsProps> = ({
                         id="designer-username"
                         type="text"
                         value={profileData.username}
-                        onChange={(e) => setProfileData({ ...profileData, username: e.target.value })}
+                        onChange={(e) =>
+                          setProfileData({ ...profileData, username: e.target.value })
+                        }
                         className={styles.input}
                         pattern="[a-zA-Z_][a-zA-Z0-9_]{2,29}"
                         title={t('settings.profile.usernamePatternTitle')}
@@ -400,7 +436,9 @@ export const Settings: React.FC<SettingsProps> = ({
                       />
                     </div>
                     <div className={styles.inputGroup}>
-                      <label htmlFor="designer-location">{t('settings.profile.studioLocation')}</label>
+                      <label htmlFor="designer-location">
+                        {t('settings.profile.studioLocation')}
+                      </label>
                       <input
                         id="designer-location"
                         maxLength={100}
@@ -434,7 +472,9 @@ export const Settings: React.FC<SettingsProps> = ({
 
                 {/* Group C: Connected Portfolios */}
                 <div className={styles.formSectionGroup}>
-                  <h4 className={styles.formGroupTitle}>{t('settings.profile.connectedHandles')}</h4>
+                  <h4 className={styles.formGroupTitle}>
+                    {t('settings.profile.connectedHandles')}
+                  </h4>
                   <div className={styles.formGrid}>
                     <div className={styles.inputGroup}>
                       <label htmlFor="designer-instagram">{t('settings.profile.instagram')}</label>
@@ -523,7 +563,9 @@ export const Settings: React.FC<SettingsProps> = ({
                   </h3>
                   <div className={styles.formGrid}>
                     <div className={styles.inputGroup}>
-                      <label htmlFor="current-password">{t('settings.security.currentPassword')}</label>
+                      <label htmlFor="current-password">
+                        {t('settings.security.currentPassword')}
+                      </label>
                       <input
                         id="current-password"
                         type="password"
@@ -549,7 +591,9 @@ export const Settings: React.FC<SettingsProps> = ({
                       />
                     </div>
                     <div className={styles.inputGroup}>
-                      <label htmlFor="confirm-password">{t('settings.security.confirmPassword')}</label>
+                      <label htmlFor="confirm-password">
+                        {t('settings.security.confirmPassword')}
+                      </label>
                       <input
                         id="confirm-password"
                         type="password"
@@ -610,7 +654,9 @@ export const Settings: React.FC<SettingsProps> = ({
               </div>
 
               <div className={styles.appearanceGroup}>
-                <h4 className={styles.formGroupTitle}>{t('settings.appearance.themePreferences')}</h4>
+                <h4 className={styles.formGroupTitle}>
+                  {t('settings.appearance.themePreferences')}
+                </h4>
 
                 <div className={styles.themeSelectorGrid}>
                   {/* Dark Theme Card */}
@@ -630,8 +676,12 @@ export const Settings: React.FC<SettingsProps> = ({
                       </div>
                     </div>
                     <div className={styles.themeCardMeta}>
-                      <span className={styles.themeCardTitle}>{t('settings.appearance.darkTitle')}</span>
-                      <span className={styles.themeCardDesc}>{t('settings.appearance.darkDesc')}</span>
+                      <span className={styles.themeCardTitle}>
+                        {t('settings.appearance.darkTitle')}
+                      </span>
+                      <span className={styles.themeCardDesc}>
+                        {t('settings.appearance.darkDesc')}
+                      </span>
                     </div>
                   </div>
 
@@ -652,8 +702,12 @@ export const Settings: React.FC<SettingsProps> = ({
                       </div>
                     </div>
                     <div className={styles.themeCardMeta}>
-                      <span className={styles.themeCardTitle}>{t('settings.appearance.lightTitle')}</span>
-                      <span className={styles.themeCardDesc}>{t('settings.appearance.lightDesc')}</span>
+                      <span className={styles.themeCardTitle}>
+                        {t('settings.appearance.lightTitle')}
+                      </span>
+                      <span className={styles.themeCardDesc}>
+                        {t('settings.appearance.lightDesc')}
+                      </span>
                     </div>
                   </div>
                 </div>
@@ -684,27 +738,44 @@ export const Settings: React.FC<SettingsProps> = ({
             </div>
             <p className={styles.modalDesc}>{t('settings.avatarModal.desc')}</p>
 
-            {/* Presets Grid */}
-            <div className={styles.avatarGrid}>
-              {presetAvatars.map((preset, index) => (
-                <div
-                  key={preset.url}
-                  className={`${styles.avatarGridItem} ${profileData.avatar === preset.url ? styles.avatarItemActive : ''}`}
-                  onClick={() => handleSelectPresetAvatar(preset.url)}
-                  role="button"
-                  tabIndex={0}
-                  aria-label={t('settings.avatarModal.presetLabel', { n: index + 1 })}
-                  onKeyDown={(e) => {
-                    if (e.key === 'Enter') handleSelectPresetAvatar(preset.url);
-                  }}
-                >
-                  <img src={preset.url} alt="" className={styles.gridAvatarImg} />
-                  {PRESET_AVATAR_NAMES[index] && (
-                    <span className={styles.gridAvatarName}>{PRESET_AVATAR_NAMES[index]}</span>
-                  )}
-                </div>
-              ))}
+            {/* Current avatar stays front and centre; presets are opt-in */}
+            <div className={styles.currentAvatarWrap}>
+              <img src={profileData.avatar} alt="" className={styles.currentAvatarImg} />
             </div>
+
+            <button
+              type="button"
+              className={styles.secondaryBtn}
+              style={{ width: '100%' }}
+              aria-expanded={showPresets}
+              onClick={() => setShowPresets((v) => !v)}
+            >
+              <Images size={14} />
+              <span>{t('settings.avatarModal.choosePreset')}</span>
+            </button>
+
+            {showPresets && (
+              <div className={styles.avatarGrid}>
+                {presetAvatars.map((preset, index) => (
+                  <div
+                    key={preset.url}
+                    className={`${styles.avatarGridItem} ${profileData.avatar === preset.url ? styles.avatarItemActive : ''}`}
+                    onClick={() => handleSelectPresetAvatar(preset.url)}
+                    role="button"
+                    tabIndex={0}
+                    aria-label={t('settings.avatarModal.presetLabel', { n: index + 1 })}
+                    onKeyDown={(e) => {
+                      if (e.key === 'Enter') handleSelectPresetAvatar(preset.url);
+                    }}
+                  >
+                    <img src={preset.url} alt="" className={styles.gridAvatarImg} />
+                    {PRESET_AVATAR_NAMES[index] && (
+                      <span className={styles.gridAvatarName}>{PRESET_AVATAR_NAMES[index]}</span>
+                    )}
+                  </div>
+                ))}
+              </div>
+            )}
 
             <div className={styles.divider} />
 
@@ -716,10 +787,7 @@ export const Settings: React.FC<SettingsProps> = ({
                   <span>{t('settings.avatarModal.uploading')}</span>
                 </div>
               ) : (
-                <label
-                  className={styles.secondaryBtn}
-                  style={{ width: '100%', cursor: 'pointer' }}
-                >
+                <label className={styles.secondaryBtn} style={{ width: '100%', cursor: 'pointer' }}>
                   <input
                     type="file"
                     accept="image/jpeg,image/png,image/webp"

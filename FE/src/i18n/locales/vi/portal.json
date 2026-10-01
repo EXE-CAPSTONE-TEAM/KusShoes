@@ -96,6 +96,7 @@
       "toastLight": "Đã chuyển sang giao diện Premium Cream"
     },
     "avatarModal": {
+      "choosePreset": "Chọn ảnh có sẵn",
       "presetLabel": "Ảnh mẫu {{n}}",
       "title": "Chọn ảnh đại diện nhà thiết kế",
       "desc": "Chọn một trong các mẫu có sẵn hoặc tải lên ảnh tuỳ chỉnh.",

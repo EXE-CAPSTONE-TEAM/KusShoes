@@ -822,6 +822,19 @@
   line-height: 1.4;
 }
 
+.currentAvatarWrap {
+  display: flex;
+  justify-content: center;
+}
+
+.currentAvatarImg {
+  width: 96px;
+  height: 96px;
+  border-radius: 50%;
+  object-fit: cover;
+  border: 1px solid var(--border);
+}
+
 .avatarGrid {
   display: grid;
   grid-template-columns: repeat(5, 1fr);
