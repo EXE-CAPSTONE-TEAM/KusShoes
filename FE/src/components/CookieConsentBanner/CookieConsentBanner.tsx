@@ -1,4 +1,4 @@
-import React, { useEffect, useState } from 'react';
+import React, { useEffect, useId, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import {
   getCookieConsent,
@@ -7,6 +7,39 @@ import {
   saveCookieConsent,
 } from '../../analytics';
 import styles from './CookieConsentBanner.module.css';
+
+interface ConsentCategoryProps {
+  id: string;
+  label: string;
+  description: string;
+  checked: boolean;
+  /** Omitted for the always-on category, which is shown checked and disabled. */
+  onChange?: (checked: boolean) => void;
+}
+
+const ConsentCategory: React.FC<ConsentCategoryProps> = ({
+  id,
+  label,
+  description,
+  checked,
+  onChange,
+}) => (
+  <li className={styles.category}>
+    <input
+      id={id}
+      type="checkbox"
+      checked={checked}
+      disabled={!onChange}
+      readOnly={!onChange}
+      aria-describedby={`${id}-desc`}
+      onChange={onChange && ((e) => onChange(e.target.checked))}
+    />
+    <div>
+      <label htmlFor={id}>{label}</label>
+      <small id={`${id}-desc`}>{description}</small>
+    </div>
+  </li>
+);
 
 interface CookieConsentBannerProps {
   navigate: (path: string) => void;
@@ -24,6 +57,7 @@ export const CookieConsentBanner: React.FC<CookieConsentBannerProps> = ({ naviga
   const [customizing, setCustomizing] = useState(false);
   const [analytics, setAnalytics] = useState(false);
   const [ads, setAds] = useState(false);
+  const idPrefix = useId();
 
   useEffect(() => {
     let cancelled = false;
@@ -74,37 +108,26 @@ export const CookieConsentBanner: React.FC<CookieConsentBannerProps> = ({ naviga
 
       {customizing && (
         <ul className={styles.categories}>
-          <li>
-            <label className={styles.category}>
-              <input type="checkbox" checked disabled readOnly />
-              <span>
-                <strong>{t('cookieConsent.necessary')}</strong>
-                <small>{t('cookieConsent.necessaryDesc')}</small>
-              </span>
-            </label>
-          </li>
-          <li>
-            <label className={styles.category}>
-              <input
-                type="checkbox"
-                checked={analytics}
-                onChange={(e) => setAnalytics(e.target.checked)}
-              />
-              <span>
-                <strong>{t('cookieConsent.analytics')}</strong>
-                <small>{t('cookieConsent.analyticsDesc')}</small>
-              </span>
-            </label>
-          </li>
-          <li>
-            <label className={styles.category}>
-              <input type="checkbox" checked={ads} onChange={(e) => setAds(e.target.checked)} />
-              <span>
-                <strong>{t('cookieConsent.ads')}</strong>
-                <small>{t('cookieConsent.adsDesc')}</small>
-              </span>
-            </label>
-          </li>
+          <ConsentCategory
+            id={`${idPrefix}-necessary`}
+            label={t('cookieConsent.necessary')}
+            description={t('cookieConsent.necessaryDesc')}
+            checked
+          />
+          <ConsentCategory
+            id={`${idPrefix}-analytics`}
+            label={t('cookieConsent.analytics')}
+            description={t('cookieConsent.analyticsDesc')}
+            checked={analytics}
+            onChange={setAnalytics}
+          />
+          <ConsentCategory
+            id={`${idPrefix}-ads`}
+            label={t('cookieConsent.ads')}
+            description={t('cookieConsent.adsDesc')}
+            checked={ads}
+            onChange={setAds}
+          />
         </ul>
       )}
 

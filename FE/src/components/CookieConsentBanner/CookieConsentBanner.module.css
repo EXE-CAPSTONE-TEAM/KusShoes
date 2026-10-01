@@ -47,7 +47,6 @@
   align-items: flex-start;
   gap: 10px;
   font-size: 0.85rem;
-  cursor: pointer;
 }
 
 .category input {
@@ -55,10 +54,15 @@
   accent-color: var(--color-orange);
 }
 
-.category span {
+.category div {
   display: flex;
   flex-direction: column;
   gap: 2px;
+}
+
+.category label {
+  font-weight: 700;
+  cursor: pointer;
 }
 
 .category small {
