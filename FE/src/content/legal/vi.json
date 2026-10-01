@@ -78,7 +78,7 @@
         "id": "google",
         "title": "6. Dữ liệu từ tài khoản Google",
         "body": [
-          "Khi bạn chọn \"Đăng nhập với Google\", KusShoes chỉ xin các quyền openid, email và profile. Từ Google, chúng tôi nhận và lưu: mã định danh tài khoản Google, địa chỉ email, tên và họ. Chúng tôi không lưu ảnh đại diện Google, không truy cập Gmail, Drive, danh bạ hay bất kỳ dữ liệu Google nào khác.",
+          "Khi bạn chọn \"Đăng nhập bằng Google\", KusShoes chỉ xin các quyền openid, email và profile. Từ Google, chúng tôi nhận và lưu: mã định danh tài khoản Google, địa chỉ email, tên và họ. Chúng tôi không lưu ảnh đại diện Google, không truy cập Gmail, Drive, danh bạ hay bất kỳ dữ liệu Google nào khác.",
           "Các dữ liệu này chỉ được dùng để tạo tài khoản KusShoes, đăng nhập và hiển thị tên của bạn trong ứng dụng. Chúng được lưu trong cơ sở dữ liệu của KusShoes (Neon, Singapore) và không được chia sẻ với bên nào khác ngoài các nhà cung cấp hạ tầng ở mục 5; không bị bán, không dùng cho quảng cáo và không dùng để huấn luyện trí tuệ nhân tạo.",
           "Việc KusShoes sử dụng thông tin nhận từ Google API tuân thủ Chính sách dữ liệu người dùng của dịch vụ Google API (Google API Services User Data Policy), bao gồm các yêu cầu về Sử dụng giới hạn (Limited Use).",
           "Bạn có thể ngắt kết nối KusShoes khỏi tài khoản Google tại https://myaccount.google.com/permissions. Khi bạn xoá tài khoản KusShoes, các dữ liệu trên bị xoá hoặc ẩn danh hoá theo mục 7."

@@ -10,21 +10,21 @@
     "exportsSuffix": "{{count}} lượt xuất",
     "fileExportFormats": "Định dạng file xuất",
     "bakePriority": "Ưu tiên xử lý",
-    "desktopClientSync": "Đồng bộ với ứng dụng Desktop"
+    "desktopClientSync": "Đồng bộ với ứng dụng máy tính"
   },
   "faqs": {
     "q1": "Quét bằng điện thoại hoạt động thế nào?",
-    "a1": "Bạn tải ứng dụng KusShoes trên iOS hoặc Android, chụp ảnh giày 360°, ứng dụng sẽ dùng Kiri Engine API để tự động ghép thành mesh 3D độ phân giải cao.",
+    "a1": "Bạn tải ứng dụng KusShoes về điện thoại, chụp ảnh giày 360°, rồi ứng dụng sẽ dùng KIRI Engine để tự động dựng thành mô hình 3D độ phân giải cao.",
     "q2": "KusStudio là gì?",
-    "a2": "KusStudio là phần mềm tuỳ chỉnh trên desktop. Nó đồng bộ với bộ nhớ đám mây để bạn dễ dàng tô màu, chỉnh chất liệu và bố cục giày trên máy tính mạnh mẽ.",
+    "a2": "KusStudio là phần mềm tuỳ chỉnh giày trên máy tính. Phần mềm đồng bộ với kho lưu trữ đám mây của bạn, giúp bạn dễ dàng tô màu, chỉnh chất liệu và bố cục giày ngay trên máy tính.",
     "q3": "Tôi có thể hạ cấp hoặc huỷ gói bất cứ lúc nào không?",
-    "a3": "Có. Bạn có thể quản lý gói đăng ký ngay trong tài khoản User Portal. Việc huỷ sẽ có hiệu lực vào cuối chu kỳ thanh toán hiện tại."
+    "a3": "Có. Bạn có thể quản lý gói đăng ký ngay trong trang tài khoản của mình. Việc huỷ sẽ có hiệu lực vào cuối chu kỳ thanh toán hiện tại."
   },
   "tierStarterSuffix": "{{tier}} Starter",
   "tierAnnual": "{{tier}} Năm",
   "tierMonthly": "{{tier}} Tháng",
-  "freePlanDesc": "Bắt đầu với giới hạn workspace đám mây mặc định.",
-  "paidPlanDesc": "Ưu tiên xử lý {{priority}} cùng giới hạn thanh toán quản lý theo cơ sở dữ liệu.",
+  "freePlanDesc": "Bắt đầu với giới hạn mặc định của không gian làm việc trên đám mây.",
+  "paidPlanDesc": "Ưu tiên xử lý {{priority}}, kèm hạn mức theo đúng gói bạn đăng ký.",
   "unlimitedActiveProjects": "Không giới hạn dự án hoạt động",
   "activeProjectsCount": "{{count}} dự án hoạt động",
   "unlimitedMonthlyExports": "Không giới hạn xuất file hàng tháng",

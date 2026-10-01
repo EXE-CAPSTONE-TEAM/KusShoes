@@ -5,13 +5,13 @@
     "macIntel": "macOS Intel (sắp ra mắt)"
   },
   "selectDesktopOsAria": "Chọn hệ điều hành desktop",
-  "downloadToast": "Đang bắt đầu tải {{appName}} ({{platform}}). Cảm ơn bạn đã tham gia bản beta!",
+  "downloadToast": "Đang tải {{appName}} ({{platform}}). Cảm ơn bạn đã tham gia bản beta!",
   "badge": "HỆ SINH THÁI HAI ỨNG DỤNG",
   "heroTitleLine1Prefix": "QUÉT VỚI",
   "heroTitleLine2Prefix": "THIẾT KẾ TRÊN",
-  "heroSubtitle": "Hai công cụ chuyên biệt phối hợp hoàn hảo. Ghi lại hình học vật lý ngoài đời thực bằng ứng dụng di động, rồi áp dụng chất liệu, màu sắc và thiết kế chuyên nghiệp trên desktop.",
+  "heroSubtitle": "Hai công cụ chuyên biệt phối hợp ăn ý. Quét hình dáng đôi giày thật bằng ứng dụng trên điện thoại, rồi áp chất liệu, màu sắc và thiết kế chuyên nghiệp trên máy tính.",
   "mobile": {
-    "tag": "ỨNG DỤNG QUÉT DI ĐỘNG",
+    "tag": "ỨNG DỤNG QUÉT TRÊN ĐIỆN THOẠI",
     "description": "Biến đôi giày thật thành mô hình 3D. Quay một video 360° quanh đôi giày bằng điện thoại, KIRI Engine dựng mô hình 3D, bạn xem trước ngay trên máy và lưu thành dự án.",
     "spec1": "Dựng mô hình 3D từ video bằng KIRI Engine",
     "spec2": "Video được tải thẳng lên kho lưu trữ đám mây bảo mật",
@@ -19,7 +19,7 @@
     "spec4": "Lưu thành dự án, mở tiếp trên web và KusStudio Desktop",
     "selectPlatform": "Chọn nền tảng",
     "iosMeta": "Phiên bản iOS sắp ra mắt",
-    "androidMeta": "Android 7.0 trở lên • tệp APK đã ký chính thức",
+    "androidMeta": "Android 7.0 trở lên • file APK đã ký",
     "downloadIos": "iOS sắp ra mắt",
     "downloadAndroid": "Tải file APK",
     "iosComingSoon": "KusShoes cho iOS sắp ra mắt. Hiện tại bạn vui lòng dùng điện thoại Android.",
@@ -27,25 +27,25 @@
     "apkInstallHint": "Mở file APK vừa tải để cài. Nếu Android hỏi, hãy cho phép cài ứng dụng từ trình duyệt."
   },
   "desktop": {
-    "tag": "BỘ CÔNG CỤ THIẾT KẾ DESKTOP",
+    "tag": "ỨNG DỤNG THIẾT KẾ TRÊN MÁY TÍNH",
     "description": "Tuỳ chỉnh giày 3D trên máy tính: mở bản quét từ dự án trên web, cắt gọn mô hình, thêm sticker và chữ, xem trước rồi xuất file 3D.",
-    "spec1": "Xem mô hình 3D thời gian thực bằng WebGL",
+    "spec1": "Xem mô hình 3D theo thời gian thực bằng WebGL",
     "spec2": "Thêm sticker và chữ nhiều lớp lên giày",
     "spec3": "Xuất mô hình 3D định dạng GLB và OBJ",
-    "spec4": "Mở dự án từ web chỉ với một cú bấm",
+    "spec4": "Mở dự án từ web chỉ với một lần bấm",
     "selectOs": "Chọn hệ điều hành",
     "windowsMeta": "Windows 10/11 (64-bit) • Lần đầu mở app sẽ tải thêm bộ dựng hình 3D (khoảng 400 MB)",
     "macSiliconMeta": "Phiên bản macOS sắp ra mắt",
     "macIntelMeta": "Phiên bản macOS sắp ra mắt",
-    "downloadInstaller": "Tải trình cài đặt Desktop",
+    "downloadInstaller": "Tải bộ cài đặt cho máy tính",
     "macComingSoon": "KusShoes Editor cho macOS sắp ra mắt. Hiện tại bạn vui lòng dùng máy Windows.",
     "noInstallerYet": "Trình cài đặt Windows đầu tiên đang được chuẩn bị. Bạn quay lại sau ít phút nhé.",
     "smartScreenHint": "Nếu Windows hiện “Windows protected your PC”, bấm More info → Run anyway."
   },
   "workflow": {
-    "title": "Cách chúng đồng bộ",
+    "title": "Cách hai ứng dụng đồng bộ",
     "desc": "Quét một đôi giày bằng <b1>KusShoes App</b1>: video được tải lên đám mây, KIRI Engine dựng mô hình 3D và bạn lưu thành dự án. Dự án hiện ngay trong trang quản lý trên web; bấm “Mở trong KusStudio” để tiếp tục chỉnh sửa trên <b2>KusStudio Desktop</b2>.",
-    "cta": "Vào Portal Console",
+    "cta": "Vào trang quản lý",
     "cloudSync": "Đồng bộ đám mây"
   }
 }

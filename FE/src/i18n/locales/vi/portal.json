@@ -8,8 +8,8 @@
     "feedback": "Phản hồi",
     "settings": "Cài đặt",
     "settingsProfile": "Thông tin hồ sơ",
-    "settingsSecurity": "Bảo mật & Đăng nhập",
-    "settingsPrivacy": "Quyền riêng tư mô hình",
+    "settingsSecurity": "Bảo mật và đăng nhập",
+    "settingsPrivacy": "Quyền riêng tư của mô hình",
     "settingsAppearance": "Giao diện",
     "exports": "Xuất file",
     "recentProjects": "Dự án gần đây",
@@ -48,7 +48,7 @@
       "primaryRole": "Vai trò chính",
       "studioName": "Tên studio",
       "studioLocation": "Địa điểm studio",
-      "studioBio": "Giới thiệu & Slogan studio",
+      "studioBio": "Giới thiệu và khẩu hiệu của studio",
       "creativeBio": "Giới thiệu bản thân",
       "bioPlaceholder": "Giới thiệu về thương hiệu studio tuỳ chỉnh giày của bạn...",
       "connectedHandles": "Liên kết mạng xã hội",
@@ -61,15 +61,15 @@
       "toastSaved": "Đã lưu hồ sơ lên máy chủ.",
       "toastSaveError": "Không thể lưu hồ sơ.",
       "toastLoadError": "Không thể tải hồ sơ.",
-      "toastPresetSelected": "Đã chọn ảnh xem trước. Tải lên ảnh cục bộ để lưu ảnh đại diện trên máy chủ.",
+      "toastPresetSelected": "Đã chọn ảnh mẫu. Hãy tải ảnh từ máy của bạn lên để lưu làm ảnh đại diện.",
       "toastUploaded": "Đã tải ảnh đại diện lên máy chủ.",
       "toastUploadError": "Không thể tải ảnh đại diện lên.",
       "toastRemoved": "Đã xoá ảnh đại diện.",
       "toastRemoveError": "Không thể xoá ảnh đại diện."
     },
     "security": {
-      "title": "Bảo mật & Thông tin đăng nhập",
-      "subtitle": "Đổi mật khẩu và điều chỉnh phương thức xác thực danh tính.",
+      "title": "Bảo mật và đăng nhập",
+      "subtitle": "Đổi mật khẩu và quản lý cách xác minh danh tính của bạn.",
       "updatePassword": "Cập nhật mật khẩu",
       "currentPassword": "Mật khẩu hiện tại",
       "newPassword": "Mật khẩu mới",
@@ -79,12 +79,12 @@
       "toastUpdateError": "Không thể cập nhật mật khẩu."
     },
     "privacy": {
-      "title": "Quyền riêng tư & Dữ liệu",
-      "subtitle": "Kiểm soát ai có thể xem tác phẩm của bạn, những gì bạn đồng ý chia sẻ, và dữ liệu cá nhân."
+      "title": "Quyền riêng tư và dữ liệu",
+      "subtitle": "Kiểm soát ai được xem tác phẩm của bạn, những gì bạn đồng ý chia sẻ và dữ liệu cá nhân của bạn."
     },
     "appearance": {
       "title": "Giao diện",
-      "subtitle": "Chọn giao diện hiển thị cho không gian làm việc KusShoes. Lựa chọn được ghi nhớ trên thiết bị này.",
+      "subtitle": "Chọn giao diện cho KusShoes. Lựa chọn được ghi nhớ trên thiết bị này.",
       "themePreferences": "Tuỳ chọn giao diện",
       "darkTitle": "Streetwear Dark",
       "darkDesc": "Giao diện tối neon mặc định",
@@ -97,7 +97,7 @@
       "title": "Chọn ảnh đại diện nhà thiết kế",
       "desc": "Chọn một trong các mẫu có sẵn hoặc tải lên ảnh tuỳ chỉnh.",
       "uploading": "Đang tải ảnh đại diện lên...",
-      "uploadCta": "Tải ảnh tuỳ chỉnh (.png, .jpg)",
+      "uploadCta": "Tải ảnh lên (.png, .jpg)",
       "removeCurrent": "Xoá ảnh đại diện hiện tại",
       "cancel": "Huỷ"
     }
