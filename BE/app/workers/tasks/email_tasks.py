@@ -109,6 +109,20 @@ def send_account_locked_email(self, user_email: str) -> None:
 
 
 @celery_app.task(
+    name="app.workers.tasks.email_tasks.send_google_linked_email",
+    bind=True,
+    max_retries=3,
+    default_retry_delay=5,
+)
+def send_google_linked_email(self, user_email: str) -> None:
+    try:
+        notification_service.send_google_linked_email(user_email)
+    except Exception as exc:
+        delay = 5 * (2**self.request.retries)
+        raise self.retry(exc=exc, countdown=delay)
+
+
+@celery_app.task(
     name="app.workers.tasks.email_tasks.send_account_restore_email",
     bind=True,
     max_retries=3,

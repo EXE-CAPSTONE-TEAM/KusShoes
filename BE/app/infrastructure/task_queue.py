@@ -61,6 +61,14 @@ def enqueue_account_locked_email(email: str) -> None:
     )
 
 
+def enqueue_google_linked_email(email: str) -> None:
+    celery_app.send_task(
+        "app.workers.tasks.email_tasks.send_google_linked_email",
+        args=[email],
+        queue="normal",
+    )
+
+
 def enqueue_storage_delete(file_path: str) -> None:
     celery_app.send_task(
         "app.workers.tasks.maintenance_tasks.delete_storage_file",

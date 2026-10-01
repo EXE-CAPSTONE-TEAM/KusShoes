@@ -35,6 +35,10 @@ def send_account_locked_email(user_email: str) -> None:
     email_sender.send_account_locked_email(user_email)
 
 
+def send_google_linked_email(user_email: str) -> None:
+    email_sender.send_google_linked_email(user_email)
+
+
 def send_account_restore_email(user_email: str, otp_code: str) -> None:
     email_sender.send_account_restore_email(user_email, otp_code)
 

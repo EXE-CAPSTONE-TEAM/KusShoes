@@ -83,6 +83,17 @@ def send_account_locked_email(user_email: str) -> None:
     )
 
 
+def send_google_linked_email(user_email: str) -> None:
+    _send(
+        user_email,
+        "Cảnh báo bảo mật — Tài khoản Google vừa được liên kết",
+        "Xin chào,\n\nMột tài khoản Google dùng địa chỉ email này vừa được liên kết với tài khoản "
+        "KusShoes của bạn và đã đăng nhập thành công.\n\n"
+        "Nếu đây là bạn, không cần làm gì thêm. Nếu không phải bạn, hãy đổi mật khẩu ngay "
+        "và thu hồi các phiên đăng nhập trong Cài đặt → Thiết bị.",
+    )
+
+
 def send_grace_period_email(user_email: str) -> None:
     _send(
         user_email,

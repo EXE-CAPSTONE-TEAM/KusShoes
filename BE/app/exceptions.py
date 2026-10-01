@@ -258,6 +258,17 @@ class AuthTwoFactorCodeInvalid(AppException):
         super().__init__(400, "AUTH_2FA_CODE_INVALID", "Mã xác thực 2 lớp không đúng")
 
 
+class AuthTwoFactorLocked(AppException):
+    def __init__(self, retry_after: int):
+        super().__init__(
+            429,
+            "AUTH_2FA_LOCKED",
+            "Nhập sai mã xác thực 2 lớp quá 5 lần. Vui lòng đăng nhập lại sau 15 phút.",
+            extra={"retry_after": retry_after},
+            headers={"Retry-After": str(retry_after)},
+        )
+
+
 class AuthTwoFactorAlreadyEnabled(AppException):
     def __init__(self):
         super().__init__(409, "AUTH_2FA_ALREADY_ENABLED", "Xác thực 2 lớp đã được bật")

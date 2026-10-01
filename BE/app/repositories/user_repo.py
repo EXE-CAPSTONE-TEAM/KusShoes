@@ -150,6 +150,31 @@ async def set_verified_google_link(db: AsyncSession, user: User, google_id: str)
     user.is_verified = True
 
 
+async def reclaim_unverified_for_google(
+    db: AsyncSession,
+    user: User,
+    *,
+    google_id: str,
+    first_name: str,
+    last_name: str,
+    username: str,
+) -> None:
+    """Hand a never-verified email/password row to the Google identity that owns its
+    mailbox, dropping everything the unproven registrant chose (password, profile,
+    attribution) so it becomes a Google-only account."""
+    user.google_id = google_id
+    user.is_verified = True
+    user.password_hash = None
+    user.first_name = first_name
+    user.last_name = last_name
+    user.username = username
+    user.acquisition_channel = None
+    user.utm_source = None
+    user.utm_campaign = None
+    user.referral_code = None
+    await db.flush()
+
+
 async def update_last_login(db: AsyncSession, user: User) -> None:
     user.updated_at = datetime.now(UTC)
 

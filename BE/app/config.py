@@ -42,6 +42,10 @@ class Settings(BaseSettings):
     REFRESH_COOKIE_NAME: str = "kusshoes_refresh_token"
     REFRESH_COOKIE_SAMESITE: str = "lax"
 
+    # Reverse proxies in front of the API that append to X-Forwarded-For (nginx = 1).
+    # 0 when clients reach uvicorn directly. See app.utils.http.get_client_ip.
+    TRUSTED_PROXY_HOPS: int = 1
+
     # Authentication abuse protection
     REGISTER_RATE_LIMIT: int = 5
     REGISTER_RATE_WINDOW_SECONDS: int = 60

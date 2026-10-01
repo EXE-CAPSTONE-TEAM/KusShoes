@@ -4,6 +4,7 @@ Email-method challenges reuse `otp_store`'s Redis functions under a
 namespaced pseudo user-id (e.g. ``2fa-login:<uuid>``) instead of a new store —
 same TTL/attempt semantics, zero new Redis primitives.
 """
+import hmac
 import secrets
 
 import redis.asyncio as aioredis
@@ -133,6 +134,10 @@ async def send_login_challenge_code(redis: aioredis.Redis, user) -> None:
     task_queue.enqueue_verification_email(user.recovery_email or user.email, code)
 
 
+async def discard_login_challenge_code(redis: aioredis.Redis, user) -> None:
+    await otp_store.delete_otp(redis, f"2fa-login:{user.id}")
+
+
 async def verify_login_code(
     db: AsyncSession,
     redis: aioredis.Redis,
@@ -149,7 +154,7 @@ async def verify_login_code(
         return bool(user.totp_secret) and totp.verify_code(user.totp_secret, code)
     if user.two_factor_method == "email":
         data = await otp_store.get_otp_data(redis, f"2fa-login:{user.id}")
-        if not data or data["code"] != code:
+        if not data or not hmac.compare_digest(data["code"].encode(), code.encode()):
             return False
         await otp_store.delete_otp(redis, f"2fa-login:{user.id}")
         return True

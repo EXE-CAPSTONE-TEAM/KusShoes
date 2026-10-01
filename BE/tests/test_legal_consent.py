@@ -70,7 +70,13 @@ async def _google_round_trip(client, monkeypatch, *, consent: bool, email: str, 
     state = parse_qs(urlparse(start.headers["location"]).query)["state"][0]
 
     async def fake_user_info(_code):
-        return {"sub": sub, "email": email, "given_name": "Gia", "family_name": "Tran"}
+        return {
+            "sub": sub,
+            "email": email,
+            "email_verified": True,
+            "given_name": "Gia",
+            "family_name": "Tran",
+        }
 
     monkeypatch.setattr(google_oauth, "fetch_user_info", fake_user_info)
     return await client.get(f"/api/v1/auth/google/callback?code=c&state={state}")
@@ -161,7 +167,12 @@ async def test_legacy_state_value_is_treated_as_no_consent_not_a_crash(
     await redis.set("oauth:state:legacy-state", "1", ex=60)
 
     async def fake_user_info(_code):
-        return {"sub": "g-sub-legacy", "email": "g-legacy@example.com", "given_name": "L"}
+        return {
+            "sub": "g-sub-legacy",
+            "email": "g-legacy@example.com",
+            "email_verified": True,
+            "given_name": "L",
+        }
 
     monkeypatch.setattr(google_oauth, "fetch_user_info", fake_user_info)
     res = await client.get("/api/v1/auth/google/callback?code=c&state=legacy-state")

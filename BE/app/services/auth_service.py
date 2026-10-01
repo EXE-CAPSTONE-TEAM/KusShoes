@@ -30,6 +30,7 @@ from app.exceptions import (
     AuthTokenInvalid,
     AuthTwoFactorChallengeInvalid,
     AuthTwoFactorCodeInvalid,
+    AuthTwoFactorLocked,
     AuthUserSuspended,
     EmailAlreadyTaken,
     EmailNotVerified,
@@ -342,6 +343,9 @@ async def login_user(
     await login_guard.reset(redis, "ip", client_ip)
 
     if user.two_factor_enabled:
+        lock_ttl = await login_guard.get_lock_ttl(redis, "2fa", str(user.id))
+        if lock_ttl is not None:
+            raise AuthTwoFactorLocked(lock_ttl)
         challenge_token = await twofa_store.create_challenge(redis, str(user.id))
         await twofa_service.send_login_challenge_code(redis, user)
         return LoginResult(
@@ -361,6 +365,15 @@ async def verify_two_factor_login(
     client_ip: str,
     user_agent: str | None = None,
 ) -> IssuedTokens:
+    from app.config import settings
+
+    await _enforce_rate_limit(
+        redis,
+        bucket="2fa-verify-ip",
+        identifier=client_ip,
+        limit=settings.LOGIN_RATE_LIMIT,
+        window_seconds=settings.LOGIN_RATE_WINDOW_SECONDS,
+    )
     user_id = await twofa_store.peek_challenge(redis, challenge_token)
     if not user_id:
         raise AuthTwoFactorChallengeInvalid()
@@ -368,12 +381,23 @@ async def verify_two_factor_login(
     if not user or user.status != "active":
         raise AuthTwoFactorChallengeInvalid()
 
+    # A 6-digit code is only as strong as the number of guesses allowed: BR-86's
+    # 5 failures / 15 min, counted per user so fresh challenges don't reset it.
+    lock_ttl = await login_guard.get_lock_ttl(redis, "2fa", user_id)
+    if lock_ttl is not None:
+        raise AuthTwoFactorLocked(lock_ttl)
+
     ok = await twofa_service.verify_login_code(
         db, redis, user, code=code, recovery_code=recovery_code
     )
     if not ok:
+        if await login_guard.record_failure(redis, "2fa", user_id):
+            await twofa_store.delete_challenge(redis, challenge_token)
+            await twofa_service.discard_login_challenge_code(redis, user)
+            raise AuthTwoFactorLocked(login_guard.LOCK_TTL_SECONDS)
         raise AuthTwoFactorCodeInvalid()
 
+    await login_guard.reset(redis, "2fa", user_id)
     await twofa_store.delete_challenge(redis, challenge_token)
     return await _complete_login(db, user, ip_address=client_ip, user_agent=user_agent)
 
@@ -580,16 +604,48 @@ async def handle_google_callback(
         )
         return {**tokens.__dict__, "is_new_user": False, "linked": False}
 
-    # AF-2: Auto-link — email/password account with same email
+    # Google vouches for the mailbox only when it says so; linking or creating an account
+    # by an unverified address would hand it to whoever typed that address into Google.
+    if userinfo.get("email_verified") is not True:
+        raise GoogleNoEmail()
+
+    # AF-2: email/password account with the same email
     by_email = await user_repo.get_by_email(db, email)
     if by_email:
-        await user_repo.set_verified_google_link(db, by_email, google_id)
         if by_email.status != "active":
             raise AccountBanned()
-        tokens = await _issue_tokens(
-            db, by_email, user_agent=user_agent, ip_address=ip_address
+        if by_email.is_verified:
+            # The mailbox owner proved ownership by OTP: link, and tell them it happened.
+            await user_repo.set_verified_google_link(db, by_email, google_id)
+            tokens = await _issue_tokens(
+                db, by_email, user_agent=user_agent, ip_address=ip_address
+            )
+            await db.commit()
+            task_queue.enqueue_google_linked_email(by_email.email)
+            return {**tokens.__dict__, "is_new_user": False, "linked": True}
+
+        # Never verified: nothing shows whoever registered it owns the mailbox, so the
+        # Google sign-in (which does) takes the row over as a fresh sign-up — the
+        # registrant's password, profile and consent must not survive into it.
+        if not consented:
+            raise AuthConsentRequired()
+        username = await _generate_unique_username(db, given_name, family_name, email)
+        await user_repo.reclaim_unverified_for_google(
+            db,
+            by_email,
+            google_id=google_id,
+            first_name=given_name or email.split("@")[0],
+            last_name=family_name or "",
+            username=username,
         )
-        return {**tokens.__dict__, "is_new_user": False, "linked": True}
+        await legal_service.accept_current_documents(
+            db,
+            by_email.id,
+            channel="mobile" if started.get("client") == GOOGLE_CLIENT_MOBILE else "web",
+        )
+        await otp_store.delete_otp(redis, str(by_email.id))
+        tokens = await _issue_tokens(db, by_email, user_agent=user_agent, ip_address=ip_address)
+        return {**tokens.__dict__, "is_new_user": True, "linked": False}
 
     # New user via Google: only with the 18+ / ToS / privacy consent ticked before starting.
     if not consented:
@@ -640,14 +696,23 @@ async def login_admin(
         limit=settings.LOGIN_RATE_LIMIT,
         window_seconds=settings.LOGIN_RATE_WINDOW_SECONDS,
     )
+    # BR-86 per account, independent of IP: an admin password must not be guessable
+    # at the rate of however many addresses an attacker controls.
+    lock_ttl = await login_guard.get_lock_ttl(redis, "admin-account", email)
+    if lock_ttl is not None:
+        raise AuthAccountLocked(lock_ttl)
+
     user = await user_repo.get_admin_by_email(db, email)
 
     if not user or not user.password_hash or not verify_password(password, user.password_hash):
+        if await login_guard.record_failure(redis, "admin-account", email) and user:
+            task_queue.enqueue_account_locked_email(user.email)
         raise InvalidCredentials()
 
     if user.status != "active":
         raise AccountBanned()
 
+    await login_guard.reset(redis, "admin-account", email)
     tokens = await _issue_tokens(db, user, user_agent=user_agent, ip_address=client_ip)
     return {**tokens.__dict__, "role": user.role}
 
