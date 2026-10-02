@@ -2,6 +2,7 @@ import { lazy, Suspense, useEffect, useState, useTransition } from 'react';
 import { addBootTask, markAppMounted } from './boot/boot';
 import { Landing } from './pages/Landing/Landing';
 import { ImpersonationBanner } from './components/ImpersonationBanner/ImpersonationBanner';
+import { CookieConsentBanner } from './components/CookieConsentBanner/CookieConsentBanner';
 import { TopProgressBar } from './components/TopProgressBar/TopProgressBar';
 import { api, ApiError, type PortalProject } from './api/client';
 import { getSettingTabFromSearch, type SettingTab } from './pages/Settings/settingsNavigation';
@@ -337,6 +338,7 @@ function App() {
     <Suspense fallback={null}>
       <TopProgressBar active={isPending} />
       <ImpersonationBanner onEnded={() => navigate('/admin/users')} />
+      <CookieConsentBanner navigate={navigate} />
       {isPortalView && <LegalConsentGate activePage={activePage} onLogout={() => void handleLogout()} />}
 
       {/* If it's a logged-in view, show the Sidebar navigation */}

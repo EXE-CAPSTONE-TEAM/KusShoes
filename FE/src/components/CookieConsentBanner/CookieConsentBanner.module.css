@@ -1,0 +1,111 @@
+/* Fixed card in the bottom-left corner: overlays the page, so it never shifts layout (CLS).
+   A non-modal <dialog open>: the UA centring (inset, margin) is reset. */
+.banner {
+  position: fixed;
+  inset: auto auto 16px 16px;
+  margin: 0;
+  z-index: 1900;
+  width: min(440px, calc(100vw - 32px));
+  max-height: calc(100vh - 32px);
+  overflow-y: auto;
+  padding: 20px;
+  background: var(--bg-secondary);
+  border: 1px solid var(--glass-border-hover, var(--glass-border));
+  border-radius: var(--border-radius-md);
+  box-shadow: var(--shadow-md);
+  color: var(--text-primary);
+  font-family: var(--font-sans);
+}
+
+.title {
+  font-size: 1rem;
+  font-weight: 700;
+  margin-bottom: 8px;
+}
+
+.body {
+  font-size: 0.85rem;
+  line-height: 1.5;
+  color: var(--text-secondary);
+}
+
+.body a {
+  color: var(--text-primary);
+  text-decoration: underline;
+}
+
+.categories {
+  list-style: none;
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+  margin-top: 16px;
+}
+
+.category {
+  display: flex;
+  align-items: flex-start;
+  gap: 10px;
+  font-size: 0.85rem;
+}
+
+.category input {
+  margin-top: 3px;
+  accent-color: var(--color-orange);
+}
+
+.category div {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+}
+
+.category label {
+  font-weight: 700;
+  cursor: pointer;
+}
+
+.category small {
+  color: var(--text-secondary);
+  font-size: 0.78rem;
+  line-height: 1.4;
+}
+
+.actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+  margin-top: 16px;
+}
+
+.actions button {
+  flex: 1 1 auto;
+  min-height: 40px;
+  padding: 8px 14px;
+  border-radius: var(--border-radius-md);
+  font-family: inherit;
+  font-size: 0.85rem;
+  font-weight: 600;
+  cursor: pointer;
+}
+
+/* Same visual weight for accept and reject: rejecting must be as easy as accepting. */
+.secondary {
+  background: transparent;
+  color: var(--text-primary);
+  border: 1px solid var(--text-secondary);
+}
+
+.secondary:hover {
+  border-color: var(--text-primary);
+}
+
+.primary {
+  background: var(--text-primary);
+  color: var(--bg-primary);
+  border: 1px solid var(--text-primary);
+}
+
+.primary:hover {
+  opacity: 0.9;
+}

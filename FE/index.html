@@ -12,14 +12,27 @@
   <!-- Google Tag Manager (GTM-NFVKQXLB) + Google tag (gtag.js, G-ZB62H02JZW) -->
   <script>
     window.dataLayer = window.dataLayer || [];
-    function gtag(){dataLayer.push(arguments);}
-    gtag('consent', 'default', {
-      'analytics_storage': 'granted',
-      'ad_storage': 'granted',
-      'ad_user_data': 'granted',
-      'ad_personalization': 'granted'
-    });
-    dataLayer.push({'gtm.start': new Date().getTime(), event: 'gtm.js'});
+    function gtag(){window.dataLayer.push(arguments);}
+    // Consent Mode v2 defaults come first: nothing is stored until the visitor accepts in the
+    // cookie banner, and a saved choice (src/analytics/consent.ts, same key and version) applies
+    // before any tag fires.
+    (function () {
+      var analytics = 'denied', ads = 'denied';
+      try {
+        var saved = JSON.parse(localStorage.getItem('kusshoes_cookie_consent') || 'null');
+        if (saved && saved.version === 1) {
+          if (saved.analytics === true) analytics = 'granted';
+          if (saved.ads === true) ads = 'granted';
+        }
+      } catch (e) {}
+      gtag('consent', 'default', {
+        'analytics_storage': analytics,
+        'ad_storage': ads,
+        'ad_user_data': ads,
+        'ad_personalization': ads
+      });
+    })();
+    window.dataLayer.push({'gtm.start': new Date().getTime(), event: 'gtm.js'});
     gtag('js', new Date());
     gtag('config', 'G-ZB62H02JZW');
     // gtm.js and gtag.js are fetched once the page has loaded, so third-party tags don't compete
@@ -38,8 +51,9 @@
     })(window,document);
   </script>
   <!-- End Google Tag Manager + Google tag -->
-  <!-- Filled per route at build time by vite-plugin-seo.ts (data: src/seo/pages.ts) -->
-  <!--seo:head--><!--/seo:head-->
+  <!-- Filled per route at build time by vite-plugin-seo.ts (data: src/seo/pages.ts); the
+       placeholder title is replaced, so every built page has exactly one. -->
+  <!--seo:head--><title>KusShoes</title><!--/seo:head-->
   <style>
     /* Crawler fallback text: it only exists for HTML-only crawlers and always sits under the boot
        overlay until React replaces it. The app CSS arrives after the first paint
@@ -66,7 +80,7 @@
 
 <body>
   <!-- Google Tag Manager (noscript) -->
-  <noscript><iframe src="https://www.googletagmanager.com/ns.html?id=GTM-NFVKQXLB"
+  <noscript><iframe title="Google Tag Manager" src="https://www.googletagmanager.com/ns.html?id=GTM-NFVKQXLB"
   height="0" width="0" style="display:none;visibility:hidden"></iframe></noscript>
   <!-- End Google Tag Manager (noscript) -->
   <div id="root"><!--seo:body--><!--/seo:body--></div>

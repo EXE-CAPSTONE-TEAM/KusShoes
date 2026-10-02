@@ -3,6 +3,7 @@ import { Instagram, Github, Youtube, MessageSquare } from 'lucide-react';
 import { useTranslation } from 'react-i18next';
 import { useTheme } from '../../context/ThemeContext';
 import { useToast } from '../../context/ToastContext';
+import { openCookieSettings } from '../../analytics';
 import styles from './Footer.module.css';
 
 interface FooterProps {
@@ -70,6 +71,7 @@ export const Footer: React.FC<FooterProps> = ({ navigate }) => {
           <a href="/terms" onClick={(e) => { e.preventDefault(); navigate('/terms'); }}>{t('footer.terms')}</a>
           <a href="/privacy" onClick={(e) => { e.preventDefault(); navigate('/privacy'); }}>{t('footer.privacy')}</a>
           <a href="/pricing" onClick={handlePricingClick}>{t('footer.faqs')}</a>
+          <a href="#cookie-settings" onClick={(e) => { e.preventDefault(); openCookieSettings(); }}>{t('cookieConsent.settingsLink')}</a>
         </div>
       </div>
 

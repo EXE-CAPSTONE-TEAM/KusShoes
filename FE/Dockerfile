@@ -12,10 +12,13 @@ COPY package.json package-lock.json ./
 RUN npm ci
 COPY . .
 RUN npm run build
+# CSP hashes of the inline scripts, computed from the built HTML so they always match it.
+RUN node scripts/render-nginx-csp.mjs dist nginx-security-headers.conf /app/security-headers.conf
 
 # ── Runtime stage (static nginx) ─────────────────────────────────────────────
 FROM nginx:1.27-alpine AS runtime
 COPY nginx.conf /etc/nginx/conf.d/default.conf
+COPY --from=build /app/security-headers.conf /etc/nginx/snippets/security-headers.conf
 COPY --from=build /app/dist /usr/share/nginx/html
 EXPOSE 80
 HEALTHCHECK --interval=15s --timeout=3s --retries=5 \
