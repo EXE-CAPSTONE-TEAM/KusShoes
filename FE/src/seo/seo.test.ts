@@ -109,6 +109,16 @@ describe('build renderers', () => {
     expect(products).toContain('<h1>Quét với KusShoes. Thiết kế trên KusStudio.</h1>');
   });
 
+  it('replaces the placeholder <title> of the real index.html', () => {
+    const indexHtml = readFileSync(path.resolve(__dirname, '../../index.html'), 'utf8');
+    expect(indexHtml).toMatch(/<!--seo:head--><title>[^<]+<\/title><!--\/seo:head-->/);
+    for (const page of SEO_PAGES) {
+      const html = applySeo(indexHtml, page);
+      expect(html.match(/<title>/g)).toHaveLength(1);
+      expect(html).toContain(`<title>${page.title.vi.replace(/&/g, '&amp;')}</title>`);
+    }
+  });
+
   it('fails loudly when index.html lost its markers', () => {
     expect(() => applySeo('<html></html>', HOME_PAGE)).toThrow(/markers/);
   });
