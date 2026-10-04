@@ -1,5 +1,6 @@
 import type { User } from '../types';
 import { toast as notifyToast } from '../context/ToastContext';
+import { isStaffRole, roleFromAccessToken, type SessionRole } from './tokenRole';
 import { getStoredAttribution, pushAnalyticsEvent, type AttributionData } from '../analytics';
 
 if (import.meta.env.PROD && !import.meta.env.VITE_API_BASE_URL) {
@@ -336,6 +337,11 @@ function clearLegacyStoredTokens(): void {
 clearLegacyStoredTokens();
 
 function saveTokens(tokens: AuthTokens, _remember: boolean): void {
+  // Back-office accounts sign in on the admin login only. On the customer login they get the
+  // same answer as a wrong password, so the screen never reveals the account exists.
+  if (isStaffRole(roleFromAccessToken(tokens.access_token))) {
+    throw new ApiError('Email hoặc mật khẩu không đúng', 401, 'AUTH_INVALID_CREDENTIALS');
+  }
   accessTokenInMemory = tokens.access_token;
   clearLegacyStoredTokens();
 }
@@ -538,6 +544,20 @@ export const api = {
 
   hasToken(): boolean {
     return Boolean(accessTokenInMemory);
+  },
+
+  /**
+   * Role of the current session, restoring it from the refresh cookie after a reload.
+   * Returns null when nobody is signed in.
+   */
+  async restoreRole(): Promise<SessionRole | null> {
+    if (!accessTokenInMemory) await refreshAccessToken();
+    return roleFromAccessToken(accessTokenInMemory);
+  },
+
+  /** Drop the in-memory token only (e.g. a staff token that landed on the customer login). */
+  discardLocalToken(): void {
+    accessTokenInMemory = null;
   },
 
   /** Admin acting as a customer (BR-80): 30-minute token, kept in memory, no refresh. */

@@ -38,7 +38,12 @@ export const GoogleCallback: React.FC<GoogleCallbackProps> = ({ setPage }) => {
       setError('googleCallback.failed');
       return;
     }
-    api.completeGoogleLogin(accessToken, tokenType);
+    try {
+      api.completeGoogleLogin(accessToken, tokenType);
+    } catch {
+      setError('googleCallback.failed');
+      return;
+    }
 
     const storedAttribution = getStoredAttribution();
     if (isNewUser) {
