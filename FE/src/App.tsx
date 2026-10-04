@@ -8,6 +8,7 @@ import { api, ApiError, type PortalProject } from './api/client';
 import { getSettingTabFromSearch, type SettingTab } from './pages/Settings/settingsNavigation';
 import { useDocumentMeta } from './seo/useDocumentMeta';
 import { useAnalyticsPageView } from './analytics';
+import { useRouteGuard } from './auth/routeGuard';
 import i18n, { i18nReady, LAZY_NAMESPACES } from './i18n';
 
 // Everything except the home page (Landing) is code-split, so the landing bundle stays small.
@@ -201,6 +202,14 @@ function App() {
   const [projectsLoading, setProjectsLoading] = useState(false);
   const [projectsError, setProjectsError] = useState('');
 
+  // Role-based access: customers only see the portal, staff only the back office, everyone
+  // else is sent to the login page. Redirects replace the URL so Back does not bounce.
+  const redirectTo = (path: string) => {
+    window.history.replaceState({}, '', path);
+    setActivePage(getPageFromPath(path));
+  };
+  const routeAllowed = useRouteGuard(activePage, redirectTo);
+
   useEffect(() => markAppMounted(), []);
   useDocumentMeta(activePage);
   useAnalyticsPageView(activePage);
@@ -249,7 +258,7 @@ function App() {
       'settings',
       'project-details',
     ];
-    if (!portalPages.includes(activePage)) return;
+    if (!portalPages.includes(activePage) || !routeAllowed) return;
     setProjectsLoading(true);
     setProjectsError('');
     api
@@ -266,7 +275,7 @@ function App() {
         setProjectsError(caught instanceof Error ? caught.message : 'Unable to load projects.');
       })
       .finally(() => setProjectsLoading(false));
-  }, [activePage]);
+  }, [activePage, routeAllowed]);
 
   // Sync browser back/forward buttons
   useEffect(() => {
@@ -302,6 +311,11 @@ function App() {
       setActiveDetailProject(found);
     }
   }, [activePage, projects, activeDetailProject]);
+
+  if (!routeAllowed) {
+    // Role check in flight (or a redirect is about to happen): render nothing protected.
+    return <TopProgressBar active />;
+  }
 
   if (activePage === 'admin') {
     return (
