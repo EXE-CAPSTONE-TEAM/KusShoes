@@ -60,8 +60,8 @@ function toInvoiceRow(invoice: ApiInvoice, vatLabel: (rate: number) => string, t
     paidAt: invoice.paid_at ? formatDateTime(invoice.paid_at) : null,
     createdAt: formatDate(invoice.created_at),
     planCycle: invoiceItemLabel(invoice, t),
-    amount: formatVnd(invoice.amount_vnd),
-    vatNote: invoice.vat.enabled ? vatLabel(invoice.vat.rate_percent) : null,
+    amount: formatVnd(invoice.amount_vnd ?? 0),
+    vatNote: invoice.vat?.enabled ? vatLabel(invoice.vat.rate_percent) : null,
     method: invoice.payment_method ? invoice.payment_method.toUpperCase() : '—',
     status: normalizeInvoiceStatus(invoice.status),
   };

@@ -64,7 +64,16 @@ const formatDateTime = (iso: string | null | undefined) => {
 export const AdminBilling: React.FC = () => {
   const { toast } = useToast();
   const { isAdmin } = useAdminAuth();
-  const [tab, setTab] = useState<'subscriptions' | 'invoices' | 'manual' | 'periods' | 'coupons' | 'tax' | 'api-cost'>('subscriptions');
+  const searchParams = new URLSearchParams(window.location.search);
+  const paramTab = searchParams.get('tab');
+  const validTabs = ['subscriptions', 'invoices', 'manual', 'periods', 'coupons', 'tax', 'api-cost'] as const;
+  const initialTab = validTabs.includes(paramTab as (typeof validTabs)[number])
+    ? (paramTab as (typeof validTabs)[number])
+    : 'subscriptions';
+  const initialUserId = searchParams.get('userId') || undefined;
+  const initialInvoiceId = searchParams.get('invoiceId') || null;
+
+  const [tab, setTab] = useState<'subscriptions' | 'invoices' | 'manual' | 'periods' | 'coupons' | 'tax' | 'api-cost'>(initialTab);
   const [mutating, setMutating] = useState(false);
 
   // Subscriptions
@@ -88,13 +97,13 @@ export const AdminBilling: React.FC = () => {
 
   // Invoices
   const [invoiceStatus, setInvoiceStatus] = useState('all');
-  const [invoiceUserIdInput, setInvoiceUserIdInput] = useState('');
-  const [invoiceUserId, setInvoiceUserId] = useState<string | undefined>(undefined);
+  const [invoiceUserIdInput, setInvoiceUserIdInput] = useState(initialUserId || '');
+  const [invoiceUserId, setInvoiceUserId] = useState<string | undefined>(initialUserId);
   const [invoiceUserIdError, setInvoiceUserIdError] = useState<string | null>(null);
   const [invoiceSearchInput, setInvoiceSearchInput] = useState('');
   const [invoiceSearch, setInvoiceSearch] = useState<string | undefined>(undefined);
   const [selectedInvoice, setSelectedInvoice] = useState<AdminInvoice | null>(null);
-  const [selectedInvoiceId, setSelectedInvoiceId] = useState<string | null>(null);
+  const [selectedInvoiceId, setSelectedInvoiceId] = useState<string | null>(initialInvoiceId);
   const [refundTarget, setRefundTarget] = useState<AdminInvoice | null>(null);
   const [refundReason, setRefundReason] = useState('');
   const [refundOverride, setRefundOverride] = useState(false);

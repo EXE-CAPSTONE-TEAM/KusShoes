@@ -336,7 +336,7 @@ export const CheckoutReview: React.FC<CheckoutReviewProps> = ({ navigate }) => {
                     <span>{t('checkout.totalPayable')}</span>
                     <div>
                       <div className={styles.totalVal}>{formatVnd(planQuote.amount_vnd)}</div>
-                      {planQuote.vat.enabled && (
+                      {planQuote.vat?.enabled && (
                         <div className={styles.vatSubtext}>
                           {t('checkout.vatIncluded', {
                             rate: planQuote.vat.rate_percent,
@@ -362,7 +362,7 @@ export const CheckoutReview: React.FC<CheckoutReviewProps> = ({ navigate }) => {
                     <span>{t('checkout.totalPayable')}</span>
                     <div>
                       <div className={styles.totalVal}>{formatVnd(creditQuote.total_vnd)}</div>
-                      {creditQuote.vat.enabled && (
+                      {creditQuote.vat?.enabled && (
                         <div className={styles.vatSubtext}>
                           {t('checkout.vatIncluded', {
                             rate: creditQuote.vat.rate_percent,

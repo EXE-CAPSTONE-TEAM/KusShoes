@@ -288,6 +288,17 @@ export const AdminUsers: React.FC = () => {
                       {detailUser.subscription_expires_at ? new Date(detailUser.subscription_expires_at).toLocaleDateString('vi-VN') : '—'}
                     </span>
                   </div>
+                  <div className={shared.drawerRow}>
+                    <span className={shared.drawerRowLabel}>Hóa đơn</span>
+                    <span className={shared.drawerRowValue}>
+                      <a
+                        href={`/admin/billing?tab=invoices&userId=${detailUser.id}`}
+                        style={{ color: 'var(--color-primary, #3b82f6)', textDecoration: 'underline', fontSize: '0.875rem' }}
+                      >
+                        Xem hóa đơn của user này &rarr;
+                      </a>
+                    </span>
+                  </div>
                 </div>
 
                 <div className={shared.drawerSection}>

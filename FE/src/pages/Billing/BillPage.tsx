@@ -344,7 +344,7 @@ export const BillPage: React.FC<BillPageProps> = ({ navigate }) => {
                 )}
                 <div className={styles.metaItem}>
                   <span className={styles.metaKey}>{t('bill.paymentMethod')}</span>
-                  <span className={styles.metaVal}>{invoice.payment_method.toUpperCase()}</span>
+                  <span className={styles.metaVal}>{invoice.payment_method ? invoice.payment_method.toUpperCase() : '—'}</span>
                 </div>
                 {invoice.transfer?.bank_reference && (
                   <div className={styles.metaItem}>
@@ -437,7 +437,7 @@ export const BillPage: React.FC<BillPageProps> = ({ navigate }) => {
                   <span>{t('bill.totalPaid')}</span>
                   <span className={styles.totalSummaryAmount}>{formatVnd(invoice.amount_vnd)}</span>
                 </div>
-                {invoice.vat.enabled && (
+                {invoice.vat?.enabled && (
                   <div className={styles.vatNote}>
                     {t('bill.vatIncluded', {
                       rate: invoice.vat.rate_percent,

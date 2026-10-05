@@ -16,6 +16,8 @@ const USER_PAGES = new Set([
   'trash',
   'exports',
   'billing',
+  'billing-checkout',
+  'billing-bill',
   'settings',
   'feedback',
   'project-details',
