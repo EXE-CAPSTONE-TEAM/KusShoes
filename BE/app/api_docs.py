@@ -109,6 +109,7 @@ DOCS: dict[str, tuple[str, str]] = {
     # ---- Admin Billing ----
     "GET /api/v1/admin/billing/subscriptions": ("Danh sách đăng ký", "Lọc theo trạng thái/gói, phân trang con trỏ. " + _A),
     "GET /api/v1/admin/billing/invoices": ("Danh sách giao dịch", "Lọc theo trạng thái, hình thức thanh toán, giao dịch thủ công, cờ nội bộ, khoảng ngày; phân trang con trỏ. " + _A),
+    "GET /api/v1/admin/billing/invoices/{invoice_id}": ("Chi tiết giao dịch", "Một hóa đơn kèm email người dùng và thông tin chuyển khoản lấy từ webhook PayOS: thời điểm chuyển khoản, người chuyển, ngân hàng, số tài khoản đầy đủ, mã tham chiếu. " + _A),
     "POST /api/v1/admin/billing/subscriptions/{user_id}/force-downgrade": ("Ép hạ về Free", "Hạ gói của người dùng về Free ngay (khóa dự án vượt hạn mức, BR-27). Ghi audit. " + _AW),
     "POST /api/v1/admin/billing/invoices/{invoice_id}/refund": ("Hoàn tiền một giao dịch", "Tạo bút toán hoàn tiền (không gọi cổng thanh toán). Tự động chỉ khi ≤7 ngày và chưa xuất file; ngoài chính sách cần `override=true` (BR-97). Hoàn toàn bộ gói hiện tại sẽ hạ về Free. Bị chặn nếu ngày thanh toán nằm trong kỳ đã khóa (`PERIOD_LOCKED`). " + _AW),
     "POST /api/v1/admin/billing/manual-transactions/proof-upload": ("Xin URL tải ảnh chứng từ", "Trả presigned URL để tải ảnh chứng từ (chuyển khoản/tiền mặt) trước khi tạo giao dịch thủ công. " + _AW),
@@ -260,6 +261,9 @@ DOCS: dict[str, tuple[str, str]] = {
     "POST /api/v1/subscription/cancel": ("Hủy gia hạn", "Không gọi cổng thanh toán (không có tự động trừ tiền, BR-25); gói hết hạn theo chu kỳ. " + _B),
     "GET /api/v1/subscription/invoices/{invoice_id}": ("Chi tiết hóa đơn / trạng thái", "Trang thanh toán thành công gọi lặp endpoint này đến khi hết `pending` (MSG29). " + _B),
     "GET /api/v1/subscription/invoices/{invoice_id}/receipt": ("Tải biên nhận PDF", "Trả URL có chữ ký 15 phút tới biên nhận KUS-xxx bất biến; chưa phát hành trả 409. " + _B),
+    "GET /api/v1/subscription/invoices/by-order/{order_code}": ("Hóa đơn theo mã đơn", "Trang hóa đơn sau thanh toán tra hóa đơn theo `orderCode` mà cổng thanh toán gắn vào URL trả về; số tài khoản người chuyển bị che, chỉ còn 4 số cuối. Không phải của mình trả 404. " + _B),
+    "POST /api/v1/subscription/checkout/quote": ("Báo giá trước khi thanh toán", "Tính giá niêm yết, giảm giá (mã giảm giá hoặc nâng cấp giữa chu kỳ, BR-24/26), số phải trả, VAT và thời hạn mới mà không tạo hóa đơn; dùng cùng phép tính với checkout. " + _B),
+    "POST /api/v1/subscription/credits/quote": ("Báo giá mua Credit", "Tính tổng tiền và VAT cho số Credit muốn mua, kiểm tra điều kiện mua và giới hạn mỗi chu kỳ (BR-94) mà không tạo hóa đơn. " + _B),
     "POST /api/v1/subscription/coupon/preview": ("Xem trước mã giảm giá", "Tính giá sau giảm cho một gói mà không tạo hóa đơn; mỗi tài khoản dùng một mã một lần. " + _B),
     # ---- Webhooks ----
     "POST /api/v1/webhooks/payos": ("Webhook PayOS", "Xác thực chữ ký HMAC-SHA256, khớp số tiền, idempotent. Không dùng Bearer. " + _P),

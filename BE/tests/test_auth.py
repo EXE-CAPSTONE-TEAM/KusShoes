@@ -542,6 +542,7 @@ async def test_google_desktop_start_requires_a_pkce_challenge(client):
 async def test_google_desktop_flow(client, redis, monkeypatch):
     import re
     from urllib.parse import parse_qs, urlparse
+
     from app.services import auth_service
 
     verifier, challenge = _pkce_pair()

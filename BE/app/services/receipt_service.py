@@ -14,7 +14,7 @@ from app.config import settings
 from app.exceptions import ReceiptUnavailable
 from app.infrastructure import storage
 from app.models.scan_credit import CREDIT_INVOICE_TIER
-from app.repositories import consent_repo, invoice_repo
+from app.repositories import consent_repo, invoice_repo, subscription_repo
 from app.services import tax_service
 from app.services.period_service import GMT7
 from app.utils.text import ascii_slug, format_vnd, mask_email, short_name
@@ -70,6 +70,12 @@ async def _build_snapshot(db: AsyncSession, invoice, user, receipt_number: str) 
         "date_code": paid_at.strftime("%d%m%y"),
         # BR-28 (SRS_v2.2.txt:1643): VAT frozen at issue time, extracted from the amount.
         **tax_service.snapshot_fields(invoice.amount_vnd),
+        "period_start": (
+            user_sub.current_period_start.isoformat()
+            if (user_sub := await subscription_repo.get_by_user(db, user.id)) and user_sub.current_period_start
+            else None
+        ),
+        "period_end": user_sub.expires_at.isoformat() if user_sub and user_sub.expires_at else None,
     }
 
 

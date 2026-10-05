@@ -5,6 +5,7 @@ from datetime import UTC, datetime, timedelta
 
 from sqlalchemy.ext.asyncio import AsyncSession
 
+from app.config import settings
 from app.exceptions import (
     ActionRequiresVerifiedEmail,
     AppException,
@@ -47,7 +48,6 @@ from app.schemas.project import (
     TriggerBakeRequest,
     UpdateProjectRequest,
 )
-from app.config import settings
 from app.services import guardrail_service, job_service, quota_service, version_service
 from app.services.project_access import require_owner
 

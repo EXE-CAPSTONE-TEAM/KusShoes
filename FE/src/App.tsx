@@ -30,6 +30,10 @@ const importProjects = () =>
 const importTrash = () => import('./pages/Trash/Trash').then((m) => ({ default: m.Trash }));
 const importExports = () => import('./pages/Exports/Exports').then((m) => ({ default: m.Exports }));
 const importBilling = () => import('./pages/Billing/Billing').then((m) => ({ default: m.Billing }));
+const importBillingCheckout = () =>
+  import('./pages/Billing/CheckoutReview').then((m) => ({ default: m.CheckoutReview }));
+const importBillingBill = () =>
+  import('./pages/Billing/BillPage').then((m) => ({ default: m.BillPage }));
 const importSettings = () =>
   import('./pages/Settings/Settings').then((m) => ({ default: m.Settings }));
 const importFeedback = () =>
@@ -55,6 +59,8 @@ const Projects = lazy(importProjects);
 const Trash = lazy(importTrash);
 const Exports = lazy(importExports);
 const Billing = lazy(importBilling);
+const CheckoutReview = lazy(importBillingCheckout);
+const BillPage = lazy(importBillingBill);
 const Settings = lazy(importSettings);
 const Feedback = lazy(importFeedback);
 const ProjectDetails = lazy(importProjectDetails);
@@ -77,6 +83,8 @@ const pageImporters: Record<string, (() => Promise<unknown>) | undefined> = {
   trash: withPortalShell(importTrash),
   exports: withPortalShell(importExports),
   billing: withPortalShell(importBilling),
+  'billing-checkout': withPortalShell(importBillingCheckout),
+  'billing-bill': withPortalShell(importBillingBill),
   settings: withPortalShell(importSettings),
   feedback: withPortalShell(importFeedback),
   'project-details': withPortalShell(importProjectDetails),
@@ -97,6 +105,12 @@ const getPageFromPath = (path: string): string => {
   }
   if (cleanPath.startsWith('/artisan/')) {
     return 'artisan-viewer';
+  }
+  if (cleanPath === '/billing/checkout') {
+    return 'billing-checkout';
+  }
+  if (cleanPath === '/billing/success' || cleanPath.startsWith('/billing/invoices/')) {
+    return 'billing-bill';
   }
   switch (cleanPath) {
     case '/auth/google/callback':
@@ -124,7 +138,6 @@ const getPageFromPath = (path: string): string => {
     case '/exports':
       return 'exports';
     case '/billing':
-    case '/billing/success': // PayOS / MoMo return URLs
     case '/billing/cancel':
       return 'billing';
     case '/settings':
@@ -173,6 +186,10 @@ const getPathFromPage = (page: string): string => {
       return '/exports' + query;
     case 'billing':
       return '/billing' + query;
+    case 'billing-checkout':
+      return '/billing/checkout' + query;
+    case 'billing-bill':
+      return '/billing/success' + query;
     case 'settings':
       return '/settings' + query;
     case 'feedback':
@@ -255,6 +272,8 @@ function App() {
       'archives',
       'exports',
       'billing',
+      'billing-checkout',
+      'billing-bill',
       'settings',
       'project-details',
     ];
@@ -333,6 +352,8 @@ function App() {
     'trash',
     'exports',
     'billing',
+    'billing-checkout',
+    'billing-bill',
     'settings',
     'feedback',
     'project-details',
@@ -415,7 +436,9 @@ function App() {
         {activePage === 'exports' && (
           <Exports onOpenProject={(id) => navigate(`/project-details?id=${id}`)} />
         )}
-        {activePage === 'billing' && <Billing />}
+        {activePage === 'billing' && <Billing navigate={navigate} />}
+        {activePage === 'billing-checkout' && <CheckoutReview navigate={navigate} />}
+        {activePage === 'billing-bill' && <BillPage navigate={navigate} />}
         {activePage === 'settings' && (
           <Settings
             activeTab={activeSettingTab}

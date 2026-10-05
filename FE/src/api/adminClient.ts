@@ -240,6 +240,7 @@ export interface InvoiceListQuery {
   is_manual?: boolean;
   payment_method?: 'payos' | 'momo' | 'manual';
   exclude_internal?: boolean;
+  q?: string;
   limit?: number;
   cursor?: string;
 }
@@ -256,6 +257,8 @@ export const adminBilling = {
     }),
   invoices: (query: InvoiceListQuery = {}, signal?: AbortSignal): Promise<CursorPage<AdminInvoice>> =>
     request(`/api/v1/admin/billing/invoices${queryString(query)}`, { signal }),
+  invoice: (id: string, signal?: AbortSignal): Promise<AdminInvoice> =>
+    request(`/api/v1/admin/billing/invoices/${encodeURIComponent(id)}`, { signal }),
   refund: (
     invoiceId: string,
     body: { amount_vnd: number; reason: string; override?: boolean },

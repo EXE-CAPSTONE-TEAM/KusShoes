@@ -1,11 +1,12 @@
 import React, { useCallback, useState } from 'react';
-import { ArrowDownCircle, RotateCcw, ShieldAlert, RotateCw } from 'lucide-react';
+import { ArrowDownCircle, RotateCcw, ShieldAlert, RotateCw, Eye } from 'lucide-react';
 import * as Tabs from '@radix-ui/react-tabs';
 import { Select } from '../../../components/Select/Select';
 import { ConfirmDialog } from '../../../components/ConfirmDialog/ConfirmDialog';
 import { StatusBadge } from '../../../components/Admin/StatusBadge';
 import { AdminDialog } from '../../../components/Admin/AdminDialog';
 import { ApiCostPanel, CouponsPanel, ManualTransactionsPanel, PeriodsPanel, TaxConfigPanel } from './FinancePanels';
+import { InvoiceDetailDrawer } from './InvoiceDetailDrawer';
 import { useToast } from '../../../context/ToastContext';
 import { useAdminAuth } from '../../../context/AdminAuthContext';
 import { adminBilling, AdminApiError, type SubscriptionListQuery, type InvoiceListQuery } from '../../../api/adminClient';
@@ -43,6 +44,22 @@ const INVOICE_STATUS_OPTIONS = [
 
 const formatVnd = (v: number) => `${v.toLocaleString('vi-VN')} VNĐ`;
 const formatDate = (iso: string | null) => (iso ? new Date(iso).toLocaleDateString('vi-VN') : '—');
+const formatDateTime = (iso: string | null | undefined) => {
+  if (!iso) return '—';
+  try {
+    const d = new Date(iso);
+    return d.toLocaleString('vi-VN', {
+      day: '2-digit',
+      month: '2-digit',
+      year: 'numeric',
+      hour: '2-digit',
+      minute: '2-digit',
+      second: '2-digit',
+    });
+  } catch {
+    return iso;
+  }
+};
 
 export const AdminBilling: React.FC = () => {
   const { toast } = useToast();
@@ -74,6 +91,10 @@ export const AdminBilling: React.FC = () => {
   const [invoiceUserIdInput, setInvoiceUserIdInput] = useState('');
   const [invoiceUserId, setInvoiceUserId] = useState<string | undefined>(undefined);
   const [invoiceUserIdError, setInvoiceUserIdError] = useState<string | null>(null);
+  const [invoiceSearchInput, setInvoiceSearchInput] = useState('');
+  const [invoiceSearch, setInvoiceSearch] = useState<string | undefined>(undefined);
+  const [selectedInvoice, setSelectedInvoice] = useState<AdminInvoice | null>(null);
+  const [selectedInvoiceId, setSelectedInvoiceId] = useState<string | null>(null);
   const [refundTarget, setRefundTarget] = useState<AdminInvoice | null>(null);
   const [refundReason, setRefundReason] = useState('');
   const [refundOverride, setRefundOverride] = useState(false);
@@ -81,6 +102,7 @@ export const AdminBilling: React.FC = () => {
   const invoiceQuery: InvoiceListQuery = {
     status: invoiceStatus === 'all' ? undefined : invoiceStatus,
     user_id: invoiceUserId,
+    q: invoiceSearch,
   };
   const invoiceFetcher = useCallback(
     (q: InvoiceListQuery & { cursor?: string; limit?: number }, signal: AbortSignal) =>
@@ -105,6 +127,11 @@ export const AdminBilling: React.FC = () => {
     }
     setInvoiceUserIdError(null);
     setInvoiceUserId(trimmed);
+  };
+
+  const submitInvoiceSearch = () => {
+    const trimmed = invoiceSearchInput.trim();
+    setInvoiceSearch(trimmed ? trimmed : undefined);
   };
 
   const handleForceDowngrade = async () => {
@@ -214,14 +241,24 @@ export const AdminBilling: React.FC = () => {
                       <td className={shared.mutedCell}>{formatDate(s.expires_at)}</td>
                       <td className={shared.mutedCell}>{s.cancel_at_period_end ? 'Có' : 'Không'}</td>
                       <td>
-                        <button
-                          className={shared.iconBtn}
-                          title={isAdmin ? 'Buộc hạ xuống Free' : 'Chỉ Admin mới được thực hiện'}
-                          disabled={!isAdmin || s.tier === 'free' || mutating}
-                          onClick={() => setDowngradeTarget(s)}
-                        >
-                          <ArrowDownCircle size={14} />
-                        </button>
+                        <div style={{ display: 'flex', gap: 4 }}>
+                          <button
+                            className={shared.iconBtn}
+                            title={s.last_invoice_id ? 'Xem thanh toán gần nhất' : 'Không có thanh toán gần nhất'}
+                            disabled={!s.last_invoice_id}
+                            onClick={() => setSelectedInvoiceId(s.last_invoice_id!)}
+                          >
+                            <Eye size={14} />
+                          </button>
+                          <button
+                            className={shared.iconBtn}
+                            title={isAdmin ? 'Buộc hạ xuống Free' : 'Chỉ Admin mới được thực hiện'}
+                            disabled={!isAdmin || s.tier === 'free' || mutating}
+                            onClick={() => setDowngradeTarget(s)}
+                          >
+                            <ArrowDownCircle size={14} />
+                          </button>
+                        </div>
                       </td>
                     </tr>
                   ))}
@@ -248,6 +285,15 @@ export const AdminBilling: React.FC = () => {
           <div className={shared.toolbar} style={{ marginBottom: 16 }}>
             <Select value={invoiceStatus} onValueChange={setInvoiceStatus} options={INVOICE_STATUS_OPTIONS} ariaLabel="Lọc trạng thái hóa đơn" />
             <input
+              className={shared.filterInput}
+              placeholder="Tìm mã đơn, mã GD, người chuyển..."
+              value={invoiceSearchInput}
+              onChange={(e) => setInvoiceSearchInput(e.target.value)}
+              onKeyDown={(e) => { if (e.key === 'Enter') submitInvoiceSearch(); }}
+              onBlur={submitInvoiceSearch}
+              style={{ minWidth: 220 }}
+            />
+            <input
               className={`${shared.filterInput} ${invoiceUserIdError ? shared.filterInputError : ''}`}
               placeholder="User ID (UUID)..."
               value={invoiceUserIdInput}
@@ -255,10 +301,17 @@ export const AdminBilling: React.FC = () => {
               onKeyDown={(e) => { if (e.key === 'Enter') submitInvoiceUserId(); }}
               onBlur={submitInvoiceUserId}
             />
-            {(invoiceStatus !== 'all' || invoiceUserId) && (
+            {(invoiceStatus !== 'all' || invoiceUserId || invoiceSearch) && (
               <button
                 className={shared.clearFiltersBtn}
-                onClick={() => { setInvoiceStatus('all'); setInvoiceUserIdInput(''); setInvoiceUserId(undefined); setInvoiceUserIdError(null); }}
+                onClick={() => {
+                  setInvoiceStatus('all');
+                  setInvoiceUserIdInput('');
+                  setInvoiceUserId(undefined);
+                  setInvoiceUserIdError(null);
+                  setInvoiceSearchInput('');
+                  setInvoiceSearch(undefined);
+                }}
               >
                 Xóa bộ lọc
               </button>
@@ -275,7 +328,10 @@ export const AdminBilling: React.FC = () => {
               <table className={shared.table}>
                 <thead>
                   <tr>
+                    <th>Mã đơn</th>
                     <th>User</th>
+                    <th>Người chuyển</th>
+                    <th>Thời điểm CK</th>
                     <th>Gói</th>
                     <th>Chu kỳ</th>
                     <th>Số tiền</th>
@@ -287,8 +343,15 @@ export const AdminBilling: React.FC = () => {
                 </thead>
                 <tbody>
                   {invoices.map(inv => (
-                    <tr key={inv.id}>
+                    <tr
+                      key={inv.id}
+                      style={{ cursor: 'pointer' }}
+                      onClick={() => setSelectedInvoice(inv)}
+                    >
+                      <td style={{ fontWeight: 600 }}>{inv.order_code}</td>
                       <td className={shared.mutedCell} title={inv.user_id}>{inv.user_email ?? inv.user_id}</td>
+                      <td className={shared.mutedCell}>{inv.transfer?.sender_name || '—'}</td>
+                      <td className={shared.mutedCell}>{formatDateTime(inv.transfer?.transferred_at)}</td>
                       <td className={shared.mutedCell} style={{ textTransform: 'capitalize' }}>{inv.plan_tier}</td>
                       <td className={shared.mutedCell}>{inv.billing_cycle}</td>
                       <td>{formatVnd(inv.amount_vnd)}</td>
@@ -296,22 +359,37 @@ export const AdminBilling: React.FC = () => {
                       <td><StatusBadge status={inv.status} /></td>
                       <td className={shared.mutedCell}>{formatDate(inv.paid_at)}</td>
                       <td>
-                        <button
-                          className={shared.iconBtn}
-                          title={isAdmin ? 'Hoàn tiền' : 'Chỉ Admin mới được thực hiện'}
-                          disabled={!isAdmin || inv.status !== 'paid' || mutating}
-                          onClick={() => setRefundTarget(inv)}
-                        >
-                          <RotateCcw size={14} />
-                        </button>
+                        <div style={{ display: 'flex', gap: 4 }}>
+                          <button
+                            className={shared.iconBtn}
+                            title="Xem chi tiết"
+                            onClick={(e) => {
+                              e.stopPropagation();
+                              setSelectedInvoice(inv);
+                            }}
+                          >
+                            <Eye size={14} />
+                          </button>
+                          <button
+                            className={shared.iconBtn}
+                            title={isAdmin ? 'Hoàn tiền' : 'Chỉ Admin mới được thực hiện'}
+                            disabled={!isAdmin || inv.status !== 'paid' || mutating}
+                            onClick={(e) => {
+                              e.stopPropagation();
+                              setRefundTarget(inv);
+                            }}
+                          >
+                            <RotateCcw size={14} />
+                          </button>
+                        </div>
                       </td>
                     </tr>
                   ))}
                   {!invoiceLoading && invoices.length === 0 && (
-                    <tr><td colSpan={8}><div className={shared.emptyState}>Không có hóa đơn phù hợp.</div></td></tr>
+                    <tr><td colSpan={11}><div className={shared.emptyState}>Không có hóa đơn phù hợp.</div></td></tr>
                   )}
                   {invoiceLoading && invoices.length === 0 && (
-                    <tr><td colSpan={8}><div className={shared.emptyState}>Đang tải...</div></td></tr>
+                    <tr><td colSpan={11}><div className={shared.emptyState}>Đang tải...</div></td></tr>
                   )}
                 </tbody>
               </table>
@@ -331,6 +409,15 @@ export const AdminBilling: React.FC = () => {
         <Tabs.Content value="tax"><TaxConfigPanel /></Tabs.Content>
         <Tabs.Content value="api-cost"><ApiCostPanel /></Tabs.Content>
       </Tabs.Root>
+
+      <InvoiceDetailDrawer
+        invoice={selectedInvoice}
+        invoiceId={selectedInvoiceId}
+        onClose={() => {
+          setSelectedInvoice(null);
+          setSelectedInvoiceId(null);
+        }}
+      />
 
       <ConfirmDialog
         open={downgradeTarget !== null}

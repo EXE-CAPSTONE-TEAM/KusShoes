@@ -96,9 +96,25 @@ export interface AdminSubscription {
   started_at: string;
   expires_at: string | null;
   cancel_at_period_end: boolean;
+  last_invoice_id?: string | null;
 }
 
 export type InvoiceStatus = 'pending' | 'awaiting_approval' | 'paid' | 'failed' | 'cancelled' | 'refunded';
+
+export interface AdminPaymentTransfer {
+  transferred_at: string | null;
+  sender_name: string | null;
+  sender_account_number: string | null;
+  sender_bank_id: string | null;
+  sender_bank_name: string | null;
+  receiver_account_number: string | null;
+  virtual_account_name: string | null;
+  virtual_account_number: string | null;
+  bank_reference: string | null;
+  payment_link_id: string | null;
+  transfer_description: string | null;
+  currency: string | null;
+}
 
 export interface AdminInvoice {
   id: string;
@@ -122,6 +138,8 @@ export interface AdminInvoice {
   paid_at: string | null;
   created_at: string;
   vat: { enabled: boolean; rate_percent: number; vat_vnd: number; net_vnd: number };
+  transfer?: AdminPaymentTransfer | null;
+  subscription_period?: { start: string | null; end: string | null } | null;
 }
 
 export type ProjectStatus = 'draft' | 'in_progress' | 'baking' | 'completed';

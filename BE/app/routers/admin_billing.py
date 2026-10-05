@@ -74,6 +74,7 @@ async def list_invoices(
     exclude_internal: bool = False,
     date_from: datetime | None = None,
     date_to: datetime | None = None,
+    q: str | None = None,
     limit: int = Query(default=20, ge=1, le=100),
     cursor: str | None = None,
     db: AsyncSession = Depends(get_db),
@@ -95,6 +96,7 @@ async def list_invoices(
         exclude_internal=exclude_internal,
         date_from=date_from,
         date_to=date_to,
+        q=q,
         limit=limit,
         before=before,
         before_id=before_id,
@@ -104,6 +106,15 @@ async def list_invoices(
         last = items[-1]
         next_cursor = encode_cursor(last.created_at, last.id)
     return CursorPage(items=items, next_cursor=next_cursor)
+
+
+@router.get("/billing/invoices/{invoice_id}", response_model=AdminInvoiceResponse)
+async def get_invoice(
+    invoice_id: uuid.UUID,
+    db: AsyncSession = Depends(get_db),
+    admin=Depends(get_current_admin),
+):
+    return await billing_service.admin_get_invoice(db, invoice_id)
 
 
 @router.post("/billing/subscriptions/{user_id}/force-downgrade")

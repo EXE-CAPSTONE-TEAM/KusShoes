@@ -45,6 +45,7 @@ logs
 
 # --- Generated code index ---
 .codegraph/
+.spec/verification-log/
 
 # --- Local-only scratch / never push ---
 # Real credentials for the shared production DB (see docs/TEST_ACCOUNTS.md) — local reference only.

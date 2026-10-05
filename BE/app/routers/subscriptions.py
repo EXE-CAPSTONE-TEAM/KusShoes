@@ -15,10 +15,14 @@ from app.schemas.credit import (
 )
 from app.schemas.subscription import (
     CancelSubscriptionRequest,
+    CheckoutQuote,
+    CheckoutQuoteRequest,
     CheckoutRequest,
     CheckoutResponse,
     CouponPreviewRequest,
     CouponPreviewResponse,
+    CreditQuoteRequest,
+    CreditQuoteResponse,
     InvoiceResponse,
     PaymentGatewaysResponse,
     PlanResponse,
@@ -51,12 +55,50 @@ async def get_subscription(
 
 @router.get("/subscription/invoices", response_model=list[InvoiceResponse])
 async def list_invoices(
-    limit: int = 20,
+    limit: int = Query(default=20, ge=1, le=100),
     before: datetime | None = None,
+    before_id: uuid.UUID | None = None,
     db: AsyncSession = Depends(get_db),
     user=Depends(get_current_user),
 ):
-    return await billing_service.list_invoice_views(db, user, limit=limit, before=before)
+    return await billing_service.list_invoice_views(
+        db, user, limit=limit, before=before, before_id=before_id
+    )
+
+
+@router.get("/subscription/invoices/by-order/{order_code}", response_model=InvoiceResponse)
+async def get_invoice_by_order(
+    order_code: int,
+    db: AsyncSession = Depends(get_db),
+    user=Depends(get_current_user),
+):
+    return await billing_service.get_user_invoice_by_order_view(db, user, order_code)
+
+
+@router.post("/subscription/checkout/quote", response_model=CheckoutQuote)
+async def quote_checkout(
+    body: CheckoutQuoteRequest,
+    db: AsyncSession = Depends(get_db),
+    redis: aioredis.Redis = Depends(get_redis),
+    user=Depends(get_current_user),
+):
+    return await billing_service.quote_checkout(
+        db,
+        user,
+        tier=body.tier,
+        billing_cycle=body.billing_cycle,
+        coupon_code=body.coupon_code,
+        redis=redis,
+    )
+
+
+@router.post("/subscription/credits/quote", response_model=CreditQuoteResponse)
+async def quote_credits(
+    body: CreditQuoteRequest,
+    db: AsyncSession = Depends(get_db),
+    user=Depends(get_current_user),
+):
+    return await billing_service.quote_credits(db, user, quantity=body.quantity)
 
 
 @router.post("/subscription/checkout", response_model=CheckoutResponse, dependencies=[Depends(forbid_impersonation)])

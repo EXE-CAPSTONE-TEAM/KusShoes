@@ -202,6 +202,26 @@ export type Subscription = {
   cancel_at_period_end: boolean;
 };
 
+export interface PaymentTransferDetails {
+  transferred_at: string | null;
+  sender_name: string | null;
+  sender_account_number: string | null;
+  sender_bank_id: string | null;
+  sender_bank_name: string | null;
+  receiver_account_number: string | null;
+  virtual_account_name: string | null;
+  virtual_account_number: string | null;
+  bank_reference: string | null;
+  payment_link_id: string | null;
+  transfer_description: string | null;
+  currency: string | null;
+}
+
+export interface SubscriptionPeriod {
+  start: string | null;
+  end: string | null;
+}
+
 export type Invoice = {
   id: string;
   order_code: number;
@@ -216,7 +236,52 @@ export type Invoice = {
   paid_at: string | null;
   created_at: string;
   vat: { enabled: boolean; rate_percent: number; vat_vnd: number; net_vnd: number };
+  transfer?: PaymentTransferDetails | null;
+  subscription_period?: SubscriptionPeriod | null;
+  /** Credit invoices only: number of scan Credits bought. */
+  credit_quantity?: number | null;
+  coupon_code?: string | null;
+  is_upgrade?: boolean;
 };
+
+export interface CheckoutBuyer {
+  full_name: string | null;
+  email: string;
+}
+
+export interface PlanQuoteDetails {
+  tier: string;
+  billing_cycle: string;
+  price_vnd: number;
+  max_projects: number | null;
+  max_exports_per_month: number | null;
+  max_scans_per_cycle: number | null;
+  max_ai_credits_per_cycle: number | null;
+}
+
+export interface CheckoutQuote {
+  plan: PlanQuoteDetails;
+  listed_price_vnd: number;
+  discount_vnd: number;
+  discount_reason: 'coupon' | 'upgrade_proration' | null;
+  coupon_code: string | null;
+  amount_vnd: number;
+  vat: { enabled: boolean; rate_percent: number; vat_vnd: number; net_vnd: number };
+  is_upgrade: boolean;
+  current_tier: string | null;
+  new_period_start: string;
+  new_expires_at: string;
+  buyer: CheckoutBuyer;
+}
+
+export interface CreditQuote {
+  quantity: number;
+  unit_price_vnd: number;
+  total_vnd: number;
+  amount_vnd: number;
+  vat: { enabled: boolean; rate_percent: number; vat_vnd: number; net_vnd: number };
+  can_purchase: boolean;
+}
 
 export type WatermarkPolicy = {
   required: boolean;
@@ -908,8 +973,42 @@ export const api = {
     return request<Subscription>('/api/v1/subscription');
   },
 
-  async listInvoices(): Promise<Invoice[]> {
-    return request<Invoice[]>('/api/v1/subscription/invoices?limit=100');
+  async listInvoices(options?: { limit?: number; before?: string | null; before_id?: string | null }): Promise<Invoice[]> {
+    const params = new URLSearchParams();
+    params.set('limit', String(options?.limit ?? 20));
+    if (options?.before) params.set('before', options.before);
+    if (options?.before_id) params.set('before_id', options.before_id);
+    return request<Invoice[]>(`/api/v1/subscription/invoices?${params.toString()}`);
+  },
+
+  async getInvoice(id: string): Promise<Invoice> {
+    return request<Invoice>(`/api/v1/subscription/invoices/${encodeURIComponent(id)}`);
+  },
+
+  async getInvoiceByOrder(orderCode: string | number): Promise<Invoice> {
+    return request<Invoice>(`/api/v1/subscription/invoices/by-order/${encodeURIComponent(String(orderCode))}`);
+  },
+
+  async quoteCheckout(
+    tier: string,
+    billingCycle: string,
+    couponCode?: string | null,
+  ): Promise<CheckoutQuote> {
+    return request<CheckoutQuote>('/api/v1/subscription/checkout/quote', {
+      method: 'POST',
+      body: JSON.stringify({
+        tier,
+        billing_cycle: billingCycle,
+        coupon_code: couponCode?.trim() || null,
+      }),
+    });
+  },
+
+  async quoteCredits(quantity: number): Promise<CreditQuote> {
+    return request<CreditQuote>('/api/v1/subscription/credits/quote', {
+      method: 'POST',
+      body: JSON.stringify({ quantity }),
+    });
   },
 
   async createCheckout(

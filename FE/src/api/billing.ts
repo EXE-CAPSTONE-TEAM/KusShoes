@@ -81,4 +81,26 @@ export const billingApi = {
       method: "POST",
       body: JSON.stringify({ quantity, gateway }),
     }).then((result) => result.checkout_url),
+
+  quoteCheckout: (tier: string, billingCycle: string, couponCode?: string | null) =>
+    request<import("./client").CheckoutQuote>("/api/v1/subscription/checkout/quote", {
+      method: "POST",
+      body: JSON.stringify({
+        tier,
+        billing_cycle: billingCycle,
+        coupon_code: couponCode?.trim() || null,
+      }),
+    }),
+
+  quoteCredits: (quantity: number) =>
+    request<import("./client").CreditQuote>("/api/v1/subscription/credits/quote", {
+      method: "POST",
+      body: JSON.stringify({ quantity }),
+    }),
+
+  getInvoice: (invoiceId: string) =>
+    request<import("./client").Invoice>(`/api/v1/subscription/invoices/${encodeURIComponent(invoiceId)}`),
+
+  getInvoiceByOrder: (orderCode: string | number) =>
+    request<import("./client").Invoice>(`/api/v1/subscription/invoices/by-order/${encodeURIComponent(String(orderCode))}`),
 };

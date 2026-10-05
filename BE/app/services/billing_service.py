@@ -39,7 +39,16 @@ from app.repositories import (
     subscription_repo,
     user_repo,
 )
-from app.schemas.subscription import AdminInvoiceResponse, AdminSubscriptionResponse
+from app.schemas.subscription import (
+    AdminInvoiceResponse,
+    AdminSubscriptionResponse,
+    CheckoutBuyer,
+    CheckoutQuote,
+    CreditQuoteResponse,
+    PaymentTransferDetails,
+    PlanQuoteDetails,
+    SubscriptionPeriod,
+)
 from app.services import (
     coupon_service,
     credit_service,
@@ -49,6 +58,7 @@ from app.services import (
     tax_service,
 )
 from app.services.audit import record_audit
+from app.services.payment_details import customer_transfer_details, payos_transfer_details
 
 _CYCLE_TIMEDELTA = {
     "monthly": timedelta(days=30),
@@ -116,8 +126,42 @@ async def get_subscription_view(db: AsyncSession, user) -> dict:
     }
 
 
-def to_invoice_view(invoice: Invoice) -> dict:
-    """InvoiceResponse fields plus the BR-28 VAT breakdown (frozen receipt value once paid)."""
+def _extract_subscription_period(
+    invoice: Invoice, current_sub: Subscription | None = None
+) -> dict | None:
+    if invoice.plan_tier == CREDIT_INVOICE_TIER:
+        return None
+    snapshot = invoice.receipt_snapshot
+    if isinstance(snapshot, dict):
+        if "subscription_period" in snapshot and isinstance(snapshot["subscription_period"], dict):
+            sp = snapshot["subscription_period"]
+            start_val = sp.get("start")
+            end_val = sp.get("end")
+            start_dt = datetime.fromisoformat(start_val) if isinstance(start_val, str) else start_val
+            end_dt = datetime.fromisoformat(end_val) if isinstance(end_val, str) else end_val
+            return {"start": start_dt, "end": end_dt}
+        if snapshot.get("period_start") and snapshot.get("period_end"):
+            start_val = snapshot["period_start"]
+            end_val = snapshot["period_end"]
+            start_dt = datetime.fromisoformat(start_val) if isinstance(start_val, str) else start_val
+            end_dt = datetime.fromisoformat(end_val) if isinstance(end_val, str) else end_val
+            return {"start": start_dt, "end": end_dt}
+    if current_sub and current_sub.last_invoice_id == invoice.id:
+        return {
+            "start": current_sub.current_period_start,
+            "end": current_sub.expires_at,
+        }
+    return None
+
+
+def _credit_quantity(invoice: Invoice) -> int | None:
+    return credit_service.credit_quantity(invoice) if credit_service.is_credit_invoice(invoice) else None
+
+
+def to_invoice_view(invoice: Invoice, current_sub: Subscription | None = None) -> dict:
+    """InvoiceResponse fields plus the BR-28 VAT breakdown, masked transfer details, and subscription period."""
+    transfer_data = customer_transfer_details(invoice)
+    period = _extract_subscription_period(invoice, current_sub)
     return {
         "id": invoice.id,
         "order_code": invoice.order_code,
@@ -132,23 +176,134 @@ def to_invoice_view(invoice: Invoice) -> dict:
         "paid_at": invoice.paid_at,
         "created_at": invoice.created_at,
         "vat": tax_service.breakdown_for_invoice(invoice),
+        "transfer": PaymentTransferDetails(**transfer_data) if transfer_data else None,
+        "subscription_period": SubscriptionPeriod(**period) if period else None,
+        "credit_quantity": _credit_quantity(invoice),
+        "coupon_code": invoice.coupon_code,
+        "is_upgrade": invoice.is_upgrade,
     }
 
 
 async def list_invoices(
-    db: AsyncSession, user, *, limit: int, before: datetime | None
+    db: AsyncSession,
+    user,
+    *,
+    limit: int,
+    before: datetime | None,
+    before_id: uuid.UUID | None = None,
 ) -> list[Invoice]:
-    return await invoice_repo.list_by_user(db, user.id, limit=limit, before=before)
+    return await invoice_repo.list_by_user(db, user.id, limit=limit, before=before, before_id=before_id)
 
 
 async def list_invoice_views(
-    db: AsyncSession, user, *, limit: int, before: datetime | None
+    db: AsyncSession,
+    user,
+    *,
+    limit: int,
+    before: datetime | None,
+    before_id: uuid.UUID | None = None,
 ) -> list[dict]:
-    invoices = await list_invoices(db, user, limit=limit, before=before)
-    return [to_invoice_view(invoice) for invoice in invoices]
+    invoices = await list_invoices(db, user, limit=limit, before=before, before_id=before_id)
+    current_sub = await subscription_repo.get_by_user(db, user.id)
+    return [to_invoice_view(invoice, current_sub) for invoice in invoices]
 
 
 # --- Checkout ---
+
+
+async def quote_checkout(
+    db: AsyncSession,
+    user,
+    *,
+    tier: str,
+    billing_cycle: str,
+    coupon_code: str | None = None,
+    redis: aioredis.Redis | None = None,
+) -> CheckoutQuote:
+    if redis is not None:
+        retry_after = await rate_limiter.consume(
+            redis,
+            bucket="checkout-quote",
+            identifier=str(user.id),
+            limit=10,
+            window_seconds=60,
+        )
+        if retry_after:
+            raise AuthRateLimited(retry_after)
+
+    plan = await plan_repo.get_by_tier_and_cycle(db, tier, billing_cycle)
+    if not plan:
+        raise SubPlanNotFound()
+    if tier == "free" or plan.price_vnd <= 0:
+        raise SubPlanNotSellable()
+
+    current = await subscription_repo.get_by_user(db, user.id)
+    if current and current.tier == f"{tier}_{billing_cycle}" and current.status == "active":
+        raise SubAlreadyActive()
+
+    now = datetime.now(UTC)
+    amount_vnd = plan.price_vnd
+    is_upgrade = _is_midcycle_upgrade(
+        current, new_billing_cycle=billing_cycle, new_price_vnd=plan.price_vnd, now=now
+    )
+    coupon = None
+    discount_reason = None
+    if coupon_code:
+        if is_upgrade:  # a prorated upgrade is already discounted; codes don't stack (BR-26)
+            raise CouponInvalid()
+        coupon, coupon_discount = await coupon_service.evaluate(
+            db, user, coupon_code, plan, plan.price_vnd
+        )
+        amount_vnd = plan.price_vnd - coupon_discount
+        discount_reason = "coupon"
+    elif is_upgrade:
+        cycle_days = 30 if billing_cycle == "monthly" else 365
+        amount_vnd = _prorated_upgrade_amount(
+            old_price_vnd=current.plan.price_vnd,
+            new_price_vnd=plan.price_vnd,
+            expires_at=current.expires_at,
+            cycle_days=cycle_days,
+            now=now,
+        )
+        discount_reason = "upgrade_proration"
+
+    if is_upgrade and current and current.expires_at:
+        new_expires_at = current.expires_at
+        new_period_start = current.current_period_start or now
+    else:
+        new_period_start = now
+        new_expires_at = now + _CYCLE_TIMEDELTA.get(billing_cycle, timedelta(days=30))
+
+    buyer_name = f"{getattr(user, 'first_name', '') or ''} {getattr(user, 'last_name', '') or ''}".strip()
+    buyer = CheckoutBuyer(
+        full_name=buyer_name or None,
+        email=user.email,
+    )
+
+    plan_details = PlanQuoteDetails(
+        tier=plan.tier,
+        billing_cycle=plan.billing_cycle,
+        price_vnd=plan.price_vnd,
+        max_projects=plan.max_projects,
+        max_exports_per_month=plan.max_exports_per_month,
+        max_scans_per_cycle=plan.max_scans_per_cycle,
+        max_ai_credits_per_cycle=plan.max_ai_credits_per_cycle,
+    )
+
+    return CheckoutQuote(
+        plan=plan_details,
+        listed_price_vnd=plan.price_vnd,
+        discount_vnd=plan.price_vnd - amount_vnd,
+        discount_reason=discount_reason,
+        coupon_code=coupon.code if coupon else None,
+        amount_vnd=amount_vnd,
+        vat=tax_service.vat_breakdown(amount_vnd),
+        is_upgrade=is_upgrade,
+        current_tier=current.tier if current else None,
+        new_period_start=new_period_start,
+        new_expires_at=new_expires_at,
+        buyer=buyer,
+    )
 
 
 async def create_checkout_session(
@@ -168,38 +323,10 @@ async def create_checkout_session(
     if gateway == "momo" and not settings.MOMO_ENABLED:
         raise SubGatewayComingSoon("MoMo")
 
-    plan = await plan_repo.get_by_tier_and_cycle(db, tier, billing_cycle)
-    if not plan:
-        raise SubPlanNotFound()
-    if tier == "free" or plan.price_vnd <= 0:
-        raise SubPlanNotSellable()
-
-    current = await subscription_repo.get_by_user(db, user.id)
-    if current and current.tier == f"{tier}_{billing_cycle}" and current.status == "active":
-        raise SubAlreadyActive()
-
-    now = datetime.now(UTC)
-    amount_vnd = plan.price_vnd
-    is_upgrade = _is_midcycle_upgrade(
-        current, new_billing_cycle=billing_cycle, new_price_vnd=plan.price_vnd, now=now
+    quote = await quote_checkout(
+        db, user, tier=tier, billing_cycle=billing_cycle, coupon_code=coupon_code
     )
-    coupon = None
-    if coupon_code:
-        if is_upgrade:  # a prorated upgrade is already discounted; codes don't stack (BR-26)
-            raise CouponInvalid()
-        coupon, coupon_discount = await coupon_service.evaluate(
-            db, user, coupon_code, plan, plan.price_vnd
-        )
-        amount_vnd = plan.price_vnd - coupon_discount
-    if is_upgrade:
-        cycle_days = 30 if billing_cycle == "monthly" else 365
-        amount_vnd = _prorated_upgrade_amount(
-            old_price_vnd=current.plan.price_vnd,
-            new_price_vnd=plan.price_vnd,
-            expires_at=current.expires_at,
-            cycle_days=cycle_days,
-            now=now,
-        )
+    plan = await plan_repo.get_by_tier_and_cycle(db, tier, billing_cycle)
 
     order_code = _generate_order_code()
     invoice = await invoice_repo.create_pending(
@@ -209,17 +336,35 @@ async def create_checkout_session(
         plan_tier=tier,
         billing_cycle=billing_cycle,
         order_code=order_code,
-        listed_price_vnd=plan.price_vnd,
-        discount_vnd=plan.price_vnd - amount_vnd,
-        coupon_code=coupon.code if coupon else None,
-        is_upgrade=is_upgrade,
-        amount_vnd=amount_vnd,
+        listed_price_vnd=quote.listed_price_vnd,
+        discount_vnd=quote.discount_vnd,
+        coupon_code=quote.coupon_code,
+        is_upgrade=quote.is_upgrade,
+        amount_vnd=quote.amount_vnd,
         payment_method=gateway,
     )
     await db.commit()
 
     description = f"KusShoes {tier} {billing_cycle}"[:25]
     return await _open_gateway_payment(db, invoice, gateway=gateway, description=description)
+
+
+async def quote_credits(
+    db: AsyncSession,
+    user,
+    *,
+    quantity: int,
+) -> CreditQuoteResponse:
+    await credit_service.assert_can_purchase(db, user, quantity)
+    total_vnd = settings.CREDIT_PRICE_VND * quantity
+    return CreditQuoteResponse(
+        quantity=quantity,
+        unit_price_vnd=settings.CREDIT_PRICE_VND,
+        total_vnd=total_vnd,
+        amount_vnd=total_vnd,
+        vat=tax_service.vat_breakdown(total_vnd),
+        can_purchase=True,
+    )
 
 
 async def _open_gateway_payment(
@@ -358,12 +503,15 @@ async def admin_list_subscriptions(
             started_at=subscription.started_at,
             expires_at=subscription.expires_at,
             cancel_at_period_end=subscription.cancel_at_period_end,
+            last_invoice_id=subscription.last_invoice_id,
         )
         for subscription, user_email in rows
     ]
 
 
 def to_admin_invoice(invoice: Invoice, user_email: str | None) -> AdminInvoiceResponse:
+    transfer_data = payos_transfer_details(invoice)
+    period = _extract_subscription_period(invoice, None)
     return AdminInvoiceResponse(
         id=invoice.id,
         user_id=invoice.user_id,
@@ -386,6 +534,10 @@ def to_admin_invoice(invoice: Invoice, user_email: str | None) -> AdminInvoiceRe
         paid_at=invoice.paid_at,
         created_at=invoice.created_at,
         vat=tax_service.breakdown_for_invoice(invoice),
+        transfer=PaymentTransferDetails(**transfer_data) if transfer_data else None,
+        subscription_period=SubscriptionPeriod(**period) if period else None,
+        credit_quantity=_credit_quantity(invoice),
+        is_upgrade=invoice.is_upgrade,
     )
 
 
@@ -402,6 +554,7 @@ async def admin_list_invoices(
     exclude_internal: bool = False,
     date_from: datetime | None = None,
     date_to: datetime | None = None,
+    q: str | None = None,
 ) -> list[AdminInvoiceResponse]:
     rows = await invoice_repo.list_all(
         db,
@@ -412,11 +565,20 @@ async def admin_list_invoices(
         exclude_internal=exclude_internal,
         date_from=date_from,
         date_to=date_to,
+        q=q,
         limit=limit,
         before=before,
         before_id=before_id,
     )
     return [to_admin_invoice(invoice, user_email) for invoice, user_email in rows]
+
+
+async def admin_get_invoice(db: AsyncSession, invoice_id: uuid.UUID) -> AdminInvoiceResponse:
+    row = await invoice_repo.get_with_user_email(db, invoice_id)
+    if not row:
+        raise InvoiceNotFound()
+    invoice, user_email = row
+    return to_admin_invoice(invoice, user_email)
 
 
 async def admin_force_downgrade(db: AsyncSession, admin, user_id: uuid.UUID) -> None:
@@ -515,7 +677,17 @@ async def get_user_invoice(db: AsyncSession, user, invoice_id: uuid.UUID) -> Inv
 
 
 async def get_user_invoice_view(db: AsyncSession, user, invoice_id: uuid.UUID) -> dict:
-    return to_invoice_view(await get_user_invoice(db, user, invoice_id))
+    invoice = await get_user_invoice(db, user, invoice_id)
+    current_sub = await subscription_repo.get_by_user(db, user.id)
+    return to_invoice_view(invoice, current_sub)
+
+
+async def get_user_invoice_by_order_view(db: AsyncSession, user, order_code: int) -> dict:
+    invoice = await invoice_repo.get_by_order_code(db, order_code)
+    if not invoice or invoice.user_id != user.id:
+        raise InvoiceNotFound()
+    current_sub = await subscription_repo.get_by_user(db, user.id)
+    return to_invoice_view(invoice, current_sub)
 
 
 async def get_receipt_url(db: AsyncSession, user, invoice_id: uuid.UUID) -> str:

@@ -201,7 +201,9 @@ export const Sidebar: React.FC<SidebarProps> = ({
 
   const renderNavItem = (item: { id: string; label: string; icon: typeof LayoutDashboard }) => {
     const Icon = item.icon;
-    const isActive = activePage.split('?')[0] === item.id;
+    const isActive =
+      activePage.split('?')[0] === item.id ||
+      (item.id === 'billing' && (activePage === 'billing-checkout' || activePage === 'billing-bill'));
     const button = (
       <button
         className={`${styles.navItem} ${isActive ? styles.active : ''}`}

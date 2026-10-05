@@ -1,7 +1,7 @@
 import uuid
 from datetime import datetime
 
-from sqlalchemy import select, text
+from sqlalchemy import or_, select, text
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.models.invoice import Invoice
@@ -66,6 +66,21 @@ async def get_by_gateway_transaction_id(
     return result.scalar_one_or_none()
 
 
+async def get_with_user_email(
+    db: AsyncSession, invoice_id: uuid.UUID
+) -> tuple[Invoice, str | None] | None:
+    query = (
+        select(Invoice, User.email)
+        .outerjoin(User, User.id == Invoice.user_id)
+        .where(Invoice.id == invoice_id)
+    )
+    result = await db.execute(query)
+    row = result.first()
+    if not row:
+        return None
+    return row[0], row[1]
+
+
 async def mark_paid(
     db: AsyncSession,
     invoice: Invoice,
@@ -107,10 +122,12 @@ async def list_by_user(
     query = select(Invoice).where(Invoice.user_id == user_id)
     if before is not None:
         if before_id is not None:
-            query = query.where((Invoice.created_at < before) | ((Invoice.created_at == before) & (Invoice.id < before_id)))
+            query = query.where(
+                (Invoice.created_at < before) | ((Invoice.created_at == before) & (Invoice.id < before_id))
+            )
         else:
             query = query.where(Invoice.created_at < before)
-    query = query.order_by(Invoice.created_at.desc()).limit(limit)
+    query = query.order_by(Invoice.created_at.desc(), Invoice.id.desc()).limit(limit)
     result = await db.execute(query)
     return list(result.scalars())
 
@@ -125,6 +142,7 @@ async def list_all(
     exclude_internal: bool = False,
     date_from: datetime | None = None,
     date_to: datetime | None = None,
+    q: str | None = None,
     limit: int = 20,
     before: datetime | None = None,
     before_id: uuid.UUID | None = None,
@@ -144,9 +162,20 @@ async def list_all(
         query = query.where(Invoice.created_at >= date_from)
     if date_to is not None:
         query = query.where(Invoice.created_at < date_to)
+    if q is not None and q.strip():
+        search = q.strip()
+        or_clauses = [
+            Invoice.payment_reference.ilike(f"%{search}%"),
+            Invoice.gateway_metadata[("payos", "counterAccountName")].astext.ilike(f"%{search}%"),
+        ]
+        if search.isdigit():
+            or_clauses.append(Invoice.order_code == int(search))
+        query = query.where(or_(*or_clauses))
     if before is not None:
         if before_id is not None:
-            query = query.where((Invoice.created_at < before) | ((Invoice.created_at == before) & (Invoice.id < before_id)))
+            query = query.where(
+                (Invoice.created_at < before) | ((Invoice.created_at == before) & (Invoice.id < before_id))
+            )
         else:
             query = query.where(Invoice.created_at < before)
     query = query.order_by(Invoice.created_at.desc(), Invoice.id.desc()).limit(limit)

@@ -1,0 +1,403 @@
+/* KusShoes Bill Page - Design System Compliant (docs/DESIGN.md) */
+
+.container {
+  max-width: 768px;
+  width: 100%;
+  margin: 0 auto;
+  padding: 0 24px 48px;
+  display: flex;
+  flex-direction: column;
+  gap: 24px;
+}
+
+@media (max-width: 640px) {
+  .container {
+    padding: 0 16px 32px;
+  }
+}
+
+.pageHeader {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  padding-top: 16px;
+}
+
+.title {
+  font-family: inherit;
+  font-size: 22px;
+  font-weight: 600;
+  line-height: 28px;
+  letter-spacing: -0.015em;
+  color: var(--text-primary);
+  margin: 0;
+}
+
+/* Status Cards & Banners */
+.banner {
+  padding: 16px 20px;
+  border-radius: var(--radius-lg, 8px);
+  border: 1px solid var(--border);
+  background-color: var(--bg-surface);
+  display: flex;
+  align-items: flex-start;
+  gap: 14px;
+  font-size: 13px;
+  line-height: 20px;
+}
+
+.bannerSuccess {
+  border-color: var(--success);
+  background-color: rgba(22, 163, 74, 0.06);
+  color: var(--text-primary);
+}
+
+.bannerWarning {
+  border-color: var(--warning);
+  background-color: rgba(245, 158, 11, 0.06);
+  color: var(--text-primary);
+}
+
+.bannerDanger {
+  border-color: var(--danger);
+  background-color: rgba(220, 38, 38, 0.06);
+  color: var(--text-primary);
+}
+
+.bannerTitle {
+  font-size: 15px;
+  font-weight: 600;
+  color: var(--text-primary);
+  margin: 0 0 4px 0;
+}
+
+.bannerSubtitle {
+  font-size: 13px;
+  color: var(--text-secondary);
+  margin: 0;
+  line-height: 18px;
+}
+
+.bannerIcon {
+  flex-shrink: 0;
+  margin-top: 2px;
+}
+
+.bannerIconSuccess {
+  color: var(--success);
+}
+
+.bannerIconWarning {
+  color: var(--warning);
+}
+
+.bannerIconDanger {
+  color: var(--danger);
+}
+
+.spin {
+  animation: spin 1s linear infinite;
+}
+
+@keyframes spin {
+  from { transform: rotate(0deg); }
+  to { transform: rotate(360deg); }
+}
+
+/* Bill Sheet */
+.billCard {
+  background-color: var(--bg-surface);
+  border: 1px solid var(--border);
+  border-radius: var(--radius-lg, 8px);
+  padding: 32px;
+  display: flex;
+  flex-direction: column;
+  gap: 24px;
+  position: relative;
+}
+
+.billTop {
+  display: flex;
+  justify-content: space-between;
+  align-items: flex-start;
+  gap: 16px;
+  border-bottom: 1px solid var(--border);
+  padding-bottom: 20px;
+}
+
+.brandGroup {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+
+.brandName {
+  font-size: 20px;
+  font-weight: 700;
+  letter-spacing: -0.02em;
+  color: var(--text-primary);
+  margin: 0;
+}
+
+.brandSub {
+  font-size: 12px;
+  color: var(--text-tertiary);
+}
+
+.receiptMeta {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-end;
+  gap: 4px;
+  text-align: right;
+}
+
+.receiptNumber {
+  font-size: 16px;
+  font-weight: 700;
+  font-variant-numeric: tabular-nums;
+  color: var(--text-primary);
+}
+
+.orderCode {
+  font-size: 12px;
+  color: var(--text-secondary);
+  font-variant-numeric: tabular-nums;
+}
+
+/* Section Grids */
+.section {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+
+.sectionTitle {
+  font-size: 13px;
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+  color: var(--text-tertiary);
+  margin: 0;
+}
+
+.grid2 {
+  display: grid;
+  grid-template-columns: repeat(2, 1fr);
+  gap: 16px;
+}
+
+@media (max-width: 600px) {
+  .grid2 {
+    grid-template-columns: 1fr;
+  }
+}
+
+.metaItem {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+}
+
+.metaKey {
+  font-size: 12px;
+  color: var(--text-secondary);
+}
+
+.metaVal {
+  font-size: 13px;
+  font-weight: 500;
+  color: var(--text-primary);
+  font-variant-numeric: tabular-nums;
+}
+
+/* Breakdown Table */
+.table {
+  width: 100%;
+  border-collapse: collapse;
+  margin-top: 8px;
+}
+
+.table th {
+  padding: 8px 12px;
+  font-size: 12px;
+  font-weight: 600;
+  color: var(--text-secondary);
+  border-bottom: 1px solid var(--border);
+  text-align: left;
+  background-color: var(--bg-hover);
+}
+
+.table td {
+  padding: 12px;
+  font-size: 13px;
+  color: var(--text-primary);
+  border-bottom: 1px solid var(--border);
+  font-variant-numeric: tabular-nums;
+}
+
+.table td:last-child,
+.table th:last-child {
+  text-align: right;
+}
+
+.summarySection {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-end;
+  gap: 8px;
+  padding-top: 12px;
+}
+
+.summaryRow {
+  display: flex;
+  justify-content: flex-end;
+  gap: 24px;
+  font-size: 13px;
+  color: var(--text-secondary);
+  width: 280px;
+}
+
+.summaryRow span:last-child {
+  color: var(--text-primary);
+  font-weight: 500;
+  font-variant-numeric: tabular-nums;
+  text-align: right;
+}
+
+.totalSummaryRow {
+  display: flex;
+  justify-content: flex-end;
+  align-items: baseline;
+  gap: 24px;
+  padding-top: 8px;
+  border-top: 1px solid var(--border);
+  width: 280px;
+  font-size: 15px;
+  font-weight: 600;
+  color: var(--text-primary);
+}
+
+.totalSummaryAmount {
+  font-size: 20px;
+  font-weight: 700;
+  color: var(--text-primary);
+  font-variant-numeric: tabular-nums;
+}
+
+.vatNote {
+  font-size: 11px;
+  color: var(--text-tertiary);
+  text-align: right;
+  margin-top: -4px;
+}
+
+/* Actions */
+.actionRow {
+  display: flex;
+  align-items: center;
+  justify-content: flex-end;
+  gap: 12px;
+  padding-top: 8px;
+  flex-wrap: wrap;
+}
+
+.btnPrimary {
+  height: 40px;
+  padding: 0 18px;
+  font-size: 14px;
+  font-weight: 500;
+  border-radius: var(--radius-md, 6px);
+  background-color: var(--accent);
+  color: #ffffff;
+  border: none;
+  cursor: pointer;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  transition: opacity var(--duration-fast, 120ms);
+}
+
+.btnPrimary:hover:not(:disabled) {
+  opacity: 0.9;
+}
+
+.btnSecondary {
+  height: 40px;
+  padding: 0 16px;
+  font-size: 14px;
+  font-weight: 500;
+  border-radius: var(--radius-md, 6px);
+  background-color: transparent;
+  color: var(--text-primary);
+  border: 1px solid var(--border);
+  cursor: pointer;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  transition: all var(--duration-fast, 120ms);
+}
+
+.btnSecondary:hover:not(:disabled) {
+  border-color: var(--border-strong);
+  background-color: var(--bg-hover);
+}
+
+.btnSecondary:disabled {
+  opacity: 0.45;
+  cursor: not-allowed;
+}
+
+/* Print Stylesheet - Section 4 / C4 */
+@media print {
+  /* Hide non-bill elements */
+  body {
+    background: #ffffff !important;
+    color: #000000 !important;
+  }
+
+  header,
+  nav,
+  aside,
+  .actionRow,
+  .pageHeader,
+  .banner,
+  button,
+  [data-portal] > aside,
+  [class*="mobileBar"],
+  [class*="sidebar"] {
+    display: none !important;
+  }
+
+  .container {
+    max-width: 100% !important;
+    margin: 0 !important;
+    padding: 0 !important;
+  }
+
+  .billCard {
+    border: 1px solid #cccccc !important;
+    background: #ffffff !important;
+    color: #000000 !important;
+    box-shadow: none !important;
+    padding: 24px !important;
+  }
+
+  .brandName,
+  .receiptNumber,
+  .totalSummaryAmount,
+  .table td,
+  .metaVal {
+    color: #000000 !important;
+  }
+
+  .metaKey,
+  .brandSub,
+  .orderCode,
+  .table th,
+  .sectionTitle {
+    color: #444444 !important;
+  }
+}

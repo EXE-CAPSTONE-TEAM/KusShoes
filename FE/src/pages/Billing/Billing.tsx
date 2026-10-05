@@ -11,9 +11,11 @@ import {
   Loader2,
   Gem,
   Plus,
+  Eye,
 } from 'lucide-react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { Trans, useTranslation } from 'react-i18next';
+import type { TFunction } from 'i18next';
 import { ConfirmDialog } from '../../components/ConfirmDialog/ConfirmDialog';
 import { useToast } from '../../context/ToastContext';
 import {
@@ -26,45 +28,42 @@ import {
   type UserProfile,
 } from '../../api/client';
 import { billingApi, type CouponPreview, type CreditBalance, type CreditLedgerItem } from '../../api/billing';
-import { formatVnd, formatDate } from '../../utils/format';
+import { formatVnd, formatDate, formatDateTime } from '../../utils/format';
 import { LoadingDots } from '../../components/LoadingDots/LoadingDots';
-import { pushAnalyticsEvent } from '../../analytics';
+import {
+  formatTierName,
+  invoiceItemLabel,
+  normalizeInvoiceStatus,
+  type InvoiceStatusLabel,
+} from './invoiceLabels';
 import styles from './Billing.module.css';
 
-type InvoiceStatus = 'Paid' | 'Pending' | 'Failed' | 'Cancelled' | 'Refunded';
 
 const GRACE_DAYS = 3; // BR-90: view/edit stays open, exports are blocked
 
-interface Invoice {
+interface InvoiceRow {
   id: string;
-  date: string;
+  receiptNumber: string | null;
+  paidAt: string | null;
+  createdAt: string;
+  planCycle: string;
   amount: string;
   vatNote: string | null;
-  status: InvoiceStatus;
-  receiptNumber: string | null;
+  method: string;
+  status: InvoiceStatusLabel;
 }
 
-function formatTierName(tier: string): string {
-  return tier.replace(/_/g, ' ').replace(/\b\w/g, (char) => char.toUpperCase());
-}
-
-function normalizeInvoiceStatus(status: string): InvoiceStatus {
-  const normalized = status.toLowerCase();
-  if (normalized === 'paid') return 'Paid';
-  if (normalized === 'failed') return 'Failed';
-  if (normalized === 'cancelled') return 'Cancelled';
-  if (normalized === 'refunded') return 'Refunded';
-  return 'Pending';
-}
-
-function toInvoiceRow(invoice: ApiInvoice, vatLabel: (rate: number) => string): Invoice {
+function toInvoiceRow(invoice: ApiInvoice, vatLabel: (rate: number) => string, t: TFunction): InvoiceRow {
   return {
     id: invoice.id,
-    date: formatDate(invoice.created_at),
+    receiptNumber: invoice.receipt_number ?? null,
+    paidAt: invoice.paid_at ? formatDateTime(invoice.paid_at) : null,
+    createdAt: formatDate(invoice.created_at),
+    planCycle: invoiceItemLabel(invoice, t),
     amount: formatVnd(invoice.amount_vnd),
     vatNote: invoice.vat.enabled ? vatLabel(invoice.vat.rate_percent) : null,
+    method: invoice.payment_method ? invoice.payment_method.toUpperCase() : '—',
     status: normalizeInvoiceStatus(invoice.status),
-    receiptNumber: invoice.receipt_number ?? null,
   };
 }
 
@@ -141,16 +140,33 @@ function MomoButton({ enabled, disabled, onClick }: { enabled: boolean; disabled
   );
 }
 
-export const Billing: React.FC = () => {
+interface BillingProps {
+  navigate?: (path: string) => void;
+}
+
+export const Billing: React.FC<BillingProps> = ({ navigate }) => {
   const { t } = useTranslation('billing');
   const { toast } = useToast();
-  const vatLabel = (rate: number) => t('invoices.vatIncl', { rate });
-  const cycleLabel = (cycle: string) => t(`cycle.${cycle}`, { defaultValue: cycle });
+  const vatLabel = React.useCallback((rate: number) => t('invoices.vatIncl', { rate }), [t]);
+  const cycleLabel = React.useCallback((cycle: string) => t(`cycle.${cycle}`, { defaultValue: cycle }), [t]);
   const priorityLabel = (priority: string, formatted = false) =>
     t(`priority.${priority}`, { defaultValue: formatted ? formatTierName(priority) : priority });
+
+  const handleNavigate = (path: string) => {
+    if (navigate) {
+      navigate(path);
+    } else {
+      window.history.pushState({}, '', path);
+      window.dispatchEvent(new PopStateEvent('popstate'));
+    }
+  };
+
   const [showUpgradeModal, setShowUpgradeModal] = useState(false);
   const [showCancelConfirm, setShowCancelConfirm] = useState(false);
-  const [invoices, setInvoices] = useState<Invoice[]>([]);
+  const [invoices, setInvoices] = useState<InvoiceRow[]>([]);
+  const [rawInvoices, setRawInvoices] = useState<ApiInvoice[]>([]);
+  const [hasMoreInvoices, setHasMoreInvoices] = useState(false);
+  const [loadingMoreInvoices, setLoadingMoreInvoices] = useState(false);
   const [plans, setPlans] = useState<Plan[]>([]);
   const [subscription, setSubscription] = useState<Subscription | null>(null);
   const [usage, setUsage] = useState<Usage | null>(null);
@@ -165,7 +181,6 @@ export const Billing: React.FC = () => {
   const [creditLedger, setCreditLedger] = useState<CreditLedgerItem[]>([]);
   const [showBuyCreditModal, setShowBuyCreditModal] = useState(false);
   const [buyQuantity, setBuyQuantity] = useState(1);
-  const [buyingCredit, setBuyingCredit] = useState(false);
   const [momoEnabled, setMomoEnabled] = useState(false);
 
   useEffect(() => {
@@ -176,85 +191,7 @@ export const Billing: React.FC = () => {
       .catch(() => setMomoEnabled(false));
   }, []);
 
-  // Landing here from PayOS/MoMo (/billing/success): poll until the webhook has settled the invoice (MSG29).
-  const returnedFromGateway = window.location.pathname === '/billing/success';
   const cancelledAtGateway = window.location.pathname === '/billing/cancel';
-  const [paymentCheck, setPaymentCheck] = useState<'idle' | 'checking' | 'paid' | 'failed' | 'timeout'>(
-    returnedFromGateway ? 'checking' : 'idle',
-  );
-
-  const purchasePushedRef = React.useRef(false);
-
-  useEffect(() => {
-    if (!returnedFromGateway) return;
-    let attempts = 0;
-    let cancelled = false;
-    const timer = window.setInterval(async () => {
-      attempts += 1;
-      try {
-        const latest = (await api.listInvoices())[0];
-        if (cancelled) return;
-        const status = latest?.status.toLowerCase();
-        if (status === 'paid') {
-          window.clearInterval(timer);
-          const [nextSubscription, nextInvoices, nextCredit, nextLedger] = await Promise.all([
-            api.subscription().catch(() => null),
-            api.listInvoices(),
-            billingApi.getCreditBalance().catch(() => null),
-            billingApi.getCreditLedger().catch(() => null),
-          ]);
-          if (cancelled) return;
-          if (nextSubscription) setSubscription(nextSubscription);
-          setInvoices(nextInvoices.map((invoice) => toInvoiceRow(invoice, vatLabel)));
-          if (nextCredit) setCreditBalance(nextCredit);
-          if (nextLedger) setCreditLedger(nextLedger.items);
-          setPaymentCheck('paid');
-
-          if (!purchasePushedRef.current) {
-            purchasePushedRef.current = true;
-            const searchParams = new URLSearchParams(window.location.search);
-            const orderCode = searchParams.get('orderCode') || searchParams.get('id') || latest?.id || `tx_${Date.now()}`;
-            let val = latest?.amount_vnd ?? 0;
-            let planCode = latest?.plan_tier ?? 'subscription';
-            let currency = 'VND';
-            const lastCheckout = sessionStorage.getItem('kusshoes_last_checkout');
-            if (lastCheckout) {
-              try {
-                const parsed = JSON.parse(lastCheckout);
-                val = val || parsed.value || 0;
-                planCode = parsed.plan_code || planCode;
-                currency = parsed.currency || currency;
-              } catch {
-                // ignore
-              }
-              sessionStorage.removeItem('kusshoes_last_checkout');
-            }
-            pushAnalyticsEvent('purchase', {
-              transaction_id: String(orderCode),
-              value: val,
-              currency,
-              plan_code: planCode,
-            });
-          }
-        } else if (status === 'failed' || status === 'cancelled') {
-          window.clearInterval(timer);
-          setPaymentCheck('failed');
-        } else if (attempts >= 20) {
-          window.clearInterval(timer);
-          setPaymentCheck('timeout');
-        }
-      } catch {
-        if (attempts >= 20) {
-          window.clearInterval(timer);
-          setPaymentCheck('timeout');
-        }
-      }
-    }, 3000);
-    return () => {
-      cancelled = true;
-      window.clearInterval(timer);
-    };
-  }, [returnedFromGateway]);
 
   useEffect(() => {
     const subscriptionRequest = api.subscription().catch((caught) => {
@@ -267,7 +204,7 @@ export const Billing: React.FC = () => {
     Promise.all([
       api.listPlans(),
       subscriptionRequest,
-      api.listInvoices(),
+      api.listInvoices({ limit: 20 }),
       api.usage(),
       api.profile(),
       creditRequest,
@@ -278,13 +215,36 @@ export const Billing: React.FC = () => {
         setSubscription(nextSubscription);
         setUsage(nextUsage);
         setProfile(nextProfile);
-        setInvoices(nextInvoices.map((invoice) => toInvoiceRow(invoice, vatLabel)));
+        setRawInvoices(nextInvoices);
+        setInvoices(nextInvoices.map((invoice) => toInvoiceRow(invoice, vatLabel, t)));
+        setHasMoreInvoices(nextInvoices.length === 20);
         setCreditBalance(nextCredit);
         if (nextLedger) setCreditLedger(nextLedger.items);
       })
       .catch((caught) => toast(caught instanceof Error ? caught.message : t('toast.loadError'), 'error'))
       .finally(() => setLoading(false));
-  }, [toast]);
+  }, [toast, t, vatLabel]);
+
+  const handleLoadMoreInvoices = async () => {
+    if (loadingMoreInvoices || rawInvoices.length === 0) return;
+    setLoadingMoreInvoices(true);
+    try {
+      const last = rawInvoices[rawInvoices.length - 1];
+      const more = await api.listInvoices({
+        before: last.created_at,
+        before_id: last.id,
+        limit: 20,
+      });
+      const nextRaw = [...rawInvoices, ...more];
+      setRawInvoices(nextRaw);
+      setInvoices(nextRaw.map((inv) => toInvoiceRow(inv, vatLabel, t)));
+      setHasMoreInvoices(more.length === 20);
+    } catch (caught) {
+      toast(caught instanceof Error ? caught.message : t('toast.loadError'), 'error');
+    } finally {
+      setLoadingMoreInvoices(false);
+    }
+  };
 
   const currentPlan = useMemo(
     () =>
@@ -315,55 +275,24 @@ export const Billing: React.FC = () => {
     };
   });
 
-  const handleChoosePlan = async (plan: Plan, gateway: 'payos' | 'momo') => {
-    try {
-      pushAnalyticsEvent('begin_checkout', {
-        plan_code: `${plan.tier}_${plan.billing_cycle ?? 'monthly'}`,
-        value: plan.price_vnd,
-        currency: 'VND',
-      });
-      sessionStorage.setItem(
-        'kusshoes_last_checkout',
-        JSON.stringify({
-          plan_code: `${plan.tier}_${plan.billing_cycle ?? 'monthly'}`,
-          value: plan.price_vnd,
-          currency: 'VND',
-        }),
-      );
-      const checkoutUrl = await api.createCheckout(plan.tier, plan.billing_cycle ?? 'monthly', gateway, appliedCoupon);
-      window.location.assign(checkoutUrl);
-      setShowUpgradeModal(false);
-    } catch (caught) {
-      toast(caught instanceof Error ? caught.message : t('toast.checkoutError'), 'error');
-    }
+  const handleChoosePlan = (plan: Plan, gateway: 'payos' | 'momo') => {
+    const params = new URLSearchParams();
+    params.set('type', 'plan');
+    params.set('tier', plan.tier);
+    params.set('cycle', plan.billing_cycle ?? 'monthly');
+    params.set('gateway', gateway);
+    if (appliedCoupon) params.set('coupon', appliedCoupon);
+    handleNavigate(`/billing/checkout?${params.toString()}`);
+    setShowUpgradeModal(false);
   };
 
-  const handleBuyCredit = async (gateway: 'payos' | 'momo') => {
-    setBuyingCredit(true);
-    try {
-      const unitPrice = creditBalance?.price_vnd ?? 2000;
-      const totalVal = buyQuantity * unitPrice;
-      pushAnalyticsEvent('begin_checkout', {
-        plan_code: `credits_${buyQuantity}`,
-        value: totalVal,
-        currency: 'VND',
-      });
-      sessionStorage.setItem(
-        'kusshoes_last_checkout',
-        JSON.stringify({
-          plan_code: `credits_${buyQuantity}`,
-          value: totalVal,
-          currency: 'VND',
-        }),
-      );
-      const checkoutUrl = await billingApi.createCreditCheckout(buyQuantity, gateway);
-      window.location.assign(checkoutUrl);
-      setShowBuyCreditModal(false);
-    } catch (caught) {
-      toast(caught instanceof Error ? caught.message : t('toast.creditCheckoutError'), 'error');
-    } finally {
-      setBuyingCredit(false);
-    }
+  const handleBuyCredit = (gateway: 'payos' | 'momo') => {
+    const params = new URLSearchParams();
+    params.set('type', 'credit');
+    params.set('qty', String(buyQuantity));
+    params.set('gateway', gateway);
+    handleNavigate(`/billing/checkout?${params.toString()}`);
+    setShowBuyCreditModal(false);
   };
 
   const applyCoupon = async (event: React.FormEvent) => {
@@ -459,30 +388,6 @@ export const Billing: React.FC = () => {
         <div className={`${styles.banner} ${styles.bannerWarning}`}>
           <AlertTriangle size={16} className={styles.bannerIcon} />
           <span>{t('banner.cancelled')}</span>
-        </div>
-      )}
-      {paymentCheck === 'checking' && (
-        <div className={styles.banner}>
-          <Loader2 size={16} className={`${styles.bannerIcon} ${styles.spin}`} />
-          <span>{t('banner.checking')}</span>
-        </div>
-      )}
-      {paymentCheck === 'paid' && (
-        <div className={`${styles.banner} ${styles.bannerSuccess}`}>
-          <Check size={16} className={styles.bannerIcon} />
-          <span>{t('banner.paid')}</span>
-        </div>
-      )}
-      {paymentCheck === 'failed' && (
-        <div className={`${styles.banner} ${styles.bannerDanger}`}>
-          <AlertTriangle size={16} className={styles.bannerIcon} />
-          <span>{t('banner.failed')}</span>
-        </div>
-      )}
-      {paymentCheck === 'timeout' && (
-        <div className={`${styles.banner} ${styles.bannerWarning}`}>
-          <AlertTriangle size={16} className={styles.bannerIcon} />
-          <span>{t('banner.timeout')}</span>
         </div>
       )}
       {subscription?.status === 'grace' && subscription.expires_at && (
@@ -584,24 +489,26 @@ export const Billing: React.FC = () => {
               <table className={styles.table}>
                 <thead>
                   <tr>
-                    <th>{t('invoices.colInvoice')}</th>
-                    <th>{t('invoices.colDate')}</th>
+                    <th>{t('invoices.colReceipt')}</th>
+                    <th>{t('invoices.colPaidAt')}</th>
+                    <th>{t('invoices.colPlanCycle')}</th>
                     <th>{t('invoices.colAmount')}</th>
+                    <th>{t('invoices.colMethod')}</th>
                     <th>{t('invoices.colStatus')}</th>
-                    <th style={{ textAlign: 'right' }}>{t('invoices.colReceipt')}</th>
+                    <th style={{ textAlign: 'right' }}>{t('invoices.colAction', { defaultValue: 'Thao tác' })}</th>
                   </tr>
                 </thead>
                 <tbody>
                   {loading && (
                     <tr>
-                      <td colSpan={5} style={{ padding: '24px 0', textAlign: 'center' }}>
+                      <td colSpan={7} style={{ padding: '24px 0', textAlign: 'center' }}>
                         <LoadingDots center label={t('invoices.loading')} />
                       </td>
                     </tr>
                   )}
                   {!loading && invoices.length === 0 && (
                     <tr>
-                      <td colSpan={5} className={styles.tableEmpty}>
+                      <td colSpan={7} className={styles.tableEmpty}>
                         {t('invoices.empty')}
                       </td>
                     </tr>
@@ -609,11 +516,19 @@ export const Billing: React.FC = () => {
                   {invoices.map((inv) => (
                     <tr key={inv.id}>
                       <td style={{ fontWeight: 500 }}>{inv.receiptNumber ?? inv.id.slice(0, 8)}</td>
-                      <td style={{ color: 'var(--text-secondary)' }}>{inv.date}</td>
+                      <td style={{ color: 'var(--text-secondary)' }}>
+                        {inv.paidAt ?? (
+                          <span style={{ color: 'var(--text-tertiary)', fontStyle: 'italic' }}>
+                            {t('invoices.createdFallback', { date: inv.createdAt })}
+                          </span>
+                        )}
+                      </td>
+                      <td>{inv.planCycle}</td>
                       <td>
                         {inv.amount}
                         {inv.vatNote && <div className={styles.vatNote}>{inv.vatNote}</div>}
                       </td>
+                      <td>{inv.method}</td>
                       <td>
                         <StatusIndicator
                           status={
@@ -629,21 +544,47 @@ export const Billing: React.FC = () => {
                         />
                       </td>
                       <td style={{ textAlign: 'right' }}>
-                        <button
-                          className={`${styles.btnSecondary} ${styles.btnSm}`}
-                          disabled={!inv.receiptNumber || downloadingReceipt === inv.id}
-                          title={inv.receiptNumber ? t('invoices.downloadPdf') : t('invoices.receiptLater')}
-                          onClick={() => downloadReceipt(inv.id)}
-                        >
-                          <FileText size={12} />
-                          <span>{downloadingReceipt === inv.id ? t('invoices.opening') : t('invoices.colReceipt')}</span>
-                        </button>
+                        <div style={{ display: 'inline-flex', gap: 6, alignItems: 'center', justifyContent: 'flex-end' }}>
+                          <button
+                            type="button"
+                            className={`${styles.btnSecondary} ${styles.btnSm}`}
+                            title={t('invoices.viewBill')}
+                            onClick={() => handleNavigate(`/billing/invoices/${inv.id}`)}
+                          >
+                            <Eye size={12} />
+                            <span>{t('invoices.viewBill')}</span>
+                          </button>
+                          <button
+                            type="button"
+                            className={`${styles.btnSecondary} ${styles.btnSm}`}
+                            disabled={!inv.receiptNumber || downloadingReceipt === inv.id}
+                            title={inv.receiptNumber ? t('invoices.downloadPdf') : t('invoices.receiptLater')}
+                            onClick={() => downloadReceipt(inv.id)}
+                          >
+                            <FileText size={12} />
+                            <span>{downloadingReceipt === inv.id ? t('invoices.opening') : 'PDF'}</span>
+                          </button>
+                        </div>
                       </td>
                     </tr>
                   ))}
                 </tbody>
               </table>
             </div>
+
+            {hasMoreInvoices && (
+              <div style={{ padding: '12px 16px', display: 'flex', justifyContent: 'center', borderTop: '1px solid var(--border)' }}>
+                <button
+                  type="button"
+                  className={styles.btnSecondary}
+                  disabled={loadingMoreInvoices}
+                  onClick={() => void handleLoadMoreInvoices()}
+                >
+                  {loadingMoreInvoices && <Loader2 size={14} className={styles.spin} />}
+                  <span>{t('invoices.loadMore')}</span>
+                </button>
+              </div>
+            )}
           </div>
 
           {/* Credit Ledger Table (if user has scan credit history) */}
@@ -869,14 +810,12 @@ export const Billing: React.FC = () => {
               <div className={styles.modalFooter}>
                 <button
                   className={styles.btnPrimary}
-                  disabled={buyingCredit}
                   onClick={() => handleBuyCredit('payos')}
                 >
-                  {buyingCredit ? t('connecting') : t('payos')}
+                  {t('payos')}
                 </button>
                 <MomoButton
                   enabled={momoEnabled}
-                  disabled={buyingCredit}
                   onClick={() => handleBuyCredit('momo')}
                 />
               </div>
