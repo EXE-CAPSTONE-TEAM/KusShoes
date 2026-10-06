@@ -40,6 +40,9 @@ import type {
   ExportFormat,
   BakePriority,
   StaffCreateResponse,
+  Ga4ConnectionTestResponse,
+  MarketingAnalyticsResponse,
+  RealtimeAnalyticsResponse,
 } from '../types/admin';
 import {
   getAdminSession,
@@ -384,6 +387,14 @@ export const adminAnalytics = {
     request(`/api/v1/admin/analytics${queryString(query)}`),
   downloadReport: (type: ReportType, format: ReportFormat, query: DateRangeQuery = {}): Promise<void> =>
     downloadAdminFile(`/api/v1/admin/reports/${type}${queryString({ format, ...query })}`, `${type}.${format}`),
+  getMarketing: (
+    query: DateRangeQuery & { country?: string; refresh?: boolean } = {},
+  ): Promise<MarketingAnalyticsResponse> =>
+    request(`/api/v1/admin/analytics/marketing${queryString(query)}`),
+  getRealtime: (): Promise<RealtimeAnalyticsResponse> =>
+    request('/api/v1/admin/analytics/marketing/realtime'),
+  testGa4Connection: (): Promise<Ga4ConnectionTestResponse> =>
+    request('/api/v1/admin/analytics/marketing/test-connection', jsonBody('POST')),
 };
 
 export const adminStudio = {

@@ -8,6 +8,7 @@ import {
   adminModeration,
   adminFeedback,
   adminApiCost,
+  adminAnalytics,
 } from '../../../api/adminClient';
 import type {
   DashboardStats,
@@ -153,6 +154,8 @@ export const AdminDashboard: React.FC<AdminDashboardProps> = ({ navigate }) => {
   const [newReports, setNewReports] = useState<CountResult>({ count: 0, hasMore: false });
   const [newFeedback, setNewFeedback] = useState(0);
   const [apiBudget, setApiBudget] = useState<AdminApiBudget | null>(null);
+  const [realtimeVisitors, setRealtimeVisitors] = useState<number | null>(null);
+  const [topMarketingPlatform, setTopMarketingPlatform] = useState<string | null>(null);
 
   const loadCore = useCallback(
     () =>
@@ -186,6 +189,18 @@ export const AdminDashboard: React.FC<AdminDashboardProps> = ({ navigate }) => {
         adminApiCost
           .budget()
           .then(setApiBudget)
+          .catch(() => {}),
+        adminAnalytics
+          .getRealtime()
+          .then((r) => setRealtimeVisitors(r.active_now))
+          .catch(() => {}),
+        adminAnalytics
+          .getMarketing()
+          .then((m) => {
+            if (m.scorecard && m.scorecard.length > 0) {
+              setTopMarketingPlatform(m.scorecard[0].platform);
+            }
+          })
           .catch(() => {}),
       ]),
     [],
@@ -301,8 +316,18 @@ export const AdminDashboard: React.FC<AdminDashboardProps> = ({ navigate }) => {
         tone: budgetTone,
         onClick: () => navigate?.('billing'),
       },
+      {
+        key: 'marketing-traffic',
+        label: 'Khách trực tuyến (GA4)',
+        value: realtimeVisitors !== null ? `${realtimeVisitors} online` : 'GA4 chưa sẵn sàng',
+        caption: topMarketingPlatform
+          ? `Kênh hiệu quả nhất: ${topMarketingPlatform} · Bấm xem chi tiết`
+          : 'Xem báo cáo nguồn khách, retention và nền tảng',
+        tone: 'ok' as ActionTone,
+        onClick: () => navigate?.('analytics'),
+      },
     ];
-  }, [pendingInvoices, newReports, newFeedback, apiBudget, navigate]);
+  }, [pendingInvoices, newReports, newFeedback, apiBudget, realtimeVisitors, topMarketingPlatform, navigate]);
 
   const filteredUsers = useMemo(() => {
     const q = userSearch.trim().toLowerCase();
