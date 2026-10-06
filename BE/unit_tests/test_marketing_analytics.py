@@ -1,0 +1,169 @@
+"""Unit tests for Marketing and Google Analytics 4 integration."""
+
+from datetime import UTC, date, datetime
+from unittest.mock import AsyncMock, patch
+
+import pytest
+
+from app.services import ga4_service
+from app.services import marketing_analytics_service as mkt_svc
+
+
+def test_normalize_platform_known_sources():
+    assert mkt_svc._normalize_platform("tiktok") == "TikTok"
+    assert mkt_svc._normalize_platform("vm.tiktok.com") == "TikTok"
+    assert mkt_svc._normalize_platform("ttclid") == "TikTok"
+
+    assert mkt_svc._normalize_platform("facebook") == "Facebook / Meta"
+    assert mkt_svc._normalize_platform("fb.com") == "Facebook / Meta"
+    assert mkt_svc._normalize_platform("instagram") == "Facebook / Meta"
+    assert mkt_svc._normalize_platform("fbclid") == "Facebook / Meta"
+
+    assert mkt_svc._normalize_platform("google") == "Google Search"
+    assert mkt_svc._normalize_platform("gclid") == "Google Search"
+
+    assert mkt_svc._normalize_platform("zalo") == "Zalo"
+    assert mkt_svc._normalize_platform("youtube") == "YouTube"
+    assert mkt_svc._normalize_platform("direct") == "Direct"
+    assert mkt_svc._normalize_platform(None) == "Direct"
+
+
+def test_evaluate_platform_relative_to_baselines():
+    ev = mkt_svc._evaluate_platform
+    # revenue at/above mean of revenue-producing platforms
+    assert ev(100, 1, 600_000, baseline_rate=0.05, baseline_revenue=500_000) == "high_performing"
+    # conversion at/above site-wide rate
+    assert ev(100, 6, 0, baseline_rate=0.05, baseline_revenue=500_000) == "high_performing"
+    assert ev(100, 2, 100_000, baseline_rate=0.05, baseline_revenue=500_000) == "moderate"
+    assert ev(100, 0, 0, baseline_rate=0.05, baseline_revenue=500_000) == "needs_attention"
+    # no GA4 → no rate baseline, still classified by revenue
+    assert ev(0, 3, 0, baseline_rate=None, baseline_revenue=0.0) == "moderate"
+
+
+def test_ga4_connection_unconfigured():
+    with patch("app.config.settings.GA4_PROPERTY_ID", ""):
+        res = ga4_service.test_connection()
+        assert res["status"] == "unconfigured"
+        assert res["connected"] is False
+
+
+def test_ga4_realtime_unconfigured():
+    with patch("app.config.settings.GA4_PROPERTY_ID", ""):
+        assert ga4_service.get_realtime_active_users() is None
+
+
+@pytest.mark.asyncio
+async def test_marketing_report_hybrid_aggregation():
+    mock_db = AsyncMock()
+
+    # Mock signup attribution rows: (user_id, utm_source, utm_medium, utm_campaign, initial_referrer, created_at)
+    signup_rows = [
+        ("u1", "tiktok", "cpc", "tet-2026", None, None),
+        ("u2", "tiktok", "cpc", "tet-2026", None, None),
+        ("u3", "facebook", "ads", "kol-review", None, None),
+    ]
+
+    # Mock paid invoice attribution rows: (invoice_id, user_id, amount_vnd, utm_source, utm_campaign, paid_at)
+    paid_rows = [
+        ("inv1", "u1", 250_000, "tiktok", "tet-2026", None),
+        ("inv2", "u3", 500_000, "facebook", "kol-review", None),
+    ]
+
+    mock_ga4_data = {
+        "configured": True,
+        "summary": {
+            "active_users": 150,
+            "new_users": 120,
+            "sessions": 200,
+            "screen_page_views": 500,
+            "bounce_rate": 0.35,
+            "average_session_duration": 140.0,
+            "engagement_rate": 0.65,
+        },
+        "channels": [
+            {"channel_group": "Paid Social", "source_medium": "tiktok / cpc", "users": 80, "sessions": 100, "avg_duration": 120.0, "engagement_rate": 0.7},
+            {"channel_group": "Paid Social", "source_medium": "facebook / ads", "users": 50, "sessions": 70, "avg_duration": 150.0, "engagement_rate": 0.6},
+        ],
+        "cities": [
+            {"city": "Ho Chi Minh City", "country": "Vietnam", "users": 100, "sessions": 130, "share": 0.67},
+            {"city": "Hanoi", "country": "Vietnam", "users": 40, "sessions": 50, "share": 0.27},
+        ],
+        "countries": [{"country": "Vietnam", "users": 140, "sessions": 180}],
+        "daily_traffic": [{"date": "2026-10-01", "users": 50, "sessions": 70}],
+        "devices": [{"device": "mobile", "users": 120, "share": 0.8}],
+        "landing_pages": [{"path": "/products", "sessions": 80, "users": 60}],
+    }
+
+    with (
+        patch("app.repositories.attribution_repo.signup_attribution_rows", AsyncMock(return_value=signup_rows)),
+        patch("app.repositories.attribution_repo.paid_invoice_attribution_rows", AsyncMock(return_value=paid_rows)),
+        patch("app.services.ga4_service.fetch_ga4_traffic_data", return_value=mock_ga4_data),
+    ):
+        report = await mkt_svc.get_marketing_report(mock_db, date(2026, 10, 1), date(2026, 10, 5))
+
+        assert report["ga4_configured"] is True
+        assert report["hero_metrics"]["total_signups"] == 3
+        assert report["hero_metrics"]["total_paying_customers"] == 2
+        assert report["hero_metrics"]["total_revenue_vnd"] == 750_000
+
+        # Scorecard checks
+        scorecard = {item["platform"]: item for item in report["scorecard"]}
+        assert "TikTok" in scorecard
+        assert scorecard["TikTok"]["signups"] == 2
+        assert scorecard["TikTok"]["revenue_vnd"] == 250_000
+
+        assert "Facebook / Meta" in scorecard
+        assert scorecard["Facebook / Meta"]["signups"] == 1
+        assert scorecard["Facebook / Meta"]["revenue_vnd"] == 500_000
+
+        # Funnel checks
+        assert len(report["funnel"]) == 4
+        assert report["funnel"][0]["count"] == 150  # Web visitors
+        assert report["funnel"][2]["count"] == 3    # Signups
+        assert report["funnel"][3]["count"] == 2    # Paying customers
+
+
+def test_normalize_platform_ga4_direct_and_hosts():
+    split = mkt_svc._split_source_medium
+    assert mkt_svc._normalize_platform(*split("(direct) / (none)")) == "Direct"
+    assert mkt_svc._normalize_platform(*split("google / organic")) == "Google Search"
+    assert mkt_svc._normalize_platform(*split("m.facebook.com / referral")) == "Facebook / Meta"
+    # Substring false positives must not happen
+    assert mkt_svc._normalize_platform("chatgpt.com", "referral") == "Referral / Khác"
+    assert mkt_svc._normalize_platform("https://www.metacritic.com/x") != "Facebook / Meta"
+    assert mkt_svc._normalize_platform("t.co") == "X (Twitter)"
+    assert mkt_svc._normalize_platform("https://youtu.be/abc") == "YouTube"
+    # Seen in the real GA4 property (2026-10): login redirect and Messenger shares
+    assert mkt_svc._normalize_platform(*split("accounts.google.com / referral")) == "Direct"
+    assert mkt_svc._normalize_platform(*split("messenger / chat")) == "Facebook / Meta"
+    assert mkt_svc._normalize_platform(*split("lm.facebook.com / referral")) == "Facebook / Meta"
+    assert mkt_svc._normalize_platform(*split("bing / organic")) == "Organic Search"
+
+
+def test_analytics_response_keeps_refund_and_api_cost():
+    from app.schemas.analytics import AnalyticsResponse
+
+    assert {"refund_rate", "api_cost_vnd", "gross_margin_vnd"} <= set(AnalyticsResponse.model_fields)
+
+
+@pytest.mark.asyncio
+async def test_marketing_report_vietnam_day_bounds_and_no_fabricated_funnel():
+    signup_mock = AsyncMock(return_value=[("u1", None, None, None, None, None)])
+    paid_mock = AsyncMock(return_value=[])
+    ga4 = {"configured": False, "summary": {}, "channels": []}
+    with (
+        patch("app.repositories.attribution_repo.signup_attribution_rows", signup_mock),
+        patch("app.repositories.attribution_repo.paid_invoice_attribution_rows", paid_mock),
+        patch("app.services.ga4_service.fetch_ga4_traffic_data", return_value=ga4),
+    ):
+        report = await mkt_svc.get_marketing_report(AsyncMock(), date(2026, 10, 1), date(2026, 10, 1))
+
+    _, start_dt, end_dt = signup_mock.call_args.args
+    # 00:00 VN time == 17:00 UTC the previous day
+    assert start_dt.astimezone(UTC) == datetime(2026, 9, 30, 17, 0, tzinfo=UTC)
+    assert end_dt.astimezone(UTC) < datetime(2026, 10, 1, 17, 0, tzinfo=UTC)
+
+    funnel = report["funnel"]
+    assert funnel[1]["count"] == 0  # no invented "60% of visitors"
+    direct = next(r for r in report["scorecard"] if r["platform"] == "Direct")
+    assert direct["signup_rate"] is None  # no visitors → no rate, not 100%

@@ -274,6 +274,112 @@ export interface AdminAnalytics {
   gross_margin_vnd: number;
 }
 
+// ---- Marketing & Google Analytics 4 ----
+export interface MarketingHeroMetrics {
+  active_users: number;
+  new_users: number;
+  sessions: number;
+  screen_page_views: number;
+  returning_rate: number;
+  bounce_rate: number;
+  average_session_duration: number;
+  engagement_rate: number;
+  total_signups: number;
+  total_paying_customers: number;
+  total_revenue_vnd: number;
+}
+
+export type PlatformEvaluation = 'high_performing' | 'moderate' | 'needs_attention';
+
+export interface PlatformScorecardItem {
+  platform: string;
+  visitors: number;
+  sessions: number;
+  avg_duration_sec: number;
+  engagement_rate: number;
+  signups: number;
+  signup_rate: number | null;
+  paying_customers: number;
+  revenue_vnd: number;
+  evaluation: PlatformEvaluation;
+}
+
+export interface MarketingFunnelStep {
+  step: string;
+  count: number;
+  label: string;
+  conversion_rate: number;
+}
+
+export interface GeoCityItem {
+  city: string;
+  country: string;
+  users: number;
+  sessions: number;
+  share: number;
+}
+
+export interface GeoCountryItem {
+  country: string;
+  users: number;
+  sessions: number;
+}
+
+export interface DailyTrafficPoint {
+  date: string;
+  users: number;
+  sessions: number;
+}
+
+export interface DeviceCategoryItem {
+  device: string;
+  users: number;
+  share: number;
+}
+
+export interface LandingPageItem {
+  path: string;
+  sessions: number;
+  users: number;
+}
+
+export interface CampaignPerformanceItem {
+  campaign: string;
+  signups: number;
+  paying_customers: number;
+  revenue_vnd: number;
+}
+
+export interface MarketingAnalyticsResponse {
+  ga4_configured: boolean;
+  property_id: string | null;
+  date_from: string;
+  date_to: string;
+  hero_metrics: MarketingHeroMetrics;
+  scorecard: PlatformScorecardItem[];
+  funnel: MarketingFunnelStep[];
+  cities: GeoCityItem[];
+  countries: GeoCountryItem[];
+  daily_traffic: DailyTrafficPoint[];
+  devices: DeviceCategoryItem[];
+  landing_pages: LandingPageItem[];
+  campaigns: CampaignPerformanceItem[];
+}
+
+export interface RealtimeAnalyticsResponse {
+  active_now: number | null;
+  captured_at: string;
+}
+
+export interface Ga4ConnectionTestResponse {
+  status: string;
+  connected: boolean;
+  message: string;
+  property_id: string | null;
+  rows_sampled?: number | null;
+}
+
+
 export type ReportType = 'revenue' | 'users' | 'transactions' | 'channel-funnel' | 'api-cost';
 export type ReportFormat = 'csv' | 'xlsx' | 'pdf';
 

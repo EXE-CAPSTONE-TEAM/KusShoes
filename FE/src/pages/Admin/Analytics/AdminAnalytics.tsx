@@ -9,6 +9,7 @@ import { useToast } from '../../../context/ToastContext';
 import { MetricDetailModal, type MetricKey } from './MetricDetailModal';
 import shared from '../admin-shared.module.css';
 import styles from './AdminAnalytics.module.css';
+import { MarketingTab } from './Marketing/MarketingTab';
 
 const formatVnd = (v: number) => `${v.toLocaleString('vi-VN')} VNĐ`;
 const formatVndSigned = (v: number) => `${v > 0 ? '+' : ''}${v.toLocaleString('vi-VN')} VNĐ`;
@@ -75,7 +76,7 @@ const PAYMENT_METHOD_LABEL: Record<string, string> = {
 
 const FORMATS: ReportFormat[] = ['csv', 'xlsx', 'pdf'];
 
-type ActiveTab = 'all' | 'metrics' | 'charts' | 'reports';
+type ActiveTab = 'all' | 'metrics' | 'charts' | 'reports' | 'marketing';
 
 /** Component hiển thị % tăng/giảm so với kỳ trước */
 function Delta({ value }: { value: PeriodValue }) {
@@ -305,6 +306,13 @@ export const AdminAnalytics: React.FC = () => {
             Trung tâm Báo cáo
             <span className={styles.tabBadge}>{REPORTS.length}</span>
           </button>
+          <button
+            className={`${styles.tabBtn} ${activeTab === 'marketing' ? styles.tabActive : ''}`}
+            onClick={() => setActiveTab('marketing')}
+          >
+            Marketing &amp; Lưu lượng (GA4)
+            <span className={styles.tabBadge}>Mới</span>
+          </button>
         </div>
 
         {error && (
@@ -315,7 +323,7 @@ export const AdminAnalytics: React.FC = () => {
         )}
 
         {/* 4 HERO FINANCIAL HIGHLIGHT CARDS */}
-        {activeTab !== 'reports' && (
+        {activeTab !== 'reports' && activeTab !== 'marketing' && (
           <div className={styles.heroGrid}>
             {/* 1. MRR */}
             <div
@@ -960,6 +968,11 @@ export const AdminAnalytics: React.FC = () => {
               ))}
             </div>
           </div>
+        )}
+
+        {/* SECTION 4: MARKETING & GOOGLE ANALYTICS 4 (Hiển thị khi tab là 'all' hoặc 'marketing') */}
+        {(activeTab === 'all' || activeTab === 'marketing') && (
+          <MarketingTab startDate={startDate} endDate={endDate} />
         )}
 
         {/* MODAL CHI TIẾT CÁCH TÍNH & BÓC TÁCH NGUỒN LOG */}

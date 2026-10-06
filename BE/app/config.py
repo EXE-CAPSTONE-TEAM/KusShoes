@@ -146,6 +146,11 @@ class Settings(BaseSettings):
     INTERNAL_ACCOUNT_SCAN_CAP: int = 10           # SRS_v2.2.txt:1767 "trần riêng 10 lượt quét"
     API_COST_ADMIN_ALERT_EMAIL: str = ""          # empty → fall back to settings.EMAIL_FROM
 
+    # Google Analytics 4 (Data API v1beta)
+    GA4_PROPERTY_ID: str = ""
+    GA4_CREDENTIALS_JSON_PATH: str = ""
+    GA4_CREDENTIALS_JSON_RAW: str = ""
+
     @property
     def is_production(self) -> bool:
         return self.APP_ENV == "production"

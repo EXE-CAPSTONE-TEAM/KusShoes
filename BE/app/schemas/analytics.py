@@ -108,3 +108,110 @@ class AnalyticsResponse(BaseModel):
     refund_rate: float | None  # refunds / gross revenue in the period
     api_cost_vnd: int
     gross_margin_vnd: int  # revenue_vnd.current − api_cost_vnd
+
+
+# ---------------------------------------------------------------------------
+# Marketing & Google Analytics 4 (GA4) Schemas
+# ---------------------------------------------------------------------------
+
+class MarketingHeroMetrics(BaseModel):
+    active_users: int
+    new_users: int
+    sessions: int
+    screen_page_views: int
+    returning_rate: float
+    bounce_rate: float
+    average_session_duration: float
+    engagement_rate: float
+    total_signups: int
+    total_paying_customers: int
+    total_revenue_vnd: int
+
+
+class PlatformScorecardRow(BaseModel):
+    platform: str
+    visitors: int
+    sessions: int
+    avg_duration_sec: float
+    engagement_rate: float
+    signups: int
+    signup_rate: float | None  # None when GA4 recorded no visitors for the platform
+    paying_customers: int
+    revenue_vnd: int
+    evaluation: str  # "high_performing" | "moderate" | "needs_attention"
+
+
+class FunnelStep(BaseModel):
+    step: str
+    count: int
+    label: str
+    conversion_rate: float
+
+
+class GeoCityRow(BaseModel):
+    city: str
+    country: str
+    users: int
+    sessions: int
+    share: float
+
+
+class GeoCountryRow(BaseModel):
+    country: str
+    users: int
+    sessions: int
+
+
+class DailyTrafficPoint(BaseModel):
+    date: str
+    users: int
+    sessions: int
+
+
+class DeviceCategoryRow(BaseModel):
+    device: str
+    users: int
+    share: float
+
+
+class LandingPageRow(BaseModel):
+    path: str
+    sessions: int
+    users: int
+
+
+class CampaignPerformanceRow(BaseModel):
+    campaign: str
+    signups: int
+    paying_customers: int
+    revenue_vnd: int
+
+
+class MarketingAnalyticsResponse(BaseModel):
+    ga4_configured: bool
+    property_id: str | None
+    date_from: str
+    date_to: str
+    hero_metrics: MarketingHeroMetrics
+    scorecard: list[PlatformScorecardRow]
+    funnel: list[FunnelStep]
+    cities: list[GeoCityRow]
+    countries: list[GeoCountryRow]
+    daily_traffic: list[DailyTrafficPoint]
+    devices: list[DeviceCategoryRow]
+    landing_pages: list[LandingPageRow]
+    campaigns: list[CampaignPerformanceRow]
+
+
+class RealtimeAnalyticsResponse(BaseModel):
+    active_now: int | None  # None → GA4 unconfigured or unreachable
+    captured_at: str
+
+
+class Ga4ConnectionTestResponse(BaseModel):
+    status: str
+    connected: bool
+    message: str
+    property_id: str | None
+    rows_sampled: int | None = None
+
