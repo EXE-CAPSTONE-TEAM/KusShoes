@@ -78,6 +78,17 @@ const FORMATS: ReportFormat[] = ['csv', 'xlsx', 'pdf'];
 
 type ActiveTab = 'all' | 'metrics' | 'charts' | 'reports' | 'marketing';
 
+const VALID_TABS: readonly ActiveTab[] = ['all', 'metrics', 'charts', 'reports', 'marketing'] as const;
+
+const getInitialTab = (): ActiveTab => {
+  if (typeof window === 'undefined') return 'all';
+  const tabParam = new URLSearchParams(window.location.search).get('tab');
+  if (tabParam && (VALID_TABS as readonly string[]).includes(tabParam)) {
+    return tabParam as ActiveTab;
+  }
+  return 'all';
+};
+
 /** Component hiển thị % tăng/giảm so với kỳ trước */
 function Delta({ value }: { value: PeriodValue }) {
   if (value.previous === 0) {
@@ -107,7 +118,7 @@ export const AdminAnalytics: React.FC = () => {
   const [refreshing, setRefreshing] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [downloading, setDownloading] = useState<string | null>(null);
-  const [activeTab, setActiveTab] = useState<ActiveTab>('all');
+  const [activeTab, setActiveTab] = useState<ActiveTab>(getInitialTab);
   const [selectedMetric, setSelectedMetric] = useState<MetricKey | null>(null);
 
   const days = useMemo(() => {

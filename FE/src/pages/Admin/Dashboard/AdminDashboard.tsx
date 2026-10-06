@@ -156,6 +156,8 @@ export const AdminDashboard: React.FC<AdminDashboardProps> = ({ navigate }) => {
   const [apiBudget, setApiBudget] = useState<AdminApiBudget | null>(null);
   const [realtimeVisitors, setRealtimeVisitors] = useState<number | null>(null);
   const [topMarketingPlatform, setTopMarketingPlatform] = useState<string | null>(null);
+  const [newVisitors, setNewVisitors] = useState<number | null>(null);
+  const [ga4Configured, setGa4Configured] = useState<boolean>(false);
 
   const loadCore = useCallback(
     () =>
@@ -197,11 +199,20 @@ export const AdminDashboard: React.FC<AdminDashboardProps> = ({ navigate }) => {
         adminAnalytics
           .getMarketing()
           .then((m) => {
+            setGa4Configured(m.ga4_configured);
+            if (m.ga4_configured && m.hero_metrics) {
+              setNewVisitors(m.hero_metrics.new_users);
+            } else {
+              setNewVisitors(null);
+            }
             if (m.scorecard && m.scorecard.length > 0) {
               setTopMarketingPlatform(m.scorecard[0].platform);
             }
           })
-          .catch(() => {}),
+          .catch(() => {
+            setGa4Configured(false);
+            setNewVisitors(null);
+          }),
       ]),
     [],
   );
@@ -321,13 +332,26 @@ export const AdminDashboard: React.FC<AdminDashboardProps> = ({ navigate }) => {
         label: 'Khách trực tuyến (GA4)',
         value: realtimeVisitors !== null ? `${realtimeVisitors} online` : 'GA4 chưa sẵn sàng',
         caption: topMarketingPlatform
-          ? `Kênh hiệu quả nhất: ${topMarketingPlatform} · Bấm xem chi tiết`
-          : 'Xem báo cáo nguồn khách, retention và nền tảng',
+          ? `Khách mới: ${ga4Configured && newVisitors !== null ? newVisitors.toLocaleString('vi-VN') : '—'} · Kênh: ${topMarketingPlatform} · Bấm xem chi tiết`
+          : `Khách mới: ${ga4Configured && newVisitors !== null ? newVisitors.toLocaleString('vi-VN') : '—'} · Xem báo cáo nguồn khách và nền tảng`,
         tone: 'ok' as ActionTone,
-        onClick: () => navigate?.('analytics'),
+        onClick: () => {
+          window.history.pushState({}, '', '/admin/analytics?tab=marketing');
+          navigate?.('analytics');
+        },
       },
     ];
-  }, [pendingInvoices, newReports, newFeedback, apiBudget, realtimeVisitors, topMarketingPlatform, navigate]);
+  }, [
+    pendingInvoices,
+    newReports,
+    newFeedback,
+    apiBudget,
+    realtimeVisitors,
+    topMarketingPlatform,
+    newVisitors,
+    ga4Configured,
+    navigate,
+  ]);
 
   const filteredUsers = useMemo(() => {
     const q = userSearch.trim().toLowerCase();
