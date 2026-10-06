@@ -1,0 +1,296 @@
+.viewModeTabs {
+  display: flex;
+  gap: 8px;
+  padding: 4px;
+  background-color: var(--bg-tertiary, #1f2937);
+  border-radius: var(--border-radius-md, 8px);
+  margin-bottom: 16px;
+}
+
+.viewModeTab {
+  flex: 1;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 6px;
+  padding: 8px 12px;
+  font-size: 0.82rem;
+  font-weight: 600;
+  border: none;
+  background: transparent;
+  color: var(--text-muted, #9ca3af);
+  border-radius: var(--border-radius-sm, 6px);
+  cursor: pointer;
+  transition: all 0.2s ease;
+}
+
+.viewModeTabActive {
+  background-color: var(--bg-secondary, #111827);
+  color: var(--text-primary, #f9fafb);
+  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.2);
+}
+
+.headerActions {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.actionBtn {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  padding: 6px 12px;
+  font-size: 0.8rem;
+  font-weight: 600;
+  border-radius: var(--border-radius-sm, 6px);
+  cursor: pointer;
+  border: 1px solid var(--glass-border, rgba(255, 255, 255, 0.1));
+  background-color: var(--bg-tertiary, #1f2937);
+  color: var(--text-primary, #f9fafb);
+  transition: background-color 0.15s ease;
+}
+
+.actionBtn:hover:not(:disabled) {
+  background-color: var(--hover-bg-item, rgba(255, 255, 255, 0.08));
+}
+
+.actionBtn:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+}
+
+.actionBtnPrimary {
+  background-color: var(--color-primary, #3b82f6);
+  border-color: var(--color-primary, #3b82f6);
+  color: #ffffff;
+}
+
+.actionBtnPrimary:hover:not(:disabled) {
+  background-color: var(--color-primary-hover, #2563eb);
+}
+
+/* Paper Receipt Styles */
+.paperReceipt {
+  background-color: var(--bg-card, #ffffff);
+  color: var(--text-invoice, #1f2937);
+  border: 1px solid var(--border-color, #e5e7eb);
+  border-radius: 12px;
+  padding: 24px;
+  box-shadow: 0 4px 20px rgba(0, 0, 0, 0.08);
+  display: flex;
+  flex-direction: column;
+  gap: 20px;
+  position: relative;
+  overflow: hidden;
+}
+
+/* Dark mode adjustments for invoice paper */
+:global(.theme-dark) .paperReceipt {
+  background-color: #181d28;
+  color: #f3f4f6;
+  border-color: #2e384d;
+}
+
+.receiptTop {
+  display: flex;
+  justify-content: space-between;
+  align-items: flex-start;
+  gap: 16px;
+  border-bottom: 2px dashed var(--border-color, #e5e7eb);
+  padding-bottom: 16px;
+}
+
+:global(.theme-dark) .receiptTop {
+  border-bottom-color: #2e384d;
+}
+
+.brandGroup {
+  display: flex;
+  flex-direction: column;
+}
+
+.brandName {
+  font-size: 1.3rem;
+  font-weight: 800;
+  letter-spacing: -0.5px;
+  color: var(--color-primary, #3b82f6);
+}
+
+.brandSub {
+  font-size: 0.75rem;
+  color: var(--text-muted, #6b7280);
+  font-weight: 500;
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+}
+
+.stampBadge {
+  border: 2px dashed #10b981;
+  color: #10b981;
+  padding: 4px 10px;
+  border-radius: 6px;
+  font-size: 0.75rem;
+  font-weight: 800;
+  text-transform: uppercase;
+  letter-spacing: 1px;
+  transform: rotate(-3deg);
+  user-select: none;
+}
+
+.stampRefunded {
+  border-color: #f59e0b;
+  color: #f59e0b;
+}
+
+.stampCancelled {
+  border-color: #ef4444;
+  color: #ef4444;
+}
+
+.receiptTitleSection {
+  text-align: center;
+  margin: 4px 0;
+}
+
+.receiptTitle {
+  font-size: 1.15rem;
+  font-weight: 800;
+  text-transform: uppercase;
+  letter-spacing: 0.8px;
+  margin: 0;
+}
+
+.receiptNumber {
+  font-size: 0.85rem;
+  color: var(--text-muted, #6b7280);
+  margin-top: 4px;
+  font-family: monospace;
+}
+
+.receiptInfoGrid {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 16px;
+  font-size: 0.8rem;
+  background: var(--bg-tertiary-subtle, rgba(0, 0, 0, 0.02));
+  padding: 12px;
+  border-radius: 8px;
+}
+
+:global(.theme-dark) .receiptInfoGrid {
+  background: rgba(255, 255, 255, 0.03);
+}
+
+.infoCol {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+
+.infoLabel {
+  font-size: 0.72rem;
+  color: var(--text-muted, #6b7280);
+  text-transform: uppercase;
+  font-weight: 600;
+}
+
+.infoValue {
+  font-weight: 600;
+  word-break: break-all;
+}
+
+.receiptTable {
+  width: 100%;
+  border-collapse: collapse;
+  font-size: 0.82rem;
+  margin: 4px 0;
+}
+
+.receiptTable th {
+  text-align: left;
+  padding: 8px 10px;
+  background: var(--bg-table-head, #f3f4f6);
+  font-size: 0.72rem;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+  color: var(--text-muted, #6b7280);
+  border-bottom: 1px solid var(--border-color, #e5e7eb);
+}
+
+:global(.theme-dark) .receiptTable th {
+  background: #1f2736;
+  border-color: #2e384d;
+}
+
+.receiptTable td {
+  padding: 10px;
+  border-bottom: 1px solid var(--border-color, #e5e7eb);
+  vertical-align: middle;
+}
+
+:global(.theme-dark) .receiptTable td {
+  border-color: #2e384d;
+}
+
+.receiptTotals {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  padding-top: 8px;
+}
+
+.totalRow {
+  display: flex;
+  justify-content: space-between;
+  font-size: 0.85rem;
+}
+
+.totalRowGrand {
+  display: flex;
+  justify-content: space-between;
+  align-items: baseline;
+  font-size: 1rem;
+  font-weight: 800;
+  padding-top: 8px;
+  border-top: 2px solid var(--border-color, #e5e7eb);
+  color: var(--color-primary, #3b82f6);
+}
+
+:global(.theme-dark) .totalRowGrand {
+  border-top-color: #2e384d;
+}
+
+.vatNotice {
+  font-size: 0.72rem;
+  color: var(--text-muted, #6b7280);
+  text-align: right;
+  font-style: italic;
+}
+
+.receiptFooter {
+  border-top: 1px dashed var(--border-color, #e5e7eb);
+  padding-top: 14px;
+  font-size: 0.72rem;
+  color: var(--text-muted, #6b7280);
+  text-align: center;
+  line-height: 1.4;
+}
+
+:global(.theme-dark) .receiptFooter {
+  border-top-color: #2e384d;
+}
+
+.spin {
+  animation: spin 1s linear infinite;
+}
+
+@keyframes spin {
+  from {
+    transform: rotate(0deg);
+  }
+  to {
+    transform: rotate(360deg);
+  }
+}

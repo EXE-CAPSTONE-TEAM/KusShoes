@@ -101,4 +101,22 @@ describe('InvoiceDetailDrawer', () => {
     fireEvent.click(screen.getByTestId('invoice-drawer-overlay'));
     expect(handleClose).toHaveBeenCalledTimes(2);
   });
+
+  it('renders visual paper receipt and handles PDF download and print', async () => {
+    const handleClose = vi.fn();
+    const openSpy = vi.spyOn(window, 'open').mockImplementation(() => null);
+    const printSpy = vi.spyOn(window, 'print').mockImplementation(() => {});
+
+    render(<InvoiceDetailDrawer invoice={mockFullInvoice} onClose={handleClose} />);
+
+    expect(screen.getByText('BIÊN NHẬN THANH TOÁN')).toBeInTheDocument();
+    expect(screen.getByText('✔ ĐÃ THANH TOÁN')).toBeInTheDocument();
+    expect(screen.getByText('Tải file PDF')).toBeInTheDocument();
+
+    fireEvent.click(screen.getByText('In'));
+    expect(printSpy).toHaveBeenCalled();
+
+    printSpy.mockRestore();
+    openSpy.mockRestore();
+  });
 });

@@ -50,15 +50,22 @@ async def _next_receipt_number(db: AsyncSession) -> str:
 
 async def _build_snapshot(db: AsyncSession, invoice, user, receipt_number: str) -> dict:
     # BR-88: shortened name only if the customer agreed to academic use, else the account code.
-    academic = await consent_repo.get_active(db, user.id, "academic_report")
-    display_name = short_name(user.first_name, user.last_name) if academic else user.account_code
+    academic = await consent_repo.get_active(db, user.id, "academic_report") if user else False
+    display_name = (
+        short_name(user.first_name, user.last_name)
+        if academic and user
+        else (getattr(user, "account_code", None) or f"KH-{str(invoice.user_id)[:8]}")
+    )
+    user_email = user.email if user else "khach@example.com"
     paid_at = (invoice.paid_at or datetime.now(UTC)).astimezone(GMT7)
+    user_id = user.id if user else invoice.user_id
+    user_sub = await subscription_repo.get_by_user(db, user_id) if user_id else None
     return {
         "receipt_number": receipt_number,
         "order_code": invoice.order_code,
         "paid_at": paid_at.strftime(f"{_PAID_AT_FORMAT} (GMT+7)"),
         "customer": display_name,
-        "email": mask_email(user.email),
+        "email": mask_email(user_email),
         "item": _item_label(invoice),
         "listed_price": invoice.listed_price_vnd,
         "discount": invoice.discount_vnd,
@@ -72,7 +79,7 @@ async def _build_snapshot(db: AsyncSession, invoice, user, receipt_number: str) 
         **tax_service.snapshot_fields(invoice.amount_vnd),
         "period_start": (
             user_sub.current_period_start.isoformat()
-            if (user_sub := await subscription_repo.get_by_user(db, user.id)) and user_sub.current_period_start
+            if user_sub and user_sub.current_period_start
             else None
         ),
         "period_end": user_sub.expires_at.isoformat() if user_sub and user_sub.expires_at else None,
@@ -164,7 +171,7 @@ async def issue_receipt(db: AsyncSession, invoice, user) -> None:
     invoice.receipt_number = number
     invoice.receipt_snapshot = snapshot
     try:
-        path = _file_path(user.id, snapshot)
+        path = _file_path(user.id if user else invoice.user_id, snapshot)
         storage.upload_bytes(path, render_pdf(snapshot), "application/pdf")
         invoice.receipt_path = path
     except Exception:

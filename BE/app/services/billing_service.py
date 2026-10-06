@@ -697,6 +697,19 @@ async def get_receipt_url(db: AsyncSession, user, invoice_id: uuid.UUID) -> str:
     return url
 
 
+async def admin_get_receipt_url(db: AsyncSession, invoice_id: uuid.UUID) -> tuple[str, str]:
+    invoice = await invoice_repo.get_by_id(db, invoice_id)
+    if not invoice:
+        raise InvoiceNotFound()
+    if invoice.status in ("paid", "refunded") and not invoice.receipt_number:
+        user = await user_repo.get_by_id(db, invoice.user_id)
+        await receipt_service.issue_receipt(db, invoice, user)
+        await db.commit()
+    url = await receipt_service.get_download_url(invoice)
+    await db.commit()
+    return invoice.receipt_number, url
+
+
 async def cancel_stale_pending_invoices(db: AsyncSession) -> int:
     """SF-06 / BR-30: gateway invoices still PENDING after 30 minutes become
     CANCELLED. A late SUCCESS webhook still activates them (see below)."""

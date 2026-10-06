@@ -26,7 +26,7 @@ from app.schemas.finance import (
     ReportingPeriodCreate,
     ReportingPeriodResponse,
 )
-from app.schemas.subscription import AdminInvoiceResponse, AdminSubscriptionResponse, RefundRequest
+from app.schemas.subscription import AdminInvoiceResponse, AdminSubscriptionResponse, ReceiptResponse, RefundRequest
 from app.services import (
     billing_service,
     coupon_service,
@@ -115,6 +115,16 @@ async def get_invoice(
     admin=Depends(get_current_admin),
 ):
     return await billing_service.admin_get_invoice(db, invoice_id)
+
+
+@router.get("/billing/invoices/{invoice_id}/receipt", response_model=ReceiptResponse)
+async def get_invoice_receipt(
+    invoice_id: uuid.UUID,
+    db: AsyncSession = Depends(get_db),
+    admin=Depends(get_current_admin),
+):
+    receipt_number, url = await billing_service.admin_get_receipt_url(db, invoice_id)
+    return ReceiptResponse(receipt_number=receipt_number, download_url=url)
 
 
 @router.post("/billing/subscriptions/{user_id}/force-downgrade")

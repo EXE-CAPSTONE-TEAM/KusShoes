@@ -267,6 +267,11 @@ export const adminBilling = {
       method: 'POST',
       body: JSON.stringify(body),
     }),
+  receipt: (
+    invoiceId: string,
+    signal?: AbortSignal,
+  ): Promise<{ receipt_number: string; download_url: string }> =>
+    request(`/api/v1/admin/billing/invoices/${encodeURIComponent(invoiceId)}/receipt`, { signal }),
 };
 
 export interface ProjectListQuery {
