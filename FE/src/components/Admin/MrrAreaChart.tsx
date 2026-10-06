@@ -58,7 +58,10 @@ export function calculateNiceTicks(min: number, max: number, targetCount = 4): n
 
   const ticks: number[] = [];
   for (let v = niceMin; v <= niceMax + niceStep * 0.001; v += niceStep) {
-    ticks.push(Math.round(v));
+    const rounded = Math.round(v);
+    // Sub-integer steps (e.g. all-zero data → max 1, step 0.5) round to repeated values;
+    // ticks are used as React keys on the axis, so keep each value once.
+    if (ticks[ticks.length - 1] !== rounded) ticks.push(rounded);
   }
   return ticks;
 }
