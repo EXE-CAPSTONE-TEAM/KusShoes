@@ -108,5 +108,57 @@ BE+FE = needs backend work · DECISION = blocked on a product decision from T AK
   | export, 20 parallel | 63.1 / 59.6 ms | 2.5 s / 2.4 s | 169 / 170 MiB |
   RAM stayed flat (156 MiB idle → 170 MiB after 568 exports; peak = final). CPU is the only
   cost: ~5–10× an ordinary GET, and parallel exports queue (latency grows) rather than use more
-  memory. Not measured on the prod VM (GCP e2-small, 2 vCPU / 2 GB; SSH not available here), whose
+  memory. Not measured on the prod VM (GCP e2-small, 2 vCPU / 2 GB; SSH không có sẵn ở đây), whose
   shared vCPUs are slower than this machine, so absolute ms there will be higher.
+
+## Batch 3 — Marketing & Google Analytics 4 (GA4) Dashboard
+
+- [x] **T17 — BE: GA4 Service & Marketing Analytics Service (Hybrid Top/Bottom-of-funnel)**
+  Lane: BE. Files: `BE/app/services/ga4_service.py`, `BE/app/services/marketing_analytics_service.py`, `BE/app/config.py`.
+  Acceptance:
+  - `ga4_service.py`: Queries GA4 Data API v1beta for active users, new users, sessions, pageviews, engagement rate, avg duration, geography (city/country), and sources. Supports realtime active visitors (30-min window). Graceful unconfigured state if credentials missing.
+  - `marketing_analytics_service.py`: Aggregates GA4 traffic with PostgreSQL `user_attributions` + `invoices` for end-to-end platform scorecard and conversion funnel.
+
+- [x] **T18 — BE: Marketing Analytics Router, Schemas & Redis Caching**
+  Lane: BE. Files: `BE/app/schemas/analytics.py`, `BE/app/routers/admin_analytics.py`.
+  Acceptance:
+  - `GET /api/v1/admin/analytics/marketing` (date_from, date_to, country) cached in Redis for 15 minutes.
+  - `GET /api/v1/admin/analytics/marketing/realtime` cached for 30s.
+  - `POST /api/v1/admin/analytics/marketing/test-connection` verifies GA4 credentials and reports status.
+
+- [x] **T19 — FE: Marketing Analytics API Client & TypeScript Types**
+  Lane: FE. Files: `FE/src/types/admin.ts`, `FE/src/api/adminClient.ts`.
+  Acceptance:
+  - Type definitions for `MarketingAnalyticsResponse`, `PlatformScorecardItem`, `GeoLocationItem`, `MarketingFunnelStep`.
+  - Methods in `adminAnalytics` client to query marketing report, realtime, and test connection.
+
+- [x] **T20 — FE: Marketing Tab UI on /admin/analytics**
+  Lane: FE. Files: `FE/src/pages/Admin/Analytics/AdminAnalytics.tsx`, `FE/src/pages/Admin/Analytics/Marketing/*`.
+  Acceptance:
+  - New tab "Marketing & Lưu lượng" in `AdminAnalytics.tsx`.
+  - 4 Hero KPI cards + Realtime active visitor indicator.
+  - Multi-tier Platform Performance Scorecard table.
+  - Geographic distribution by City and Country filter.
+  - Marketing Conversion Funnel visualization.
+  - Fallback Setup Guide modal/card when GA4 credentials are not configured.
+
+- [x] **T21 — FE: Admin Dashboard Marketing Summary Widget**
+  Lane: FE. File: `FE/src/pages/Admin/Dashboard/AdminDashboard.tsx`.
+  Acceptance:
+  - Summary widget displaying new visitors, top referral channel, and realtime online count.
+  - Direct navigation link to `/admin/analytics?tab=marketing`.
+
+- [x] **T22 — Verification & Harness Testing**
+  Lane: BE+FE. Files: Tests in `BE/tests/` and `./harness/verify.sh`.
+  Acceptance:
+  - Tests covering marketing analytics service & router.
+  - `./harness/verify.sh` passes with Exit Code 0.
+
+- [x] **T23 — GA4 sign-off gaps (T21 widget, deep-link, router tests)**
+  Lane: BE+FE (SMALL, ≤3 files). Files: `FE/src/pages/Admin/Dashboard/AdminDashboard.tsx`, `FE/src/pages/Admin/Analytics/AdminAnalytics.tsx`, `BE/unit_tests/test_marketing_analytics.py`.
+  Found by Stage 5.5 audit of PR #68 (T17–T22 were merged as PENDING_REVIEW):
+  - T21: the marketing widget shows realtime count + top channel only; add **new visitors** (from `getMarketing()` response, no fabricated fallback — show "—" when GA4 unconfigured).
+  - T21: widget click only calls `navigate('analytics')`; it must land on the Marketing tab. Admin nav is pathname-based (`AdminApp.tsx`), so `history.pushState` to `/admin/analytics?tab=marketing` before `navigate('analytics')`, and `AdminAnalytics` must initialise `activeTab` from `?tab=` (valid `ActiveTab` values only, default `'all'`).
+  - T22: no router-level tests. Add tests for `GET /analytics/marketing` (cache hit skips GA4 call; miss writes with ex=900), `/marketing/realtime` (ex=30), `POST /marketing/test-connection` (unconfigured → reports status, not 500), reusing existing fakes in the file.
+  Acceptance: `npx tsc -b` clean, `npx oxlint` clean on touched files, `pytest BE/unit_tests/test_marketing_analytics.py` green, `./harness/verify.sh --strict` exit 0.
+
