@@ -34,37 +34,31 @@ const REPORTS: {
   type: ReportType;
   label: string;
   hint: string;
-  code: string;
 }[] = [
   {
     type: 'transactions',
     label: 'Sổ giao dịch EXE201',
     hint: 'Đúng thứ tự cột chuẩn của sổ 07 theo quy định đối soát kế toán.',
-    code: 'BR-106',
   },
   {
     type: 'channel-funnel',
     label: 'Phễu theo kênh & tuần',
     hint: 'Chu trình chuyển đổi: Đăng ký → Xác thực → Lưu thiết kế 3D → Thanh toán.',
-    code: 'BR-107',
   },
   {
     type: 'revenue',
     label: 'Báo cáo doanh thu',
     hint: 'Chi tiết MRR, ARR, doanh thu theo chu kỳ tháng và tỷ trọng theo từng gói cước.',
-    code: 'REV-01',
   },
   {
     type: 'users',
     label: 'Báo cáo người dùng',
     hint: 'Số lượng đăng ký mới trong kỳ, phân loại tài khoản và nguồn kênh tiếp cận.',
-    code: 'USR-02',
   },
   {
     type: 'api-cost',
     label: 'Chi phí API theo ngày',
     hint: 'Chi phí điện toán API 3D/AI theo ngày và đối chiếu ngân sách tháng.',
-    code: 'SF-14 / BR-108',
   },
 ];
 
@@ -211,7 +205,7 @@ export const AdminAnalytics: React.FC = () => {
               </span>
             </div>
             <p className={styles.pageSubtitle}>
-              Báo cáo hiệu suất kinh doanh, dòng tiền và trích xuất dữ liệu đối soát tự động theo quy chuẩn kế toán (BR-105 ~ BR-108, SF-14). Đã loại tài khoản nội bộ và gói tặng COMP.
+              Báo cáo hiệu suất kinh doanh, dòng tiền và trích xuất dữ liệu đối soát tự động theo quy chuẩn kế toán. Đã loại tài khoản nội bộ và gói tặng COMP.
             </p>
           </div>
 
@@ -497,7 +491,7 @@ export const AdminAnalytics: React.FC = () => {
                   </div>
                 </div>
 
-                {/* Khách quay lại (BR-105) */}
+                {/* Khách quay lại */}
                 <div
                   className={styles.metricCard}
                   onClick={() => setSelectedMetric('repeat')}
@@ -508,7 +502,7 @@ export const AdminAnalytics: React.FC = () => {
                   <div className={styles.metricCardHeader}>
                     <div className={styles.metricLabel}>
                       <span title="Khách có từ 2 hóa đơn gói trở lên chia cho khách trả tiền đã tới kỳ gia hạn lần 2.">
-                        Khách quay lại (BR-105)
+                        Khách quay lại
                       </span>
                     </div>
                     <span className={styles.cardClickBadge}>Chi tiết</span>
@@ -643,7 +637,7 @@ export const AdminAnalytics: React.FC = () => {
                 >
                   <div className={styles.metricCardHeader}>
                     <div className={styles.metricLabel}>
-                      <span title="Tiền mua Credit quét 3D đã thanh toán. Tính vào dòng tiền nhưng không tính vào MRR (BR-94).">
+                      <span title="Tiền mua Credit quét 3D đã thanh toán. Tính vào dòng tiền nhưng không tính vào MRR.">
                         Doanh thu Credit (Kỳ)
                       </span>
                     </div>
@@ -653,7 +647,7 @@ export const AdminAnalytics: React.FC = () => {
                     {loading ? <ThreeDotsLoader size="md" /> : formatVnd(data?.credit_revenue_vnd ?? 0)}
                   </div>
                   <div className={styles.metricSubText}>
-                    Không tính vào MRR theo chuẩn BR-94
+                    Không tính vào MRR
                   </div>
                 </div>
 
@@ -691,7 +685,7 @@ export const AdminAnalytics: React.FC = () => {
                 >
                   <div className={styles.metricCardHeader}>
                     <div className={styles.metricLabel}>
-                      <span title="Tổng chi phí điện toán của mọi lượt gọi API 3D/AI trong kỳ (SF-14).">
+                      <span title="Tổng chi phí điện toán của mọi lượt gọi API 3D/AI trong kỳ.">
                         Chi phí API 3D/AI
                       </span>
                     </div>
@@ -953,7 +947,6 @@ export const AdminAnalytics: React.FC = () => {
                     <div className={styles.reportMeta}>
                       <div className={styles.reportTitleRow}>
                         <h4 className={styles.reportName}>{report.label}</h4>
-                        <span className={styles.reportBadge}>{report.code}</span>
                       </div>
                       <p className={styles.reportDesc}>{report.hint}</p>
                     </div>

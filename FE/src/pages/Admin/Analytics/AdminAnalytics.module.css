@@ -815,17 +815,6 @@
   margin: 0;
 }
 
-.reportBadge {
-  padding: 2px 7px;
-  border-radius: var(--border-radius-sm);
-  background-color: var(--hover-bg-item);
-  color: var(--text-secondary);
-  font-size: 0.65rem;
-  font-weight: 600;
-  font-family: var(--font-mono);
-  border: 1px solid var(--glass-border);
-}
-
 .reportDesc {
   font-size: 0.78rem;
   font-weight: 400;

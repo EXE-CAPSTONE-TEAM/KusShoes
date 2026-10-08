@@ -362,3 +362,24 @@
   box-shadow: 0 2px 8px rgba(0, 0, 0, 0.3);
   cursor: pointer;
 }
+
+.brandLogo {
+  height: 36px;
+  width: auto;
+  max-width: 100%;
+  object-fit: contain;
+  object-position: left center;
+  margin-bottom: 6px;
+}
+
+.logoDark {
+  display: none;
+}
+
+:global(.theme-dark) .logoLight {
+  display: none;
+}
+
+:global(.theme-dark) .logoDark {
+  display: block;
+}

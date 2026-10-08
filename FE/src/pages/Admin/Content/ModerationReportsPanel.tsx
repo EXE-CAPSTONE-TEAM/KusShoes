@@ -92,7 +92,7 @@ export const ModerationReportsPanel: React.FC = () => {
       <div className={shared.toolbar} style={{ marginBottom: 16 }}>
         <Select value={statusFilter} onValueChange={setStatusFilter} options={STATUS_FILTERS} ariaLabel="Lọc theo trạng thái" />
         <span className={shared.pageSubtitle}>
-          Lần 1: cảnh cáo · Lần 2: hạn chế chia sẻ công khai 30 ngày · Lần 3: khóa tài khoản (BR-77).
+          Lần 1: cảnh cáo · Lần 2: hạn chế chia sẻ công khai 30 ngày · Lần 3: khóa tài khoản.
         </span>
       </div>
 
@@ -185,7 +185,7 @@ export const ModerationReportsPanel: React.FC = () => {
         title={decisionOpen === 'uphold' ? 'Chấp nhận báo cáo vi phạm' : 'Từ chối báo cáo vi phạm'}
         description={
           decisionOpen === 'uphold'
-            ? 'Sẽ áp mức xử lý kế tiếp theo BR-77 cho tài khoản bị báo cáo. Thao tác được ghi vào nhật ký.'
+            ? 'Sẽ áp mức xử lý kế tiếp cho tài khoản bị báo cáo. Thao tác được ghi vào nhật ký.'
             : 'Đóng khiếu nại mà không áp mức xử lý nào.'
         }
         submitLabel={decisionOpen === 'uphold' ? 'Chấp nhận' : 'Từ chối'}

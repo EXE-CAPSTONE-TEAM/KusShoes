@@ -106,7 +106,16 @@ export const InvoiceDetailDrawer: React.FC<InvoiceDetailDrawerProps> = ({
     <div className={styles.paperReceipt}>
       <div className={styles.receiptTop}>
         <div className={styles.brandGroup}>
-          <span className={styles.brandName}>KusShoes</span>
+          <img
+            src="/KusShoes_Logo_cropped.webp"
+            alt="KusShoes"
+            className={`${styles.brandLogo} ${styles.logoLight}`}
+          />
+          <img
+            src="/KusShoes_Logo_Dark_Mode_cropped.webp"
+            alt="KusShoes"
+            className={`${styles.brandLogo} ${styles.logoDark}`}
+          />
           <span className={styles.brandSub}>3D SNEAKER LAB &bull; SHOE DESIGN PLATFORM</span>
         </div>
         <div

@@ -24,11 +24,10 @@ interface DashboardMetricModalProps {
 interface MetricConfig {
   title: string;
   category: string;
-  code: string;
   currentValue: string;
   formula: string;
   variables: { symbol: string; desc: string }[];
-  rules: { text: string; code?: string }[];
+  rules: { text: string }[];
   dataSources: string[];
   breakdown: { label: string; value: string; note?: string; highlight?: boolean }[];
   businessMeaning: string;
@@ -57,7 +56,6 @@ function getConfig(
       return {
         title: 'Tổng Người Dùng Hệ Thống',
         category: 'Người dùng & Tăng trưởng',
-        code: 'SRS §5.1 / USR-01',
         currentValue: `${(stats?.total_users ?? 0).toLocaleString('vi-VN')} người dùng`,
         formula: 'Tổng người dùng = COUNT(*) từ bảng users có vai trò "user"',
         variables: [
@@ -69,11 +67,9 @@ function getConfig(
         rules: [
           {
             text: 'Bao gồm cả người dùng gói Free lẫn các gói trả phí đang hoạt động hoặc đã hết hạn.',
-            code: 'All Tiers',
           },
           {
             text: 'Loại trừ tài khoản admin/staff nội bộ khỏi số liệu người dùng thực tế.',
-            code: 'BR-83',
           },
         ],
         dataSources: ['users'],
@@ -97,7 +93,6 @@ function getConfig(
       return {
         title: 'MRR — Doanh Thu Định Kỳ Hàng Tháng',
         category: 'Doanh thu định kỳ',
-        code: 'SRS §5.4 / BR-104',
         currentValue: formatVnd(stats?.mrr_vnd ?? 0),
         formula: 'MRR = ∑ (Gói tháng) + ∑ (Gói năm ÷ 12)',
         variables: [
@@ -113,15 +108,12 @@ function getConfig(
         rules: [
           {
             text: 'Chỉ tính các thuê bao đang ở trạng thái ACTIVE hoặc GRACE (trong 3 ngày ân hạn).',
-            code: 'BR-23',
           },
           {
             text: 'Loại trừ gói Free và gói tặng COMP (không phát sinh tiền thực tế).',
-            code: 'BR-83',
           },
           {
             text: 'Xem chi tiết ARR, ARPU và bóc tách đầy đủ tại trang Phân tích &amp; Báo cáo.',
-            code: 'Ref',
           },
         ],
         dataSources: ['subscriptions', 'invoices', 'users'],
@@ -141,7 +133,6 @@ function getConfig(
       return {
         title: 'Tổng Lượt Export Mô Hình 3D',
         category: 'Sản phẩm & Sử dụng',
-        code: 'SRS §5.1 / EXP-01',
         currentValue: `${(stats?.total_exports ?? 0).toLocaleString('vi-VN')} lượt`,
         formula: 'Tổng lượt Export = COUNT(*) từ bảng exports',
         variables: [
@@ -153,11 +144,9 @@ function getConfig(
         rules: [
           {
             text: 'Bao gồm các định dạng xuất được hỗ trợ: GLB, OBJ và gói ZIP kèm textures.',
-            code: 'Formats',
           },
           {
             text: 'Chỉ tính các lượt export đã hoàn tất, không tính các tác vụ lỗi hoặc bị hủy.',
-            code: 'Completed Only',
           },
         ],
         dataSources: ['exports'],
@@ -178,7 +167,6 @@ function getConfig(
       return {
         title: 'Bake Job Pipeline — Hạ Tầng Dựng Mô Hình 3D',
         category: 'Hạ tầng & Vận hành',
-        code: 'SRS §6.2 / SF-14',
         currentValue: `${total.toLocaleString('vi-VN')} job`,
         formula:
           'Tổng job = ∑ (Job theo từng trạng thái: queued, processing, completed, failed, cancelled)',
@@ -191,11 +179,9 @@ function getConfig(
         rules: [
           {
             text: 'Trạng thái hệ thống "Ổn định" khi không có job nào tồn đọng bất thường trong hàng đợi.',
-            code: 'health.status',
           },
           {
             text: 'Hàng đợi được phân theo 3 mức ưu tiên: cao (high), thường (normal), thấp (low).',
-            code: 'Queue Priority',
           },
         ],
         dataSources: ['bake_jobs', 'system_health_service'],
@@ -223,7 +209,6 @@ function getConfig(
       return {
         title: `Chuỗi Doanh Thu Theo Tháng (${revenueMonths} tháng gần nhất)`,
         category: 'Xu hướng dòng tiền',
-        code: 'SRS §5.4 / Monthly Trend',
         currentValue: formatVnd(total),
         formula: 'Doanh thu tháng M = ∑ (Hóa đơn PAID trong tháng M) - ∑ (Hoàn tiền trong tháng M)',
         variables: [
@@ -235,11 +220,9 @@ function getConfig(
         rules: [
           {
             text: 'Nhóm doanh thu thực thu theo tháng dương lịch, quy đổi MRR định kỳ.',
-            code: 'GMT+7',
           },
           {
             text: 'Xem bóc tách chi tiết theo gói cước và cổng thanh toán tại trang Phân tích &amp; Báo cáo.',
-            code: 'Ref',
           },
         ],
         dataSources: ['invoices (nhóm theo tháng paid_at)'],
@@ -264,7 +247,6 @@ function getConfig(
       return {
         title: 'Tăng Trưởng Người Dùng Mới Theo Tháng',
         category: 'Người dùng & Tăng trưởng',
-        code: 'SRS §5.1 / Growth Trend',
         currentValue: `${total.toLocaleString('vi-VN')} người dùng mới`,
         formula: 'Người dùng mới tháng M = COUNT(users.created_at trong tháng M)',
         variables: [
@@ -274,10 +256,9 @@ function getConfig(
           },
         ],
         rules: [
-          { text: 'Tính theo tháng dương lịch, múi giờ Việt Nam GMT+7.', code: 'GMT+7' },
+          { text: 'Tính theo tháng dương lịch, múi giờ Việt Nam GMT+7.' },
           {
             text: 'Loại trừ tài khoản admin/staff nội bộ khỏi số liệu tăng trưởng.',
-            code: 'BR-83',
           },
         ],
         dataSources: ['users (nhóm theo tháng created_at)'],
@@ -301,7 +282,6 @@ function getConfig(
       return {
         title: 'Thông Tin Chỉ Số',
         category: 'Tổng quan',
-        code: 'SRS §5.1',
         currentValue: '—',
         formula: 'Đang cập nhật công thức.',
         variables: [],
@@ -340,7 +320,6 @@ export const DashboardMetricModal: React.FC<DashboardMetricModalProps> = ({
             <div className={styles.titleArea}>
               <div className={styles.badgeRow}>
                 <span className={styles.categoryBadge}>{config.category}</span>
-                <span className={styles.codeBadge}>{config.code}</span>
               </div>
               <h3 className={styles.title}>{config.title}</h3>
             </div>
@@ -422,11 +401,6 @@ export const DashboardMetricModal: React.FC<DashboardMetricModalProps> = ({
               {config.rules.map((rule, idx) => (
                 <div key={idx} className={styles.ruleItem}>
                   <span>
-                    {rule.code && (
-                      <span className={styles.ruleCode} style={{ marginRight: 6 }}>
-                        {rule.code}
-                      </span>
-                    )}
                     {rule.text}
                   </span>
                 </div>
