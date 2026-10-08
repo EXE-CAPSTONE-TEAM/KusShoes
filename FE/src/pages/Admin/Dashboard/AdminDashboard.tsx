@@ -23,6 +23,7 @@ import { MrrAreaChart } from '../../../components/Admin/MrrAreaChart';
 import { ThreeDotsLoader, ThreeDotsBlockLoader } from '../../../components/Admin/ThreeDotsLoader';
 import { StatusBadge } from '../../../components/Admin/StatusBadge';
 import { RevenueThisMonthModal } from './RevenueThisMonthModal';
+import { FeedbackOverview } from './FeedbackOverview';
 import { DashboardMetricModal, type DashboardMetricKey } from './DashboardMetricModal';
 import shared from '../admin-shared.module.css';
 import styles from './AdminDashboard.module.css';
@@ -758,6 +759,9 @@ export const AdminDashboard: React.FC<AdminDashboardProps> = ({ navigate }) => {
             </div>
           )}
         </div>
+
+        {/* SECTION: ĐÁNH GIÁ CỦA NGƯỜI DÙNG */}
+        <FeedbackOverview navigate={navigate} />
 
         {/* SECTION: HOẠT ĐỘNG GẦN ĐÂY & TÀI NGUYÊN HỆ THỐNG */}
         <div className={styles.bottomSplit}>
