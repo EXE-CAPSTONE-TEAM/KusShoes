@@ -34,11 +34,10 @@ interface MetricDetailModalProps {
 interface MetricConfig {
   title: string;
   category: string;
-  code: string;
   currentValue: string;
   formula: string;
   variables: { symbol: string; desc: string }[];
-  rules: { text: string; code?: string }[];
+  rules: { text: string }[];
   dataSources: string[];
   breakdown: { label: string; value: string; note?: string; highlight?: boolean }[];
   businessMeaning: string;
@@ -54,7 +53,6 @@ function getMetricConfig(key: MetricKey, data: Analytics | null, days: number): 
       return {
         title: 'MRR — Doanh Thu Định Kỳ Hàng Tháng',
         category: 'Doanh thu định kỳ',
-        code: 'SRS §5.4 / BR-104',
         currentValue: formatVnd(data?.mrr_vnd ?? 0),
         formula: 'MRR = ∑ (Gói tháng) + ∑ (Gói năm ÷ 12)',
         variables: [
@@ -62,10 +60,10 @@ function getMetricConfig(key: MetricKey, data: Analytics | null, days: number): 
           { symbol: 'Gói năm ÷ 12', desc: 'Số tiền thực trả của gói năm quy chuẩn đều về giá trị 1 tháng.' },
         ],
         rules: [
-          { text: 'Chỉ tính các thuê bao đang ở trạng thái ACTIVE hoặc GRACE (trong 3 ngày ân hạn).', code: 'BR-23' },
-          { text: 'Loại trừ gói Free và gói tặng COMP (không phát sinh tiền thực tế).', code: 'BR-83' },
-          { text: 'Loại trừ gói nạp Credit quét 3D vì Credit là mua dùng một lần, không định kỳ.', code: 'BR-94' },
-          { text: 'Loại bỏ hoàn toàn các tài khoản nội bộ công ty khỏi số liệu.', code: 'BR-83' },
+          { text: 'Chỉ tính các thuê bao đang ở trạng thái ACTIVE hoặc GRACE (trong 3 ngày ân hạn).' },
+          { text: 'Loại trừ gói Free và gói tặng COMP (không phát sinh tiền thực tế).' },
+          { text: 'Loại trừ gói nạp Credit quét 3D vì Credit là mua dùng một lần, không định kỳ.' },
+          { text: 'Loại bỏ hoàn toàn các tài khoản nội bộ công ty khỏi số liệu.' },
         ],
         dataSources: ['subscriptions', 'invoices', 'users'],
         breakdown: [
@@ -84,7 +82,6 @@ function getMetricConfig(key: MetricKey, data: Analytics | null, days: number): 
       return {
         title: `Doanh Thu Ghi Nhận Thực Tế (${days} Ngày)`,
         category: 'Dòng tiền & Kế toán',
-        code: 'SRS §5.4 / BR-106',
         currentValue: formatVnd(curRev),
         formula: 'Doanh thu ghi nhận = ∑ (Hóa đơn PAID trong kỳ) - ∑ (Hoàn tiền trong kỳ)',
         variables: [
@@ -92,10 +89,10 @@ function getMetricConfig(key: MetricKey, data: Analytics | null, days: number): 
           { symbol: 'Hoàn tiền', desc: 'Số tiền hoàn lại cho khách hàng theo ngày hoàn tiền thực tế phát sinh.' },
         ],
         rules: [
-          { text: `Tính tất cả các khoản thanh toán trong khoảng thời gian ${days} ngày chọn.`, code: 'Period' },
-          { text: 'Bao gồm cả doanh thu gói thuê bao lẫn gói mua thêm lượt quét Credit 3D.', code: 'Cashflow' },
-          { text: 'Nếu hóa đơn bị hoàn tiền một phần hoặc toàn bộ, chỉ ghi nhận phần thực thu.', code: 'BR-97' },
-          { text: 'Loại trừ các hóa đơn thử nghiệm từ tài khoản nội bộ (is_internal = true).', code: 'BR-83' },
+          { text: `Tính tất cả các khoản thanh toán trong khoảng thời gian ${days} ngày chọn.` },
+          { text: 'Bao gồm cả doanh thu gói thuê bao lẫn gói mua thêm lượt quét Credit 3D.' },
+          { text: 'Nếu hóa đơn bị hoàn tiền một phần hoặc toàn bộ, chỉ ghi nhận phần thực thu.' },
+          { text: 'Loại trừ các hóa đơn thử nghiệm từ tài khoản nội bộ (is_internal = true).' },
         ],
         dataSources: ['invoices (status = paid)', 'refunds (created_at in period)', 'users'],
         breakdown: [
@@ -117,7 +114,6 @@ function getMetricConfig(key: MetricKey, data: Analytics | null, days: number): 
       return {
         title: 'Biên Lợi Nhuận Gộp (Gross Margin)',
         category: 'Hiệu quả tài chính',
-        code: 'SRS §5.4 / SF-14 / BR-108',
         currentValue: formatVnd(margin),
         formula: 'Biên LN gộp = Doanh thu ghi nhận trong kỳ - Chi phí API 3D/AI',
         variables: [
@@ -125,8 +121,8 @@ function getMetricConfig(key: MetricKey, data: Analytics | null, days: number): 
           { symbol: 'Chi phí API 3D/AI', desc: 'Tổng chi phí điện toán GPU dựng mô hình 3D, Bake Texture và AI mesh.' },
         ],
         rules: [
-          { text: 'Chi phí API tính theo số lượt gọi API thực tế ghi nhận trong log hệ thống SF-14.', code: 'SF-14' },
-          { text: 'Đơn giá API đối chiếu theo thỏa thuận dịch vụ hạ tầng điện toán đám mây.', code: 'BR-108' },
+          { text: 'Chi phí API tính theo số lượt gọi API thực tế ghi nhận trong log hệ thống.' },
+          { text: 'Đơn giá API đối chiếu theo thỏa thuận dịch vụ hạ tầng điện toán đám mây.' },
         ],
         dataSources: ['invoices', 'refunds', 'api_cost_service / api_usage_logs'],
         breakdown: [
@@ -143,16 +139,15 @@ function getMetricConfig(key: MetricKey, data: Analytics | null, days: number): 
       return {
         title: 'Khách Hàng Trả Tiền (Paying Customers)',
         category: 'Sức khỏe khách hàng',
-        code: 'SRS §5.4 / BR-103',
         currentValue: `${(data?.paying_customers ?? 0).toLocaleString('vi-VN')} người dùng`,
         formula: 'Paying Customers = COUNT(DISTINCT user_id có gói cước ACTIVE hoặc GRACE)',
         variables: [
           { symbol: 'DISTINCT user_id', desc: 'Đếm người dùng duy nhất, dù người dùng có mua nhiều lần cũng chỉ tính 1 khách hàng.' },
         ],
         rules: [
-          { text: 'Chỉ tính các gói cước trả phí đang có hiệu lực (status = active hoặc grace).', code: 'BR-103' },
-          { text: 'Không tính tài khoản dùng gói dùng thử / miễn phí (Free) và gói COMP.', code: 'BR-83' },
-          { text: 'Khách hàng mới (New Paying): Có giao dịch trả phí định kỳ đầu tiên rơi vào khoảng ngày đã chọn.', code: 'Cohorts' },
+          { text: 'Chỉ tính các gói cước trả phí đang có hiệu lực (status = active hoặc grace).' },
+          { text: 'Không tính tài khoản dùng gói dùng thử / miễn phí (Free) và gói COMP.' },
+          { text: 'Khách hàng mới (New Paying): Có giao dịch trả phí định kỳ đầu tiên rơi vào khoảng ngày đã chọn.' },
         ],
         dataSources: ['subscriptions', 'invoices', 'users'],
         breakdown: [
@@ -168,7 +163,6 @@ function getMetricConfig(key: MetricKey, data: Analytics | null, days: number): 
       return {
         title: 'Tỷ Lệ Churn (Tỷ Lệ Rời Bỏ Kỳ)',
         category: 'Sức khỏe tăng trưởng',
-        code: 'SRS §5.4 / Churn Logic',
         currentValue: formatPercent(data?.churn?.rate ?? null),
         formula: 'Tỷ lệ Churn = (Số khách đến hạn nhưng không gia hạn ÷ Tổng khách đến hạn gia hạn) × 100%',
         variables: [
@@ -176,9 +170,9 @@ function getMetricConfig(key: MetricKey, data: Analytics | null, days: number): 
           { symbol: 'Không gia hạn (Churned)', desc: 'Thuê bao đã quá thời gian ân hạn 3 ngày (Grace Period) mà không tiếp tục trả phí.' },
         ],
         rules: [
-          { text: 'Khách hàng nâng cấp gói (Upgrade) trước khi hết hạn không tính là Churn.', code: 'BR-23' },
-          { text: 'Hệ thống cho phép 3 ngày ân hạn (GRACE_DAYS = 3) trước khi chính thức đánh dấu Churn.', code: 'GRACE' },
-          { text: 'Không tính các tài khoản dùng gói Credit vì Credit không có chu kỳ hết hạn cố định.', code: 'BR-94' },
+          { text: 'Khách hàng nâng cấp gói (Upgrade) trước khi hết hạn không tính là Churn.' },
+          { text: 'Hệ thống cho phép 3 ngày ân hạn (GRACE_DAYS = 3) trước khi chính thức đánh dấu Churn.' },
+          { text: 'Không tính các tài khoản dùng gói Credit vì Credit không có chu kỳ hết hạn cố định.' },
         ],
         dataSources: ['invoices (billing_cycle, paid_at)', 'subscriptions'],
         breakdown: [
@@ -194,7 +188,6 @@ function getMetricConfig(key: MetricKey, data: Analytics | null, days: number): 
       return {
         title: 'NRR / GRR — Duy Trì Doanh Thu Khách Hàng',
         category: 'Sức khỏe tăng trưởng',
-        code: 'SRS §5.4 / NRR & GRR',
         currentValue: `${formatPercent(data?.retention?.nrr ?? null)} / ${formatPercent(data?.retention?.grr ?? null)}`,
         formula: 'NRR = (Doanh thu tháng này của Cohort tháng trước ÷ Doanh thu tháng trước của chính Cohort đó) × 100%',
         variables: [
@@ -202,8 +195,8 @@ function getMetricConfig(key: MetricKey, data: Analytics | null, days: number): 
           { symbol: 'GRR (Gross Revenue Retention)', desc: 'Tỷ lệ duy trì gộp, không tính phần nâng cấp gói, tối đa là 100%.' },
         ],
         rules: [
-          { text: 'Khảo sát dòng tiền của cùng 1 nhóm khách hàng qua 2 tháng liên tiếp liền kề.', code: 'Cohort' },
-          { text: 'NRR > 100%: Doanh thu từ khách hàng cũ tăng thêm bù đắp hoàn toàn cho số khách hủy gói.', code: 'Benchmark' },
+          { text: 'Khảo sát dòng tiền của cùng 1 nhóm khách hàng qua 2 tháng liên tiếp liền kề.' },
+          { text: 'NRR > 100%: Doanh thu từ khách hàng cũ tăng thêm bù đắp hoàn toàn cho số khách hủy gói.' },
         ],
         dataSources: ['invoices (nhóm theo tháng thanh toán và user_id)'],
         breakdown: [
@@ -218,7 +211,6 @@ function getMetricConfig(key: MetricKey, data: Analytics | null, days: number): 
       return {
         title: 'Khách Quay Lại (Repeat Purchase Rate)',
         category: 'Sức khỏe tăng trưởng',
-        code: 'SRS §5.4 / BR-105',
         currentValue: formatPercent(data?.repeat?.rate ?? null),
         formula: 'Tỷ lệ quay lại = (Số khách có ≥ 2 hóa đơn gói ÷ Khách trả tiền đã tới kỳ gia hạn lần 2) × 100%',
         variables: [
@@ -226,8 +218,8 @@ function getMetricConfig(key: MetricKey, data: Analytics | null, days: number): 
           { symbol: 'Khách đủ điều kiện', desc: 'Người dùng đã đồng hành đủ lâu để chu kỳ gói thứ nhất kết thúc và bước sang kỳ thứ hai.' },
         ],
         rules: [
-          { text: 'Loại trừ nhóm khách hàng mới đăng ký gần đây chưa đến hạn gia hạn lần 2.', code: 'BR-105' },
-          { text: 'Đảm bảo tỷ lệ phản ánh đúng lòng trung thành thay vì bị pha loãng bởi khách mới.', code: 'Cohort' },
+          { text: 'Loại trừ nhóm khách hàng mới đăng ký gần đây chưa đến hạn gia hạn lần 2.' },
+          { text: 'Đảm bảo tỷ lệ phản ánh đúng lòng trung thành thay vì bị pha loãng bởi khách mới.' },
         ],
         dataSources: ['invoices (đếm số hóa đơn per user_id)'],
         breakdown: [
@@ -243,7 +235,6 @@ function getMetricConfig(key: MetricKey, data: Analytics | null, days: number): 
       return {
         title: 'Tỷ Lệ Chuyển Đổi Free → Trả Phí',
         category: 'Sức khỏe tăng trưởng',
-        code: 'SRS §5.4 / Conversion Funnel',
         currentValue: formatPercent(data?.free_to_paid?.rate ?? null),
         formula: 'Tỷ lệ chuyển đổi = (Số user đã xác thực từng thanh toán ÷ Tổng số user đã xác thực email) × 100%',
         variables: [
@@ -251,8 +242,8 @@ function getMetricConfig(key: MetricKey, data: Analytics | null, days: number): 
           { symbol: 'Mẫu số', desc: 'Tổng số người dùng có vai trò "user", đã bấm xác nhận email và không phải tài khoản nội bộ.' },
         ],
         rules: [
-          { text: 'Chỉ tính người dùng đã kích hoạt email thật (is_verified = true).', code: 'Anti-Spam' },
-          { text: 'Loại trừ tài khoản nhân sự nội bộ và admin.', code: 'BR-83' },
+          { text: 'Chỉ tính người dùng đã kích hoạt email thật (is_verified = true).' },
+          { text: 'Loại trừ tài khoản nhân sự nội bộ và admin.' },
         ],
         dataSources: ['users (is_verified = true, role = user)', 'invoices (status = paid)'],
         breakdown: [
@@ -267,7 +258,6 @@ function getMetricConfig(key: MetricKey, data: Analytics | null, days: number): 
       return {
         title: 'Công Nợ Chờ Thu (Accounts Receivable — AR)',
         category: 'Dòng tiền & Công nợ',
-        code: 'SRS §5.4 / AR Snapshot',
         currentValue: formatVnd(data?.outstanding?.amount_vnd ?? 0),
         formula: 'Công nợ AR = ∑ (Giá trị hóa đơn trạng thái pending hoặc awaiting_approval)',
         variables: [
@@ -275,8 +265,8 @@ function getMetricConfig(key: MetricKey, data: Analytics | null, days: number): 
           { symbol: 'Awaiting Approval', desc: 'Hóa đơn chuyển khoản thủ công hoặc yêu cầu duyệt từ kế toán.' },
         ],
         rules: [
-          { text: 'Đây là dữ liệu tức thời (Snapshot) tại thời điểm hiện tại của hệ thống.', code: 'Realtime' },
-          { text: 'Chỉ tính các hóa đơn có giá trị lớn hơn 0 VNĐ và của khách hàng thực.', code: 'BR-83' },
+          { text: 'Đây là dữ liệu tức thời (Snapshot) tại thời điểm hiện tại của hệ thống.' },
+          { text: 'Chỉ tính các hóa đơn có giá trị lớn hơn 0 VNĐ và của khách hàng thực.' },
         ],
         dataSources: ['invoices (status IN pending, awaiting_approval)'],
         breakdown: [
@@ -290,15 +280,14 @@ function getMetricConfig(key: MetricKey, data: Analytics | null, days: number): 
       return {
         title: 'Thanh Toán Lỗi (Failed Payments 30 Ngày)',
         category: 'Dòng tiền & Rủi ro',
-        code: 'SRS §5.4 / Payment Monitoring',
         currentValue: `${data?.failed_payments?.count_30d ?? 0} giao dịch`,
         formula: 'Failed Payments = COUNT & SUM (Hóa đơn trạng thái "failed" trong 30 ngày gần nhất)',
         variables: [
           { symbol: 'Hóa đơn failed', desc: 'Giao dịch thanh toán bị cổng thanh toán từ chối, hết hạn phiên hoặc lỗi số dư.' },
         ],
         rules: [
-          { text: 'Khung thời gian cố định: 30 ngày gần nhất tính từ thời điểm hiện tại.', code: 'Rolling 30D' },
-          { text: 'Loại trừ các thử nghiệm lỗi của tài khoản nội bộ công ty.', code: 'BR-83' },
+          { text: 'Khung thời gian cố định: 30 ngày gần nhất tính từ thời điểm hiện tại.' },
+          { text: 'Loại trừ các thử nghiệm lỗi của tài khoản nội bộ công ty.' },
         ],
         dataSources: ['invoices (status = failed, created_at >= NOW - 30 days)'],
         breakdown: [
@@ -312,15 +301,14 @@ function getMetricConfig(key: MetricKey, data: Analytics | null, days: number): 
       return {
         title: 'Chiết Khấu Đã Áp Dụng (Discounts & Vouchers)',
         category: 'Dòng tiền & Khuyến mãi',
-        code: 'SRS §5.4 / Promotion',
         currentValue: formatVnd(data?.discounts_vnd ?? 0),
         formula: 'Tổng chiết khấu = ∑ (discount_vnd trên các hóa đơn đã thanh toán trong kỳ)',
         variables: [
           { symbol: 'discount_vnd', desc: 'Số tiền giảm trực tiếp trên hóa đơn từ voucher khuyến mãi hoặc chiết khấu gói năm.' },
         ],
         rules: [
-          { text: 'Chỉ cộng dồn chiết khấu của những hóa đơn khách hàng đã thanh toán thành công.', code: 'Realized' },
-          { text: 'Khoảng thời gian áp dụng theo bộ lọc ngày được chọn.', code: 'Period' },
+          { text: 'Chỉ cộng dồn chiết khấu của những hóa đơn khách hàng đã thanh toán thành công.' },
+          { text: 'Khoảng thời gian áp dụng theo bộ lọc ngày được chọn.' },
         ],
         dataSources: ['invoices (discount_vnd > 0, status = paid)'],
         breakdown: [
@@ -334,20 +322,19 @@ function getMetricConfig(key: MetricKey, data: Analytics | null, days: number): 
       return {
         title: 'Doanh Thu Credit Quét 3D (Scan Credits)',
         category: 'Dòng tiền & Kế toán',
-        code: 'SRS §5.4 / BR-94',
         currentValue: formatVnd(data?.credit_revenue_vnd ?? 0),
         formula: 'Doanh thu Credit = ∑ (Hóa đơn mua gói Credit đã thanh toán thành công trong kỳ)',
         variables: [
           { symbol: 'Gói Credit', desc: 'Số tiền người dùng nạp thêm để quét và chuyển đổi ảnh chụp giày thành mô hình 3D.' },
         ],
         rules: [
-          { text: 'QUY CHUẨN BR-94: Doanh thu Credit được tính vào dòng tiền nhưng KHÔNG được tính vào MRR.', code: 'BR-94' },
-          { text: 'Lý do: Credit là giao dịch trả trước sử dụng theo lượt (one-off), không phải thuê bao chu kỳ tự động.', code: 'Accounting' },
+          { text: 'Doanh thu Credit được tính vào dòng tiền nhưng KHÔNG được tính vào MRR.' },
+          { text: 'Lý do: Credit là giao dịch trả trước sử dụng theo lượt (one-off), không phải thuê bao chu kỳ tự động.' },
         ],
         dataSources: ['invoices (plan_tier = credit, status = paid)'],
         breakdown: [
           { label: 'Doanh thu Credit trong kỳ', value: formatVnd(data?.credit_revenue_vnd ?? 0), highlight: true },
-          { label: 'Quy chuẩn kế toán áp dụng', value: 'BR-94 (Không đưa vào MRR)' },
+          { label: 'Quy chuẩn kế toán áp dụng', value: 'Không đưa vào MRR' },
         ],
         businessMeaning: 'Mảng doanh thu bổ trợ dựa trên mức độ sử dụng tính năng quét 3D thực tế của người dùng, phản ánh nhu cầu số hóa sản phẩm giày ngoài gói thuê bao cơ bản.',
       };
@@ -356,7 +343,6 @@ function getMetricConfig(key: MetricKey, data: Analytics | null, days: number): 
       return {
         title: 'Thuế VAT Ước Tính (Estimated VAT Collected)',
         category: 'Thuế & Pháp lý',
-        code: 'SRS §5.4 / Tax Engine',
         currentValue: formatVnd(data?.vat_collected_vnd ?? 0),
         formula: 'Thuế VAT = Doanh thu ghi nhận ròng × Thuế suất VAT (8% hoặc 10%)',
         variables: [
@@ -364,8 +350,8 @@ function getMetricConfig(key: MetricKey, data: Analytics | null, days: number): 
           { symbol: 'Thuế suất', desc: 'Tỷ lệ thuế suất giá trị gia tăng được cấu hình trong tax_service theo ngành phần mềm/dịch vụ số.' },
         ],
         rules: [
-          { text: 'Tính toán theo thuật toán của tax_service tuân thủ luật thuế điện tử Việt Nam.', code: 'Tax Service' },
-          { text: 'Số liệu mang tính ước tính đối soát kế toán trước khi xuất hóa đơn điện tử.', code: 'Estimate' },
+          { text: 'Tính toán theo thuật toán của tax_service tuân thủ luật thuế điện tử Việt Nam.' },
+          { text: 'Số liệu mang tính ước tính đối soát kế toán trước khi xuất hóa đơn điện tử.' },
         ],
         dataSources: ['invoices', 'tax_service'],
         breakdown: [
@@ -379,16 +365,15 @@ function getMetricConfig(key: MetricKey, data: Analytics | null, days: number): 
       return {
         title: 'Chi Phí Điện Toán API 3D/AI (Compute Costs)',
         category: 'Chi phí hạ tầng',
-        code: 'SRS §5.4 / SF-14 / BR-108',
         currentValue: formatVnd(data?.api_cost_vnd ?? 0),
         formula: 'Chi phí API = ∑ (Số lượt tác vụ 3D/AI × Đơn giá điện toán tài nguyên GPU)',
         variables: [
           { symbol: 'Tác vụ 3D/AI', desc: 'Các lệnh AI photogrammetry, tạo lưới mesh 3D, Bake Texture PBR và khử nhiễu.' },
-          { symbol: 'Đơn giá điện toán', desc: 'Chi phí quy đổi theo thời gian tính toán của server GPU (SF-14).' },
+          { symbol: 'Đơn giá điện toán', desc: 'Chi phí quy đổi theo thời gian tính toán của server GPU.' },
         ],
         rules: [
-          { text: 'Ghi nhận chi phí cho mọi cuộc gọi API hợp lệ được hệ thống xử lý.', code: 'SF-14' },
-          { text: 'Được khấu trừ trực tiếp khi tính Biên lợi nhuận gộp của KusShoes.', code: 'BR-108' },
+          { text: 'Ghi nhận chi phí cho mọi cuộc gọi API hợp lệ được hệ thống xử lý.' },
+          { text: 'Được khấu trừ trực tiếp khi tính Biên lợi nhuận gộp của KusShoes.' },
         ],
         dataSources: ['api_cost_service', 'bake_jobs', 'api_usage_logs'],
         breakdown: [
@@ -405,15 +390,14 @@ function getMetricConfig(key: MetricKey, data: Analytics | null, days: number): 
       return {
         title: 'Chuỗi Doanh Thu Theo Chu Kỳ Tháng',
         category: 'Xu hướng dòng tiền',
-        code: 'SRS §5.4 / Monthly Trend',
         currentValue: formatVnd(total),
         formula: 'Doanh thu tháng M = ∑ (Hóa đơn PAID trong tháng M) - ∑ (Hoàn tiền trong tháng M)',
         variables: [
           { symbol: 'Tháng M', desc: 'Thời gian theo tháng dương lịch tính theo múi giờ Việt Nam GMT+7.' },
         ],
         rules: [
-          { text: 'Nhóm doanh thu thực thu theo tháng dương lịch.', code: 'GMT+7' },
-          { text: 'Bao gồm cả doanh thu gói thuê bao và gói Credit mua lẻ.', code: 'Consolidated' },
+          { text: 'Nhóm doanh thu thực thu theo tháng dương lịch.' },
+          { text: 'Bao gồm cả doanh thu gói thuê bao và gói Credit mua lẻ.' },
         ],
         dataSources: ['invoices (nhóm theo tháng paid_at)'],
         breakdown: [
@@ -432,15 +416,14 @@ function getMetricConfig(key: MetricKey, data: Analytics | null, days: number): 
       return {
         title: 'Cơ Cấu Doanh Thu Theo Gói Cước',
         category: 'Phân tích sản phẩm',
-        code: 'SRS §5.4 / Plan Share',
         currentValue: `${data?.revenue_by_plan?.length ?? 0} gói phát sinh`,
         formula: 'Tỷ trọng gói = (Doanh thu của gói cước ÷ Tổng doanh thu các gói) × 100%',
         variables: [
           { symbol: 'Doanh thu gói', desc: 'Tổng tiền thu về từ người dùng mua gói cước đó trong kỳ.' },
         ],
         rules: [
-          { text: 'Tính tất cả các gói cước đang phân phối (Starter, Pro, Enterprise, Credit...).', code: 'All Plans' },
-          { text: 'Tỷ trọng % được làm tròn đến 1 chữ số thập phân.', code: 'Rounding' },
+          { text: 'Tính tất cả các gói cước đang phân phối (Starter, Pro, Enterprise, Credit...).' },
+          { text: 'Tỷ trọng % được làm tròn đến 1 chữ số thập phân.' },
         ],
         dataSources: ['invoices (group by plan_tier)'],
         breakdown: (data?.revenue_by_plan ?? []).map((p) => ({
@@ -456,7 +439,6 @@ function getMetricConfig(key: MetricKey, data: Analytics | null, days: number): 
       return {
         title: 'Doanh Thu Theo Phương Thức Thanh Toán',
         category: 'Cổng thanh toán',
-        code: 'SRS §5.4 / Payment Channel',
         currentValue: `${data?.payment_methods?.length ?? 0} cổng ghi nhận`,
         formula: 'Tỷ trọng kênh = (Doanh thu qua cổng thanh toán ÷ Tổng doanh thu) × 100%',
         variables: [
@@ -465,7 +447,7 @@ function getMetricConfig(key: MetricKey, data: Analytics | null, days: number): 
           { symbol: 'Manual', desc: 'Chuyển khoản thủ công có nhân sự duyệt ủy nhiệm chi.' },
         ],
         rules: [
-          { text: 'Chỉ cộng tiền khi giao dịch qua cổng được xác nhận thành công (PAID).', code: 'Gateway Webhook' },
+          { text: 'Chỉ cộng tiền khi giao dịch qua cổng được xác nhận thành công (PAID).' },
         ],
         dataSources: ['invoices (group by payment_method)'],
         breakdown: (data?.payment_methods ?? []).map((m) => ({
@@ -481,7 +463,6 @@ function getMetricConfig(key: MetricKey, data: Analytics | null, days: number): 
       return {
         title: `Biến Động MRR — Thác Dòng Tiền (${mov?.month ?? 'Tháng này'})`,
         category: 'Doanh thu định kỳ',
-        code: 'SRS §5.4 / Waterfall',
         currentValue: formatVndSigned(mov?.net_new ?? 0),
         formula: 'Net New MRR = (Mới + Nâng cấp + Kích hoạt lại) - (Hạ cấp + Hủy gói)',
         variables: [
@@ -492,8 +473,8 @@ function getMetricConfig(key: MetricKey, data: Analytics | null, days: number): 
           { symbol: 'Hủy gói (Churn)', desc: 'MRR mất đi hoàn toàn do khách hàng hủy hoặc không gia hạn tiếp.' },
         ],
         rules: [
-          { text: 'Tính biến động MRR giữa tháng trước và tháng đang khảo sát.', code: 'Month-over-Month' },
-          { text: 'Net New MRR dương (> 0) chứng tỏ doanh thu định kỳ của KusShoes đang tăng trưởng.', code: 'Health' },
+          { text: 'Tính biến động MRR giữa tháng trước và tháng đang khảo sát.' },
+          { text: 'Net New MRR dương (> 0) chứng tỏ doanh thu định kỳ của KusShoes đang tăng trưởng.' },
         ],
         dataSources: ['invoices', 'subscriptions (so sánh lịch sử gói cước)'],
         breakdown: [
@@ -512,15 +493,14 @@ function getMetricConfig(key: MetricKey, data: Analytics | null, days: number): 
       return {
         title: 'Khách Hàng Doanh Thu Cao (Top VIP Customers)',
         category: 'Khách hàng',
-        code: 'SRS §5.4 / VIP Tier',
         currentValue: `${data?.top_customers?.length ?? 0} khách hàng VIP`,
         formula: 'Chi tiêu ròng = ∑ (Hóa đơn PAID của khách) - ∑ (Hoàn tiền của khách)',
         variables: [
           { symbol: 'Chi tiêu ròng', desc: 'Tổng số tiền thực tế khách hàng đã thanh toán sau khi trừ các khoản hoàn trả.' },
         ],
         rules: [
-          { text: 'Xếp hạng giảm dần theo số tiền thực chi trong khoảng ngày đã chọn.', code: 'Ranking' },
-          { text: 'Chỉ xét các giao dịch hợp lệ của tài khoản người dùng thực.', code: 'BR-83' },
+          { text: 'Xếp hạng giảm dần theo số tiền thực chi trong khoảng ngày đã chọn.' },
+          { text: 'Chỉ xét các giao dịch hợp lệ của tài khoản người dùng thực.' },
         ],
         dataSources: ['invoices (group by user_id)', 'users'],
         breakdown: (data?.top_customers ?? []).map((c, i) => ({
@@ -536,7 +516,6 @@ function getMetricConfig(key: MetricKey, data: Analytics | null, days: number): 
       return {
         title: 'Thông Tin Chỉ Số',
         category: 'Tổng quan',
-        code: 'SRS §5.4',
         currentValue: '—',
         formula: 'Đang cập nhật công thức.',
         variables: [],
@@ -575,7 +554,6 @@ export const MetricDetailModal: React.FC<MetricDetailModalProps> = ({
             <div className={styles.titleArea}>
               <div className={styles.badgeRow}>
                 <span className={styles.categoryBadge}>{config.category}</span>
-                <span className={styles.codeBadge}>{config.code}</span>
               </div>
               <h3 className={styles.title}>{config.title}</h3>
             </div>
@@ -664,7 +642,6 @@ export const MetricDetailModal: React.FC<MetricDetailModalProps> = ({
               {config.rules.map((rule, idx) => (
                 <div key={idx} className={styles.ruleItem}>
                   <span>
-                    {rule.code && <span className={styles.ruleCode} style={{ marginRight: 6 }}>{rule.code}</span>}
                     {rule.text}
                   </span>
                 </div>

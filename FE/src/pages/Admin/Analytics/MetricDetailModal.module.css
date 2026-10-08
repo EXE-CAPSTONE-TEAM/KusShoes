@@ -88,17 +88,6 @@
   border: 1px solid var(--glass-border);
 }
 
-.codeBadge {
-  font-family: var(--font-mono);
-  font-size: 0.65rem;
-  font-weight: 600;
-  padding: 2px 7px;
-  border-radius: var(--border-radius-sm);
-  background-color: var(--card-info-bg);
-  color: #2563EB;
-  border: 1px solid var(--glass-border);
-}
-
 .title {
   font-size: 1.10rem;
   font-weight: 700;

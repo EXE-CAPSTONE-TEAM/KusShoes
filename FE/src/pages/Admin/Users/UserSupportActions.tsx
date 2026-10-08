@@ -106,12 +106,12 @@ export const UserSupportActions: React.FC<UserSupportActionsProps> = ({ user, al
       <button className={shared.iconBtn} title={title('Gửi mã đặt lại mật khẩu')} disabled={!allowed || busy} onClick={() => setDialog('reset')}>
         <KeyRound size={14} />
       </button>
-      <button className={shared.iconBtn} title="Lịch sử vi phạm (BR-77)" disabled={busy} onClick={() => void openModerationHistory()}>
+      <button className={shared.iconBtn} title="Lịch sử vi phạm" disabled={busy} onClick={() => void openModerationHistory()}>
         <ShieldAlert size={14} />
       </button>
       <button
         className={shared.iconBtn}
-        title={title(user.is_internal ? 'Bỏ đánh dấu tài khoản nội bộ' : 'Đánh dấu tài khoản nội bộ (BR-83)')}
+        title={title(user.is_internal ? 'Bỏ đánh dấu tài khoản nội bộ' : 'Đánh dấu tài khoản nội bộ')}
         aria-label={user.is_internal ? 'Bỏ đánh dấu tài khoản nội bộ' : 'Đánh dấu tài khoản nội bộ'}
         disabled={!allowed || busy}
         onClick={() => setDialog('internal')}
@@ -191,7 +191,7 @@ export const UserSupportActions: React.FC<UserSupportActionsProps> = ({ user, al
         open={dialog === 'moderation'}
         onOpenChange={(open) => !open && close()}
         title={`Lịch sử vi phạm — ${user.email}`}
-        description="Các mức xử lý đã áp dụng cho tài khoản này theo BR-77."
+        description="Các mức xử lý đã áp dụng cho tài khoản này."
         submitLabel="Đóng"
         onSubmit={close}
       >
