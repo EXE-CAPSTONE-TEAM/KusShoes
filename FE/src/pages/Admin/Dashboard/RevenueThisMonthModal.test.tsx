@@ -10,7 +10,7 @@ const { revenueThisMonth, invoices } = vi.hoisted(() => ({
 vi.mock('../../../api/adminClient', () => {
   class AdminApiError extends Error {
     status: number;
-    constructor(code: string, message: string, status = 0) {
+    constructor(_code: string, message: string, status = 0) {
       super(message);
       this.status = status;
     }
