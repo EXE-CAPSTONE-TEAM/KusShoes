@@ -31,12 +31,15 @@
 }
 
 .headerActions {
+  flex-shrink: 0;
+  white-space: nowrap;
   display: flex;
   align-items: center;
   gap: 8px;
 }
 
 .actionBtn {
+  white-space: nowrap;
   display: inline-flex;
   align-items: center;
   gap: 6px;
@@ -83,6 +86,7 @@
   gap: 20px;
   position: relative;
   overflow: hidden;
+  flex-shrink: 0;
 }
 
 /* Dark mode adjustments for invoice paper */
@@ -293,4 +297,68 @@
   to {
     transform: rotate(360deg);
   }
+}
+
+.receiptWrap {
+  position: relative;
+  flex-shrink: 0;
+}
+
+.expandBtn {
+  position: absolute;
+  top: 8px;
+  right: 8px;
+  z-index: 2;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 28px;
+  height: 28px;
+  border-radius: 6px;
+  border: 1px solid var(--border-color, #e5e7eb);
+  background: var(--bg-card, #ffffff);
+  color: var(--text-muted, #6b7280);
+  cursor: pointer;
+}
+
+.expandBtn:hover {
+  color: var(--color-primary, #3b82f6);
+  border-color: var(--color-primary, #3b82f6);
+}
+
+.fullOverlay {
+  position: fixed;
+  inset: 0;
+  z-index: 400;
+  background: rgba(0, 0, 0, 0.7);
+  display: flex;
+  align-items: flex-start;
+  justify-content: center;
+  overflow-y: auto;
+  padding: 32px 16px;
+}
+
+.fullDialog {
+  position: relative;
+  width: 100%;
+  max-width: 760px;
+  margin: auto;
+}
+
+.fullCloseBtn {
+  position: absolute;
+  top: -12px;
+  right: -12px;
+  z-index: 3;
+  width: 32px;
+  height: 32px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  border-radius: 50%;
+  border: none;
+  background: #ffffff;
+  color: #111827;
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.3);
+  cursor: pointer;
 }

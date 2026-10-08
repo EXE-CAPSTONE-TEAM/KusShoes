@@ -1,5 +1,5 @@
 import React, { useEffect, useState } from 'react';
-import { X, RotateCw, Download, Printer, Loader2 } from 'lucide-react';
+import { X, RotateCw, Download, Printer, Loader2, Maximize2 } from 'lucide-react';
 import { adminBilling } from '../../../api/adminClient';
 import type { AdminInvoice } from '../../../types/admin';
 import shared from '../admin-shared.module.css';
@@ -42,6 +42,7 @@ export const InvoiceDetailDrawer: React.FC<InvoiceDetailDrawerProps> = ({
   const [error, setError] = useState<string | null>(null);
   const [downloadingPdf, setDownloadingPdf] = useState(false);
   const [downloadError, setDownloadError] = useState<string | null>(null);
+  const [fullView, setFullView] = useState(false);
 
   useEffect(() => {
     setData(initialInvoice);
@@ -100,6 +101,117 @@ export const InvoiceDetailDrawer: React.FC<InvoiceDetailDrawerProps> = ({
         transfer.payment_link_id ||
         transfer.transfer_description),
   );
+
+  const receiptPaper = data ? (
+    <div className={styles.paperReceipt}>
+      <div className={styles.receiptTop}>
+        <div className={styles.brandGroup}>
+          <span className={styles.brandName}>KusShoes</span>
+          <span className={styles.brandSub}>3D SNEAKER LAB &bull; SHOE DESIGN PLATFORM</span>
+        </div>
+        <div
+          className={`${styles.stampBadge} ${
+            data.status === 'refunded'
+              ? styles.stampRefunded
+              : data.status === 'cancelled' || data.status === 'failed'
+              ? styles.stampCancelled
+              : ''
+          }`}
+        >
+          {data.status === 'paid'
+            ? '✔ ĐÃ THANH TOÁN'
+            : data.status === 'refunded'
+            ? 'ĐÃ HOÀN TIỀN'
+            : data.status === 'cancelled'
+            ? 'ĐÃ HỦY'
+            : 'CHỜ THANH TOÁN'}
+        </div>
+      </div>
+
+      <div className={styles.receiptTitleSection}>
+        <h4 className={styles.receiptTitle}>BIÊN NHẬN THANH TOÁN</h4>
+        <div className={styles.receiptNumber}>
+          Số chứng từ: {data.receipt_number || `KUS-${data.order_code}`}
+        </div>
+      </div>
+
+      <div className={styles.receiptInfoGrid}>
+        <div className={styles.infoCol}>
+          <span className={styles.infoLabel}>Đơn vị cung cấp</span>
+          <span className={styles.infoValue}>KusShoes Platform</span>
+          <span className={styles.infoLabel} style={{ marginTop: 6 }}>Ngày thanh toán</span>
+          <span className={styles.infoValue}>{formatDateTime(data.paid_at || data.created_at)}</span>
+        </div>
+        <div className={styles.infoCol}>
+          <span className={styles.infoLabel}>Khách hàng</span>
+          <span className={styles.infoValue}>Tài khoản: {data.user_email || '—'}</span>
+          <span className={styles.infoLabel} style={{ marginTop: 6 }}>Mã đơn hàng</span>
+          <span className={styles.infoValue}>Đơn #{data.order_code}</span>
+        </div>
+      </div>
+
+      <table className={styles.receiptTable}>
+        <thead>
+          <tr>
+            <th>Dịch vụ / Gói</th>
+            <th style={{ textAlign: 'center' }}>Chu kỳ</th>
+            <th style={{ textAlign: 'right' }}>Thành tiền</th>
+          </tr>
+        </thead>
+        <tbody>
+          <tr>
+            <td>
+              <strong style={{ textTransform: 'capitalize' }}>Gói {data.plan_tier}</strong>
+            </td>
+            <td style={{ textAlign: 'center', textTransform: 'capitalize' }}>
+              {data.billing_cycle === 'yearly' ? 'Hàng năm' : data.billing_cycle === 'monthly' ? 'Hàng tháng' : data.billing_cycle}
+            </td>
+            <td style={{ textAlign: 'right', fontWeight: 600 }}>
+              {formatVnd(data.listed_price_vnd)}
+            </td>
+          </tr>
+          {data.discount_vnd > 0 && (
+            <tr>
+              <td colSpan={2} style={{ color: 'var(--color-success, #10b981)' }}>
+                Chiết khấu {data.coupon_code ? `(Coupon: ${data.coupon_code})` : ''}
+              </td>
+              <td style={{ textAlign: 'right', color: 'var(--color-success, #10b981)', fontWeight: 600 }}>
+                -{formatVnd(data.discount_vnd)}
+              </td>
+            </tr>
+          )}
+        </tbody>
+      </table>
+
+      <div className={styles.receiptTotals}>
+        <div className={styles.totalRow}>
+          <span>Giá niêm yết:</span>
+          <span>{formatVnd(data.listed_price_vnd)}</span>
+        </div>
+        {data.discount_vnd > 0 && (
+          <div className={styles.totalRow}>
+            <span>Giảm trừ:</span>
+            <span>-{formatVnd(data.discount_vnd)}</span>
+          </div>
+        )}
+        <div className={styles.totalRowGrand}>
+          <span>TỔNG TIỀN THỰC TRẢ:</span>
+          <span>{formatVnd(data.amount_vnd)}</span>
+        </div>
+        <div className={styles.vatNotice}>
+          {data.vat?.enabled
+            ? `Trong đó VAT (${data.vat.rate_percent}%): ${formatVnd(data.vat.vat_vnd)}`
+            : 'Không áp dụng thuế GTGT'}
+        </div>
+      </div>
+
+      <div className={styles.receiptFooter}>
+        Đây là chứng từ biên nhận thanh toán điện tử nội bộ được phát hành tự động bởi KusShoes.
+        <br />
+        Chứng nhận giao dịch hợp lệ giữa khách hàng và KusShoes 3D Sneaker Lab.
+      </div>
+    </div>
+  ) : null;
 
   return (
     <div className={shared.overlay} onClick={onClose} data-testid="invoice-drawer-overlay">
@@ -191,114 +303,17 @@ export const InvoiceDetailDrawer: React.FC<InvoiceDetailDrawerProps> = ({
 
         {data && !loading && (
           <>
-            {/* Tờ Hóa Đơn / Biên Nhận Thanh Toán Chuẩn */}
-            <div className={styles.paperReceipt}>
-              <div className={styles.receiptTop}>
-                <div className={styles.brandGroup}>
-                  <span className={styles.brandName}>KusShoes</span>
-                  <span className={styles.brandSub}>3D SNEAKER LAB &bull; SHOE DESIGN PLATFORM</span>
-                </div>
-                <div
-                  className={`${styles.stampBadge} ${
-                    data.status === 'refunded'
-                      ? styles.stampRefunded
-                      : data.status === 'cancelled' || data.status === 'failed'
-                      ? styles.stampCancelled
-                      : ''
-                  }`}
-                >
-                  {data.status === 'paid'
-                    ? '✔ ĐÃ THANH TOÁN'
-                    : data.status === 'refunded'
-                    ? 'ĐÃ HOÀN TIỀN'
-                    : data.status === 'cancelled'
-                    ? 'ĐÃ HỦY'
-                    : 'CHỜ THANH TOÁN'}
-                </div>
-              </div>
-
-              <div className={styles.receiptTitleSection}>
-                <h4 className={styles.receiptTitle}>BIÊN NHẬN THANH TOÁN</h4>
-                <div className={styles.receiptNumber}>
-                  Số chứng từ: {data.receipt_number || `KUS-${data.order_code}`}
-                </div>
-              </div>
-
-              <div className={styles.receiptInfoGrid}>
-                <div className={styles.infoCol}>
-                  <span className={styles.infoLabel}>Đơn vị cung cấp</span>
-                  <span className={styles.infoValue}>KusShoes Platform</span>
-                  <span className={styles.infoLabel} style={{ marginTop: 6 }}>Ngày thanh toán</span>
-                  <span className={styles.infoValue}>{formatDateTime(data.paid_at || data.created_at)}</span>
-                </div>
-                <div className={styles.infoCol}>
-                  <span className={styles.infoLabel}>Khách hàng</span>
-                  <span className={styles.infoValue}>Tài khoản: {data.user_email || '—'}</span>
-                  <span className={styles.infoLabel} style={{ marginTop: 6 }}>Mã đơn hàng</span>
-                  <span className={styles.infoValue}>Đơn #{data.order_code}</span>
-                </div>
-              </div>
-
-              <table className={styles.receiptTable}>
-                <thead>
-                  <tr>
-                    <th>Dịch vụ / Gói</th>
-                    <th style={{ textAlign: 'center' }}>Chu kỳ</th>
-                    <th style={{ textAlign: 'right' }}>Thành tiền</th>
-                  </tr>
-                </thead>
-                <tbody>
-                  <tr>
-                    <td>
-                      <strong style={{ textTransform: 'capitalize' }}>Gói {data.plan_tier}</strong>
-                    </td>
-                    <td style={{ textAlign: 'center', textTransform: 'capitalize' }}>
-                      {data.billing_cycle === 'yearly' ? 'Hàng năm' : data.billing_cycle === 'monthly' ? 'Hàng tháng' : data.billing_cycle}
-                    </td>
-                    <td style={{ textAlign: 'right', fontWeight: 600 }}>
-                      {formatVnd(data.listed_price_vnd)}
-                    </td>
-                  </tr>
-                  {data.discount_vnd > 0 && (
-                    <tr>
-                      <td colSpan={2} style={{ color: 'var(--color-success, #10b981)' }}>
-                        Chiết khấu {data.coupon_code ? `(Coupon: ${data.coupon_code})` : ''}
-                      </td>
-                      <td style={{ textAlign: 'right', color: 'var(--color-success, #10b981)', fontWeight: 600 }}>
-                        -{formatVnd(data.discount_vnd)}
-                      </td>
-                    </tr>
-                  )}
-                </tbody>
-              </table>
-
-              <div className={styles.receiptTotals}>
-                <div className={styles.totalRow}>
-                  <span>Giá niêm yết:</span>
-                  <span>{formatVnd(data.listed_price_vnd)}</span>
-                </div>
-                {data.discount_vnd > 0 && (
-                  <div className={styles.totalRow}>
-                    <span>Giảm trừ:</span>
-                    <span>-{formatVnd(data.discount_vnd)}</span>
-                  </div>
-                )}
-                <div className={styles.totalRowGrand}>
-                  <span>TỔNG TIỀN THỰC TRẢ:</span>
-                  <span>{formatVnd(data.amount_vnd)}</span>
-                </div>
-                <div className={styles.vatNotice}>
-                  {data.vat?.enabled
-                    ? `Trong đó VAT (${data.vat.rate_percent}%): ${formatVnd(data.vat.vat_vnd)}`
-                    : 'Không áp dụng thuế GTGT'}
-                </div>
-              </div>
-
-              <div className={styles.receiptFooter}>
-                Đây là chứng từ biên nhận thanh toán điện tử nội bộ được phát hành tự động bởi KusShoes.
-                <br />
-                Chứng nhận giao dịch hợp lệ giữa khách hàng và KusShoes 3D Sneaker Lab.
-              </div>
+            <div className={styles.receiptWrap}>
+              <button
+                type="button"
+                className={styles.expandBtn}
+                onClick={() => setFullView(true)}
+                title="Xem toàn bộ biên lai"
+                aria-label="Xem toàn bộ biên lai"
+              >
+                <Maximize2 size={14} />
+              </button>
+              {receiptPaper}
             </div>
 
             <div style={{ marginTop: 24, marginBottom: 8, fontSize: '0.75rem', fontWeight: 700, color: 'var(--text-muted, #9ca3af)', textTransform: 'uppercase', letterSpacing: 0.6 }}>
@@ -455,6 +470,35 @@ export const InvoiceDetailDrawer: React.FC<InvoiceDetailDrawerProps> = ({
           </>
         )}
       </div>
+
+      {fullView && receiptPaper && (
+        <div
+          className={styles.fullOverlay}
+          onClick={(e) => {
+            e.stopPropagation();
+            setFullView(false);
+          }}
+          data-testid="invoice-receipt-fullview"
+        >
+          <div
+            className={styles.fullDialog}
+            onClick={(e) => e.stopPropagation()}
+            role="dialog"
+            aria-modal="true"
+            aria-label="Biên lai toàn bộ"
+          >
+            <button
+              type="button"
+              className={styles.fullCloseBtn}
+              onClick={() => setFullView(false)}
+              aria-label="Đóng xem toàn bộ"
+            >
+              <X size={18} />
+            </button>
+            {receiptPaper}
+          </div>
+        </div>
+      )}
     </div>
   );
 };
