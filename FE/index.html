@@ -108,6 +108,31 @@
       <div class="track"><div class="bar"></div></div>
     </div>
   </div>
+  <script>
+    /* Failsafe: the boot overlay normally removes itself (src/boot/boot.ts, capped at 5s). If the
+       app script never ran or failed, do not leave a loader spinning forever: drop the overlay when
+       the app is up, or offer a reload when it is not. */
+    (function () {
+      setTimeout(function () {
+        var boot = document.getElementById('boot');
+        if (!boot) return;
+        if (window.__kusMounted) {
+          boot.classList.add('done');
+          setTimeout(function () { boot.remove(); }, 250);
+          return;
+        }
+        var box = boot.querySelector('.box');
+        if (!box) return;
+        box.innerHTML = '<p style="margin:0;font:14px system-ui,sans-serif;color:#9CA3AF;text-align:center">KusShoes could not start.<br>Please reload the page.</p>';
+        var btn = document.createElement('button');
+        btn.type = 'button';
+        btn.textContent = 'Reload';
+        btn.style.cssText = 'padding:8px 18px;border:0;border-radius:8px;background:#FF6B35;color:#fff;font:600 14px system-ui,sans-serif;cursor:pointer';
+        btn.addEventListener('click', function () { location.reload(); });
+        box.appendChild(btn);
+      }, 12000);
+    })();
+  </script>
   <script type="module" src="/src/main.tsx"></script>
 </body>
 
