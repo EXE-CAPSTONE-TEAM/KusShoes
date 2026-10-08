@@ -535,7 +535,9 @@ export const AdminDashboard: React.FC<AdminDashboardProps> = ({ navigate }) => {
                 {loading ? (
                   <ThreeDotsLoader size="md" />
                 ) : (
-                  formatVnd(stats?.revenue_this_month_vnd ?? 0)
+                  stats?.revenue_this_month_vnd == null
+                    ? '—'
+                    : formatVnd(stats.revenue_this_month_vnd)
                 )}
               </span>
               {monthRevenueTrend && (
@@ -552,7 +554,9 @@ export const AdminDashboard: React.FC<AdminDashboardProps> = ({ navigate }) => {
               {loading ? (
                 <ThreeDotsLoader size="sm" />
               ) : (
-                formatVnd(stats?.revenue_last_month_vnd ?? 0)
+                stats?.revenue_last_month_vnd == null
+                  ? '—'
+                  : formatVnd(stats.revenue_last_month_vnd)
               )}
             </span>
           </div>

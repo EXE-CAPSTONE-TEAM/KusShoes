@@ -83,7 +83,7 @@ export const RevenueThisMonthModal: React.FC<RevenueThisMonthModalProps> = ({ st
           <div className={styles.valueBanner}>
             <span className={styles.valueBannerLabel}>Giá trị ghi nhận hiện thời</span>
             <span className={styles.valueBannerNumber}>
-              {formatVnd(stats?.revenue_this_month_vnd ?? 0)}
+              {stats?.revenue_this_month_vnd == null ? '—' : formatVnd(stats.revenue_this_month_vnd)}
             </span>
           </div>
 

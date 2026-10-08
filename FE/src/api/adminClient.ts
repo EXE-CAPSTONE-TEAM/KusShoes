@@ -68,6 +68,18 @@ export class AdminApiError extends Error {
   }
 }
 
+// FastAPI answers unknown routes and framework-level failures with bare English phrases; show
+// something an admin can act on instead.
+const GENERIC_ERROR_MESSAGES: Record<string, string> = {
+  'Not Found': 'Không tìm thấy dữ liệu, hoặc máy chủ chưa hỗ trợ chức năng này. Vui lòng thử lại sau ít phút.',
+  'Method Not Allowed': 'Máy chủ chưa hỗ trợ thao tác này. Vui lòng thử lại sau ít phút.',
+  'Internal Server Error': 'Máy chủ đang gặp sự cố. Vui lòng thử lại sau.',
+  'Bad Gateway': 'Máy chủ đang khởi động lại. Vui lòng thử lại sau ít phút.',
+  'Service Unavailable': 'Máy chủ đang bảo trì. Vui lòng thử lại sau ít phút.',
+};
+
+const friendlyMessage = (message: string): string => GENERIC_ERROR_MESSAGES[message] ?? message;
+
 async function parseApiError(response: Response): Promise<AdminApiError> {
   try {
     const payload = (await response.json()) as Record<string, unknown>;
@@ -88,14 +100,14 @@ async function parseApiError(response: Response): Promise<AdminApiError> {
 
     return new AdminApiError(
       typeof payload.code === 'string' ? payload.code : `HTTP_${response.status}`,
-      message || `Yêu cầu thất bại (${response.status})`,
+      friendlyMessage(message) || `Yêu cầu thất bại (${response.status})`,
       response.status,
       payload,
     );
   } catch {
     return new AdminApiError(
       `HTTP_${response.status}`,
-      response.statusText || `Yêu cầu thất bại (${response.status})`,
+      friendlyMessage(response.statusText) || `Yêu cầu thất bại (${response.status})`,
       response.status,
     );
   }
