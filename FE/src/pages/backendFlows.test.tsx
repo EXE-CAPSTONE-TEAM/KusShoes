@@ -13,6 +13,7 @@ vi.mock('../api/client', async () => {
       login: vi.fn(),
       verifyOtp: vi.fn(),
       verifyTwoFactorLogin: vi.fn(),
+      startGoogleLogin: vi.fn(),
       logout: vi.fn(),
       impersonation: vi.fn(() => null),
       onImpersonationChange: vi.fn(() => () => undefined),
@@ -195,6 +196,21 @@ describe('Login analytics events', () => {
     await waitFor(() => expect(api.verifyOtp).toHaveBeenCalledWith('u1', '123456', true));
     await waitFor(() => expect(events()).toContainEqual(expect.objectContaining({ event: 'sign_up', method: 'password' })));
     expect(events()).toContainEqual(expect.objectContaining({ event: 'login', method: 'password' }));
+  });
+
+  it('starts Google login with consent=true from the sign in tab', async () => {
+    wrap(<Login setPage={vi.fn()} />);
+    const googleBtn = screen.getByRole('button', { name: /sign in with google/i });
+    fireEvent.click(googleBtn);
+    expect(api.startGoogleLogin).toHaveBeenCalledWith({ consent: true });
+  });
+
+  it('starts Google login with consent=true from the register tab without requiring terms checkbox', async () => {
+    wrap(<Login setPage={vi.fn()} />);
+    fireEvent.click(screen.getByRole('button', { name: /^register$/i }));
+    const googleBtn = screen.getByRole('button', { name: /sign in with google/i });
+    fireEvent.click(googleBtn);
+    expect(api.startGoogleLogin).toHaveBeenCalledWith({ consent: true });
   });
 });
 

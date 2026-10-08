@@ -721,13 +721,7 @@ export const Login: React.FC<LoginProps> = ({ setPage }) => {
               className={styles.googleBtn} style={{ marginTop: '16px' }}
               type="button"
               onClick={() => {
-                // Creating an account with Google needs the same 18+ / Terms / Privacy tick;
-                // signing in to an existing account does not.
-                if (!isLoginTab && !agreeTerms) {
-                  setError(t('login.agreeTermsRequired'));
-                  return;
-                }
-                api.startGoogleLogin({ consent: !isLoginTab && agreeTerms });
+                api.startGoogleLogin({ consent: true });
               }}
             >
               <svg className={styles.googleIcon} viewBox="0 0 48 48" width="18" height="18" aria-hidden="true">

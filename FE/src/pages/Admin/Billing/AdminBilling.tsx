@@ -346,7 +346,7 @@ export const AdminBilling: React.FC = () => {
                     <th>Số tiền</th>
                     <th>Phương thức</th>
                     <th>Trạng thái</th>
-                    <th>Ngày thanh toán</th>
+                    <th>Thời điểm thanh toán</th>
                     <th>Hành động</th>
                   </tr>
                 </thead>
@@ -366,7 +366,7 @@ export const AdminBilling: React.FC = () => {
                       <td>{formatVnd(inv.amount_vnd)}</td>
                       <td className={shared.mutedCell}>{inv.payment_method}</td>
                       <td><StatusBadge status={inv.status} /></td>
-                      <td className={shared.mutedCell}>{formatDate(inv.paid_at)}</td>
+                      <td className={shared.mutedCell} style={{ whiteSpace: 'nowrap' }}>{formatDateTime(inv.paid_at)}</td>
                       <td>
                         <div style={{ display: 'flex', gap: 4 }}>
                           <button
