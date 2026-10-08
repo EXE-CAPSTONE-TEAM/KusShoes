@@ -192,26 +192,26 @@ export const AdminBilling: React.FC = () => {
       </div>
 
       <Tabs.Root value={tab} onValueChange={(v) => setTab(v as typeof tab)}>
-        <Tabs.List style={{ display: 'flex', gap: 8, marginBottom: 20 }}>
-          <Tabs.Trigger value="subscriptions" className="btn-outline" style={{ borderRadius: 'var(--border-radius-md)' }}>
+        <Tabs.List className={shared.tabList}>
+          <Tabs.Trigger value="subscriptions" className={shared.tabTrigger}>
             Subscriptions
           </Tabs.Trigger>
-          <Tabs.Trigger value="invoices" className="btn-outline" style={{ borderRadius: 'var(--border-radius-md)' }}>
+          <Tabs.Trigger value="invoices" className={shared.tabTrigger}>
             Invoices
           </Tabs.Trigger>
-          <Tabs.Trigger value="manual" className="btn-outline" style={{ borderRadius: 'var(--border-radius-md)' }}>
+          <Tabs.Trigger value="manual" className={shared.tabTrigger}>
             Giao dịch thủ công
           </Tabs.Trigger>
-          <Tabs.Trigger value="periods" className="btn-outline" style={{ borderRadius: 'var(--border-radius-md)' }}>
+          <Tabs.Trigger value="periods" className={shared.tabTrigger}>
             Khóa sổ
           </Tabs.Trigger>
-          <Tabs.Trigger value="coupons" className="btn-outline" style={{ borderRadius: 'var(--border-radius-md)' }}>
+          <Tabs.Trigger value="coupons" className={shared.tabTrigger}>
             Mã giảm giá
           </Tabs.Trigger>
-          <Tabs.Trigger value="tax" className="btn-outline" style={{ borderRadius: 'var(--border-radius-md)' }}>
+          <Tabs.Trigger value="tax" className={shared.tabTrigger}>
             VAT
           </Tabs.Trigger>
-          <Tabs.Trigger value="api-cost" className="btn-outline" style={{ borderRadius: 'var(--border-radius-md)' }}>
+          <Tabs.Trigger value="api-cost" className={shared.tabTrigger}>
             Chi phí API
           </Tabs.Trigger>
         </Tabs.List>
