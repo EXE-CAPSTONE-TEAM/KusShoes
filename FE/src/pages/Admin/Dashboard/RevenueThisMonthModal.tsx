@@ -1,13 +1,14 @@
 import React, { useEffect, useMemo, useState } from 'react';
 import { X, RotateCw } from 'lucide-react';
-import { adminDashboard } from '../../../api/adminClient';
-import type { AdminInvoice, DashboardStats } from '../../../types/admin';
+import { AdminApiError, adminBilling, adminDashboard } from '../../../api/adminClient';
+import type { AdminInvoice } from '../../../types/admin';
 import { InvoiceDetailDrawer } from '../Billing/InvoiceDetailDrawer';
 import shared from '../admin-shared.module.css';
 import styles from '../Analytics/MetricDetailModal.module.css';
 
 interface RevenueThisMonthModalProps {
-  stats: DashboardStats | null;
+  /** Figure shown on the dashboard card; null while it is still loading. */
+  total: number | null;
   onClose: () => void;
 }
 
@@ -26,7 +27,39 @@ const formatDateTime = (iso: string | null | undefined): string =>
 
 const METHOD_LABEL: Record<string, string> = { payos: 'PayOS', momo: 'MoMo', manual: 'Thủ công' };
 
-export const RevenueThisMonthModal: React.FC<RevenueThisMonthModalProps> = ({ stats, onClose }) => {
+// Servers without the dedicated endpoint: page through the regular invoice list (newest first)
+// and keep the invoices paid in the current UTC month — the same bucket the revenue figures use.
+async function loadPaidThisMonthFromInvoiceList(): Promise<AdminInvoice[]> {
+  const now = new Date();
+  const monthStart = Date.UTC(now.getUTCFullYear(), now.getUTCMonth(), 1);
+  // An invoice can be paid shortly after it was created, so keep paging a little past the month start.
+  const stopBefore = monthStart - 3 * 24 * 60 * 60 * 1000;
+  const paid: AdminInvoice[] = [];
+  let cursor: string | undefined;
+  for (let page = 0; page < 20; page += 1) {
+    const result = await adminBilling.invoices({ status: 'paid', limit: 100, cursor });
+    for (const invoice of result.items) {
+      if (invoice.paid_at && new Date(invoice.paid_at).getTime() >= monthStart) paid.push(invoice);
+    }
+    const oldest = result.items[result.items.length - 1];
+    if (!result.next_cursor || !oldest || new Date(oldest.created_at).getTime() < stopBefore) break;
+    cursor = result.next_cursor;
+  }
+  return paid.sort((a, b) => new Date(b.paid_at ?? 0).getTime() - new Date(a.paid_at ?? 0).getTime());
+}
+
+async function loadPaidThisMonth(): Promise<AdminInvoice[]> {
+  try {
+    return await adminDashboard.revenueThisMonth();
+  } catch (err) {
+    if (err instanceof AdminApiError && (err.status === 404 || err.status === 405)) {
+      return loadPaidThisMonthFromInvoiceList();
+    }
+    throw err;
+  }
+}
+
+export const RevenueThisMonthModal: React.FC<RevenueThisMonthModalProps> = ({ total: cardTotal, onClose }) => {
   const [invoices, setInvoices] = useState<AdminInvoice[] | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [selected, setSelected] = useState<AdminInvoice | null>(null);
@@ -36,8 +69,7 @@ export const RevenueThisMonthModal: React.FC<RevenueThisMonthModalProps> = ({ st
     let active = true;
     setInvoices(null);
     setError(null);
-    adminDashboard
-      .revenueThisMonth()
+    loadPaidThisMonth()
       .then((rows) => active && setInvoices(rows))
       .catch((err) => active && setError(err?.message || 'Không thể tải danh sách giao dịch.'));
     return () => {
@@ -83,7 +115,7 @@ export const RevenueThisMonthModal: React.FC<RevenueThisMonthModalProps> = ({ st
           <div className={styles.valueBanner}>
             <span className={styles.valueBannerLabel}>Giá trị ghi nhận hiện thời</span>
             <span className={styles.valueBannerNumber}>
-              {stats?.revenue_this_month_vnd == null ? '—' : formatVnd(stats.revenue_this_month_vnd)}
+              {formatVnd(cardTotal ?? total)}
             </span>
           </div>
 

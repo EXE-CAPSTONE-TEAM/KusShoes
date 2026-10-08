@@ -252,7 +252,7 @@ export const AdminDashboard: React.FC<AdminDashboardProps> = ({ navigate }) => {
       ['Chỉ số', 'Giá trị'],
       ['Tổng người dùng', String(stats.total_users)],
       ['Doanh thu MRR (VNĐ)', String(stats.mrr_vnd)],
-      ['Doanh thu tháng này (VNĐ)', String(stats.revenue_this_month_vnd)],
+      ['Doanh thu tháng này (VNĐ)', String(monthRevenue.current ?? 0)],
       ['Tổng lượt export', String(stats.total_exports)],
       [],
       ['Người dùng mới gần đây'],
@@ -280,12 +280,21 @@ export const AdminDashboard: React.FC<AdminDashboardProps> = ({ navigate }) => {
 
   const userGrowthTrend = useMemo(() => computeTrend(userGrowth), [userGrowth]);
   const revenueTrend = useMemo(() => computeTrend(revenue), [revenue]);
+  // Prefer the figures on the stats payload; servers that predate them still expose the
+  // per-month revenue series (last point = current month), so derive from that instead.
+  const monthRevenue = useMemo(() => {
+    const current =
+      stats?.revenue_this_month_vnd ?? (revenue.length >= 1 ? revenue[revenue.length - 1].value : null);
+    const previous =
+      stats?.revenue_last_month_vnd ?? (revenue.length >= 2 ? revenue[revenue.length - 2].value : null);
+    return { current, previous };
+  }, [stats, revenue]);
   const monthRevenueTrend = useMemo(() => {
-    const last = stats?.revenue_last_month_vnd ?? 0;
-    if (!stats || last <= 0) return null;
-    const pct = ((stats.revenue_this_month_vnd - last) / last) * 100;
+    const { current, previous } = monthRevenue;
+    if (current == null || previous == null || previous <= 0) return null;
+    const pct = ((current - previous) / previous) * 100;
     return { up: pct >= 0, pct };
-  }, [stats]);
+  }, [monthRevenue]);
 
   const actionItems = useMemo(() => {
     const budgetPercent = apiBudget?.percent ?? null;
@@ -532,12 +541,10 @@ export const AdminDashboard: React.FC<AdminDashboardProps> = ({ navigate }) => {
             </div>
             <div className={styles.kpiValueRow}>
               <span className={styles.kpiValue}>
-                {loading ? (
+                {loading || (revenueLoading && monthRevenue.current == null) ? (
                   <ThreeDotsLoader size="md" />
                 ) : (
-                  stats?.revenue_this_month_vnd == null
-                    ? '—'
-                    : formatVnd(stats.revenue_this_month_vnd)
+                  formatVnd(monthRevenue.current ?? 0)
                 )}
               </span>
               {monthRevenueTrend && (
@@ -551,12 +558,10 @@ export const AdminDashboard: React.FC<AdminDashboardProps> = ({ navigate }) => {
             </div>
             <span className={styles.kpiCaption}>
               Thực thu từ hóa đơn đã thanh toán · Tháng trước:{' '}
-              {loading ? (
+              {loading || (revenueLoading && monthRevenue.previous == null) ? (
                 <ThreeDotsLoader size="sm" />
               ) : (
-                stats?.revenue_last_month_vnd == null
-                  ? '—'
-                  : formatVnd(stats.revenue_last_month_vnd)
+                formatVnd(monthRevenue.previous ?? 0)
               )}
             </span>
           </div>
@@ -910,7 +915,7 @@ export const AdminDashboard: React.FC<AdminDashboardProps> = ({ navigate }) => {
         </div>
 
         {showMonthRevenue && (
-          <RevenueThisMonthModal stats={stats} onClose={() => setShowMonthRevenue(false)} />
+          <RevenueThisMonthModal total={monthRevenue.current} onClose={() => setShowMonthRevenue(false)} />
         )}
 
         {/* MODAL CHI TIẾT CÁCH TÍNH & BÓC TÁCH NGUỒN LOG */}
