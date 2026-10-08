@@ -49,7 +49,11 @@ export function preloadImage(src: string): Promise<void> {
 }
 
 /** Call once from App after its first commit (useEffect with []). */
-export const markAppMounted = () => resolveMounted();
+export const markAppMounted = () => {
+  // Read by the failsafe timer in index.html.
+  (window as unknown as { __kusMounted?: boolean }).__kusMounted = true;
+  resolveMounted();
+};
 
 const nextFrame = () => new Promise<void>((r) => requestAnimationFrame(() => r()));
 
