@@ -180,6 +180,8 @@ async def test_dashboard_stats_and_series(client, db, authenticated_user):
     body = stats.json()
     assert body["total_users"] >= 1
     assert body["mrr_vnd"] == 0  # chỉ có free subscription
+    assert body["revenue_this_month_vnd"] == 0
+    assert body["revenue_last_month_vnd"] == 0
 
     revenue = await client.get("/api/v1/admin/dashboard/revenue", headers=admin_headers)
     assert revenue.status_code == 200

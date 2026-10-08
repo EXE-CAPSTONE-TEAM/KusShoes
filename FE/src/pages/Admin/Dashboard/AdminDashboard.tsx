@@ -249,6 +249,7 @@ export const AdminDashboard: React.FC<AdminDashboardProps> = ({ navigate }) => {
       ['Chỉ số', 'Giá trị'],
       ['Tổng người dùng', String(stats.total_users)],
       ['Doanh thu MRR (VNĐ)', String(stats.mrr_vnd)],
+      ['Doanh thu tháng này (VNĐ)', String(stats.revenue_this_month_vnd)],
       ['Tổng lượt export', String(stats.total_exports)],
       [],
       ['Người dùng mới gần đây'],
@@ -276,6 +277,12 @@ export const AdminDashboard: React.FC<AdminDashboardProps> = ({ navigate }) => {
 
   const userGrowthTrend = useMemo(() => computeTrend(userGrowth), [userGrowth]);
   const revenueTrend = useMemo(() => computeTrend(revenue), [revenue]);
+  const monthRevenueTrend = useMemo(() => {
+    const last = stats?.revenue_last_month_vnd ?? 0;
+    if (!stats || last <= 0) return null;
+    const pct = ((stats.revenue_this_month_vnd - last) / last) * 100;
+    return { up: pct >= 0, pct };
+  }, [stats]);
 
   const actionItems = useMemo(() => {
     const budgetPercent = apiBudget?.percent ?? null;
@@ -505,6 +512,38 @@ export const AdminDashboard: React.FC<AdminDashboardProps> = ({ navigate }) => {
             <span className={styles.kpiCaption}>
               ARR dự phóng: ~
               {loading ? <ThreeDotsLoader size="sm" /> : formatVnd((stats?.mrr_vnd ?? 0) * 12)}
+            </span>
+          </div>
+
+          {/* Card: Doanh thu tháng này (thực thu từ hóa đơn đã thanh toán) */}
+          <div className={`${styles.kpiCard} ${styles.kpiCardStatic}`}>
+            <div className={styles.kpiCardHeader}>
+              <span className={styles.kpiLabel}>Doanh thu tháng này</span>
+            </div>
+            <div className={styles.kpiValueRow}>
+              <span className={styles.kpiValue}>
+                {loading ? (
+                  <ThreeDotsLoader size="md" />
+                ) : (
+                  formatVnd(stats?.revenue_this_month_vnd ?? 0)
+                )}
+              </span>
+              {monthRevenueTrend && (
+                <span
+                  className={`${styles.trendChip} ${monthRevenueTrend.up ? styles.trendUp : styles.trendDown}`}
+                >
+                  {monthRevenueTrend.up ? '▲' : '▼'} {monthRevenueTrend.pct >= 0 ? '+' : ''}
+                  {monthRevenueTrend.pct.toFixed(1)}%
+                </span>
+              )}
+            </div>
+            <span className={styles.kpiCaption}>
+              Thực thu từ hóa đơn đã thanh toán · Tháng trước:{' '}
+              {loading ? (
+                <ThreeDotsLoader size="sm" />
+              ) : (
+                formatVnd(stats?.revenue_last_month_vnd ?? 0)
+              )}
             </span>
           </div>
 

@@ -75,9 +75,12 @@ def _zero_fill(rows: list[tuple[date, int]], months: int) -> list[MonthlyPoint]:
 
 
 async def get_dashboard_stats(db: AsyncSession) -> AdminStatsResponse:
+    last_month, this_month = _zero_fill(await stats_repo.revenue_by_month(db, months=2), 2)
     return AdminStatsResponse(
         total_users=await stats_repo.count_users(db),
         mrr_vnd=await stats_repo.current_mrr_vnd(db),
+        revenue_this_month_vnd=this_month.value,
+        revenue_last_month_vnd=last_month.value,
         total_exports=await stats_repo.count_exports(db),
     )
 

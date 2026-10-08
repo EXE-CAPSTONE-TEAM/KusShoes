@@ -42,6 +42,8 @@ SubscriptionTier = Literal[
 class AdminStatsResponse(BaseModel):
     total_users: int
     mrr_vnd: int
+    revenue_this_month_vnd: int
+    revenue_last_month_vnd: int
     total_exports: int
 
 
