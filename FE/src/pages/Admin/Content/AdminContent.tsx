@@ -127,10 +127,10 @@ export const AdminContent: React.FC = () => {
       </div>
 
       <Tabs.Root defaultValue="rules">
-        <Tabs.List style={{ display: 'flex', gap: 8, marginBottom: 20 }}>
-          <Tabs.Trigger value="rules" className="btn-outline" style={{ borderRadius: 'var(--border-radius-md)' }}>Quy tắc nội dung</Tabs.Trigger>
-          <Tabs.Trigger value="templates" className="btn-outline" style={{ borderRadius: 'var(--border-radius-md)' }}>Template</Tabs.Trigger>
-          <Tabs.Trigger value="reports" className="btn-outline" style={{ borderRadius: 'var(--border-radius-md)' }}>Báo cáo vi phạm</Tabs.Trigger>
+        <Tabs.List className={shared.tabList}>
+          <Tabs.Trigger value="rules" className={shared.tabTrigger}>Quy tắc nội dung</Tabs.Trigger>
+          <Tabs.Trigger value="templates" className={shared.tabTrigger}>Template</Tabs.Trigger>
+          <Tabs.Trigger value="reports" className={shared.tabTrigger}>Báo cáo vi phạm</Tabs.Trigger>
         </Tabs.List>
 
         <Tabs.Content value="rules">
