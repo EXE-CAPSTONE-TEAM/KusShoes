@@ -19,6 +19,8 @@ export interface AdminApiErrorBody {
 export interface DashboardStats {
   total_users: number;
   mrr_vnd: number;
+  revenue_this_month_vnd: number;
+  revenue_last_month_vnd: number;
   total_exports: number;
 }
 
