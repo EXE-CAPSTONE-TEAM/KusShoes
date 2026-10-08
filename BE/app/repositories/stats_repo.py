@@ -58,6 +58,23 @@ async def revenue_by_month(db: AsyncSession, *, months: int) -> list[tuple[date,
     return [(row[0].date(), int(row[1])) for row in result.all()]
 
 
+async def paid_invoices_this_month(
+    db: AsyncSession, *, limit: int
+) -> list[tuple[Invoice, str | None]]:
+    """Hóa đơn đã thanh toán trong tháng hiện tại — cùng bộ lọc tháng với revenue_by_month."""
+    result = await db.execute(
+        select(Invoice, User.email)
+        .outerjoin(User, User.id == Invoice.user_id)
+        .where(
+            Invoice.status == "paid",
+            func.date_trunc("month", Invoice.paid_at) == func.date_trunc("month", func.now()),
+        )
+        .order_by(Invoice.paid_at.desc(), Invoice.id.desc())
+        .limit(limit)
+    )
+    return [(invoice, email) for invoice, email in result.all()]
+
+
 async def new_users_by_month(db: AsyncSession, *, months: int) -> list[tuple[date, int]]:
     # Bao gồm soft-deleted: signup là sự kiện lịch sử, không rewrite quá khứ khi user xóa tài khoản
     month_bucket = func.date_trunc("month", User.created_at)

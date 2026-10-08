@@ -188,6 +188,8 @@ export const adminDashboard = {
   stats: (): Promise<DashboardStats> => request('/api/v1/admin/dashboard/stats'),
   revenue: (months = 12): Promise<MonthlyPoint[]> =>
     request(`/api/v1/admin/dashboard/revenue${queryString({ months })}`),
+  revenueThisMonth: (): Promise<AdminInvoice[]> =>
+    request('/api/v1/admin/dashboard/revenue/this-month'),
   userGrowth: (months = 6): Promise<MonthlyPoint[]> =>
     request(`/api/v1/admin/dashboard/user-growth${queryString({ months })}`),
   recentUsers: (limit = 5): Promise<RecentUser[]> =>

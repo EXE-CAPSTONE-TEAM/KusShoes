@@ -3,7 +3,12 @@ from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.database import get_db
 from app.dependencies import get_current_admin
-from app.schemas.admin import AdminRecentUserItem, AdminStatsResponse, MonthlyPoint
+from app.schemas.admin import (
+    AdminRecentUserItem,
+    AdminStatsResponse,
+    MonthlyPoint,
+)
+from app.schemas.subscription import AdminInvoiceResponse
 from app.services import admin_service
 
 router = APIRouter()
@@ -24,6 +29,14 @@ async def get_revenue(
     admin=Depends(get_current_admin),
 ):
     return await admin_service.get_revenue_series(db, months=months)
+
+
+@router.get("/dashboard/revenue/this-month", response_model=list[AdminInvoiceResponse])
+async def get_revenue_this_month_invoices(
+    db: AsyncSession = Depends(get_db),
+    admin=Depends(get_current_admin),
+):
+    return await admin_service.get_revenue_this_month_invoices(db)
 
 
 @router.get("/dashboard/user-growth", response_model=list[MonthlyPoint])

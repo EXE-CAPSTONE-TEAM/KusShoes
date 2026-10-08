@@ -47,7 +47,8 @@ from app.schemas.admin import (
     MonthlyPoint,
     SystemHealthResponse,
 )
-from app.services import job_service, quota_service
+from app.schemas.subscription import AdminInvoiceResponse
+from app.services import billing_service, job_service, quota_service
 from app.services.audit import record_audit
 from app.utils.jwt import create_impersonation_token
 from app.utils.password import hash_password
@@ -88,6 +89,13 @@ async def get_dashboard_stats(db: AsyncSession) -> AdminStatsResponse:
 async def get_revenue_series(db: AsyncSession, *, months: int = 12) -> list[MonthlyPoint]:
     rows = await stats_repo.revenue_by_month(db, months=months)
     return _zero_fill(rows, months)
+
+
+async def get_revenue_this_month_invoices(
+    db: AsyncSession, *, limit: int = 200
+) -> list[AdminInvoiceResponse]:
+    rows = await stats_repo.paid_invoices_this_month(db, limit=limit)
+    return [billing_service.to_admin_invoice(invoice, email) for invoice, email in rows]
 
 
 async def get_user_growth_series(db: AsyncSession, *, months: int = 6) -> list[MonthlyPoint]:
