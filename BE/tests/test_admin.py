@@ -183,6 +183,10 @@ async def test_dashboard_stats_and_series(client, db, authenticated_user):
     assert body["revenue_this_month_vnd"] == 0
     assert body["revenue_last_month_vnd"] == 0
 
+    month_invoices = await client.get("/api/v1/admin/dashboard/revenue/this-month", headers=admin_headers)
+    assert month_invoices.status_code == 200
+    assert month_invoices.json() == []
+
     revenue = await client.get("/api/v1/admin/dashboard/revenue", headers=admin_headers)
     assert revenue.status_code == 200
     assert len(revenue.json()) == 12

@@ -22,6 +22,7 @@ import { MiniBarChart } from '../../../components/Admin/MiniBarChart';
 import { MrrAreaChart } from '../../../components/Admin/MrrAreaChart';
 import { ThreeDotsLoader, ThreeDotsBlockLoader } from '../../../components/Admin/ThreeDotsLoader';
 import { StatusBadge } from '../../../components/Admin/StatusBadge';
+import { RevenueThisMonthModal } from './RevenueThisMonthModal';
 import { DashboardMetricModal, type DashboardMetricKey } from './DashboardMetricModal';
 import shared from '../admin-shared.module.css';
 import styles from './AdminDashboard.module.css';
@@ -145,6 +146,7 @@ export const AdminDashboard: React.FC<AdminDashboardProps> = ({ navigate }) => {
   const [revenueLoading, setRevenueLoading] = useState(true);
   const [refreshing, setRefreshing] = useState(false);
   const [userSearch, setUserSearch] = useState('');
+  const [showMonthRevenue, setShowMonthRevenue] = useState(false);
   const [selectedMetric, setSelectedMetric] = useState<DashboardMetricKey | null>(null);
 
   // Khu vực "Cần xử lý" — các đầu việc vận hành thực tế đang chờ admin, không trùng lặp với Analytics
@@ -467,9 +469,16 @@ export const AdminDashboard: React.FC<AdminDashboardProps> = ({ navigate }) => {
           </div>
 
           {/* Card: Doanh thu tháng này (thực thu từ hóa đơn đã thanh toán) */}
-          <div className={`${styles.kpiCard} ${styles.kpiCardStatic}`}>
+          <div
+            className={styles.kpiCard}
+            onClick={() => setShowMonthRevenue(true)}
+            role="button"
+            tabIndex={0}
+            title="Bấm để xem công thức tính toán và các giao dịch cấu thành"
+          >
             <div className={styles.kpiCardHeader}>
               <span className={styles.kpiLabel}>Doanh thu tháng này</span>
+              <span className={styles.cardClickBadge}>Chi tiết đối soát</span>
             </div>
             <div className={styles.kpiValueRow}>
               <span className={styles.kpiValue}>
@@ -842,6 +851,10 @@ export const AdminDashboard: React.FC<AdminDashboardProps> = ({ navigate }) => {
             )}
           </div>
         </div>
+
+        {showMonthRevenue && (
+          <RevenueThisMonthModal stats={stats} onClose={() => setShowMonthRevenue(false)} />
+        )}
 
         {/* MODAL CHI TIẾT CÁCH TÍNH & BÓC TÁCH NGUỒN LOG */}
         {selectedMetric && (
