@@ -696,7 +696,7 @@ export const api = {
    */
   startGoogleLogin(options: { consent?: boolean } = {}): void {
     const params = new URLSearchParams();
-    if (options.consent) {
+    if (options.consent !== false) {
       params.set('consent', 'true');
     }
     const attribution = getStoredAttribution();
