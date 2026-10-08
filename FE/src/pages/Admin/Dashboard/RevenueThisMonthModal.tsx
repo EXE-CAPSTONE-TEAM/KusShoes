@@ -22,6 +22,7 @@ const formatDateTime = (iso: string | null | undefined): string =>
         year: 'numeric',
         hour: '2-digit',
         minute: '2-digit',
+        second: '2-digit',
       })
     : '—';
 
@@ -185,7 +186,7 @@ export const RevenueThisMonthModal: React.FC<RevenueThisMonthModalProps> = ({ to
                           {inv.plan_tier} ({inv.billing_cycle === 'yearly' ? 'năm' : 'tháng'})
                         </td>
                         <td>{METHOD_LABEL[inv.payment_method] ?? inv.payment_method}</td>
-                        <td>{formatDateTime(inv.paid_at)}</td>
+                        <td style={{ whiteSpace: 'nowrap' }}>{formatDateTime(inv.paid_at)}</td>
                         <td className={styles.cellValue}>{formatVnd(inv.amount_vnd)}</td>
                       </tr>
                     ))}
