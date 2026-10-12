@@ -31,7 +31,9 @@ async def test_catalogue_lists_every_report_for_admin(client, db):
 
 
 @pytest.mark.asyncio
-@pytest.mark.parametrize("report_id", REPORT_IDS)
+@pytest.mark.parametrize(
+    "report_id", REPORT_IDS, ids=[f"report-{i:02d}" for i in range(len(REPORT_IDS))]
+)  # ids hide names: CI runs -k "not refund"
 async def test_every_report_exports_csv_and_xlsx(client, db, report_id):
     headers = await _admin_headers(db)
     for fmt in ("csv", "xlsx"):
