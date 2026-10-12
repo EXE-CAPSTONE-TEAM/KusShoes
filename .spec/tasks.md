@@ -175,10 +175,10 @@ Harness runs on the OpenClaw host; local fallback: BE `uv run pytest unit_tests 
 - [~] **FD-2 — BE config/constants** `config.py`, `policy.py` (Blocked by FD-0).
 - [~] **FD-3 — BE repo + schema + async `get_finance_overview`** (Blocked by FD-1, FD-2).
 - [ ] **FD-4 — BE route `/dashboard/finance`, `api_docs.py`, `docs/API_REFERENCE.md`, tests** (Blocked by FD-3).
-- [ ] **FD-5 — FE types + client** (Blocked by FD-4 contract).
-- [ ] **FD-6 — FE `FinanceTrendChart` (+ negative profit) + test** (Blocked by FD-5).
-- [ ] **FD-7 — FE dashboard rewrite `FinancePanel` + 404 fallback + tests** (Blocked by FD-6).
-- [ ] **FD-8 — FE delete secondary KPIs / dead files / CSS** (Blocked by FD-7).
+- [~] **FD-5 — FE types + client** (Blocked by FD-4 contract).
+- [~] **FD-6 — FE `FinanceTrendChart` (+ negative profit) + test** (Blocked by FD-5).
+- [~] **FD-7 — FE dashboard rewrite `FinancePanel` + 404 fallback + tests** (Blocked by FD-6).
+- [~] **FD-8 — FE delete secondary KPIs / dead files / CSS** (Blocked by FD-7).
 
 ## Batch 5 — Reports hub (30 reports = 6 domains x 5)
 
