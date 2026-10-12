@@ -19,6 +19,7 @@ import type {
   AdminContentReportDetail,
   AdminTaxConfig,
   DashboardStats,
+  FinanceOverview,
   ModerationAction,
   ReportStatus,
   MonthlyPoint,
@@ -198,6 +199,7 @@ export const adminAuth = {
 
 export const adminDashboard = {
   stats: (): Promise<DashboardStats> => request('/api/v1/admin/dashboard/stats'),
+  finance: (): Promise<FinanceOverview> => request('/api/v1/admin/dashboard/finance'),
   revenue: (months = 12): Promise<MonthlyPoint[]> =>
     request(`/api/v1/admin/dashboard/revenue${queryString({ months })}`),
   revenueThisMonth: (): Promise<AdminInvoice[]> =>
