@@ -26,6 +26,7 @@ from app.routers import (
     admin_moderation,
     admin_ops,
     admin_plans,
+    admin_reports,
     admin_studio,
     admin_users,
     api_cost,
@@ -157,6 +158,7 @@ app.include_router(admin_plans.router, prefix="/api/v1/admin", tags=["Admin Plan
 app.include_router(admin_studio.router, prefix="/api/v1/admin", tags=["Admin Studio"])
 app.include_router(admin_feedback.router, prefix="/api/v1/admin", tags=["Admin Feedback"])
 app.include_router(admin_analytics.router, prefix="/api/v1/admin", tags=["Admin Analytics"])
+app.include_router(admin_reports.router, prefix="/api/v1/admin", tags=["Admin Reports"])
 app.include_router(admin_ops.router, prefix="/api/v1/admin", tags=["Admin Ops"])
 app.include_router(users.router, prefix="/api/v1/users", tags=["Users"])
 app.include_router(projects.router, prefix="/api/v1/projects", tags=["Projects"])

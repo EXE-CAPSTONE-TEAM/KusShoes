@@ -54,7 +54,8 @@ TAGS = [
     {"name": "Admin Plans", "description": "Cấu hình gói dịch vụ và hạn mức."},
     {"name": "Admin Billing", "description": "Giao dịch, hoàn tiền, giao dịch thủ công, khóa kỳ báo cáo, mã giảm giá."},
     {"name": "Admin Dashboard", "description": "Số liệu tổng quan cho trang chủ quản trị."},
-    {"name": "Admin Analytics", "description": "Chỉ số kinh doanh (MRR, ARR, churn, NRR/GRR…) và báo cáo CSV/XLSX/PDF."},
+    {"name": "Admin Analytics", "description": "Chỉ số kinh doanh (MRR, ARR, churn, NRR/GRR…); báo cáo xuất tệp nằm ở Admin Reports."},
+    {"name": "Admin Reports", "description": "Trung tâm báo cáo: danh mục 30 báo cáo theo 6 nhóm, xuất CSV/XLSX (một số có PDF), ghi nhật ký mỗi lần xuất."},
     {"name": "Admin Studio", "description": "Quy tắc nội dung (guardrail) và thư viện template."},
     {"name": "Admin Feedback", "description": "Xử lý phản hồi khách hàng và xuất Excel."},
     {"name": "Admin Ops", "description": "Vận hành: dự án, bake job, export, sức khỏe hệ thống, nhật ký thao tác."},
@@ -110,6 +111,7 @@ DOCS: dict[str, tuple[str, str]] = {
     "GET /api/v1/admin/billing/subscriptions": ("Danh sách đăng ký", "Lọc theo trạng thái/gói, phân trang con trỏ. " + _A),
     "GET /api/v1/admin/billing/invoices": ("Danh sách giao dịch", "Lọc theo trạng thái, hình thức thanh toán, giao dịch thủ công, cờ nội bộ, khoảng ngày; phân trang con trỏ. " + _A),
     "GET /api/v1/admin/billing/invoices/{invoice_id}": ("Chi tiết giao dịch", "Một hóa đơn kèm email người dùng và thông tin chuyển khoản lấy từ webhook PayOS: thời điểm chuyển khoản, người chuyển, ngân hàng, số tài khoản đầy đủ, mã tham chiếu. " + _A),
+    "GET /api/v1/admin/billing/invoices/{invoice_id}/receipt": ("Biên nhận của giao dịch", "Trả số biên nhận và URL có chữ ký tới PDF biên nhận; giao dịch đã thanh toán/hoàn tiền mà chưa có biên nhận sẽ được phát hành ngay. " + _A),
     "POST /api/v1/admin/billing/subscriptions/{user_id}/force-downgrade": ("Ép hạ về Free", "Hạ gói của người dùng về Free ngay (khóa dự án vượt hạn mức, BR-27). Ghi audit. " + _AW),
     "POST /api/v1/admin/billing/invoices/{invoice_id}/refund": ("Hoàn tiền một giao dịch", "Tạo bút toán hoàn tiền (không gọi cổng thanh toán). Tự động chỉ khi ≤7 ngày và chưa xuất file; ngoài chính sách cần `override=true` (BR-97). Hoàn toàn bộ gói hiện tại sẽ hạ về Free. Bị chặn nếu ngày thanh toán nằm trong kỳ đã khóa (`PERIOD_LOCKED`). " + _AW),
     "POST /api/v1/admin/billing/manual-transactions/proof-upload": ("Xin URL tải ảnh chứng từ", "Trả presigned URL để tải ảnh chứng từ (chuyển khoản/tiền mặt) trước khi tạo giao dịch thủ công. " + _AW),
@@ -126,6 +128,7 @@ DOCS: dict[str, tuple[str, str]] = {
     "GET /api/v1/admin/dashboard/stats": ("Số liệu tổng quan", "Người dùng, MRR, lượt xuất, dự án… cho trang chủ quản trị. " + _A),
     "GET /api/v1/admin/dashboard/finance": ("Tổng quan tài chính", "Doanh thu, chi phí API, chi phí duy trì và lợi nhuận: tổng tới nay, tháng này và chuỗi 30 ngày / 6 tháng. Chi phí duy trì lấy từ cấu hình của Tài chính (null khi chưa cấu hình); chưa gồm chi phí marketing. " + _A),
     "GET /api/v1/admin/dashboard/revenue": ("Doanh thu theo tháng", "Chuỗi doanh thu `months` tháng gần nhất (mặc định 12). " + _A),
+    "GET /api/v1/admin/dashboard/revenue/this-month": ("Giao dịch tạo doanh thu tháng này", "Hóa đơn đã thanh toán trong tháng hiện tại (tối đa 200) làm nên doanh thu tháng. " + _A),
     "GET /api/v1/admin/dashboard/user-growth": ("Tăng trưởng người dùng", "Số đăng ký mới theo tháng (mặc định 6 tháng). " + _A),
     "GET /api/v1/admin/dashboard/recent-users": ("Người dùng mới nhất", "Danh sách đăng ký gần đây. " + _A),
     # ---- Admin Users ----
@@ -157,7 +160,9 @@ DOCS: dict[str, tuple[str, str]] = {
     "PATCH /api/v1/admin/feedback/{feedback_id}": ("Xử lý phản hồi", "Đổi trạng thái NEW→REVIEWED→PLANNED→DONE/WONT_DO và ghi 'đã thay đổi gì' hiển thị cho khách. Ghi audit. " + _AW),
     # ---- Admin Analytics ----
     "GET /api/v1/admin/analytics": ("Chỉ số kinh doanh", "MRR, ARR, ARPU, doanh thu ghi nhận (so kỳ trước), churn, NRR/GRR, Free→trả phí, tỷ lệ khách quay lại (BR-105), thanh toán lỗi, doanh thu theo gói, biến động, top khách hàng. Loại tài khoản nội bộ và gói COMP. Mặc định 30 ngày gần nhất. " + _A),
-    "GET /api/v1/admin/reports/{report_type}": ("Tải báo cáo", "`report_type`: `revenue`, `users`, `transactions` (Sổ giao dịch EXE201, BR-106), `channel-funnel` (phễu theo kênh và tuần, BR-107). `format`: csv, xlsx hoặc pdf. " + _A),
+    # ---- Admin Reports ----
+    "GET /api/v1/admin/reports": ("Danh mục báo cáo", "Các báo cáo theo nhóm kèm cột, định dạng hỗ trợ, khoảng ngày tối đa và số dòng tối đa. Báo cáo nhạy cảm (`sensitive`) hiển thị `locked: true` với staff. " + _A),
+    "GET /api/v1/admin/reports/{report_id}": ("Xuất báo cáo", "Tải CSV (UTF-8 BOM) hoặc XLSX (kèm sheet 'Thông tin'); PDF chỉ cho báo cáo tổng hợp. `date_from`/`date_to` theo ngày GMT+7, mặc định 30 ngày gần nhất. Id không tồn tại: 404; báo cáo nhạy cảm với staff: 403; khoảng ngày sai/quá dài, định dạng không hỗ trợ hoặc quá số dòng tối đa: 422 (không bao giờ cắt bớt âm thầm). Ô bắt đầu bằng `= + - @` được thoát. Ghi audit `report.export`. " + _A),
     # ---- Admin Ops ----
     "GET /api/v1/admin/projects": ("Danh sách dự án", "Mọi dự án kể cả đã xóa mềm; tìm kiếm, phân trang. " + _A),
     "GET /api/v1/admin/projects/{project_id}": ("Chi tiết dự án", "Thông tin dự án, tệp và bake job. " + _A),
