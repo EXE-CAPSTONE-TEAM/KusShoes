@@ -6,20 +6,16 @@ channel-funnel (BR-107), api-cost (BR-108 "Báo cáo chi phí API theo ngày (SF
 SRS_v2.2.txt:2112). Scheduled email delivery is not implemented."""
 
 import asyncio
-import csv
-import io
 from collections import defaultdict
 from datetime import UTC, date, datetime, timedelta
 
-from fpdf import FPDF
-from openpyxl import Workbook
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.models.scan_credit import CREDIT_BILLING_CYCLE, CREDIT_INVOICE_TIER
 from app.repositories import analytics_repo
 from app.services import analytics_service, api_cost_service
 from app.services.period_service import GMT7
-from app.services.receipt_service import FONT_DIR
+from app.services.reports.render import render_csv, render_pdf, render_xlsx  # noqa: F401
 from app.utils.http import XLSX_MEDIA_TYPE
 
 _STATUS_LABELS = {
@@ -221,50 +217,6 @@ async def _users(db: AsyncSession, start: date, end: date) -> Table:
         ["Email", "Ngày đăng ký", "Đã xác thực", "Kênh đến"],
         table,
     )
-
-
-# --- Renderers ------------------------------------------------------------------------
-
-
-def render_csv(headers: list[str], rows: list[list]) -> bytes:
-    buffer = io.StringIO()
-    writer = csv.writer(buffer)
-    writer.writerow(headers)
-    writer.writerows(rows)
-    return ("﻿" + buffer.getvalue()).encode("utf-8")  # BOM so Excel reads Vietnamese
-
-
-def render_xlsx(title: str, headers: list[str], rows: list[list]) -> bytes:
-    workbook = Workbook()
-    sheet = workbook.active
-    sheet.title = title[:31]
-    sheet.append(headers)
-    for row in rows:
-        sheet.append(row)
-    buffer = io.BytesIO()
-    workbook.save(buffer)
-    return buffer.getvalue()
-
-
-def render_pdf(title: str, headers: list[str], rows: list[list]) -> bytes:
-    pdf = FPDF(orientation="L", format="A4")
-    pdf.add_page()
-    pdf.add_font("Roboto", "", str(FONT_DIR / "Roboto-Regular.ttf"))
-    pdf.add_font("Roboto", "B", str(FONT_DIR / "Roboto-Bold.ttf"))
-    pdf.set_font("Roboto", "B", 13)
-    pdf.cell(0, 9, title, new_x="LMARGIN", new_y="NEXT")
-    pdf.set_font("Roboto", "", 8)
-    with pdf.table(
-        first_row_as_headings=True, text_align="LEFT", line_height=5, repeat_headings=1
-    ) as table:
-        header = table.row()
-        for name in headers:
-            header.cell(name)
-        for values in rows:
-            row = table.row()
-            for value in values:
-                row.cell(str(value))
-    return bytes(pdf.output())
 
 
 CONTENT_TYPES = {

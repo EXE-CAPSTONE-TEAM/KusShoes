@@ -153,6 +153,11 @@ class Settings(BaseSettings):
     OPERATING_COST_MONTHLY_VND: int | None = None   # Finance-supplied, sổ 08
     OPERATING_COST_START_MONTH: date | None = None  # first month upkeep accrues; Finance-supplied
 
+    # Reports hub (RP-2): export guards. Conservative values, NOT yet backed by a measured run on
+    # seeded data (pending; see .spec/spec.md provenance table).
+    REPORT_MAX_ROWS: int = 100_000       # upper bound: Excel 1,048,576 rows/sheet; ~10% of it
+    REPORT_MAX_RANGE_DAYS: int = 366     # one calendar year incl. leap day; keeps queries bounded
+
     # Google Analytics 4 (Data API v1beta)
     GA4_PROPERTY_ID: str = ""
     GA4_CREDENTIALS_JSON_PATH: str = ""
