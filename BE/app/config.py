@@ -1,3 +1,5 @@
+from datetime import date
+
 from pydantic_settings import BaseSettings, SettingsConfigDict
 
 
@@ -145,6 +147,11 @@ class Settings(BaseSettings):
     API_BUDGET_SUSPEND_PERCENT: int = 100         # SRS_v2.2.txt:1767 "đạt 100% → tạm ngưng"
     INTERNAL_ACCOUNT_SCAN_CAP: int = 10           # SRS_v2.2.txt:1767 "trần riêng 10 lượt quét"
     API_COST_ADMIN_ALERT_EMAIL: str = ""          # empty → fall back to settings.EMAIL_FROM
+
+    # Admin finance dashboard: fixed website/API upkeep. Supplied by Finance (sổ 08); there is
+    # deliberately NO default - unset means "not configured" and upkeep accrues as 0.
+    OPERATING_COST_MONTHLY_VND: int | None = None   # Finance-supplied, sổ 08
+    OPERATING_COST_START_MONTH: date | None = None  # first month upkeep accrues; Finance-supplied
 
     # Google Analytics 4 (Data API v1beta)
     GA4_PROPERTY_ID: str = ""
