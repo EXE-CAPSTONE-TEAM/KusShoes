@@ -67,7 +67,7 @@ vi.mock('../api/studio', () => ({
 }));
 vi.mock('../api/adminClient', async () => {
   const actual = await vi.importActual<typeof import('../api/adminClient')>('../api/adminClient');
-  return { ...actual, adminAnalytics: { get: vi.fn(), downloadReport: vi.fn() } };
+  return { ...actual, adminAnalytics: { get: vi.fn() } };
 });
 
 import { api, ApiError } from '../api/client';
@@ -496,10 +496,12 @@ describe('Admin analytics', () => {
       mrr_movement: { month: '2026-09', new: 1, expansion: 0, reactivation: 0, contraction: 0, churn: 0, net_new: 1 },
       top_customers: [{ user_id: 'u1', email: 'top@example.com', net_paid_vnd: 800000, orders: 2 }],
     });
-    wrap(<AdminAnalytics />);
+    const navigate = vi.fn();
+    wrap(<AdminAnalytics navigate={navigate} />);
     expect(await screen.findByText('25.0%')).toBeInTheDocument(); // churn
     expect(screen.getByText('top@example.com')).toBeInTheDocument();
     expect(screen.getAllByText(/▲ 100\.0% so với kỳ trước/).length).toBeGreaterThan(0);
-    expect(screen.getByText('Sổ giao dịch EXE201')).toBeInTheDocument();
+    fireEvent.click(screen.getByRole('button', { name: /Mở Trung tâm báo cáo/ }));
+    expect(navigate).toHaveBeenCalledWith('reports');
   });
 });

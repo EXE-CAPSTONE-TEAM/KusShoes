@@ -1,6 +1,6 @@
 import React, { useCallback, useEffect, useMemo, useState } from 'react';
-import { adminAnalytics, AdminApiError } from '../../../api/adminClient';
-import type { AdminAnalytics as Analytics, PeriodValue, ReportFormat, ReportType } from '../../../types/admin';
+import { adminAnalytics } from '../../../api/adminClient';
+import type { AdminAnalytics as Analytics, PeriodValue } from '../../../types/admin';
 import { HorizontalBarList } from '../../../components/Admin/HorizontalBarList';
 import { MrrAreaChart } from '../../../components/Admin/MrrAreaChart';
 import { MrrWaterfallChart } from '../../../components/Admin/MrrWaterfallChart';
@@ -15,13 +15,6 @@ const formatVnd = (v: number) => `${v.toLocaleString('vi-VN')} VNĐ`;
 const formatVndSigned = (v: number) => `${v > 0 ? '+' : ''}${v.toLocaleString('vi-VN')} VNĐ`;
 const formatPercent = (v: number | null) => (v === null ? '—' : `${(v * 100).toFixed(1)}%`);
 const isoDate = (d: Date) => d.toISOString().slice(0, 10);
-const formatDateVn = (isoStr: string) => {
-  const parts = isoStr.split('-');
-  if (parts.length === 3) {
-    return `${parts[2]}/${parts[1]}/${parts[0]}`;
-  }
-  return isoStr;
-};
 
 const RANGES = [
   { id: 7, label: '7 ngày' },
@@ -30,49 +23,15 @@ const RANGES = [
   { id: 365, label: 'Năm nay (365 ngày)' },
 ];
 
-const REPORTS: {
-  type: ReportType;
-  label: string;
-  hint: string;
-}[] = [
-  {
-    type: 'transactions',
-    label: 'Sổ giao dịch EXE201',
-    hint: 'Đúng thứ tự cột chuẩn của sổ 07 theo quy định đối soát kế toán.',
-  },
-  {
-    type: 'channel-funnel',
-    label: 'Phễu theo kênh & tuần',
-    hint: 'Chu trình chuyển đổi: Đăng ký → Xác thực → Lưu thiết kế 3D → Thanh toán.',
-  },
-  {
-    type: 'revenue',
-    label: 'Báo cáo doanh thu',
-    hint: 'Chi tiết MRR, ARR, doanh thu theo chu kỳ tháng và tỷ trọng theo từng gói cước.',
-  },
-  {
-    type: 'users',
-    label: 'Báo cáo người dùng',
-    hint: 'Số lượng đăng ký mới trong kỳ, phân loại tài khoản và nguồn kênh tiếp cận.',
-  },
-  {
-    type: 'api-cost',
-    label: 'Chi phí API theo ngày',
-    hint: 'Chi phí điện toán API 3D/AI theo ngày và đối chiếu ngân sách tháng.',
-  },
-];
-
 const PAYMENT_METHOD_LABEL: Record<string, string> = {
   payos: 'PayOS (VietQR / Thẻ)',
   momo: 'Ví MoMo',
   manual: 'Chuyển khoản thủ công',
 };
 
-const FORMATS: ReportFormat[] = ['csv', 'xlsx', 'pdf'];
+type ActiveTab = 'all' | 'metrics' | 'charts' | 'marketing';
 
-type ActiveTab = 'all' | 'metrics' | 'charts' | 'reports' | 'marketing';
-
-const VALID_TABS: readonly ActiveTab[] = ['all', 'metrics', 'charts', 'reports', 'marketing'] as const;
+const VALID_TABS: readonly ActiveTab[] = ['all', 'metrics', 'charts', 'marketing'] as const;
 
 const getInitialTab = (): ActiveTab => {
   if (typeof window === 'undefined') return 'all';
@@ -97,7 +56,11 @@ function Delta({ value }: { value: PeriodValue }) {
   );
 }
 
-export const AdminAnalytics: React.FC = () => {
+interface AdminAnalyticsProps {
+  navigate?: (page: string) => void;
+}
+
+export const AdminAnalytics: React.FC<AdminAnalyticsProps> = ({ navigate }) => {
   const { toast } = useToast();
   const todayStr = useMemo(() => isoDate(new Date()), []);
   const defaultStartStr = useMemo(() => {
@@ -111,7 +74,6 @@ export const AdminAnalytics: React.FC = () => {
   const [loading, setLoading] = useState(true);
   const [refreshing, setRefreshing] = useState(false);
   const [error, setError] = useState<string | null>(null);
-  const [downloading, setDownloading] = useState<string | null>(null);
   const [activeTab, setActiveTab] = useState<ActiveTab>(getInitialTab);
   const [selectedMetric, setSelectedMetric] = useState<MetricKey | null>(null);
 
@@ -171,19 +133,6 @@ export const AdminAnalytics: React.FC = () => {
   const handleManualRefresh = () => {
     if (refreshing || loading) return;
     fetchData(true);
-  };
-
-  const download = async (type: ReportType, format: ReportFormat) => {
-    const key = `${type}.${format}`;
-    setDownloading(key);
-    try {
-      await adminAnalytics.downloadReport(type, format, rangeQuery());
-      toast(`Đã tạo và tải file báo cáo ${format.toUpperCase()} thành công.`, 'success');
-    } catch (caught) {
-      toast(caught instanceof AdminApiError ? caught.message : 'Không thể tạo báo cáo đối soát.', 'error');
-    } finally {
-      setDownloading(null);
-    }
   };
 
   const totalSeriesRevenue = useMemo(() => {
@@ -305,13 +254,6 @@ export const AdminAnalytics: React.FC = () => {
             <span className={styles.tabBadge}>5</span>
           </button>
           <button
-            className={`${styles.tabBtn} ${activeTab === 'reports' ? styles.tabActive : ''}`}
-            onClick={() => setActiveTab('reports')}
-          >
-            Trung tâm Báo cáo
-            <span className={styles.tabBadge}>{REPORTS.length}</span>
-          </button>
-          <button
             className={`${styles.tabBtn} ${activeTab === 'marketing' ? styles.tabActive : ''}`}
             onClick={() => setActiveTab('marketing')}
           >
@@ -328,7 +270,7 @@ export const AdminAnalytics: React.FC = () => {
         )}
 
         {/* 4 HERO FINANCIAL HIGHLIGHT CARDS */}
-        {activeTab !== 'reports' && activeTab !== 'marketing' && (
+        {activeTab !== 'marketing' && (
           <div className={styles.heroGrid}>
             {/* 1. MRR */}
             <div
@@ -924,52 +866,21 @@ export const AdminAnalytics: React.FC = () => {
           </div>
         )}
 
-        {/* SECTION 3: TRUNG TÂM XUẤT BÁO CÁO (Hiển thị khi tab là 'all' hoặc 'reports') */}
-        {(activeTab === 'all' || activeTab === 'reports') && (
+        {/* Các báo cáo xuất file đã chuyển sang trang riêng "Trung tâm báo cáo" */}
+        {activeTab === 'all' && navigate && (
           <div className={styles.reportsHub}>
             <div className={styles.reportsHubHeader}>
               <div className={styles.headerLeft}>
-                <div className={styles.titleRow}>
-                  <h2 className={styles.pageTitle} style={{ fontSize: '1.2rem' }}>
-                    Trung tâm Báo cáo &amp; Đối soát dữ liệu
-                  </h2>
-                </div>
+                <h2 className={styles.pageTitle} style={{ fontSize: '1.2rem' }}>
+                  Xuất báo cáo &amp; đối soát dữ liệu
+                </h2>
                 <p className={styles.pageSubtitle}>
-                  Trích xuất dữ liệu chi tiết theo quy chuẩn hệ thống EXE201. File xuất áp dụng theo khoảng ngày đang chọn: <strong>{formatDateVn(startDate)}</strong> đến <strong>{formatDateVn(endDate)}</strong>.
+                  30 loại báo cáo (CSV / Excel / PDF) được gom về trang Trung tâm báo cáo.
                 </p>
               </div>
-            </div>
-
-            <div className={styles.reportsGrid}>
-              {REPORTS.map((report) => (
-                <div key={report.type} className={styles.reportCard}>
-                  <div className={styles.reportTop}>
-                    <div className={styles.reportMeta}>
-                      <div className={styles.reportTitleRow}>
-                        <h4 className={styles.reportName}>{report.label}</h4>
-                      </div>
-                      <p className={styles.reportDesc}>{report.hint}</p>
-                    </div>
-                  </div>
-
-                  <div className={styles.reportActions}>
-                    {FORMATS.map((format) => {
-                      const isCurrentDownloading = downloading === `${report.type}.${format}`;
-                      return (
-                        <button
-                          key={format}
-                          className={styles.exportBtn}
-                          disabled={downloading !== null}
-                          onClick={() => void download(report.type, format)}
-                          title={`Tải báo cáo ${report.label} định dạng ${format.toUpperCase()}`}
-                        >
-                          {isCurrentDownloading ? 'Đang tạo...' : format.toUpperCase()}
-                        </button>
-                      );
-                    })}
-                  </div>
-                </div>
-              ))}
+              <button className={styles.exportBtn} onClick={() => navigate('reports')}>
+                Mở Trung tâm báo cáo →
+              </button>
             </div>
           </div>
         )}

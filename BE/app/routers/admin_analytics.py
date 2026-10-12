@@ -1,6 +1,5 @@
 import json
 from datetime import date, timedelta
-from typing import Literal
 
 import redis.asyncio as aioredis
 from fastapi import APIRouter, Depends, HTTPException, Query
@@ -15,8 +14,7 @@ from app.schemas.analytics import (
     MarketingAnalyticsResponse,
     RealtimeAnalyticsResponse,
 )
-from app.services import analytics_service, ga4_service, marketing_analytics_service, report_service
-from app.utils.http import attachment_response
+from app.services import analytics_service, ga4_service, marketing_analytics_service
 
 router = APIRouter()
 
@@ -29,21 +27,6 @@ async def get_analytics(
     admin=Depends(get_current_admin),
 ):
     return await analytics_service.get_analytics(db, date_from=date_from, date_to=date_to)
-
-
-@router.get("/reports/{report_type}")
-async def download_report(
-    report_type: Literal["revenue", "users", "transactions", "channel-funnel", "api-cost"],
-    format: Literal["csv", "xlsx", "pdf"] = "csv",
-    date_from: date | None = None,
-    date_to: date | None = None,
-    db: AsyncSession = Depends(get_db),
-    admin=Depends(get_current_admin),
-):
-    data, content_type, filename = await report_service.generate(
-        db, report_type, format, date_from=date_from, date_to=date_to
-    )
-    return attachment_response(data, content_type, filename)
 
 
 @router.get("/analytics/marketing", response_model=MarketingAnalyticsResponse)

@@ -89,3 +89,19 @@ async def upsert_period(
     period = await get_period(db, period_month, for_update=True)
     await db.refresh(period)
     return period
+
+
+async def first_cost_day(db: AsyncSession) -> date | None:
+    """Earliest GMT+7 business day that has any API cost entry, None for an empty ledger."""
+    result = await db.execute(select(func.min(ApiCostEntry.occurred_on)))
+    return result.scalar_one_or_none()
+
+
+async def daily_costs(db: AsyncSession, *, start: date, end: date) -> dict[date, int]:
+    """cost_vnd per business day start..end inclusive (days without entries are absent)."""
+    result = await db.execute(
+        select(ApiCostEntry.occurred_on, func.coalesce(func.sum(ApiCostEntry.cost_vnd), 0))
+        .where(ApiCostEntry.occurred_on >= start, ApiCostEntry.occurred_on <= end)
+        .group_by(ApiCostEntry.occurred_on)
+    )
+    return {day: int(cost) for day, cost in result.all()}

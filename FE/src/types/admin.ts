@@ -29,6 +29,35 @@ export interface MonthlyPoint {
   value: number;
 }
 
+export interface FinanceTotals {
+  revenue_vnd: number;
+  api_cost_vnd: number;
+  maintenance_cost_vnd: number;
+  total_cost_vnd: number;
+  profit_vnd: number;
+  contribution_margin_vnd: number;
+  contribution_margin_rate: number | null;
+  profit_margin_rate: number | null;
+}
+
+export interface FinancePoint {
+  period_start: string; // ISO date (yyyy-MM-dd)
+  revenue_vnd: number;
+  api_cost_vnd: number;
+  maintenance_cost_vnd: number;
+  profit_vnd: number;
+}
+
+export interface FinanceOverview {
+  as_of: string;
+  since: string | null;
+  totals: FinanceTotals;
+  current_month: FinanceTotals;
+  maintenance: { configured: boolean; monthly_vnd: number | null };
+  series_1m: FinancePoint[];
+  series_6m: FinancePoint[];
+}
+
 export type PlanTier = 'free' | 'basic_monthly' | 'basic_yearly' | 'pro_monthly' | 'pro_yearly';
 export type UserStatus = 'active' | 'suspended';
 
@@ -382,8 +411,26 @@ export interface Ga4ConnectionTestResponse {
 }
 
 
-export type ReportType = 'revenue' | 'users' | 'transactions' | 'channel-funnel' | 'api-cost';
 export type ReportFormat = 'csv' | 'xlsx' | 'pdf';
+
+// ---- Reports hub (GET /api/v1/admin/reports) ----
+export type ReportColumnKind = 'text' | 'int' | 'vnd' | 'date' | 'datetime' | 'percent' | 'bool';
+export interface ReportColumn { label: string; kind: ReportColumnKind }
+export interface ReportSpec {
+  id: string;
+  title: string;
+  description: string;
+  formats: ReportFormat[];
+  date_scoped: boolean;
+  sensitive: boolean;
+  /** Sensitive report seen by staff: listed but not exportable (403). */
+  locked: boolean;
+  /** Effective cap in days (0 when not date-scoped). */
+  max_range_days: number;
+  columns: ReportColumn[];
+}
+export interface ReportDomain { key: string; label: string; reports: ReportSpec[] }
+export interface ReportCatalogue { max_rows: number; domains: ReportDomain[] }
 
 // ---- Content guardrail & templates ----
 export interface GuardrailRule { id: string; kind: 'banned' | 'trademark'; term: string; is_active: boolean }

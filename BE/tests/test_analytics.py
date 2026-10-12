@@ -218,11 +218,13 @@ async def test_transactions_ledger_column_order_and_downloads(client, db, authen
         "/api/v1/admin/reports/transactions?format=xlsx", headers=admin_headers
     )
     assert xlsx.status_code == 200
-    pdf = await client.get("/api/v1/admin/reports/channel-funnel?format=pdf", headers=admin_headers)
-    assert pdf.content.startswith(b"%PDF")
+    pdf = await client.get("/api/v1/admin/reports/revenue?format=pdf", headers=admin_headers)
+    assert pdf.content.startswith(b"%PDF")  # PDF is for summary reports only (RP-2)
+    no_pdf = await client.get("/api/v1/admin/reports/channel-funnel?format=pdf", headers=admin_headers)
+    assert no_pdf.status_code == 422
 
     unknown = await client.get("/api/v1/admin/reports/bogus", headers=admin_headers)
-    assert unknown.status_code == 422
+    assert unknown.status_code == 404
 
 
 @pytest.mark.asyncio

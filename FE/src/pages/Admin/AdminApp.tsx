@@ -14,12 +14,13 @@ import { AdminExports } from './Exports/AdminExports';
 import { AdminSystemHealth } from './SystemHealth/AdminSystemHealth';
 import { AdminAuditLogs } from './AuditLogs/AdminAuditLogs';
 import { AdminAnalytics } from './Analytics/AdminAnalytics';
+import { AdminReports } from './Reports/AdminReports';
 import { AdminContent } from './Content/AdminContent';
 import { AdminFeedbackPage } from './Feedback/AdminFeedbackPage';
 import { AdminSettings } from './Settings/AdminSettings';
 
 const VALID_PAGES = [
-  'dashboard', 'analytics', 'users', 'plans', 'billing', 'projects',
+  'dashboard', 'analytics', 'reports', 'users', 'plans', 'billing', 'projects',
   'bake-jobs', 'exports', 'content', 'feedback', 'system', 'audit-logs', 'settings',
 ];
 
@@ -61,7 +62,8 @@ const AdminShell: React.FC = () => {
       <AdminSidebar activePage={page} navigate={navigate} />
       <main style={{ flexGrow: 1, backgroundColor: 'var(--bg-primary)', height: '100vh', overflowY: 'auto', display: 'flex', flexDirection: 'column', fontFamily: "var(--font-admin, 'Roboto Variable', 'Roboto', sans-serif)" }}>
         {page === 'dashboard' && <AdminDashboard navigate={navigate} />}
-        {page === 'analytics' && <AdminAnalytics />}
+        {page === 'analytics' && <AdminAnalytics navigate={navigate} />}
+        {page === 'reports' && <AdminReports />}
         {page === 'users' && <AdminUsers />}
         {page === 'plans' && <AdminPlans />}
         {page === 'billing' && <AdminBilling />}

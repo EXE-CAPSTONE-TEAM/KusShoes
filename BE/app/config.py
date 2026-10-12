@@ -1,3 +1,5 @@
+from datetime import date
+
 from pydantic_settings import BaseSettings, SettingsConfigDict
 
 
@@ -145,6 +147,16 @@ class Settings(BaseSettings):
     API_BUDGET_SUSPEND_PERCENT: int = 100         # SRS_v2.2.txt:1767 "đạt 100% → tạm ngưng"
     INTERNAL_ACCOUNT_SCAN_CAP: int = 10           # SRS_v2.2.txt:1767 "trần riêng 10 lượt quét"
     API_COST_ADMIN_ALERT_EMAIL: str = ""          # empty → fall back to settings.EMAIL_FROM
+
+    # Admin finance dashboard: fixed website/API upkeep. Supplied by Finance (sổ 08); there is
+    # deliberately NO default - unset means "not configured" and upkeep accrues as 0.
+    OPERATING_COST_MONTHLY_VND: int | None = None   # Finance-supplied, sổ 08
+    OPERATING_COST_START_MONTH: date | None = None  # first month upkeep accrues; Finance-supplied
+
+    # Reports hub (RP-2): export guards. Conservative values, NOT yet backed by a measured run on
+    # seeded data (pending; see .spec/spec.md provenance table).
+    REPORT_MAX_ROWS: int = 100_000       # upper bound: Excel 1,048,576 rows/sheet; ~10% of it
+    REPORT_MAX_RANGE_DAYS: int = 366     # one calendar year incl. leap day; keeps queries bounded
 
     # Google Analytics 4 (Data API v1beta)
     GA4_PROPERTY_ID: str = ""

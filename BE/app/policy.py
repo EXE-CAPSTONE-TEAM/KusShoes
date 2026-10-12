@@ -8,3 +8,7 @@ PROJECT_RESTORE_DAYS = 30  # BR-47: trashed project can be restored, then is pur
 LEGAL_VERSION = "1.0"
 # What a user must have agreed to, at LEGAL_VERSION, to use the service (BR-02 / BR-89).
 REQUIRED_CONSENT_TYPES = ("age_confirmation", "tos", "privacy_policy")
+
+# Admin finance dashboard chart windows (Finance feedback 2026-10: "1 tháng" / "6 tháng").
+FINANCE_SERIES_DAYS = 30  # rolling daily points; same window as the analytics default
+FINANCE_SERIES_MONTHS = 6  # calendar months incl. the current one

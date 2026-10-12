@@ -10,7 +10,7 @@ import type {
   ImpersonationResult,
   ManualTransactionInput,
   ReportFormat,
-  ReportType,
+  ReportCatalogue,
   ReportingPeriod,
   AdminApiBudget,
   AdminApiCostDailyRow,
@@ -19,6 +19,7 @@ import type {
   AdminContentReportDetail,
   AdminTaxConfig,
   DashboardStats,
+  FinanceOverview,
   ModerationAction,
   ReportStatus,
   MonthlyPoint,
@@ -198,6 +199,7 @@ export const adminAuth = {
 
 export const adminDashboard = {
   stats: (): Promise<DashboardStats> => request('/api/v1/admin/dashboard/stats'),
+  finance: (): Promise<FinanceOverview> => request('/api/v1/admin/dashboard/finance'),
   revenue: (months = 12): Promise<MonthlyPoint[]> =>
     request(`/api/v1/admin/dashboard/revenue${queryString({ months })}`),
   revenueThisMonth: (): Promise<AdminInvoice[]> =>
@@ -396,11 +398,20 @@ export interface DateRangeQuery {
   date_to?: string;
 }
 
+export const adminReports = {
+  catalogue: (): Promise<ReportCatalogue> => request('/api/v1/admin/reports'),
+  download: (id: string, format: ReportFormat, range: DateRangeQuery = {}): Promise<void> =>
+    downloadAdminFile(
+      `/api/v1/admin/reports/${encodeURIComponent(id)}${queryString({ format, ...range })}`,
+      `${id}.${format}`,
+    ),
+};
+
 export const adminAnalytics = {
   get: (query: DateRangeQuery = {}): Promise<AdminAnalytics> =>
     request(`/api/v1/admin/analytics${queryString(query)}`),
-  downloadReport: (type: ReportType, format: ReportFormat, query: DateRangeQuery = {}): Promise<void> =>
-    downloadAdminFile(`/api/v1/admin/reports/${type}${queryString({ format, ...query })}`, `${type}.${format}`),
+  downloadReport: (type: string, format: ReportFormat, query: DateRangeQuery = {}): Promise<void> =>
+    adminReports.download(type, format, query),
   getMarketing: (
     query: DateRangeQuery & { country?: string; refresh?: boolean } = {},
   ): Promise<MarketingAnalyticsResponse> =>

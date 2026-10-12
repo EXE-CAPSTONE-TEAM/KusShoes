@@ -1351,6 +1351,14 @@ Responses: `200` AdminStatsResponse, `401` ErrorResponse, `403` ErrorResponse
 
 Response fields: `total_users`: integer; `mrr_vnd`: integer; `total_exports`: integer
 
+### `GET /api/v1/admin/dashboard/finance` — Tổng quan tài chính
+
+Doanh thu, chi phí API, chi phí duy trì và lợi nhuận: tổng tới nay, tháng này và chuỗi 30 ngày / 6 tháng. Chi phí duy trì lấy từ cấu hình của Tài chính (null khi chưa cấu hình); chưa gồm chi phí marketing. Admin (Bearer).
+
+Responses: `200` FinanceOverviewResponse, `401` ErrorResponse, `403` ErrorResponse
+
+Response fields: `as_of`: date-time; `since`: date | null; `totals`: FinanceTotals; `current_month`: FinanceTotals; `maintenance`: FinanceMaintenance; `series_1m`: list[FinancePoint]; `series_6m`: list[FinancePoint]
+
 ### `GET /api/v1/admin/dashboard/revenue` — Doanh thu theo tháng
 
 Chuỗi doanh thu `months` tháng gần nhất (mặc định 12). Admin (Bearer).

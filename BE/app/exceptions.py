@@ -931,3 +931,49 @@ class EditorDesignResetRequired(AppException):
             "EDITOR_DESIGN_RESET_REQUIRED",
             "Project đã có thiết kế. Cần xác nhận đặt lại thiết kế (confirmResetDesign) để crop lại.",
         )
+
+
+class ReportNotFound(AppException):
+    def __init__(self):
+        super().__init__(404, "REPORT_NOT_FOUND", "Không tìm thấy loại báo cáo này")
+
+
+class ReportForbidden(AppException):
+    def __init__(self):
+        super().__init__(
+            403, "REPORT_FORBIDDEN", "Báo cáo này chứa dữ liệu nhạy cảm, chỉ quản trị viên được xuất"
+        )
+
+
+class ReportFormatUnsupported(AppException):
+    def __init__(self, fmt: str):
+        super().__init__(
+            422, "REPORT_FORMAT_UNSUPPORTED", f"Báo cáo này không hỗ trợ định dạng {fmt.upper()}"
+        )
+
+
+class ReportRangeInvalid(AppException):
+    def __init__(self):
+        super().__init__(
+            422, "REPORT_RANGE_INVALID", "Ngày bắt đầu phải trước hoặc bằng ngày kết thúc"
+        )
+
+
+class ReportRangeTooLarge(AppException):
+    def __init__(self, max_days: int):
+        super().__init__(
+            422,
+            "REPORT_RANGE_TOO_LARGE",
+            f"Khoảng thời gian tối đa của báo cáo này là {max_days} ngày",
+            extra={"max_days": max_days},
+        )
+
+
+class ReportTooManyRows(AppException):
+    def __init__(self, max_rows: int):
+        super().__init__(
+            422,
+            "REPORT_TOO_MANY_ROWS",
+            f"Báo cáo vượt quá {max_rows} dòng, hãy thu hẹp khoảng thời gian",
+            extra={"max_rows": max_rows},
+        )
