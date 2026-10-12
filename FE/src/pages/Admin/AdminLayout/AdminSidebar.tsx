@@ -1,7 +1,7 @@
 import React, { useEffect, useState } from 'react';
 import {
   LayoutDashboard, Users, Package, CreditCard, FolderKanban,
-  Flame, Download, Activity, ScrollText, LogOut, BarChart3, Sparkles, MessageSquare,
+  Flame, Download, Activity, ScrollText, LogOut, BarChart3, FileSpreadsheet, Sparkles, MessageSquare,
   PanelLeftClose, PanelLeftOpen, Sun, Moon, Settings,
 } from 'lucide-react';
 import * as Tooltip from '@radix-ui/react-tooltip';
@@ -82,6 +82,7 @@ export const AdminSidebar: React.FC<AdminSidebarProps> = ({ activePage, navigate
       items: [
         { id: 'dashboard', label: t('sidebar.navDashboard'), icon: LayoutDashboard, badge: 'live' },
         { id: 'analytics', label: t('sidebar.navAnalytics'), icon: BarChart3 },
+        { id: 'reports', label: t('sidebar.navReports'), icon: FileSpreadsheet },
       ],
     },
     {

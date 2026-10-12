@@ -411,8 +411,26 @@ export interface Ga4ConnectionTestResponse {
 }
 
 
-export type ReportType = 'revenue' | 'users' | 'transactions' | 'channel-funnel' | 'api-cost';
 export type ReportFormat = 'csv' | 'xlsx' | 'pdf';
+
+// ---- Reports hub (GET /api/v1/admin/reports) ----
+export type ReportColumnKind = 'text' | 'int' | 'vnd' | 'date' | 'datetime' | 'percent' | 'bool';
+export interface ReportColumn { label: string; kind: ReportColumnKind }
+export interface ReportSpec {
+  id: string;
+  title: string;
+  description: string;
+  formats: ReportFormat[];
+  date_scoped: boolean;
+  sensitive: boolean;
+  /** Sensitive report seen by staff: listed but not exportable (403). */
+  locked: boolean;
+  /** Effective cap in days (0 when not date-scoped). */
+  max_range_days: number;
+  columns: ReportColumn[];
+}
+export interface ReportDomain { key: string; label: string; reports: ReportSpec[] }
+export interface ReportCatalogue { max_rows: number; domains: ReportDomain[] }
 
 // ---- Content guardrail & templates ----
 export interface GuardrailRule { id: string; kind: 'banned' | 'trademark'; term: string; is_active: boolean }

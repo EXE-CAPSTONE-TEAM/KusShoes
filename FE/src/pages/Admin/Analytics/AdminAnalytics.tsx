@@ -1,6 +1,6 @@
 import React, { useCallback, useEffect, useMemo, useState } from 'react';
 import { adminAnalytics, AdminApiError } from '../../../api/adminClient';
-import type { AdminAnalytics as Analytics, PeriodValue, ReportFormat, ReportType } from '../../../types/admin';
+import type { AdminAnalytics as Analytics, PeriodValue, ReportFormat } from '../../../types/admin';
 import { HorizontalBarList } from '../../../components/Admin/HorizontalBarList';
 import { MrrAreaChart } from '../../../components/Admin/MrrAreaChart';
 import { MrrWaterfallChart } from '../../../components/Admin/MrrWaterfallChart';
@@ -31,7 +31,7 @@ const RANGES = [
 ];
 
 const REPORTS: {
-  type: ReportType;
+  type: string;
   label: string;
   hint: string;
 }[] = [
@@ -173,7 +173,7 @@ export const AdminAnalytics: React.FC = () => {
     fetchData(true);
   };
 
-  const download = async (type: ReportType, format: ReportFormat) => {
+  const download = async (type: string, format: ReportFormat) => {
     const key = `${type}.${format}`;
     setDownloading(key);
     try {

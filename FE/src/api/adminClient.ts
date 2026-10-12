@@ -10,7 +10,7 @@ import type {
   ImpersonationResult,
   ManualTransactionInput,
   ReportFormat,
-  ReportType,
+  ReportCatalogue,
   ReportingPeriod,
   AdminApiBudget,
   AdminApiCostDailyRow,
@@ -398,11 +398,20 @@ export interface DateRangeQuery {
   date_to?: string;
 }
 
+export const adminReports = {
+  catalogue: (): Promise<ReportCatalogue> => request('/api/v1/admin/reports'),
+  download: (id: string, format: ReportFormat, range: DateRangeQuery = {}): Promise<void> =>
+    downloadAdminFile(
+      `/api/v1/admin/reports/${encodeURIComponent(id)}${queryString({ format, ...range })}`,
+      `${id}.${format}`,
+    ),
+};
+
 export const adminAnalytics = {
   get: (query: DateRangeQuery = {}): Promise<AdminAnalytics> =>
     request(`/api/v1/admin/analytics${queryString(query)}`),
-  downloadReport: (type: ReportType, format: ReportFormat, query: DateRangeQuery = {}): Promise<void> =>
-    downloadAdminFile(`/api/v1/admin/reports/${type}${queryString({ format, ...query })}`, `${type}.${format}`),
+  downloadReport: (type: string, format: ReportFormat, query: DateRangeQuery = {}): Promise<void> =>
+    adminReports.download(type, format, query),
   getMarketing: (
     query: DateRangeQuery & { country?: string; refresh?: boolean } = {},
   ): Promise<MarketingAnalyticsResponse> =>
