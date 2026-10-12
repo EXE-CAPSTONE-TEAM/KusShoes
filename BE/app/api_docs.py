@@ -124,6 +124,7 @@ DOCS: dict[str, tuple[str, str]] = {
     "PATCH /api/v1/admin/billing/coupons/{coupon_id}": ("Cập nhật mã giảm giá", "Sửa hạn dùng, giới hạn, bật/tắt mã. " + _AW),
     # ---- Admin Dashboard ----
     "GET /api/v1/admin/dashboard/stats": ("Số liệu tổng quan", "Người dùng, MRR, lượt xuất, dự án… cho trang chủ quản trị. " + _A),
+    "GET /api/v1/admin/dashboard/finance": ("Tổng quan tài chính", "Doanh thu, chi phí API, chi phí duy trì và lợi nhuận: tổng tới nay, tháng này và chuỗi 30 ngày / 6 tháng. Chi phí duy trì lấy từ cấu hình của Tài chính (null khi chưa cấu hình); chưa gồm chi phí marketing. " + _A),
     "GET /api/v1/admin/dashboard/revenue": ("Doanh thu theo tháng", "Chuỗi doanh thu `months` tháng gần nhất (mặc định 12). " + _A),
     "GET /api/v1/admin/dashboard/user-growth": ("Tăng trưởng người dùng", "Số đăng ký mới theo tháng (mặc định 6 tháng). " + _A),
     "GET /api/v1/admin/dashboard/recent-users": ("Người dùng mới nhất", "Danh sách đăng ký gần đây. " + _A),

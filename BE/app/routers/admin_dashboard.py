@@ -8,8 +8,9 @@ from app.schemas.admin import (
     AdminStatsResponse,
     MonthlyPoint,
 )
+from app.schemas.finance_overview import FinanceOverviewResponse
 from app.schemas.subscription import AdminInvoiceResponse
-from app.services import admin_service
+from app.services import admin_service, finance_overview_service
 
 router = APIRouter()
 
@@ -20,6 +21,14 @@ async def get_stats(
     admin=Depends(get_current_admin),
 ):
     return await admin_service.get_dashboard_stats(db)
+
+
+@router.get("/dashboard/finance", response_model=FinanceOverviewResponse)
+async def get_finance_overview(
+    db: AsyncSession = Depends(get_db),
+    admin=Depends(get_current_admin),
+):
+    return await finance_overview_service.get_finance_overview(db)
 
 
 @router.get("/dashboard/revenue", response_model=list[MonthlyPoint])

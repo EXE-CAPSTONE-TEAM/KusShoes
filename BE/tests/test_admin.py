@@ -207,6 +207,22 @@ async def test_dashboard_stats_and_series(client, db, authenticated_user):
 
 
 @pytest.mark.asyncio
+async def test_dashboard_finance_overview(client, db, auth_headers):
+    denied = await client.get("/api/v1/admin/dashboard/finance", headers=auth_headers)
+    assert denied.status_code in (401, 403)
+
+    admin_headers = await _admin_headers(db)
+    response = await client.get("/api/v1/admin/dashboard/finance", headers=admin_headers)
+    assert response.status_code == 200
+    body = response.json()
+    assert len(body["series_1m"]) == 30
+    assert len(body["series_6m"]) == 6
+    totals = body["totals"]
+    assert totals["total_cost_vnd"] == totals["api_cost_vnd"] + totals["maintenance_cost_vnd"]
+    assert totals["profit_vnd"] == totals["revenue_vnd"] - totals["total_cost_vnd"]
+
+
+@pytest.mark.asyncio
 async def test_user_list_search_and_detail(client, db, authenticated_user):
     admin_headers = await _admin_headers(db)
 

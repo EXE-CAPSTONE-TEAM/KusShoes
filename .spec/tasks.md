@@ -174,7 +174,7 @@ Harness runs on the OpenClaw host; local fallback: BE `uv run pytest unit_tests 
 - [~] **FD-1 — BE pure core** `services/finance_overview_service.py` (accrue_maintenance, daily/monthly points, totals, rate) + `unit_tests/test_finance_overview.py`.
 - [~] **FD-2 — BE config/constants** `config.py`, `policy.py` (Blocked by FD-0).
 - [~] **FD-3 — BE repo + schema + async `get_finance_overview`** (Blocked by FD-1, FD-2).
-- [ ] **FD-4 — BE route `/dashboard/finance`, `api_docs.py`, `docs/API_REFERENCE.md`, tests** (Blocked by FD-3).
+- [~] **FD-4 — BE route `/dashboard/finance`, `api_docs.py`, `docs/API_REFERENCE.md`, tests** (Blocked by FD-3).
 - [~] **FD-5 — FE types + client** (Blocked by FD-4 contract).
 - [~] **FD-6 — FE `FinanceTrendChart` (+ negative profit) + test** (Blocked by FD-5).
 - [~] **FD-7 — FE dashboard rewrite `FinancePanel` + 404 fallback + tests** (Blocked by FD-6).

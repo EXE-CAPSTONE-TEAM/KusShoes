@@ -198,3 +198,37 @@ async def test_overview_unset_start_month_means_not_configured(monkeypatch):
     assert out.totals.maintenance_cost_vnd == 0
     assert out.totals.profit_vnd == -5_000
     assert out.since == date(2026, 3, 2)
+
+
+# --- route -----------------------------------------------------------------------------
+
+
+async def test_route_returns_contract_shape(monkeypatch):
+    from types import SimpleNamespace
+    from unittest.mock import AsyncMock
+
+    from httpx import ASGITransport, AsyncClient
+
+    from app.dependencies import get_current_admin, get_db
+    from app.main import app
+
+    _stub(monkeypatch, api={date(2026, 3, 2): 5_000}, monthly=1_000_000, start_month=date(2026, 3, 1))
+    app.dependency_overrides[get_current_admin] = lambda: SimpleNamespace(id="a", role="admin")
+    app.dependency_overrides[get_db] = lambda: AsyncMock()
+    try:
+        async with AsyncClient(transport=ASGITransport(app=app), base_url="http://test") as client:
+            response = await client.get("/api/v1/admin/dashboard/finance")
+    finally:
+        app.dependency_overrides.clear()
+    assert response.status_code == 200
+    body = response.json()
+    assert set(body) == {
+        "as_of", "since", "totals", "current_month", "maintenance", "series_1m", "series_6m",
+    }
+    assert body["maintenance"]["configured"] is True
+    assert body["totals"]["revenue_vnd"] == 0
+    assert body["totals"]["contribution_margin_rate"] is None
+    assert body["totals"]["profit_vnd"] == -(body["totals"]["total_cost_vnd"])
+    assert {"period_start", "revenue_vnd", "api_cost_vnd", "maintenance_cost_vnd", "profit_vnd"} == set(
+        body["series_1m"][0]
+    )
