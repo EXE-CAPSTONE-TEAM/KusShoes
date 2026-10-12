@@ -122,3 +122,79 @@ def test_series_totals_agree_with_range_sums():
 def test_earliest_ignores_missing():
     assert fin.earliest(None, None) is None
     assert fin.earliest(date(2026, 5, 1), None, date(2026, 2, 1)) == date(2026, 2, 1)
+
+
+# --- get_finance_overview with stubbed repositories ------------------------------------
+
+NOW = datetime(2026, 3, 15, 5, 0, tzinfo=UTC)  # 12:00 on 2026-03-15 in GMT+7
+
+
+def _stub(monkeypatch, *, paid=(), refunds=(), api=None, monthly=None, start_month=None):
+    api = api or {}
+
+    async def paid_rows(_db):
+        return list(paid)
+
+    async def refund_rows(_db):
+        return list(refunds)
+
+    async def first_cost_day(_db):
+        return min(api) if api else None
+
+    async def daily_costs(_db, *, start, end):
+        return {d: c for d, c in api.items() if start <= d <= end}
+
+    monkeypatch.setattr(fin.analytics_repo, "paid_invoice_rows", paid_rows)
+    monkeypatch.setattr(fin.analytics_repo, "refund_rows", refund_rows)
+    monkeypatch.setattr(fin.api_cost_repo, "first_cost_day", first_cost_day)
+    monkeypatch.setattr(fin.api_cost_repo, "daily_costs", daily_costs)
+    monkeypatch.setattr(fin.settings, "OPERATING_COST_MONTHLY_VND", monthly)
+    monkeypatch.setattr(fin.settings, "OPERATING_COST_START_MONTH", start_month)
+
+
+def _invoice(inv_id, paid_at, amount):
+    return (inv_id, "user", paid_at, amount, "monthly", "pro_monthly", False)
+
+
+async def test_overview_empty_ledger_is_all_zero(monkeypatch):
+    _stub(monkeypatch)
+    out = await fin.get_finance_overview(None, now=NOW)
+    assert out.since is None
+    assert out.maintenance.configured is False and out.maintenance.monthly_vnd is None
+    assert out.totals.revenue_vnd == out.totals.total_cost_vnd == out.totals.profit_vnd == 0
+    assert out.totals.profit_margin_rate is None
+    assert len(out.series_1m) == 30 and len(out.series_6m) == 6
+    assert all(p.revenue_vnd == p.profit_vnd == 0 for p in out.series_1m)
+
+
+async def test_overview_combines_revenue_api_and_maintenance(monkeypatch):
+    paid_at = datetime(2026, 2, 10, 3, 0, tzinfo=UTC)
+    _stub(
+        monkeypatch,
+        paid=[_invoice("a", paid_at, 500_000), _invoice("b", paid_at, 300_000)],
+        refunds=[("b", "user", 100_000, paid_at)],
+        api={date(2026, 2, 12): 40_000, date(2026, 3, 1): 10_000},
+        monthly=2_800_000,
+        start_month=date(2026, 2, 1),
+    )
+    out = await fin.get_finance_overview(None, now=NOW)
+    assert out.since == date(2026, 2, 1)
+    assert out.maintenance.configured is True
+    assert out.totals.revenue_vnd == 700_000  # refund netted
+    assert out.totals.api_cost_vnd == 50_000
+    # Feb in full (28/28) + 15 of 31 March days
+    assert out.totals.maintenance_cost_vnd == 2_800_000 + 2_800_000 * 15 // 31
+    assert out.totals.profit_vnd == out.totals.revenue_vnd - out.totals.total_cost_vnd
+    assert out.current_month.revenue_vnd == 0
+    assert out.current_month.api_cost_vnd == 10_000
+    assert out.current_month.maintenance_cost_vnd == 2_800_000 * 15 // 31
+    assert sum(p.revenue_vnd for p in out.series_6m) == out.totals.revenue_vnd
+
+
+async def test_overview_unset_start_month_means_not_configured(monkeypatch):
+    _stub(monkeypatch, api={date(2026, 3, 2): 5_000}, monthly=1_000_000, start_month=None)
+    out = await fin.get_finance_overview(None, now=NOW)
+    assert out.maintenance.configured is False
+    assert out.totals.maintenance_cost_vnd == 0
+    assert out.totals.profit_vnd == -5_000
+    assert out.since == date(2026, 3, 2)

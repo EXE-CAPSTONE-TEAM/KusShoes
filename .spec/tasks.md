@@ -171,9 +171,9 @@ Harness runs on the OpenClaw host; local fallback: BE `uv run pytest unit_tests 
 `npx oxlint`, `npx vitest run`. Never point tests at the Neon DB in BE/.env.
 
 - [~] **FD-0 — Spec & decisions** (`.spec/spec.md`, this file).
-- [ ] **FD-1 — BE pure core** `services/finance_overview_service.py` (accrue_maintenance, daily/monthly points, totals, rate) + `unit_tests/test_finance_overview.py`.
-- [ ] **FD-2 — BE config/constants** `config.py`, `policy.py` (Blocked by FD-0).
-- [ ] **FD-3 — BE repo + schema + async `get_finance_overview`** (Blocked by FD-1, FD-2).
+- [~] **FD-1 — BE pure core** `services/finance_overview_service.py` (accrue_maintenance, daily/monthly points, totals, rate) + `unit_tests/test_finance_overview.py`.
+- [~] **FD-2 — BE config/constants** `config.py`, `policy.py` (Blocked by FD-0).
+- [~] **FD-3 — BE repo + schema + async `get_finance_overview`** (Blocked by FD-1, FD-2).
 - [ ] **FD-4 — BE route `/dashboard/finance`, `api_docs.py`, `docs/API_REFERENCE.md`, tests** (Blocked by FD-3).
 - [ ] **FD-5 — FE types + client** (Blocked by FD-4 contract).
 - [ ] **FD-6 — FE `FinanceTrendChart` (+ negative profit) + test** (Blocked by FD-5).

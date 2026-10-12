@@ -9,10 +9,20 @@ from the Finance-supplied settings. Marketing spend is not in the model (sổ 08
 import calendar
 from collections import defaultdict
 from collections.abc import Iterable
-from datetime import date, timedelta
+from datetime import UTC, date, datetime, timedelta
 
-from app.schemas.finance_overview import FinancePoint, FinanceTotals
-from app.services.analytics_service import Payment, business_date
+from sqlalchemy.ext.asyncio import AsyncSession
+
+from app.config import settings
+from app.policy import FINANCE_SERIES_DAYS, FINANCE_SERIES_MONTHS
+from app.repositories import analytics_repo, api_cost_repo
+from app.schemas.finance_overview import (
+    FinanceMaintenance,
+    FinanceOverviewResponse,
+    FinancePoint,
+    FinanceTotals,
+)
+from app.services.analytics_service import Payment, build_payments, business_date
 
 
 def _days_in_month(day: date) -> int:
@@ -139,3 +149,53 @@ def monthly_points(
 def earliest(*days: date | None) -> date | None:
     present = [day for day in days if day is not None]
     return min(present) if present else None
+
+
+async def get_finance_overview(
+    db: AsyncSession, *, now: datetime | None = None
+) -> FinanceOverviewResponse:
+    as_of = now or datetime.now(UTC)
+    today = business_date(as_of)
+    monthly = settings.OPERATING_COST_MONTHLY_VND
+    configured_start = settings.OPERATING_COST_START_MONTH
+    start_month = month_start(configured_start) if configured_start else None
+    configured = monthly is not None and start_month is not None
+    if not configured:
+        monthly = start_month = None
+
+    payments = build_payments(
+        await analytics_repo.paid_invoice_rows(db), await analytics_repo.refund_rows(db)
+    )
+    revenue_days = revenue_by_day(payments)
+    first_api_day = await api_cost_repo.first_cost_day(db)
+    since = earliest(
+        min(revenue_days) if revenue_days else None,
+        first_api_day,
+        start_month if configured else None,
+    )
+    api_days: dict[date, int] = {}
+    if since is not None:
+        api_days = await api_cost_repo.daily_costs(db, start=since, end=today)
+
+    current_first = month_start(today)
+
+    def totals_for(start: date) -> FinanceTotals:
+        return build_totals(
+            sum_range(revenue_days, start, today),
+            sum_range(api_days, start, today),
+            accrue_maintenance(start, today, monthly, start_month),
+        )
+
+    return FinanceOverviewResponse(
+        as_of=as_of,
+        since=since,
+        totals=totals_for(since) if since else build_totals(0, 0, 0),
+        current_month=totals_for(current_first),
+        maintenance=FinanceMaintenance(configured=configured, monthly_vnd=monthly),
+        series_1m=daily_points(
+            today, FINANCE_SERIES_DAYS, revenue_days, api_days, monthly, start_month
+        ),
+        series_6m=monthly_points(
+            today, FINANCE_SERIES_MONTHS, revenue_days, api_days, monthly, start_month
+        ),
+    )
