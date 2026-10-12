@@ -162,3 +162,36 @@ BE+FE = needs backend work · DECISION = blocked on a product decision from T AK
   - T22: no router-level tests. Add tests for `GET /analytics/marketing` (cache hit skips GA4 call; miss writes with ex=900), `/marketing/realtime` (ex=30), `POST /marketing/test-connection` (unconfigured → reports status, not 500), reusing existing fakes in the file.
   Acceptance: `npx tsc -b` clean, `npx oxlint` clean on touched files, `pytest BE/unit_tests/test_marketing_analytics.py` green, `./harness/verify.sh --strict` exit 0.
 
+
+## Batch 4 — Finance dashboard (branch `feat/admin-finance-dashboard`)
+
+Decisions 2026-10-12: maintenance card = current month; marginal rate = (revenue - API cost)/revenue;
+1m = rolling 30 days, 6m = last 6 calendar months; modal + dashboard CSV removed; email scheduling out of scope.
+Harness runs on the OpenClaw host; local fallback: BE `uv run pytest unit_tests -q` + `ruff`, FE `npx tsc -b`,
+`npx oxlint`, `npx vitest run`. Never point tests at the Neon DB in BE/.env.
+
+- [~] **FD-0 — Spec & decisions** (`.spec/spec.md`, this file).
+- [ ] **FD-1 — BE pure core** `services/finance_overview_service.py` (accrue_maintenance, daily/monthly points, totals, rate) + `unit_tests/test_finance_overview.py`.
+- [ ] **FD-2 — BE config/constants** `config.py`, `policy.py` (Blocked by FD-0).
+- [ ] **FD-3 — BE repo + schema + async `get_finance_overview`** (Blocked by FD-1, FD-2).
+- [ ] **FD-4 — BE route `/dashboard/finance`, `api_docs.py`, `docs/API_REFERENCE.md`, tests** (Blocked by FD-3).
+- [ ] **FD-5 — FE types + client** (Blocked by FD-4 contract).
+- [ ] **FD-6 — FE `FinanceTrendChart` (+ negative profit) + test** (Blocked by FD-5).
+- [ ] **FD-7 — FE dashboard rewrite `FinancePanel` + 404 fallback + tests** (Blocked by FD-6).
+- [ ] **FD-8 — FE delete secondary KPIs / dead files / CSS** (Blocked by FD-7).
+
+## Batch 5 — Reports hub (30 reports = 6 domains x 5)
+
+Catalogue: **tai-chinh** transactions, revenue, daily-pnl, refunds, vat · **goi-thanh-toan** revenue-by-plan,
+subscriptions, mrr-movement, unpaid-invoices, coupons · **nguoi-dung** users(S), signups-daily, channel-funnel,
+utm-attribution, repeat-customers · **thiet-ke-3d** projects-daily, bake-jobs, file-exports, quota-usage, templates ·
+**chi-phi-he-thong** api-cost, api-cost-by-operation, api-cost-by-user, api-budget, scan-unit-economics ·
+**kiem-duyet-bao-mat** feedback, content-reports, moderation-actions, audit-log(S), login-history(S).
+Each report: pure `shape(rows, ctx)` seam + thin fetch; new repo queries under `repositories/reports/<domain>.py`.
+
+- [ ] **RP-1 — Registry core + renderers** `services/reports/{registry,render,__init__}.py`, `report_service.py` facade; tests incl. formula escaping, BOM, GMT+7 boundary, 30 ids/6 domains.
+- [ ] **RP-2 — Router `admin_reports.py`, catalogue schema, audit, permissions, DOCS, config caps** (Blocked by RP-1).
+- [ ] **RP-3 — Port 5 existing reports, same ids/headers; freeze interface** (Blocked by RP-2).
+- [ ] **RP-4..RP-9 — One domain each (finance needs FD-1)** (Blocked by RP-3).
+- [ ] **RP-10 — FE hub page, client, types, sidebar, i18n** (Blocked by RP-2).
+- [ ] **RP-11 — Remove Analytics reports tab; dashboard link** (Blocked by RP-10, FD-8).
