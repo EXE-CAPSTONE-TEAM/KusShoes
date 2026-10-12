@@ -193,5 +193,5 @@ Each report: pure `shape(rows, ctx)` seam + thin fetch; new repo queries under `
 - [~] **RP-2 — Router `admin_reports.py`, catalogue schema, audit, permissions, DOCS, config caps** (Blocked by RP-1).
 - [~] **RP-3 — Port 5 existing reports, same ids/headers; freeze interface** (Blocked by RP-2).
 - [~] **RP-4..RP-9 — One domain each (finance needs FD-1)** (Blocked by RP-3).
-- [ ] **RP-10 — FE hub page, client, types, sidebar, i18n** (Blocked by RP-2).
-- [ ] **RP-11 — Remove Analytics reports tab; dashboard link** (Blocked by RP-10, FD-8).
+- [~] **RP-10 — FE hub page, client, types, sidebar, i18n** (Blocked by RP-2).
+- [~] **RP-11 — Remove Analytics reports tab; dashboard link** (Blocked by RP-10, FD-8).
