@@ -50,6 +50,7 @@ jobs:
             tests/test_user_p0.py \
             tests/test_architecture.py \
             tests/test_admin.py \
+            tests/test_reports_all.py \
             -q -k "not refund"
 
       - name: Build production image
