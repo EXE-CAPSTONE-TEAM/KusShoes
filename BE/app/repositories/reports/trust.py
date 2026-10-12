@@ -23,8 +23,14 @@ async def feedback_rows(
     reviewed_at). Internal accounts excluded (BR-83)."""
     stmt = (
         select(
-            Feedback.created_at, User.account_code, Feedback.rating, Feedback.marketing_group,
-            Feedback.message, Feedback.status, Feedback.changed_what, Feedback.reviewed_at,
+            Feedback.created_at,
+            User.account_code,
+            Feedback.rating,
+            Feedback.marketing_group,
+            Feedback.message,
+            Feedback.status,
+            Feedback.changed_what,
+            Feedback.reviewed_at,
         )
         .join(User, User.id == Feedback.user_id)
         .where(
@@ -46,9 +52,14 @@ async def content_report_rows(
     resolution_note). The reporter's email/name are deliberately not selected."""
     stmt = (
         select(
-            ContentReport.created_at, ContentReport.reason, ContentReport.project_id,
-            ContentReport.template_id, User.account_code, ContentReport.status,
-            ContentReport.reviewed_at, ContentReport.resolution_note,
+            ContentReport.created_at,
+            ContentReport.reason,
+            ContentReport.project_id,
+            ContentReport.template_id,
+            User.account_code,
+            ContentReport.status,
+            ContentReport.reviewed_at,
+            ContentReport.resolution_note,
         )
         .join(User, User.id == ContentReport.reported_user_id)
         .where(
@@ -70,9 +81,13 @@ async def moderation_action_rows(
     moderator = aliased(User)
     stmt = (
         select(
-            ModerationAction.created_at, User.account_code, ModerationAction.level,
-            ModerationAction.action, ModerationAction.reason,
-            ModerationAction.restricted_until, moderator.account_code,
+            ModerationAction.created_at,
+            User.account_code,
+            ModerationAction.level,
+            ModerationAction.action,
+            ModerationAction.reason,
+            ModerationAction.restricted_until,
+            moderator.account_code,
         )
         .join(User, User.id == ModerationAction.user_id)
         .outerjoin(moderator, moderator.id == ModerationAction.created_by)
@@ -94,8 +109,13 @@ async def audit_log_rows(
     Not filtered by the internal flag: an audit trail must be complete."""
     stmt = (
         select(
-            AuditLog.created_at, User.email, AuditLog.actor_role, AuditLog.action,
-            AuditLog.target_type, AuditLog.target_id, AuditLog.payload,
+            AuditLog.created_at,
+            User.email,
+            AuditLog.actor_role,
+            AuditLog.action,
+            AuditLog.target_type,
+            AuditLog.target_id,
+            AuditLog.payload,
         )
         .join(User, User.id == AuditLog.actor_id)
         .where(AuditLog.created_at >= start_utc, AuditLog.created_at < end_utc)
@@ -111,8 +131,11 @@ async def login_history_rows(
     """(created_at, email_attempted, success, ip_address, user_agent). Complete by design."""
     stmt = (
         select(
-            LoginHistory.created_at, LoginHistory.email_attempted, LoginHistory.success,
-            LoginHistory.ip_address, LoginHistory.user_agent,
+            LoginHistory.created_at,
+            LoginHistory.email_attempted,
+            LoginHistory.success,
+            LoginHistory.ip_address,
+            LoginHistory.user_agent,
         )
         .where(LoginHistory.created_at >= start_utc, LoginHistory.created_at < end_utc)
         .order_by(LoginHistory.created_at.desc())

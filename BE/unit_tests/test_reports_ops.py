@@ -43,8 +43,17 @@ def test_row_width_matches_columns_for_every_shape():
         "api-cost-by-operation": ops.shape_by_operation([("p", "o", 3, 2, 90)]),
         "api-cost-by-user": ops.shape_by_user([("KS1", False, "free", 1, 1, 5)]),
         "api-budget": ops.shape_budget(
-            [SimpleNamespace(period_month=day, budget_vnd=None, spent_vnd=0, percent=None,
-                             state="unconfigured", warned_at=None, suspended_at=None)]
+            [
+                SimpleNamespace(
+                    period_month=day,
+                    budget_vnd=None,
+                    spent_vnd=0,
+                    percent=None,
+                    state="unconfigured",
+                    warned_at=None,
+                    suspended_at=None,
+                )
+            ]
         ),
         "scan-unit-economics": ops.shape_scan_economics([], [], ctx),
     }
@@ -104,10 +113,14 @@ def test_budget_state_flips_exactly_at_configured_thresholds():
     budget = 10_000
     warn = budget * settings.API_BUDGET_WARN_PERCENT // 100
     stop = budget * settings.API_BUDGET_SUSPEND_PERCENT // 100
-    states = [ops.shape_budget([_status(s, budget)])[0][4] for s in (warn - 1, warn, stop - 1, stop)]
+    states = [
+        ops.shape_budget([_status(s, budget)])[0][4] for s in (warn - 1, warn, stop - 1, stop)
+    ]
     labels = ops.BUDGET_STATE_LABELS
     assert states == [labels["ok"], labels["warning"], labels["warning"], labels["suspended"]]
-    assert ops.shape_budget([_status(stop, budget)])[0][3] >= settings.API_BUDGET_SUSPEND_PERCENT / 100
+    assert (
+        ops.shape_budget([_status(stop, budget)])[0][3] >= settings.API_BUDGET_SUSPEND_PERCENT / 100
+    )
 
 
 @pytest.mark.parametrize(

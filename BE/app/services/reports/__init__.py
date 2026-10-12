@@ -105,9 +105,9 @@ def build_context(
     else:
         start = end = today
     start_utc = datetime(start.year, start.month, start.day, tzinfo=GMT7).astimezone(UTC)
-    end_utc = (
-        datetime(end.year, end.month, end.day, tzinfo=GMT7) + timedelta(days=1)
-    ).astimezone(UTC)
+    end_utc = (datetime(end.year, end.month, end.day, tzinfo=GMT7) + timedelta(days=1)).astimezone(
+        UTC
+    )
     return ReportContext(
         start=start,
         end=end,

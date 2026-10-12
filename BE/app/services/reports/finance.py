@@ -121,7 +121,9 @@ def shape_revenue(data) -> list[list]:
         ["Hoàn tiền (kỳ)", data.refunds_vnd.current],
         ["Khách trả tiền mới (kỳ)", data.new_paying_customers.current],
     ]
-    table += [[f"Doanh thu tháng {point.month}", point.revenue_vnd] for point in data.revenue_series]
+    table += [
+        [f"Doanh thu tháng {point.month}", point.revenue_vnd] for point in data.revenue_series
+    ]
     table += [[f"Theo gói: {plan.plan_tier}", plan.revenue_vnd] for plan in data.revenue_by_plan]
     return table
 

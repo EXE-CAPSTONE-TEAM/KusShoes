@@ -33,7 +33,10 @@ def _pay(user, day, amount, tier="pro", cycle="monthly", month=3):
 def test_five_reports_registered_pdf_only_for_summaries():
     by_id = {s.id: s for s in registry.all_specs() if s.domain == billing.DOMAIN}
     assert set(by_id) == set(IDS)
-    assert {i for i, s in by_id.items() if "pdf" in s.formats} == {"revenue-by-plan", "mrr-movement"}
+    assert {i for i, s in by_id.items() if "pdf" in s.formats} == {
+        "revenue-by-plan",
+        "mrr-movement",
+    }
     assert not any(s.sensitive for s in by_id.values())
     assert by_id["subscriptions"].date_scoped is False
     assert by_id["coupons"].date_scoped and by_id["unpaid-invoices"].date_scoped
@@ -44,8 +47,14 @@ def test_row_width_matches_columns(report_id):
     width = len(registry.get(report_id).columns)
     ctx = _ctx()
     coupon = SimpleNamespace(
-        code="A", discount_type="percent", value=10, plan_tiers=None, max_uses=None,
-        used_count=0, valid_from=None, valid_until=None,
+        code="A",
+        discount_type="percent",
+        value=10,
+        plan_tiers=None,
+        max_uses=None,
+        used_count=0,
+        valid_from=None,
+        valid_until=None,
     )
     now = datetime(2026, 3, 2, tzinfo=UTC)
     rows = {
@@ -100,7 +109,9 @@ def test_revenue_by_plan_respects_window_in_gmt7():
     # 2026-03-31T18:00Z is 01/04 in GMT+7 -> outside a March window.
     late = Payment("i", "u", datetime(2026, 3, 31, 18, tzinfo=UTC), 100, "monthly", "pro", False)
     assert billing.shape_revenue_by_plan([late], _ctx()) == []
-    assert len(billing.shape_revenue_by_plan([late], _ctx(date(2026, 4, 1), date(2026, 4, 30)))) == 1
+    assert (
+        len(billing.shape_revenue_by_plan([late], _ctx(date(2026, 4, 1), date(2026, 4, 30)))) == 1
+    )
 
 
 def test_revenue_by_plan_labels_credit_and_blank_share_when_empty():
@@ -161,7 +172,9 @@ def test_mrr_movement_spans_year_boundary_and_counts_contraction_and_retention()
         _pay("a", 3, 200, month=12),
         _pay("a", 3, 120, month=1),  # contraction 80 (Jan 2026 here, Dec same year ok)
     ]
-    payments[0] = Payment("x", "a", datetime(2025, 12, 3, 5, tzinfo=UTC), 200, "monthly", "pro", False)
+    payments[0] = Payment(
+        "x", "a", datetime(2025, 12, 3, 5, tzinfo=UTC), 200, "monthly", "pro", False
+    )
     rows = billing.shape_mrr_movement(payments, _ctx(date(2025, 12, 15), date(2026, 1, 20)))
     assert [r[0] for r in rows] == ["2025-12", "2026-01"]
     jan = rows[1]
@@ -181,7 +194,17 @@ def test_unpaid_invoices_maps_status_method_and_hides_email():
     created = datetime(2026, 3, 31, 18, tzinfo=UTC)
     rows = billing.shape_unpaid_invoices(
         [
-            (123456, created, "KS9", "pro", "yearly", 1_990_000, "awaiting_approval", "manual", True),
+            (
+                123456,
+                created,
+                "KS9",
+                "pro",
+                "yearly",
+                1_990_000,
+                "awaiting_approval",
+                "manual",
+                True,
+            ),
             (123457, created, "KS9", "basic", "monthly", 99_000, "failed", "momo", False),
         ]
     )
@@ -196,8 +219,14 @@ def test_unpaid_invoices_maps_status_method_and_hides_email():
 
 def _coupon(code, **kw):
     base = dict(
-        code=code, discount_type="percent", value=20, plan_tiers=None, max_uses=None,
-        used_count=0, valid_from=None, valid_until=None,
+        code=code,
+        discount_type="percent",
+        value=20,
+        plan_tiers=None,
+        max_uses=None,
+        used_count=0,
+        valid_from=None,
+        valid_until=None,
     )
     return SimpleNamespace(**{**base, **kw})
 
@@ -206,7 +235,9 @@ def test_coupons_aggregates_case_insensitively_and_unused_coupons_stay_listed():
     i1, i2, i3 = uuid.uuid4(), uuid.uuid4(), uuid.uuid4()
     usage = [(i1, "SALE20", 20_000), (i2, "sale20", 30_000), (i3, "OTHER", 5)]
     net = {i1: 80_000, i2: 70_000}  # i3 absent: fully refunded
-    rows = billing.shape_coupons([_coupon("SALE20", used_count=7, max_uses=10), _coupon("NONE")], usage, net)
+    rows = billing.shape_coupons(
+        [_coupon("SALE20", used_count=7, max_uses=10), _coupon("NONE")], usage, net
+    )
     sale, none = rows
     assert sale[6] == 2 and sale[7] == 50_000 and sale[8] == 150_000
     assert sale[5] == "7/10"
@@ -215,8 +246,12 @@ def test_coupons_aggregates_case_insensitively_and_unused_coupons_stay_listed():
 
 def test_coupons_value_validity_and_plan_formatting():
     fixed = _coupon(
-        "FIX", discount_type="fixed", value=50_000, plan_tiers=["basic", "pro"],
-        valid_from=datetime(2026, 3, 31, 18, tzinfo=UTC), valid_until=None,
+        "FIX",
+        discount_type="fixed",
+        value=50_000,
+        plan_tiers=["basic", "pro"],
+        valid_from=datetime(2026, 3, 31, 18, tzinfo=UTC),
+        valid_until=None,
     )
     row = billing.shape_coupons([fixed, _coupon("PCT")], [], {})[0]
     assert row[2] == "50.000 đ"

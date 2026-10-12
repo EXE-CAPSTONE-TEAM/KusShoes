@@ -110,7 +110,6 @@ def test_six_domains_declared_once():
     assert owners == set(registry.DOMAIN_KEYS)
 
 
-@pytest.mark.xfail(reason="30 reports land in RP-3..RP-9", strict=False)
 def test_catalogue_has_30_unique_ids_and_six_domains_of_at_least_five():
     specs = registry.all_specs()
     assert len({s.id for s in specs}) == len(specs) == 30

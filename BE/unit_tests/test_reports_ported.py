@@ -13,12 +13,25 @@ from app.services.reports import finance, ops, registry, render, users
 
 LEGACY_HEADERS = {
     "transactions": [
-        "Mã", "Ngày đặt", "Tên khách", "Kênh đến", "Loại hàng hoá", "Giá tiền",
-        "Tình trạng thanh toán", "Hình thức thanh toán", "Tên file biên nhận", "Khách quay lại?",
+        "Mã",
+        "Ngày đặt",
+        "Tên khách",
+        "Kênh đến",
+        "Loại hàng hoá",
+        "Giá tiền",
+        "Tình trạng thanh toán",
+        "Hình thức thanh toán",
+        "Tên file biên nhận",
+        "Khách quay lại?",
     ],
     "channel-funnel": [
-        "Tuần (bắt đầu)", "Kênh đến", "Đăng ký", "Xác thực email", "Lưu thiết kế đầu",
-        "Thanh toán", "Conversion (thanh toán ÷ xác thực)",
+        "Tuần (bắt đầu)",
+        "Kênh đến",
+        "Đăng ký",
+        "Xác thực email",
+        "Lưu thiết kế đầu",
+        "Thanh toán",
+        "Conversion (thanh toán ÷ xác thực)",
     ],
     "revenue": ["Chỉ số", "Giá trị (VND)"],
     "api-cost": ["Ngày", "Số lần gọi", "Thành công", "Thất bại", "Chi phí (VND)"],
@@ -110,7 +123,11 @@ def test_transactions_fallbacks_and_item_labels():
     upgrade = _invoice(is_upgrade=True)
     credit = _invoice(plan_tier=CREDIT_INVOICE_TIER)
     rows = finance.shape_transactions(
-        [(unpaid, 0, 0, "KUS-ACC2", None), (upgrade, 0, 0, "A", "x"), (credit, 0, 0, "A", "direct")],
+        [
+            (unpaid, 0, 0, "KUS-ACC2", None),
+            (upgrade, 0, 0, "A", "x"),
+            (credit, 0, 0, "A", "direct"),
+        ],
         repeaters=set(),
     )
     assert rows[0][0] == "111" and rows[0][2] == "KUS-ACC2" and rows[0][3] == "Khác"
@@ -164,7 +181,9 @@ def test_channel_funnel_blank_conversion_without_verified():
 
 def test_api_cost_has_total_row_that_sums_the_days():
     days = [
-        SimpleNamespace(day=date(2026, 3, d), calls=c, success_calls=c - f, failed_calls=f, cost_vnd=v)
+        SimpleNamespace(
+            day=date(2026, 3, d), calls=c, success_calls=c - f, failed_calls=f, cost_vnd=v
+        )
         for d, c, f, v in [(1, 10, 2, 500), (2, 0, 0, 0), (3, 5, 5, 250)]
     ]
     rows = ops.shape_api_cost(days)
@@ -176,8 +195,12 @@ def test_api_cost_has_total_row_that_sums_the_days():
 
 def test_revenue_shape_rows():
     data = SimpleNamespace(
-        mrr_vnd=1, arr_vnd=12, arpu_vnd=3, paying_customers=4,
-        revenue_vnd=SimpleNamespace(current=5), refunds_vnd=SimpleNamespace(current=6),
+        mrr_vnd=1,
+        arr_vnd=12,
+        arpu_vnd=3,
+        paying_customers=4,
+        revenue_vnd=SimpleNamespace(current=5),
+        refunds_vnd=SimpleNamespace(current=6),
         new_paying_customers=SimpleNamespace(current=7),
         revenue_series=[SimpleNamespace(month="2026-03", revenue_vnd=8)],
         revenue_by_plan=[SimpleNamespace(plan_tier="pro", revenue_vnd=9)],
@@ -185,4 +208,3 @@ def test_revenue_shape_rows():
     rows = finance.shape_revenue(data)
     assert rows[0] == ["MRR", 1] and len(rows) == 9
     assert rows[-2:] == [["Doanh thu tháng 2026-03", 8], ["Theo gói: pro", 9]]
-

@@ -67,7 +67,8 @@ def test_dates_render_in_gmt7_not_utc(ctx):
     # 2026-01-31 18:30 UTC is already 01/02 01:30 in GMT+7.
     late = datetime(2026, 1, 31, 18, 30, tzinfo=UTC)
     fb = _csv_cells(
-        "feedback", trust.shape_feedback([(late, "KS-1", 5, "product", "m", "new", None, late)], ctx)
+        "feedback",
+        trust.shape_feedback([(late, "KS-1", 5, "product", "m", "new", None, late)], ctx),
     )
     assert fb[1][0] == "01/02/2026" and fb[1][7] == "01/02/2026"
     audit = _csv_cells(

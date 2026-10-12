@@ -69,8 +69,14 @@ def shape_feedback(rows: Sequence[tuple], ctx: ReportContext) -> list[list]:
     reviewed_at)."""
     return [
         [
-            created, code, rating, _label(MARKETING_GROUP, group), message,
-            _label(FEEDBACK_STATUS, status), changed, reviewed,
+            created,
+            code,
+            rating,
+            _label(MARKETING_GROUP, group),
+            message,
+            _label(FEEDBACK_STATUS, status),
+            changed,
+            reviewed,
         ]
         for created, code, rating, group, message, status, changed, reviewed in rows
     ]
@@ -113,9 +119,13 @@ def shape_content_reports(rows: Sequence[tuple], ctx: ReportContext) -> list[lis
     resolution_note)."""
     return [
         [
-            created, _label(REPORT_REASON, reason),
+            created,
+            _label(REPORT_REASON, reason),
             "Mẫu thiết kế" if template_id else "Dự án",
-            code, _label(REPORT_STATUS, status), reviewed, note,
+            code,
+            _label(REPORT_STATUS, status),
+            reviewed,
+            note,
         ]
         for created, reason, _project_id, template_id, code, status, reviewed, note in rows
     ]
