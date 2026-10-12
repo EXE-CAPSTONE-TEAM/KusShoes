@@ -391,11 +391,14 @@ async def test_api_cost_csv_report_br108(client, db, service_headers):
         ["03/09/2026", "2", "1", "1", "3000"],
         ["Tổng", "3", "2", "1", "10000"],
     ]
-    for fmt in ("xlsx", "pdf"):
-        other = await client.get(
-            "/api/v1/admin/reports/api-cost", headers=admin, params={"format": fmt}
-        )
-        assert other.status_code == 200
+    xlsx = await client.get(
+        "/api/v1/admin/reports/api-cost", headers=admin, params={"format": "xlsx"}
+    )
+    assert xlsx.status_code == 200
+    pdf = await client.get(
+        "/api/v1/admin/reports/api-cost", headers=admin, params={"format": "pdf"}
+    )
+    assert pdf.status_code == 422  # PDF only for summary reports (RP-2)
 
 
 @pytest.mark.asyncio

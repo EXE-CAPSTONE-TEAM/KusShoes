@@ -42,5 +42,5 @@
 | OPERATING_COST_START_MONTH | BE/app/config.py | None (unset) | First month fixed costs accrue, supplied by Finance |
 | FINANCE_SERIES_DAYS | BE/app/policy.py | 30 | Finance feedback 2026-10 "1 tháng"; same window as analytics default |
 | FINANCE_SERIES_MONTHS | BE/app/policy.py | 6 | Finance feedback 2026-10 "6 tháng" |
-| REPORT_MAX_RANGE_DAYS | BE/app/config.py | TBD (RP-2) | Measured run on seeded data (record here) |
-| REPORT_MAX_ROWS | BE/app/config.py | TBD (RP-2) | Upper bound Excel 1,048,576 rows; actual cap from measured run |
+| REPORT_MAX_RANGE_DAYS | BE/app/config.py | 366 | Conservative choice: one calendar year incl. leap day. NOT a measured value; measured run on seeded data pending (to record here) |
+| REPORT_MAX_ROWS | BE/app/config.py | 100000 | Conservative choice: ~10% of the Excel 1,048,576-row sheet limit. NOT a measured value; memory/latency measured run pending (to record here) |

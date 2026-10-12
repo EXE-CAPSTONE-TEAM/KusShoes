@@ -189,9 +189,9 @@ utm-attribution, repeat-customers · **thiet-ke-3d** projects-daily, bake-jobs, 
 **kiem-duyet-bao-mat** feedback, content-reports, moderation-actions, audit-log(S), login-history(S).
 Each report: pure `shape(rows, ctx)` seam + thin fetch; new repo queries under `repositories/reports/<domain>.py`.
 
-- [ ] **RP-1 — Registry core + renderers** `services/reports/{registry,render,__init__}.py`, `report_service.py` facade; tests incl. formula escaping, BOM, GMT+7 boundary, 30 ids/6 domains.
-- [ ] **RP-2 — Router `admin_reports.py`, catalogue schema, audit, permissions, DOCS, config caps** (Blocked by RP-1).
-- [ ] **RP-3 — Port 5 existing reports, same ids/headers; freeze interface** (Blocked by RP-2).
+- [~] **RP-1 — Registry core + renderers** `services/reports/{registry,render,__init__}.py`, `report_service.py` facade; tests incl. formula escaping, BOM, GMT+7 boundary, 30 ids/6 domains.
+- [~] **RP-2 — Router `admin_reports.py`, catalogue schema, audit, permissions, DOCS, config caps** (Blocked by RP-1).
+- [~] **RP-3 — Port 5 existing reports, same ids/headers; freeze interface** (Blocked by RP-2).
 - [ ] **RP-4..RP-9 — One domain each (finance needs FD-1)** (Blocked by RP-3).
 - [ ] **RP-10 — FE hub page, client, types, sidebar, i18n** (Blocked by RP-2).
 - [ ] **RP-11 — Remove Analytics reports tab; dashboard link** (Blocked by RP-10, FD-8).
