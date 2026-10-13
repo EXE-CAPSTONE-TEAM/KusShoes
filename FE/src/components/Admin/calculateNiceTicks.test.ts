@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { calculateNiceTicks } from './MrrAreaChart';
+import { calculateNiceTicks } from './chartUtils';
 
 describe('calculateNiceTicks', () => {
   it('returns unique ascending ticks when all data is zero (rawMax clamps to 1)', () => {

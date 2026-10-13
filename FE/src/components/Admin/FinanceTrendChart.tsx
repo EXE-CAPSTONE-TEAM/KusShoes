@@ -11,7 +11,7 @@ import {
   YAxis,
 } from 'recharts';
 import type { FinancePoint } from '../../types/admin';
-import { formatCompactVnd } from './MrrAreaChart';
+import { formatCompactVnd } from './chartUtils';
 import styles from './FinanceTrendChart.module.css';
 
 export type FinanceGranularity = 'day' | 'month';

@@ -1,0 +1,54 @@
+/* Phần dùng chung cho các biểu đồ Recharts của admin: khung vẽ + tooltip card. */
+.chartArea {
+  width: 100%;
+  position: relative;
+}
+
+.unit {
+  font-family: var(--font-mono);
+  font-size: 0.65rem;
+  font-weight: 700;
+  color: var(--text-secondary);
+  margin-bottom: 4px;
+}
+
+.tooltip {
+  background-color: var(--dropdown-bg);
+  border: 1px solid var(--glass-border);
+  border-radius: var(--border-radius-sm);
+  padding: 8px 12px;
+  box-shadow: var(--shadow-md);
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  white-space: nowrap;
+}
+
+.tooltipTitle {
+  font-size: 0.72rem;
+  font-weight: 700;
+  color: var(--text-secondary);
+  text-transform: uppercase;
+  letter-spacing: 0.4px;
+}
+
+.tooltipValue {
+  font-family: var(--font-admin, 'Roboto Variable', 'Roboto', sans-serif);
+  font-size: 0.85rem;
+  font-weight: 800;
+  color: var(--text-primary);
+  font-variant-numeric: tabular-nums;
+}
+
+.tooltipSub {
+  font-size: 0.7rem;
+  font-weight: 600;
+  color: var(--text-muted);
+}
+
+.valueLabel {
+  fill: var(--text-primary);
+  font-size: 9px;
+  font-weight: 700;
+  font-family: var(--font-mono);
+}

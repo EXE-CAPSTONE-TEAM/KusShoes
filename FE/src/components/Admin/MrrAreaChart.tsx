@@ -1,4 +1,25 @@
 import React, { useMemo, useState } from 'react';
+import {
+  Area,
+  Bar,
+  CartesianGrid,
+  ComposedChart,
+  LabelList,
+  ReferenceLine,
+  ResponsiveContainer,
+  Tooltip,
+  XAxis,
+  YAxis,
+} from 'recharts';
+import {
+  AXIS_TICK,
+  GRID_STROKE,
+  INITIAL_CHART_WIDTH,
+  Y_AXIS_WIDTH,
+  calculateNiceTicks,
+  formatCompactVnd,
+} from './chartUtils';
+import common from './chartCommon.module.css';
 import styles from './MrrAreaChart.module.css';
 
 interface Point {
@@ -15,64 +36,24 @@ interface MrrAreaChartProps {
   subLabel?: string;
 }
 
-/**
- * Định dạng tiền tệ rút gọn chuẩn trục tài chính (VNĐ):
- * 15.000.000 -> 15 tr, 500.000 -> 500k, 1.200.000.000 -> 1.2 tỷ
- */
-export function formatCompactVnd(v: number): string {
-  if (v === 0) return '0 đ';
-  const abs = Math.abs(v);
-  const sign = v < 0 ? '-' : '';
-  if (abs >= 1_000_000_000) {
-    const val = abs / 1_000_000_000;
-    return `${sign}${val >= 10 ? Math.round(val) : val.toFixed(1)} tỷ`;
-  }
-  if (abs >= 1_000_000) {
-    const val = abs / 1_000_000;
-    return `${sign}${val >= 10 ? Math.round(val) : val.toFixed(1)} tr`;
-  }
-  if (abs >= 1_000) {
-    const val = abs / 1_000;
-    return `${sign}${Math.round(val)}k`;
-  }
-  return `${sign}${abs.toLocaleString('vi-VN')} đ`;
-}
+const COLOR_AVG = '#F59E0B';
+const COLOR_ACTIVE = '#3B82F6';
+const COLOR_UP = '#10B981';
+const COLOR_DOWN = '#EF4444';
+// Chỉ in nhãn giá trị trên cột cao nhất khi ít cột, tránh chồng chữ.
+const MAX_LABELLED_BARS = 8;
 
-/**
- * Tính toán các mốc chia tròn số đẹp cho trục Y (Wilkinson / Nice Numbers Algorithm)
- */
-export function calculateNiceTicks(min: number, max: number, targetCount = 4): number[] {
-  if (max <= min) return [0, Math.max(min, 1)];
-  const span = max - min;
-  const rawStep = span / targetCount;
-  const magnitude = Math.pow(10, Math.floor(Math.log10(rawStep)));
-  const frac = rawStep / magnitude;
-
-  let niceStep = magnitude;
-  if (frac > 5) niceStep = 10 * magnitude;
-  else if (frac > 2) niceStep = 5 * magnitude;
-  else if (frac > 1) niceStep = 2 * magnitude;
-
-  const niceMin = Math.floor(min / niceStep) * niceStep;
-  const niceMax = Math.ceil(max / niceStep) * niceStep;
-
-  const ticks: number[] = [];
-  for (let v = niceMin; v <= niceMax + niceStep * 0.001; v += niceStep) {
-    const rounded = Math.round(v);
-    // Sub-integer steps (e.g. all-zero data → max 1, step 0.5) round to repeated values;
-    // ticks are used as React keys on the axis, so keep each value once.
-    if (ticks[ticks.length - 1] !== rounded) ticks.push(rounded);
-  }
-  return ticks;
+interface Datum extends Point {
+  momChange: number | null;
 }
 
 export const MrrAreaChart: React.FC<MrrAreaChartProps> = ({
   points,
   formatValue = (v) => `${v.toLocaleString('vi-VN')} VNĐ`,
   color = '#2563EB',
+  gradientId = 'mrrAreaGradient',
   height = 200,
 }) => {
-  const [hoverIndex, setHoverIndex] = useState<number | null>(null);
   const [chartMode, setChartMode] = useState<'bar' | 'line'>('bar');
 
   // Tính toán các chỉ số thống kê tài chính
@@ -87,15 +68,19 @@ export const MrrAreaChart: React.FC<MrrAreaChartProps> = ({
       if (values[i] > values[maxIdx]) maxIdx = i;
       if (values[i] < values[minIdx]) minIdx = i;
     }
-    return {
-      total,
-      avg,
-      maxPoint: points[maxIdx],
-      minPoint: points[minIdx],
-    };
+    return { total, avg, maxIdx, maxPoint: points[maxIdx], minPoint: points[minIdx] };
   }, [points]);
 
-  if (!points || points.length === 0) {
+  const data: Datum[] = useMemo(
+    () =>
+      (points ?? []).map((p, i) => {
+        const prev = i > 0 ? points[i - 1].value : null;
+        return { ...p, momChange: prev !== null && prev > 0 ? ((p.value - prev) / prev) * 100 : null };
+      }),
+    [points],
+  );
+
+  if (!stats) {
     return (
       <div style={{ padding: '36px 0', textAlign: 'center', color: 'var(--text-muted)', fontSize: '0.85rem' }}>
         Chưa có dữ liệu phân tích doanh thu.
@@ -103,86 +88,43 @@ export const MrrAreaChart: React.FC<MrrAreaChartProps> = ({
     );
   }
 
-  // Tọa độ và kích thước khung vẽ
-  const viewBoxWidth = 720;
-  const viewBoxHeight = height;
-  const paddingLeft = 68; // Không gian cho nhãn trục Y
-  const paddingRight = 24;
-  const paddingTop = 26;  // Không gian cho nhãn đơn vị (VNĐ)
-  const paddingBottom = 32; // Không gian cho nhãn trục X
-  const graphWidth = viewBoxWidth - paddingLeft - paddingRight;
-  const graphHeight = viewBoxHeight - paddingTop - paddingBottom;
-  const baselineY = paddingTop + graphHeight;
+  const ticks = calculateNiceTicks(0, Math.max(...points.map((p) => p.value), 1), 4);
+  const yDomain: [number, number] = [ticks[0], ticks[ticks.length - 1]];
+  const showMaxLabel = points.length <= MAX_LABELLED_BARS;
 
-  // Thang đo trục Y
-  const rawMax = Math.max(...points.map((p) => p.value), 1);
-  const ticks = calculateNiceTicks(0, rawMax, 4);
-  const yMax = ticks[ticks.length - 1];
-  const yMin = 0;
-
-  const getY = (val: number) => {
-    if (yMax === yMin) return baselineY;
-    const ratio = Math.max(0, Math.min(1, (val - yMin) / (yMax - yMin)));
-    return baselineY - ratio * graphHeight;
+  const renderMaxLabel = (props: { x?: number | string; y?: number | string; width?: number | string; index?: number }) => {
+    if (!showMaxLabel || props.index !== stats.maxIdx || stats.maxPoint.value <= 0) return null;
+    const x = Number(props.x) + Number(props.width) / 2;
+    return (
+      <text x={x} y={Number(props.y) - 5} textAnchor="middle" className={common.valueLabel}>
+        {formatCompactVnd(stats.maxPoint.value)}
+      </text>
+    );
   };
-
-  // Tọa độ các điểm trên trục X
-  const slotCount = points.length;
-  const slotWidth = graphWidth / Math.max(slotCount, 1);
-  const barWidth = Math.min(38, Math.max(14, slotWidth * 0.52));
-
-  const items = points.map((p, idx) => {
-    const centerX = paddingLeft + (idx + 0.5) * slotWidth;
-    const barX = centerX - barWidth / 2;
-    const yVal = getY(p.value);
-    const barH = Math.max(p.value > 0 ? 3 : 1, baselineY - yVal);
-    const prevVal = idx > 0 ? points[idx - 1].value : null;
-    const momChange = prevVal !== null && prevVal > 0 ? ((p.value - prevVal) / prevVal) * 100 : null;
-
-    return {
-      ...p,
-      index: idx,
-      centerX,
-      barX,
-      barY: yVal,
-      barH,
-      momChange,
-    };
-  });
-
-  const avgY = stats ? getY(stats.avg) : baselineY;
-  const activeItem = hoverIndex !== null ? items[hoverIndex] : null;
-
-  // Tạo path cho dạng đường thẳng (Financial Straight Line)
-  const linePath = items.length > 0
-    ? items.reduce((path, item, i) => `${path} ${i === 0 ? 'M' : 'L'} ${item.centerX.toFixed(1)} ${item.barY.toFixed(1)}`, '')
-    : '';
 
   return (
     <div className={styles.container}>
       {/* 1. Thanh tóm tắt các chỉ số tài chính cốt lõi */}
-      {stats && (
-        <div className={styles.statStrip}>
-          <div className={styles.statItem}>
-            <span className={styles.statLabel}>Tổng kỳ ({points.length} tháng)</span>
-            <span className={styles.statValue}>{formatValue(stats.total)}</span>
-          </div>
-          <div className={styles.statItem}>
-            <span className={styles.statLabel}>Bình quân tháng</span>
-            <span className={styles.statValue}>{formatValue(stats.avg)}</span>
-          </div>
-          <div className={styles.statItem}>
-            <span className={styles.statLabel}>Đạt đỉnh (T{stats.maxPoint.label})</span>
-            <span className={styles.statValue}>{formatValue(stats.maxPoint.value)}</span>
-          </div>
-          <div className={styles.statItem}>
-            <span className={styles.statLabel}>Thấp nhất (T{stats.minPoint.label})</span>
-            <span className={styles.statValue}>{formatValue(stats.minPoint.value)}</span>
-          </div>
+      <div className={styles.statStrip}>
+        <div className={styles.statItem}>
+          <span className={styles.statLabel}>Tổng kỳ ({points.length} tháng)</span>
+          <span className={styles.statValue}>{formatValue(stats.total)}</span>
         </div>
-      )}
+        <div className={styles.statItem}>
+          <span className={styles.statLabel}>Bình quân tháng</span>
+          <span className={styles.statValue}>{formatValue(stats.avg)}</span>
+        </div>
+        <div className={styles.statItem}>
+          <span className={styles.statLabel}>Đạt đỉnh (T{stats.maxPoint.label})</span>
+          <span className={styles.statValue}>{formatValue(stats.maxPoint.value)}</span>
+        </div>
+        <div className={styles.statItem}>
+          <span className={styles.statLabel}>Thấp nhất (T{stats.minPoint.label})</span>
+          <span className={styles.statValue}>{formatValue(stats.minPoint.value)}</span>
+        </div>
+      </div>
 
-      {/* 2. Thanh chuyển đổi chế độ xem (Cột tài chính vs Đường xu hướng) */}
+      {/* 2. Chuyển chế độ xem (Cột tài chính vs Đường xu hướng) */}
       <div className={styles.chartControls}>
         <div className={styles.modeToggleGroup}>
           <button
@@ -210,277 +152,87 @@ export const MrrAreaChart: React.FC<MrrAreaChartProps> = ({
         </div>
       </div>
 
-      {/* 3. Khung vẽ SVG chuẩn trục tài chính */}
-      <div className={styles.svgWrapper}>
-        <svg
-          viewBox={`0 0 ${viewBoxWidth} ${viewBoxHeight}`}
-          className={styles.svgChart}
-          onMouseLeave={() => setHoverIndex(null)}
-        >
-          {/* Nhãn đơn vị tiền tệ trên đỉnh trục Y */}
-          <text
-            x={paddingLeft}
-            y={paddingTop - 10}
-            textAnchor="start"
-            fill="var(--text-secondary)"
-            fontSize="9.5"
-            fontWeight="700"
-            fontFamily="var(--font-mono)"
-          >
-            (Đơn vị: VNĐ)
-          </text>
-
-          {/* Các mốc và đường lưới ngang trục Y (Horizontal Grid Lines & Ticks) */}
-          {ticks.map((tickVal) => {
-            const y = getY(tickVal);
-            return (
-              <g key={tickVal}>
-                {/* Đường lưới ngang nét đứt mỏng */}
-                <line
-                  x1={paddingLeft}
-                  y1={y}
-                  x2={viewBoxWidth - paddingRight}
-                  y2={y}
-                  stroke="var(--glass-border)"
-                  strokeDasharray="3 3"
-                  strokeWidth="1"
-                  opacity="0.8"
-                />
-                {/* Vạch chia nhỏ trên trục Y */}
-                <line
-                  x1={paddingLeft - 4}
-                  y1={y}
-                  x2={paddingLeft}
-                  y2={y}
-                  stroke="var(--glass-border)"
-                  strokeWidth="1.2"
-                />
-                {/* Nhãn số liệu trục Y căn phải */}
-                <text
-                  x={paddingLeft - 8}
-                  y={y + 3.5}
-                  textAnchor="end"
-                  fill="var(--text-secondary)"
-                  fontSize="9.5"
-                  fontWeight="600"
-                  fontFamily="var(--font-mono)"
-                >
-                  {formatCompactVnd(tickVal)}
-                </text>
-              </g>
-            );
-          })}
-
-          {/* Đường trục tung Y (Vertical Left Y-Axis) */}
-          <line
-            x1={paddingLeft}
-            y1={paddingTop - 4}
-            x2={paddingLeft}
-            y2={baselineY}
-            stroke="var(--glass-border)"
-            strokeWidth="1.5"
-          />
-
-          {/* Đường trục hoành X (Baseline X-Axis) */}
-          <line
-            x1={paddingLeft}
-            y1={baselineY}
-            x2={viewBoxWidth - paddingRight}
-            y2={baselineY}
-            stroke="var(--glass-border)"
-            strokeWidth="1.5"
-          />
-
-          {/* Đường chỉ báo Trung bình tháng (Average Benchmark Line) */}
-          {stats && (
-            <g>
-              <line
-                x1={paddingLeft}
-                y1={avgY}
-                x2={viewBoxWidth - paddingRight}
-                y2={avgY}
-                stroke="#F59E0B"
-                strokeDasharray="4 3"
-                strokeWidth="1.2"
-                opacity="0.9"
-              />
-              <text
-                x={viewBoxWidth - paddingRight}
-                y={avgY - 4}
-                textAnchor="end"
-                fill="#F59E0B"
-                fontSize="9"
-                fontWeight="700"
-                fontFamily="var(--font-mono)"
-              >
-                TB: {formatCompactVnd(stats.avg)}
-              </text>
-            </g>
-          )}
-
-          {/* DẠNG 1: BIỂU ĐỒ CỘT TÀI CHÍNH (BAR MODE) */}
-          {chartMode === 'bar' && (
-            <g>
-              {items.map((item) => {
-                const isActive = hoverIndex === item.index;
-                const isMax = stats && item.value === stats.maxPoint.value && item.value > 0;
+      {/* 3. Biểu đồ Recharts */}
+      <span className={common.unit}>(Đơn vị: VNĐ)</span>
+      <div className={common.chartArea} style={{ height }} onClick={(e) => e.stopPropagation()}>
+        <ResponsiveContainer width="100%" height="100%" initialDimension={{ width: INITIAL_CHART_WIDTH, height }}>
+          <ComposedChart data={data} margin={{ top: 16, right: 12, bottom: 0, left: 0 }}>
+            <defs>
+              <linearGradient id={gradientId} x1="0" y1="0" x2="0" y2="1">
+                <stop offset="0%" stopColor={color} stopOpacity={0.4} />
+                <stop offset="100%" stopColor={color} stopOpacity={0.02} />
+              </linearGradient>
+            </defs>
+            <CartesianGrid vertical={false} stroke={GRID_STROKE} strokeDasharray="3 3" />
+            <XAxis
+              dataKey="label"
+              tickFormatter={(v: string) => `T${v}`}
+              tickLine={false}
+              axisLine={{ stroke: GRID_STROKE }}
+              tick={AXIS_TICK}
+            />
+            <YAxis
+              width={Y_AXIS_WIDTH}
+              domain={yDomain}
+              ticks={ticks}
+              tickFormatter={formatCompactVnd}
+              tickLine={false}
+              axisLine={false}
+              tick={AXIS_TICK}
+            />
+            <ReferenceLine
+              y={stats.avg}
+              stroke={COLOR_AVG}
+              strokeDasharray="4 3"
+              label={{
+                value: `TB: ${formatCompactVnd(stats.avg)}`,
+                position: 'insideTopRight',
+                fill: COLOR_AVG,
+                fontSize: 9,
+                fontWeight: 700,
+              }}
+            />
+            <Tooltip
+              cursor={chartMode === 'bar' ? { fill: 'rgba(59, 130, 246, 0.08)' } : { stroke: GRID_STROKE }}
+              content={({ active, payload }) => {
+                if (!active || !payload?.length) return null;
+                const d = payload[0].payload as Datum;
+                const vsAvg = ((d.value - stats.avg) / Math.max(stats.avg, 1)) * 100;
                 return (
-                  <g
-                    key={item.label}
-                    onMouseEnter={() => setHoverIndex(item.index)}
-                    style={{ cursor: 'pointer' }}
-                  >
-                    {/* Vùng bắt chuột rộng */}
-                    <rect
-                      x={item.centerX - slotWidth / 2}
-                      y={paddingTop}
-                      width={slotWidth}
-                      height={graphHeight}
-                      fill="transparent"
-                    />
-
-                    {/* Vệt sáng khi hover */}
-                    {isActive && (
-                      <rect
-                        x={item.centerX - slotWidth / 2 + 2}
-                        y={paddingTop}
-                        width={slotWidth - 4}
-                        height={graphHeight}
-                        fill="rgba(59, 130, 246, 0.08)"
-                      />
+                  <div role="tooltip" className={common.tooltip}>
+                    <span className={common.tooltipTitle}>Tháng {d.label}</span>
+                    <span className={common.tooltipValue}>{formatValue(d.value)}</span>
+                    <span className={common.tooltipSub}>
+                      {d.value >= stats.avg ? '+' : ''}
+                      {vsAvg.toFixed(1)}% so với trung bình
+                    </span>
+                    {d.momChange !== null && (
+                      <span className={common.tooltipSub} style={{ color: d.momChange >= 0 ? COLOR_UP : COLOR_DOWN }}>
+                        {d.momChange >= 0 ? '▲ +' : '▼ '}
+                        {d.momChange.toFixed(1)}% so với tháng trước
+                      </span>
                     )}
-
-                    {/* Cột dữ liệu chính */}
-                    <rect
-                      x={item.barX}
-                      y={item.barY}
-                      width={barWidth}
-                      height={item.barH}
-                      rx={2}
-                      ry={2}
-                      fill={isActive ? '#3B82F6' : color}
-                      stroke={isActive ? '#60A5FA' : 'rgba(37, 99, 235, 0.9)'}
-                      strokeWidth={1}
-                      opacity={isActive ? 1 : 0.88}
-                    />
-
-                    {/* Tag hiển thị giá trị trên đỉnh cột cao nhất hoặc khi hover */}
-                    {(isActive || (isMax && slotCount <= 8)) && (
-                      <text
-                        x={item.centerX}
-                        y={Math.max(paddingTop + 10, item.barY - 5)}
-                        textAnchor="middle"
-                        fill="var(--text-primary)"
-                        fontSize="9"
-                        fontWeight="700"
-                        fontFamily="var(--font-mono)"
-                      >
-                        {formatCompactVnd(item.value)}
-                      </text>
-                    )}
-                  </g>
+                  </div>
                 );
-              })}
-            </g>
-          )}
-
-          {/* DẠNG 2: BIỂU ĐỒ ĐƯỜNG XU HƯỚNG (LINE MODE) */}
-          {chartMode === 'line' && (
-            <g>
-              {/* Vùng màu mờ dưới đường */}
-              <path
-                d={`${linePath} L ${items[items.length - 1].centerX} ${baselineY} L ${items[0].centerX} ${baselineY} Z`}
-                fill={color}
-                opacity="0.12"
-              />
-              {/* Đường thẳng xu hướng sắc nét */}
-              <path
-                d={linePath}
-                fill="none"
+              }}
+            />
+            {chartMode === 'bar' ? (
+              <Bar dataKey="value" fill={color} radius={[3, 3, 0, 0]} maxBarSize={38} activeBar={{ fill: COLOR_ACTIVE }}>
+                <LabelList dataKey="value" content={renderMaxLabel} />
+              </Bar>
+            ) : (
+              <Area
+                type="monotone"
+                dataKey="value"
                 stroke={color}
-                strokeWidth="2"
-                strokeLinecap="round"
-                strokeLinejoin="round"
+                strokeWidth={2.5}
+                fill={`url(#${gradientId})`}
+                dot={{ r: 3.5, strokeWidth: 2, stroke: color, fill: 'var(--bg-secondary)' }}
+                activeDot={{ r: 5, strokeWidth: 2.5, stroke: COLOR_ACTIVE, fill: 'var(--bg-secondary)' }}
               />
-              {/* Các điểm dữ liệu tròn */}
-              {items.map((item) => {
-                const isActive = hoverIndex === item.index;
-                return (
-                  <g
-                    key={item.label}
-                    onMouseEnter={() => setHoverIndex(item.index)}
-                    style={{ cursor: 'pointer' }}
-                  >
-                    <circle
-                      cx={item.centerX}
-                      cy={item.barY}
-                      r={isActive ? 5 : 3.5}
-                      fill="var(--bg-secondary)"
-                      stroke={isActive ? '#60A5FA' : color}
-                      strokeWidth={isActive ? 2.5 : 2}
-                    />
-                  </g>
-                );
-              })}
-            </g>
-          )}
-
-          {/* Trục X: Vạch chia và nhãn thời gian */}
-          {items.map((item) => {
-            const isActive = hoverIndex === item.index;
-            return (
-              <g key={`axis-x-${item.label}`}>
-                {/* Vạch chia nhỏ dưới trục hoành */}
-                <line
-                  x1={item.centerX}
-                  y1={baselineY}
-                  x2={item.centerX}
-                  y2={baselineY + 4}
-                  stroke="var(--glass-border)"
-                  strokeWidth="1.2"
-                />
-                {/* Nhãn tháng căn giữa */}
-                <text
-                  x={item.centerX}
-                  y={baselineY + 16}
-                  textAnchor="middle"
-                  fill={isActive ? 'var(--text-primary)' : 'var(--text-secondary)'}
-                  fontSize="10"
-                  fontWeight={isActive ? '800' : '600'}
-                  fontFamily="var(--font-mono)"
-                >
-                  T{item.label}
-                </text>
-              </g>
-            );
-          })}
-        </svg>
-
-        {/* Tooltip đối soát tài chính khi hover */}
-        {activeItem && (
-          <div
-            className={styles.tooltipBox}
-            style={{
-              left: `${(activeItem.centerX / viewBoxWidth) * 100}%`,
-              top: `${(activeItem.barY / viewBoxHeight) * 100}%`,
-            }}
-          >
-            <span className={styles.tooltipTitle}>Tháng {activeItem.label}</span>
-            <span className={styles.tooltipValue}>{formatValue(activeItem.value)}</span>
-            {stats && (
-              <span className={styles.tooltipSub}>
-                {activeItem.value >= stats.avg ? '+' : ''}
-                {(((activeItem.value - stats.avg) / Math.max(stats.avg, 1)) * 100).toFixed(1)}% so với trung bình
-              </span>
             )}
-            {activeItem.momChange !== null && (
-              <span className={styles.tooltipSub} style={{ color: activeItem.momChange >= 0 ? '#10B981' : '#EF4444' }}>
-                {activeItem.momChange >= 0 ? '▲ +' : '▼ '}
-                {activeItem.momChange.toFixed(1)}% so với tháng trước
-              </span>
-            )}
-          </div>
-        )}
+          </ComposedChart>
+        </ResponsiveContainer>
       </div>
     </div>
   );
