@@ -1,6 +1,17 @@
-import React, { useState } from 'react';
+import React from 'react';
+import {
+  Area,
+  CartesianGrid,
+  ComposedChart,
+  Line,
+  ReferenceLine,
+  ResponsiveContainer,
+  Tooltip,
+  XAxis,
+  YAxis,
+} from 'recharts';
 import type { FinancePoint } from '../../types/admin';
-import { calculateNiceTicks, formatCompactVnd } from './MrrAreaChart';
+import { formatCompactVnd } from './MrrAreaChart';
 import styles from './FinanceTrendChart.module.css';
 
 export type FinanceGranularity = 'day' | 'month';
@@ -9,6 +20,11 @@ interface FinanceTrendChartProps {
   points: FinancePoint[];
   granularity: FinanceGranularity;
   height?: number;
+  /** Ghi chú phụ trong trạng thái rỗng (ví dụ ngày dữ liệu bắt đầu). */
+  emptyHint?: string;
+  /** Nếu có, trạng thái rỗng hiện nút để chuyển sang khoảng thời gian dài hơn. */
+  onShowLonger?: () => void;
+  showLongerLabel?: string;
 }
 
 const LABELS = {
@@ -22,8 +38,14 @@ const LABELS = {
   ariaChart: 'Biểu đồ doanh thu và lợi nhuận',
 };
 
-const VIEW_WIDTH = 720;
-const PAD = { left: 68, right: 24, top: 26, bottom: 32 };
+const COLOR_REVENUE = 'var(--color-orange)';
+const COLOR_PROFIT = 'var(--status-scanned)';
+const GRADIENT_ID = 'financeRevenueGradient';
+// Kích thước khởi tạo để biểu đồ render được trước khi ResponsiveContainer đo xong (SSR/jsdom).
+const INITIAL_WIDTH = 720;
+// Số nhãn trục X tối đa khi chuỗi dày (30 ngày), tránh chồng chữ.
+const MAX_X_LABELS = 8;
+const DENSE_SERIES = 12;
 
 /** period_start là yyyy-MM-dd; tách chuỗi để tránh lệch múi giờ khi parse Date. */
 export function formatPeriodLabel(periodStart: string, granularity: FinanceGranularity): string {
@@ -32,34 +54,37 @@ export function formatPeriodLabel(periodStart: string, granularity: FinanceGranu
   return `T${Number(month)}`;
 }
 
-export const FinanceTrendChart: React.FC<FinanceTrendChartProps> = ({ points, granularity, height = 320 }) => {
-  const [hover, setHover] = useState<number | null>(null);
+interface TooltipBodyProps {
+  point: FinancePoint;
+  granularity: FinanceGranularity;
+}
 
+export const FinanceTooltipBody: React.FC<TooltipBodyProps> = ({ point, granularity }) => (
+  <div role="tooltip" className={styles.tooltip}>
+    <span className={styles.tooltipTitle}>
+      {granularity === 'day'
+        ? formatPeriodLabel(point.period_start, 'day')
+        : `${LABELS.month} ${Number(point.period_start.split('-')[1])}`}
+    </span>
+    <span className={styles.tooltipRow}>{LABELS.revenue}: {formatCompactVnd(point.revenue_vnd)}</span>
+    <span className={styles.tooltipRow}>{LABELS.apiCost}: {formatCompactVnd(point.api_cost_vnd)}</span>
+    <span className={styles.tooltipRow}>{LABELS.maintenance}: {formatCompactVnd(point.maintenance_cost_vnd)}</span>
+    <span className={`${styles.tooltipRow} ${point.profit_vnd < 0 ? styles.negative : ''}`}>
+      {LABELS.profit}: {formatCompactVnd(point.profit_vnd)}
+    </span>
+  </div>
+);
+
+export const FinanceTrendChart: React.FC<FinanceTrendChartProps> = ({
+  points,
+  granularity,
+  height = 320,
+  emptyHint,
+  onShowLonger,
+  showLongerLabel,
+}) => {
   const hasData = points.some((p) => p.revenue_vnd !== 0 || p.profit_vnd !== 0 || p.api_cost_vnd !== 0);
-  if (!hasData) return <div className={styles.empty}>{LABELS.empty}</div>;
-
-  const graphW = VIEW_WIDTH - PAD.left - PAD.right;
-  const graphH = height - PAD.top - PAD.bottom;
-  const maxVal = Math.max(...points.map((p) => Math.max(p.revenue_vnd, p.profit_vnd)), 1);
-  const minVal = Math.min(0, ...points.map((p) => p.profit_vnd));
-  const ticks = calculateNiceTicks(minVal, maxVal, 4);
-  const yMin = ticks[0];
-  const yMax = ticks[ticks.length - 1];
-  const getY = (v: number) => {
-    if (yMax === yMin) return PAD.top + graphH;
-    return PAD.top + graphH - ((v - yMin) / (yMax - yMin)) * graphH;
-  };
-  const zeroY = getY(0);
-
-  const slotW = graphW / points.length;
-  const barW = Math.min(38, Math.max(4, slotW * 0.6));
-  const items = points.map((p, i) => ({ ...p, cx: PAD.left + (i + 0.5) * slotW }));
-  const linePath = items
-    .map((it, i) => `${i === 0 ? 'M' : 'L'} ${it.cx.toFixed(1)} ${getY(it.profit_vnd).toFixed(1)}`)
-    .join(' ');
-  // Với chuỗi ngày (30 điểm), chỉ in nhãn thưa để không chồng chữ.
-  const labelEvery = points.length > 12 ? Math.ceil(points.length / 8) : 1;
-  const active = hover !== null ? items[hover] : null;
+  const tickInterval = points.length > DENSE_SERIES ? Math.ceil(points.length / MAX_X_LABELS) - 1 : 0;
 
   return (
     <div className={styles.wrapper}>
@@ -72,80 +97,83 @@ export const FinanceTrendChart: React.FC<FinanceTrendChartProps> = ({ points, gr
           <span className={styles.swatchLine} />
           {LABELS.profit}
         </span>
+        <span className={styles.unit}>{LABELS.unit}</span>
       </div>
-      <svg
-        viewBox={`0 0 ${VIEW_WIDTH} ${height}`}
-        className={styles.svg}
-        role="img"
-        aria-label={LABELS.ariaChart}
-        onMouseLeave={() => setHover(null)}
-      >
-        <text x={PAD.left} y={PAD.top - 10} fill="var(--text-secondary)" fontSize="9.5" fontWeight="700" fontFamily="var(--font-mono)">
-          {LABELS.unit}
-        </text>
-        {ticks.map((t) => (
-          <g key={t}>
-            <line x1={PAD.left} y1={getY(t)} x2={VIEW_WIDTH - PAD.right} y2={getY(t)} stroke="var(--glass-border)" strokeDasharray="3 3" opacity="0.8" />
-            <text x={PAD.left - 8} y={getY(t) + 3.5} textAnchor="end" fill="var(--text-secondary)" fontSize="9.5" fontWeight="600" fontFamily="var(--font-mono)">
-              {formatCompactVnd(t)}
-            </text>
-          </g>
-        ))}
-        <line data-testid="zero-baseline" x1={PAD.left} y1={zeroY} x2={VIEW_WIDTH - PAD.right} y2={zeroY} stroke="var(--text-secondary)" strokeWidth="1.5" />
-        <line x1={PAD.left} y1={PAD.top - 4} x2={PAD.left} y2={PAD.top + graphH} stroke="var(--glass-border)" strokeWidth="1.5" />
 
-        {items.map((it, i) => {
-          const y = getY(it.revenue_vnd);
-          return (
-            <g key={it.period_start} data-testid="finance-slot" onMouseEnter={() => setHover(i)}>
-              <rect x={it.cx - slotW / 2} y={PAD.top} width={slotW} height={graphH} fill={hover === i ? 'rgba(128,128,128,0.10)' : 'transparent'} />
-              <rect
-                data-testid="revenue-bar"
-                x={it.cx - barW / 2}
-                y={Math.min(y, zeroY)}
-                width={barW}
-                height={Math.abs(zeroY - y)}
-                rx={2}
-                fill="var(--color-orange)"
-                opacity={hover === i ? 1 : 0.85}
+      <div className={styles.chartArea} style={{ height }} role="img" aria-label={LABELS.ariaChart}>
+        <ResponsiveContainer width="100%" height="100%" initialDimension={{ width: INITIAL_WIDTH, height }}>
+          <ComposedChart data={points} margin={{ top: 8, right: 12, bottom: 0, left: 0 }}>
+            <defs>
+              <linearGradient id={GRADIENT_ID} x1="0" y1="0" x2="0" y2="1">
+                <stop offset="0%" stopColor={COLOR_REVENUE} stopOpacity={0.45} />
+                <stop offset="100%" stopColor={COLOR_REVENUE} stopOpacity={0.02} />
+              </linearGradient>
+            </defs>
+            <CartesianGrid vertical={false} stroke="var(--glass-border)" strokeDasharray="3 3" />
+            <XAxis
+              dataKey="period_start"
+              tickFormatter={(v: string) => formatPeriodLabel(v, granularity)}
+              interval={tickInterval}
+              tickLine={false}
+              axisLine={{ stroke: 'var(--glass-border)' }}
+              tick={{ fill: 'var(--text-secondary)', fontSize: 10, fontWeight: 600 }}
+            />
+            <YAxis
+              width={56}
+              tickFormatter={(v: number) => formatCompactVnd(v)}
+              tickLine={false}
+              axisLine={false}
+              tick={{ fill: 'var(--text-secondary)', fontSize: 10, fontWeight: 600 }}
+            />
+            <ReferenceLine y={0} stroke="var(--text-secondary)" strokeWidth={1.2} />
+            {hasData && (
+              <Tooltip
+                cursor={{ stroke: 'var(--glass-border)', strokeWidth: 1 }}
+                content={({ active, payload }) =>
+                  active && payload?.length ? (
+                    <FinanceTooltipBody point={payload[0].payload as FinancePoint} granularity={granularity} />
+                  ) : null
+                }
               />
-              {i % labelEvery === 0 && (
-                <text x={it.cx} y={PAD.top + graphH + 16} textAnchor="middle" fill="var(--text-secondary)" fontSize="10" fontWeight="600" fontFamily="var(--font-mono)">
-                  {formatPeriodLabel(it.period_start, granularity)}
-                </text>
-              )}
-            </g>
-          );
-        })}
+            )}
+            <Area
+              type="monotone"
+              dataKey="revenue_vnd"
+              name={LABELS.revenue}
+              stroke={COLOR_REVENUE}
+              strokeWidth={2.5}
+              fill={`url(#${GRADIENT_ID})`}
+              dot={false}
+              activeDot={{ r: 5, strokeWidth: 2, stroke: COLOR_REVENUE, fill: 'var(--bg-secondary)' }}
+              isAnimationActive={hasData}
+              animationDuration={600}
+            />
+            <Line
+              type="monotone"
+              dataKey="profit_vnd"
+              name={LABELS.profit}
+              stroke={COLOR_PROFIT}
+              strokeWidth={2.5}
+              dot={points.length <= DENSE_SERIES ? { r: 3, strokeWidth: 2, fill: 'var(--bg-secondary)' } : false}
+              activeDot={{ r: 5, strokeWidth: 2, fill: 'var(--bg-secondary)' }}
+              isAnimationActive={hasData}
+              animationDuration={600}
+            />
+          </ComposedChart>
+        </ResponsiveContainer>
 
-        <path data-testid="profit-line" d={linePath} fill="none" stroke="var(--status-scanned)" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" />
-        {items.map((it, i) => (
-          <circle key={it.period_start} cx={it.cx} cy={getY(it.profit_vnd)} r={hover === i ? 5 : 3} fill="var(--bg-secondary)" stroke="var(--status-scanned)" strokeWidth="2" />
-        ))}
-      </svg>
-
-      {active && (
-        <div
-          role="tooltip"
-          className={styles.tooltip}
-          style={{
-            left: `${(active.cx / VIEW_WIDTH) * 100}%`,
-            top: `${(Math.min(getY(active.revenue_vnd), getY(active.profit_vnd)) / height) * 100}%`,
-          }}
-        >
-          <span className={styles.tooltipTitle}>
-            {granularity === 'day'
-              ? formatPeriodLabel(active.period_start, 'day')
-              : `${LABELS.month} ${Number(active.period_start.split('-')[1])}`}
-          </span>
-          <span className={styles.tooltipRow}>{LABELS.revenue}: {formatCompactVnd(active.revenue_vnd)}</span>
-          <span className={styles.tooltipRow}>{LABELS.apiCost}: {formatCompactVnd(active.api_cost_vnd)}</span>
-          <span className={styles.tooltipRow}>{LABELS.maintenance}: {formatCompactVnd(active.maintenance_cost_vnd)}</span>
-          <span className={`${styles.tooltipRow} ${active.profit_vnd < 0 ? styles.negative : ''}`}>
-            {LABELS.profit}: {formatCompactVnd(active.profit_vnd)}
-          </span>
-        </div>
-      )}
+        {!hasData && (
+          <div className={styles.emptyOverlay}>
+            <span className={styles.emptyTitle}>{LABELS.empty}</span>
+            {emptyHint && <span className={styles.emptyHint}>{emptyHint}</span>}
+            {onShowLonger && showLongerLabel && (
+              <button type="button" className={styles.emptyAction} onClick={onShowLonger}>
+                {showLongerLabel}
+              </button>
+            )}
+          </div>
+        )}
+      </div>
     </div>
   );
 };

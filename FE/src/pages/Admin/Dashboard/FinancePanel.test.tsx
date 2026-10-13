@@ -1,8 +1,19 @@
+import React from 'react';
 import { fireEvent, render, screen, waitFor } from '@testing-library/react';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 import type { FinanceOverview, FinanceTotals } from '../../../types/admin';
 
 const { finance } = vi.hoisted(() => ({ finance: vi.fn() }));
+
+// jsdom không có layout nên ResponsiveContainer đo ra 0×0 và Recharts không vẽ trục; cho kích thước cố định.
+vi.mock('recharts', async (importOriginal) => {
+  const actual = await importOriginal<typeof import('recharts')>();
+  return {
+    ...actual,
+    ResponsiveContainer: ({ children }: { children: React.ReactElement<{ width?: number; height?: number }> }) =>
+      React.cloneElement(children, { width: 720, height: 320 }),
+  };
+});
 
 vi.mock('../../../api/adminClient', () => {
   class AdminApiError extends Error {
@@ -98,6 +109,20 @@ describe('FinancePanel', () => {
     expect(container.textContent).toContain('11/10');
     fireEvent.click(screen.getByText('6 tháng'));
     expect(container.textContent).toContain('T10');
+  });
+
+  it('offers the 6-month view when the last 30 days are empty', async () => {
+    const zero = { revenue_vnd: 0, api_cost_vnd: 0, maintenance_cost_vnd: 0, profit_vnd: 0 };
+    finance.mockResolvedValue(
+      overview({
+        series_1m: [{ period_start: '2026-10-11', ...zero }],
+        series_6m: [{ period_start: '2026-06-01', revenue_vnd: 2, api_cost_vnd: 0, maintenance_cost_vnd: 0, profit_vnd: 2 }],
+      }),
+    );
+    render(<FinancePanel />);
+    expect(await screen.findByText(/Dữ liệu bắt đầu từ 05\/01\/2026/)).toBeInTheDocument();
+    fireEvent.click(screen.getByText('Xem 6 tháng →'));
+    expect(screen.queryByText(/Chưa có dữ liệu tài chính/)).toBeNull();
   });
 
   it('navigates to analytics from the detail link', async () => {

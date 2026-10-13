@@ -30,6 +30,9 @@ const LABELS = {
   chartTitle: 'Xu hướng doanh thu & lợi nhuận',
   range1m: '1 tháng',
   range6m: '6 tháng',
+  emptyHint: 'Chưa có giao dịch trong 30 ngày gần nhất.',
+  emptySince: 'Dữ liệu bắt đầu từ',
+  showSixMonths: 'Xem 6 tháng →',
   detailLink: 'Phân tích chi tiết →',
   unsupported: 'Máy chủ chưa hỗ trợ dữ liệu tài chính',
   loadError: 'Không tải được dữ liệu tài chính.',
@@ -195,7 +198,18 @@ export const FinancePanel: React.FC<FinancePanelProps> = ({ navigate, refreshKey
             {loading && !data ? (
               <ThreeDotsBlockLoader text={LABELS.loadingChart} minHeight={240} />
             ) : (
-              <FinanceTrendChart points={points} granularity={range === '1m' ? 'day' : 'month'} height={320} />
+              <FinanceTrendChart
+                points={points}
+                granularity={range === '1m' ? 'day' : 'month'}
+                height={320}
+                emptyHint={
+                  range === '1m'
+                    ? `${LABELS.emptyHint}${data?.since ? ` ${LABELS.emptySince} ${formatIsoDate(data.since)}.` : ''}`
+                    : undefined
+                }
+                onShowLonger={range === '1m' ? () => setRange('6m') : undefined}
+                showLongerLabel={LABELS.showSixMonths}
+              />
             )}
             {navigate && (
               <button type="button" className={styles.viewAllLink} onClick={() => navigate('analytics')}>
