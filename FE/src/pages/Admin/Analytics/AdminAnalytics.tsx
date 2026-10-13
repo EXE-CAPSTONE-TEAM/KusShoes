@@ -669,7 +669,7 @@ export const AdminAnalytics: React.FC<AdminAnalyticsProps> = ({ navigate }) => {
             >
               <div className={styles.chartCardHeader}>
                 <div className={styles.chartTitleWrap}>
-                  <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
+                  <div className={styles.chartTitleRow}>
                     <h3 className={styles.chartTitle}>
                       Doanh thu theo chu kỳ tháng
                     </h3>
@@ -694,7 +694,7 @@ export const AdminAnalytics: React.FC<AdminAnalyticsProps> = ({ navigate }) => {
                       value: point.revenue_vnd,
                     }))}
                     formatValue={formatVnd}
-                    color="#2563EB"
+                    color="var(--fin-blue)"
                     height={200}
                   />
                 </div>
@@ -715,7 +715,7 @@ export const AdminAnalytics: React.FC<AdminAnalyticsProps> = ({ navigate }) => {
               >
                 <div className={styles.chartCardHeader}>
                   <div className={styles.chartTitleWrap}>
-                    <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
+                    <div className={styles.chartTitleRow}>
                       <h3 className={styles.chartTitle}>Cơ cấu doanh thu theo gói</h3>
                       <span className={styles.cardClickBadge}>Chi tiết</span>
                     </div>
@@ -732,7 +732,7 @@ export const AdminAnalytics: React.FC<AdminAnalyticsProps> = ({ navigate }) => {
                       value: plan.revenue_vnd,
                       fraction: plan.share,
                       sub: formatPercent(plan.share),
-                      color: '#2563EB',
+                      color: 'var(--fin-blue)',
                     }))}
                     formatValue={formatVnd}
                     emptyLabel="Chưa có giao dịch trong kỳ."
@@ -750,7 +750,7 @@ export const AdminAnalytics: React.FC<AdminAnalyticsProps> = ({ navigate }) => {
               >
                 <div className={styles.chartCardHeader}>
                   <div className={styles.chartTitleWrap}>
-                    <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
+                    <div className={styles.chartTitleRow}>
                       <h3 className={styles.chartTitle}>Theo phương thức thanh toán</h3>
                       <span className={styles.cardClickBadge}>Chi tiết</span>
                     </div>
@@ -767,7 +767,7 @@ export const AdminAnalytics: React.FC<AdminAnalyticsProps> = ({ navigate }) => {
                       value: method.revenue_vnd,
                       fraction: method.share,
                       sub: formatPercent(method.share),
-                      color: '#2563EB',
+                      color: 'var(--fin-blue)',
                     }))}
                     formatValue={formatVnd}
                     emptyLabel="Chưa có giao dịch trong kỳ."
@@ -788,7 +788,7 @@ export const AdminAnalytics: React.FC<AdminAnalyticsProps> = ({ navigate }) => {
               >
                 <div className={styles.chartCardHeader}>
                   <div className={styles.chartTitleWrap}>
-                    <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
+                    <div className={styles.chartTitleRow}>
                       <h3 className={styles.chartTitle}>
                         Biến động MRR ({data?.mrr_movement?.month ?? '—'})
                       </h3>
@@ -819,7 +819,7 @@ export const AdminAnalytics: React.FC<AdminAnalyticsProps> = ({ navigate }) => {
               >
                 <div className={styles.chartCardHeader}>
                   <div className={styles.chartTitleWrap}>
-                    <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
+                    <div className={styles.chartTitleRow}>
                       <h3 className={styles.chartTitle}>Khách hàng doanh thu cao</h3>
                       <span className={styles.cardClickBadge}>Chi tiết</span>
                     </div>

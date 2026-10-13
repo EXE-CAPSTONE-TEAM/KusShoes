@@ -52,6 +52,15 @@ export function calculateNiceTicks(min: number, max: number, targetCount = 4): n
 /** Kiểu chữ trục dùng chung cho mọi biểu đồ Recharts của trang admin. */
 export const AXIS_TICK = { fill: 'var(--text-secondary)', fontSize: 10, fontWeight: 600 } as const;
 export const GRID_STROKE = 'var(--glass-border)';
+/** DS §5.1: trục 1.5px, vạch chia (tick mark) 4px. */
+export const AXIS_LINE = { stroke: GRID_STROKE, strokeWidth: 1.5 } as const;
+export const TICK_LINE = { stroke: GRID_STROKE, strokeWidth: 1.2 } as const;
+export const TICK_SIZE = 4;
+/** Màu ngữ nghĩa tài chính (variables.css, có biến thể Light Mode). */
+export const FIN_BLUE = 'var(--fin-blue)';
+export const FIN_GREEN = 'var(--fin-green)';
+export const FIN_RED = 'var(--fin-red)';
+export const FIN_AMBER = 'var(--fin-amber)';
 export const Y_AXIS_WIDTH = 56;
 /** Kích thước khởi tạo cho ResponsiveContainer để render được trước khi đo layout (SSR/jsdom). */
 export const INITIAL_CHART_WIDTH = 720;

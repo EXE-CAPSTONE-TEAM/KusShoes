@@ -50,7 +50,7 @@
 }
 
 .titleIcon {
-  color: #94A3B8;
+  color: var(--text-secondary);
 }
 
 .liveTag {
@@ -72,7 +72,7 @@
   width: 6px;
   height: 6px;
   border-radius: 50%;
-  background-color: #10B981;
+  background-color: var(--fin-green);
 }
 
 .pageSubtitle {
@@ -106,7 +106,7 @@
 }
 
 .datePickerWrapper:focus-within {
-  border-color: #2563EB;
+  border-color: var(--fin-blue);
 }
 
 .dateRangeLabel {
@@ -194,8 +194,8 @@
 }
 
 .rangeBtn.active {
-  background-color: #2563EB;
-  border-color: #3B82F6;
+  background-color: var(--fin-blue-fill);
+  border-color: var(--fin-blue);
   color: #FFFFFF;
   font-weight: 600;
 }
@@ -275,7 +275,7 @@
   font-weight: 700;
   background-color: var(--card-info-bg);
   border-color: var(--glass-border) var(--glass-border) transparent var(--glass-border);
-  border-bottom: 2px solid #2563EB;
+  border-bottom: 2px solid var(--fin-blue);
 }
 
 .tabBadge {
@@ -288,8 +288,8 @@
 }
 
 .tabActive .tabBadge {
-  background-color: rgba(59, 130, 246, 0.15);
-  color: #60A5FA;
+  background-color: color-mix(in srgb, var(--fin-blue) 15%, transparent);
+  color: var(--fin-blue);
 }
 
 /* Hero Financial Highlights (4 Core Cards) */
@@ -345,8 +345,8 @@
   width: 36px;
   height: 36px;
   border-radius: var(--border-radius-sm);
-  background-color: rgba(255, 255, 255, 0.05);
-  color: #CBD5E1;
+  background-color: var(--bg-tertiary);
+  color: var(--text-secondary);
   border: 1px solid var(--glass-border);
   display: flex;
   align-items: center;
@@ -377,7 +377,7 @@
   justify-content: space-between;
   gap: 10px;
   padding-top: 10px;
-  border-top: 1px solid rgba(255, 255, 255, 0.06);
+  border-top: 1px solid var(--glass-border);
   font-size: 0.78rem;
   font-weight: 500;
   color: var(--text-secondary);
@@ -400,17 +400,17 @@
 }
 
 .trendUp {
-  background-color: rgba(16, 185, 129, 0.12);
-  color: #34D399;
+  background-color: color-mix(in srgb, var(--fin-green) 12%, transparent);
+  color: var(--fin-green);
 }
 
 .trendDown {
-  background-color: rgba(239, 68, 68, 0.12);
-  color: #F87171;
+  background-color: color-mix(in srgb, var(--fin-red) 12%, transparent);
+  color: var(--fin-red);
 }
 
 .trendNeutral {
-  background-color: rgba(255, 255, 255, 0.05);
+  background-color: var(--bg-tertiary);
   color: var(--text-muted);
 }
 
@@ -449,7 +449,7 @@
 }
 
 .sectionIcon {
-  color: #94A3B8;
+  color: var(--text-secondary);
 }
 
 .sectionSubtitle {
@@ -534,7 +534,7 @@
 }
 
 .metricMiniIcon {
-  color: #94A3B8;
+  color: var(--text-secondary);
   flex-shrink: 0;
 }
 
@@ -670,27 +670,27 @@
   font-size: 0.68rem;
   font-weight: 700;
   flex-shrink: 0;
-  background-color: rgba(255, 255, 255, 0.06);
-  color: #CBD5E1;
+  background-color: var(--bg-tertiary);
+  color: var(--text-secondary);
   border: 1px solid var(--glass-border);
 }
 
 .rank1 {
-  background-color: #1E293B;
-  color: #F8FAFC;
-  border-color: #475569;
+  background-color: var(--bg-tertiary);
+  color: var(--text-primary);
+  border-color: var(--glass-border-hover);
 }
 
 .rank2 {
-  background-color: rgba(255, 255, 255, 0.05);
-  color: #CBD5E1;
-  border-color: rgba(255, 255, 255, 0.1);
+  background-color: var(--bg-tertiary);
+  color: var(--text-secondary);
+  border-color: var(--glass-border);
 }
 
 .rank3 {
-  background-color: rgba(255, 255, 255, 0.05);
-  color: #CBD5E1;
-  border-color: rgba(255, 255, 255, 0.1);
+  background-color: var(--bg-tertiary);
+  color: var(--text-secondary);
+  border-color: var(--glass-border);
 }
 
 .rankDefault {
@@ -749,7 +749,7 @@
   gap: 16px;
   flex-wrap: wrap;
   padding-bottom: 16px;
-  border-bottom: 1px solid rgba(255, 255, 255, 0.07);
+  border-bottom: 1px solid var(--glass-border);
 }
 
 .reportsGrid {
@@ -784,8 +784,8 @@
   width: 36px;
   height: 36px;
   border-radius: var(--border-radius-sm);
-  background-color: rgba(255, 255, 255, 0.05);
-  color: #CBD5E1;
+  background-color: var(--bg-tertiary);
+  color: var(--text-secondary);
   border: 1px solid var(--glass-border);
   display: flex;
   align-items: center;
@@ -828,7 +828,7 @@
   align-items: center;
   gap: 8px;
   padding-top: 12px;
-  border-top: 1px solid rgba(255, 255, 255, 0.06);
+  border-top: 1px solid var(--glass-border);
 }
 
 .exportBtn {
@@ -890,4 +890,11 @@
   .reportsGrid {
     grid-template-columns: 1fr;
   }
+}
+
+/* Dòng tiêu đề thẻ biểu đồ: tiêu đề + badge "Chi tiết" */
+.chartTitleRow {
+  display: flex;
+  align-items: center;
+  gap: 8px;
 }

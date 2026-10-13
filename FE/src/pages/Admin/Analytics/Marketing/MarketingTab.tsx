@@ -206,7 +206,7 @@ export const MarketingTab: React.FC<MarketingTabProps> = ({ startDate, endDate }
                     <td>{row.signup_rate === null ? '—' : formatPercent(row.signup_rate)}</td>
                     <td>{row.paying_customers.toLocaleString('vi-VN')}</td>
                     <td>
-                      <strong style={{ color: 'var(--color-orange, #f97316)' }}>
+                      <strong style={{ color: 'var(--color-orange)' }}>
                         {formatVnd(row.revenue_vnd)}
                       </strong>
                     </td>
@@ -272,7 +272,7 @@ export const MarketingTab: React.FC<MarketingTabProps> = ({ startDate, endDate }
                 value: c.users,
                 fraction: c.share,
                 sub: `${formatPercent(c.share)} (${c.sessions} phiên)`,
-                color: '#10b981',
+                color: 'var(--fin-green)',
               }))}
               formatValue={(v) => `${v.toLocaleString('vi-VN')} khách`}
               emptyLabel="Chưa có dữ liệu địa lý trong kỳ."
@@ -352,7 +352,7 @@ export const MarketingTab: React.FC<MarketingTabProps> = ({ startDate, endDate }
                     <td>{camp.signups.toLocaleString('vi-VN')}</td>
                     <td>{camp.paying_customers.toLocaleString('vi-VN')}</td>
                     <td>
-                      <strong style={{ color: 'var(--color-orange, #f97316)' }}>
+                      <strong style={{ color: 'var(--color-orange)' }}>
                         {formatVnd(camp.revenue_vnd)}
                       </strong>
                     </td>

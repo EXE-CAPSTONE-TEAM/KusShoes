@@ -18,6 +18,12 @@ import {
   Y_AXIS_WIDTH,
   calculateNiceTicks,
   formatCompactVnd,
+  AXIS_LINE,
+  FIN_BLUE,
+  FIN_GREEN,
+  FIN_RED,
+  TICK_LINE,
+  TICK_SIZE,
 } from './chartUtils';
 import common from './chartCommon.module.css';
 import styles from './MrrWaterfallChart.module.css';
@@ -52,9 +58,9 @@ export interface WaterfallStep {
   range: [number, number];
 }
 
-const COLOR_POSITIVE = '#10B981';
-const COLOR_NEGATIVE = '#EF4444';
-const COLOR_TOTAL = '#2563EB';
+const COLOR_POSITIVE = FIN_GREEN;
+const COLOR_NEGATIVE = FIN_RED;
+const COLOR_TOTAL = FIN_BLUE;
 // Sàn trục Y để biểu đồ không bị dẹt khi mọi biến động đều bằng 0.
 const MIN_AXIS_MAX = 1000;
 
@@ -153,8 +159,9 @@ export const MrrWaterfallChart: React.FC<MrrWaterfallChartProps> = ({
             <CartesianGrid vertical={false} stroke={GRID_STROKE} strokeDasharray="3 3" />
             <XAxis
               dataKey="label"
-              tickLine={false}
-              axisLine={{ stroke: GRID_STROKE }}
+              tickLine={TICK_LINE}
+              tickSize={TICK_SIZE}
+              axisLine={AXIS_LINE}
               tick={AXIS_TICK}
               interval={0}
             />
@@ -163,8 +170,9 @@ export const MrrWaterfallChart: React.FC<MrrWaterfallChartProps> = ({
               domain={[ticks[0], ticks[ticks.length - 1]]}
               ticks={ticks}
               tickFormatter={formatCompactVnd}
-              tickLine={false}
-              axisLine={false}
+              tickLine={TICK_LINE}
+              tickSize={TICK_SIZE}
+              axisLine={AXIS_LINE}
               tick={AXIS_TICK}
             />
             <ReferenceLine y={0} stroke="var(--text-secondary)" strokeWidth={1.2} />
@@ -181,7 +189,7 @@ export const MrrWaterfallChart: React.FC<MrrWaterfallChartProps> = ({
               />
             ))}
             <Tooltip
-              cursor={{ fill: 'rgba(128, 128, 128, 0.08)' }}
+              cursor={{ fill: 'var(--hover-bg-item)' }}
               content={({ active, payload }) => {
                 if (!active || !payload?.length) return null;
                 const s = payload[0].payload as WaterfallStep;

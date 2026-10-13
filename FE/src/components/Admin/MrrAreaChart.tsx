@@ -18,6 +18,13 @@ import {
   Y_AXIS_WIDTH,
   calculateNiceTicks,
   formatCompactVnd,
+  AXIS_LINE,
+  FIN_AMBER,
+  FIN_BLUE,
+  FIN_GREEN,
+  FIN_RED,
+  TICK_LINE,
+  TICK_SIZE,
 } from './chartUtils';
 import common from './chartCommon.module.css';
 import styles from './MrrAreaChart.module.css';
@@ -31,15 +38,16 @@ interface MrrAreaChartProps {
   points: Point[];
   formatValue?: (v: number) => string;
   color?: string;
-  gradientId?: string;
   height?: number;
   subLabel?: string;
 }
 
-const COLOR_AVG = '#F59E0B';
-const COLOR_ACTIVE = '#3B82F6';
-const COLOR_UP = '#10B981';
-const COLOR_DOWN = '#EF4444';
+const COLOR_AVG = FIN_AMBER;
+const COLOR_ACTIVE = FIN_BLUE;
+const COLOR_UP = FIN_GREEN;
+const COLOR_DOWN = FIN_RED;
+// DS §1: không gradient trang trí — vùng dưới đường chỉ là mảng phẳng mờ.
+const AREA_FILL_OPACITY = 0.12;
 // Chỉ in nhãn giá trị trên cột cao nhất khi ít cột, tránh chồng chữ.
 const MAX_LABELLED_BARS = 8;
 
@@ -50,8 +58,7 @@ interface Datum extends Point {
 export const MrrAreaChart: React.FC<MrrAreaChartProps> = ({
   points,
   formatValue = (v) => `${v.toLocaleString('vi-VN')} VNĐ`,
-  color = '#2563EB',
-  gradientId = 'mrrAreaGradient',
+  color = FIN_BLUE,
   height = 200,
 }) => {
   const [chartMode, setChartMode] = useState<'bar' | 'line'>('bar');
@@ -157,18 +164,13 @@ export const MrrAreaChart: React.FC<MrrAreaChartProps> = ({
       <div className={common.chartArea} style={{ height }} onClick={(e) => e.stopPropagation()}>
         <ResponsiveContainer width="100%" height="100%" initialDimension={{ width: INITIAL_CHART_WIDTH, height }}>
           <ComposedChart data={data} margin={{ top: 16, right: 12, bottom: 0, left: 0 }}>
-            <defs>
-              <linearGradient id={gradientId} x1="0" y1="0" x2="0" y2="1">
-                <stop offset="0%" stopColor={color} stopOpacity={0.4} />
-                <stop offset="100%" stopColor={color} stopOpacity={0.02} />
-              </linearGradient>
-            </defs>
             <CartesianGrid vertical={false} stroke={GRID_STROKE} strokeDasharray="3 3" />
             <XAxis
               dataKey="label"
               tickFormatter={(v: string) => `T${v}`}
-              tickLine={false}
-              axisLine={{ stroke: GRID_STROKE }}
+              tickLine={TICK_LINE}
+              tickSize={TICK_SIZE}
+              axisLine={AXIS_LINE}
               tick={AXIS_TICK}
             />
             <YAxis
@@ -176,8 +178,9 @@ export const MrrAreaChart: React.FC<MrrAreaChartProps> = ({
               domain={yDomain}
               ticks={ticks}
               tickFormatter={formatCompactVnd}
-              tickLine={false}
-              axisLine={false}
+              tickLine={TICK_LINE}
+              tickSize={TICK_SIZE}
+              axisLine={AXIS_LINE}
               tick={AXIS_TICK}
             />
             <ReferenceLine
@@ -193,7 +196,7 @@ export const MrrAreaChart: React.FC<MrrAreaChartProps> = ({
               }}
             />
             <Tooltip
-              cursor={chartMode === 'bar' ? { fill: 'rgba(59, 130, 246, 0.08)' } : { stroke: GRID_STROKE }}
+              cursor={chartMode === 'bar' ? { fill: 'var(--hover-bg-item)' } : { stroke: GRID_STROKE }}
               content={({ active, payload }) => {
                 if (!active || !payload?.length) return null;
                 const d = payload[0].payload as Datum;
@@ -226,7 +229,8 @@ export const MrrAreaChart: React.FC<MrrAreaChartProps> = ({
                 dataKey="value"
                 stroke={color}
                 strokeWidth={2.5}
-                fill={`url(#${gradientId})`}
+                fillOpacity={AREA_FILL_OPACITY}
+                fill={color}
                 dot={{ r: 3.5, strokeWidth: 2, stroke: color, fill: 'var(--bg-secondary)' }}
                 activeDot={{ r: 5, strokeWidth: 2.5, stroke: COLOR_ACTIVE, fill: 'var(--bg-secondary)' }}
               />

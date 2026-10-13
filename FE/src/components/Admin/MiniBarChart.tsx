@@ -1,6 +1,6 @@
 import React from 'react';
 import { Bar, BarChart, CartesianGrid, ResponsiveContainer, Tooltip, XAxis, YAxis } from 'recharts';
-import { AXIS_TICK, GRID_STROKE, INITIAL_CHART_WIDTH, Y_AXIS_WIDTH, calculateNiceTicks } from './chartUtils';
+import { AXIS_TICK, GRID_STROKE, INITIAL_CHART_WIDTH, Y_AXIS_WIDTH, calculateNiceTicks, AXIS_LINE, TICK_LINE, TICK_SIZE } from './chartUtils';
 import common from './chartCommon.module.css';
 
 interface MiniBarChartProps {
@@ -42,18 +42,20 @@ export const MiniBarChart: React.FC<MiniBarChartProps> = ({
         <ResponsiveContainer width="100%" height="100%" initialDimension={{ width: INITIAL_CHART_WIDTH, height }}>
           <BarChart data={points} margin={{ top: 8, right: 12, bottom: 0, left: 0 }}>
             <CartesianGrid vertical={false} stroke={GRID_STROKE} strokeDasharray="3 3" />
-            <XAxis dataKey="label" tickLine={false} axisLine={{ stroke: GRID_STROKE }} tick={AXIS_TICK} />
+            <XAxis dataKey="label" tickLine={TICK_LINE}
+              tickSize={TICK_SIZE} axisLine={AXIS_LINE} tick={AXIS_TICK} />
             <YAxis
               width={Y_AXIS_WIDTH}
               domain={[ticks[0], ticks[ticks.length - 1]]}
               ticks={ticks}
               tickFormatter={tickFormat}
-              tickLine={false}
-              axisLine={false}
+              tickLine={TICK_LINE}
+              tickSize={TICK_SIZE}
+              axisLine={AXIS_LINE}
               tick={AXIS_TICK}
             />
             <Tooltip
-              cursor={{ fill: 'rgba(128, 128, 128, 0.08)' }}
+              cursor={{ fill: 'var(--hover-bg-item)' }}
               content={({ active, payload }) =>
                 active && payload?.length ? (
                   <div role="tooltip" className={common.tooltip}>

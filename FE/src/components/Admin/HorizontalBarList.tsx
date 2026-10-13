@@ -32,7 +32,7 @@ export const HorizontalBarList: React.FC<HorizontalBarListProps> = ({ items, for
       {items.map((item) => {
         const fraction = item.fraction ?? Math.abs(item.value) / max;
         const percentStr = item.sub ?? `${(fraction * 100).toFixed(1)}%`;
-        const barColor = item.color ?? '#2563EB';
+        const barColor = item.color ?? 'var(--fin-blue)';
 
         return (
           <div
