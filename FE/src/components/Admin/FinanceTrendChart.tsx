@@ -11,7 +11,7 @@ import {
   YAxis,
 } from 'recharts';
 import type { FinancePoint } from '../../types/admin';
-import { formatCompactVnd } from './MrrAreaChart';
+import { AXIS_LINE, TICK_LINE, TICK_SIZE, formatCompactVnd } from './chartUtils';
 import styles from './FinanceTrendChart.module.css';
 
 export type FinanceGranularity = 'day' | 'month';
@@ -40,7 +40,8 @@ const LABELS = {
 
 const COLOR_REVENUE = 'var(--color-orange)';
 const COLOR_PROFIT = 'var(--status-scanned)';
-const GRADIENT_ID = 'financeRevenueGradient';
+// DS §1: không gradient trang trí — vùng dưới đường là mảng phẳng mờ.
+const AREA_FILL_OPACITY = 0.12;
 // Kích thước khởi tạo để biểu đồ render được trước khi ResponsiveContainer đo xong (SSR/jsdom).
 const INITIAL_WIDTH = 720;
 // Số nhãn trục X tối đa khi chuỗi dày (30 ngày), tránh chồng chữ.
@@ -103,26 +104,22 @@ export const FinanceTrendChart: React.FC<FinanceTrendChartProps> = ({
       <div className={styles.chartArea} style={{ height }} role="img" aria-label={LABELS.ariaChart}>
         <ResponsiveContainer width="100%" height="100%" initialDimension={{ width: INITIAL_WIDTH, height }}>
           <ComposedChart data={points} margin={{ top: 8, right: 12, bottom: 0, left: 0 }}>
-            <defs>
-              <linearGradient id={GRADIENT_ID} x1="0" y1="0" x2="0" y2="1">
-                <stop offset="0%" stopColor={COLOR_REVENUE} stopOpacity={0.45} />
-                <stop offset="100%" stopColor={COLOR_REVENUE} stopOpacity={0.02} />
-              </linearGradient>
-            </defs>
             <CartesianGrid vertical={false} stroke="var(--glass-border)" strokeDasharray="3 3" />
             <XAxis
               dataKey="period_start"
               tickFormatter={(v: string) => formatPeriodLabel(v, granularity)}
               interval={tickInterval}
-              tickLine={false}
-              axisLine={{ stroke: 'var(--glass-border)' }}
+              tickLine={TICK_LINE}
+              tickSize={TICK_SIZE}
+              axisLine={AXIS_LINE}
               tick={{ fill: 'var(--text-secondary)', fontSize: 10, fontWeight: 600 }}
             />
             <YAxis
               width={56}
               tickFormatter={(v: number) => formatCompactVnd(v)}
-              tickLine={false}
-              axisLine={false}
+              tickLine={TICK_LINE}
+              tickSize={TICK_SIZE}
+              axisLine={AXIS_LINE}
               tick={{ fill: 'var(--text-secondary)', fontSize: 10, fontWeight: 600 }}
             />
             <ReferenceLine y={0} stroke="var(--text-secondary)" strokeWidth={1.2} />
@@ -142,7 +139,8 @@ export const FinanceTrendChart: React.FC<FinanceTrendChartProps> = ({
               name={LABELS.revenue}
               stroke={COLOR_REVENUE}
               strokeWidth={2.5}
-              fill={`url(#${GRADIENT_ID})`}
+              fillOpacity={AREA_FILL_OPACITY}
+              fill={COLOR_REVENUE}
               dot={false}
               activeDot={{ r: 5, strokeWidth: 2, stroke: COLOR_REVENUE, fill: 'var(--bg-secondary)' }}
               isAnimationActive={hasData}

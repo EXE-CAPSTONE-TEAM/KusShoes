@@ -56,7 +56,7 @@ export const ThreeDotsBlockLoader: React.FC<BlockLoaderProps> = ({
       role="status"
       aria-live="polite"
     >
-      <ThreeDotsLoader size={size} color="var(--color-orange, #3B82F6)" />
+      <ThreeDotsLoader size={size} color="var(--fin-blue)" />
       {text && <span className={styles.blockText}>{text}</span>}
     </div>
   );

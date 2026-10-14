@@ -91,6 +91,15 @@
   --radius-lg: 8px;
   --shadow-overlay: 0 4px 16px rgba(0, 0, 0, 0.4);
   --overlay-scrim: rgba(0, 0, 0, 0.5);
+
+  /* Admin financial semantic tokens (docs/ADMIN_DESIGN_SYSTEM.md §3.1) */
+  --fin-blue: #3B82F6;          /* Xanh tài chính: cột doanh thu, tab/nút đang chọn */
+  --fin-blue-fill: #2563EB;     /* Nền nút hành động chính (chữ trắng) */
+  --fin-blue-fill-hover: #1D4ED8;
+  --fin-green: #10B981;         /* Dòng tiền vào, xu hướng tăng */
+  --fin-red: #EF4444;           /* Dòng tiền ra, xu hướng giảm, lỗi */
+  --fin-amber: #F59E0B;         /* Đường tham chiếu trung bình, cảnh báo */
+  --fin-sky: #38BDF8;           /* Mã định danh / chỉ số thông tin */
 }
 
 /* Light Theme Overrides (High-Contrast Crisp Slate Palette) */
@@ -140,6 +149,13 @@
   --text-tertiary: #737373;
   --icon-muted: #8A8A8A;
   --shadow-overlay: 0 4px 16px rgba(0, 0, 0, 0.08);
+
+  /* Admin financial semantic tokens - Light Mode (docs/ADMIN_DESIGN_SYSTEM.md §3.1) */
+  --fin-blue: #2563EB;
+  --fin-green: #16A34A;
+  --fin-red: #DC2626;
+  --fin-amber: #D97706;
+  --fin-sky: #0284C7;
 }
 
 

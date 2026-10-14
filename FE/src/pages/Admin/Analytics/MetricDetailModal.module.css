@@ -3,7 +3,7 @@
 .overlay {
   position: fixed;
   inset: 0;
-  background-color: rgba(0, 0, 0, 0.65);
+  background-color: var(--overlay-scrim);
   backdrop-filter: blur(5px);
   display: flex;
   align-items: center;
@@ -174,7 +174,7 @@
 .formulaBox {
   background-color: var(--bg-tertiary);
   border: 1px solid var(--glass-border);
-  border-left: 3px solid #2563EB;
+  border-left: 3px solid var(--fin-blue);
   border-radius: var(--border-radius-sm);
   padding: 11px 14px;
   font-family: var(--font-mono);
@@ -203,7 +203,7 @@
 .variableSymbol {
   font-family: var(--font-mono);
   font-weight: 700;
-  color: #2563EB;
+  color: var(--fin-blue);
   flex-shrink: 0;
 }
 
@@ -247,7 +247,7 @@
 }
 
 .tableRowHighlight {
-  background-color: rgba(37, 99, 235, 0.08);
+  background-color: color-mix(in srgb, var(--fin-blue) 8%, transparent);
 }
 
 .tableRowHighlight td {
@@ -325,8 +325,8 @@
 }
 
 .doneBtn {
-  background-color: #2563EB;
-  border: 1px solid #3B82F6;
+  background-color: var(--fin-blue-fill);
+  border: 1px solid var(--fin-blue);
   color: #FFFFFF;
   font-family: var(--font-admin, 'Roboto Variable', 'Roboto', sans-serif);
   font-size: 0.82rem;
@@ -338,6 +338,6 @@
 }
 
 .doneBtn:hover {
-  background-color: #1D4ED8;
-  border-color: #2563EB;
+  background-color: var(--fin-blue-fill-hover);
+  border-color: var(--fin-blue);
 }
