@@ -289,7 +289,7 @@ export const AdminReports: React.FC = () => {
                                 title={reason ?? `Tải ${report.title} (${FORMAT_LABEL[format]})`}
                                 onClick={() => void download(report, format)}
                               >
-                                <FormatIcon size={14} aria-hidden="true" />
+                                <FormatIcon size={14} aria-hidden="true" className={styles[`icon_${format}`]} />
                                 {busy ? 'Đang tạo...' : FORMAT_LABEL[format]}
                               </button>
                             );
