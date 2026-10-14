@@ -1,4 +1,5 @@
 import React, { useCallback, useEffect, useMemo, useState } from 'react';
+import { FileSpreadsheet, FileText, FileType, type LucideIcon } from 'lucide-react';
 import { adminReports, AdminApiError } from '../../../api/adminClient';
 import { ThreeDotsBlockLoader } from '../../../components/Admin/ThreeDotsLoader';
 import { useToast } from '../../../context/ToastContext';
@@ -46,6 +47,7 @@ const presetRange = (id: PresetId, today: Date): [string, string] => {
 };
 
 const FORMAT_LABEL: Record<ReportFormat, string> = { csv: 'CSV', xlsx: 'Excel', pdf: 'PDF' };
+const FORMAT_ICON: Record<ReportFormat, LucideIcon> = { csv: FileText, xlsx: FileSpreadsheet, pdf: FileType };
 
 const normalize = (s: string): string =>
   s.normalize('NFD').replace(/[̀-ͯ]/g, '').replace(/đ/g, 'd').toLowerCase();
@@ -277,6 +279,7 @@ export const AdminReports: React.FC = () => {
                         <div className={styles.actions}>
                           {report.formats.map((format) => {
                             const busy = downloading.has(`${report.id}.${format}`);
+                            const FormatIcon = FORMAT_ICON[format];
                             return (
                               <button
                                 key={format}
@@ -286,6 +289,7 @@ export const AdminReports: React.FC = () => {
                                 title={reason ?? `Tải ${report.title} (${FORMAT_LABEL[format]})`}
                                 onClick={() => void download(report, format)}
                               >
+                                <FormatIcon size={14} aria-hidden="true" />
                                 {busy ? 'Đang tạo...' : FORMAT_LABEL[format]}
                               </button>
                             );
