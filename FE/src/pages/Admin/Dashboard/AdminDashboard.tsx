@@ -1,5 +1,7 @@
 import React, { useState } from 'react';
 import { FinancePanel } from './FinancePanel';
+import { UsersPanel } from './UsersPanel';
+import { FeedbackPanel } from './FeedbackPanel';
 import shared from '../admin-shared.module.css';
 import styles from './AdminDashboard.module.css';
 
@@ -8,8 +10,8 @@ interface AdminDashboardProps {
 }
 
 const LABELS = {
-  title: 'Tổng quan tài chính KusShoes',
-  subtitle: 'Theo dõi doanh thu, chi phí vận hành và lợi nhuận của hệ thống.',
+  title: 'Tổng quan hệ thống KusShoes',
+  subtitle: 'Theo dõi tài chính, người dùng và phản hồi của hệ thống.',
   liveBadge: 'Live Sync',
   refresh: 'Làm mới',
   refreshing: 'Đang tải...',
@@ -46,6 +48,8 @@ export const AdminDashboard: React.FC<AdminDashboardProps> = ({ navigate }) => {
         </div>
 
         <FinancePanel navigate={navigate} refreshKey={refreshKey} onLoadingChange={setRefreshing} />
+        <UsersPanel navigate={navigate} refreshKey={refreshKey} />
+        <FeedbackPanel navigate={navigate} refreshKey={refreshKey} />
       </div>
     </div>
   );

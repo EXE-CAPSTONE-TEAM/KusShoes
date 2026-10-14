@@ -289,6 +289,10 @@
   transition: var(--transition-fast);
 }
 
+.icon_csv { color: var(--fin-blue); }
+.icon_xlsx { color: var(--fin-green); }
+.icon_pdf { color: var(--fin-red); }
+
 .exportBtn:hover:not(:disabled) {
   background: var(--hover-bg-item);
 }
