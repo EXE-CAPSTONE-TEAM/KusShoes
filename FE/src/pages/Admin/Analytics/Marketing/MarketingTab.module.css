@@ -123,10 +123,11 @@
 }
 
 .heroValue {
-  font-size: 1.85rem;
-  font-weight: 700;
+  font-size: 1.55rem;
+  font-weight: 800;
   color: var(--text-primary);
   line-height: 1.2;
+  font-variant-numeric: tabular-nums;
 }
 
 .heroSub {
@@ -150,8 +151,10 @@
 }
 
 .sectionTitle {
-  font-size: 1.15rem;
-  font-weight: 600;
+  font-size: 0.92rem;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.7px;
   color: var(--text-primary);
   margin: 0;
 }
@@ -185,6 +188,7 @@
 }
 
 .scorecardTable td {
+  font-variant-numeric: tabular-nums;
   padding: 14px 16px;
   border-bottom: 1px solid var(--glass-border);
   color: var(--text-primary);
@@ -502,4 +506,14 @@
 .testBtn:disabled {
   opacity: 0.6;
   cursor: not-allowed;
+}
+
+.revenueCell {
+  color: var(--fin-blue);
+  font-variant-numeric: tabular-nums;
+}
+
+.emptyCell {
+  text-align: center;
+  padding: 24px;
 }

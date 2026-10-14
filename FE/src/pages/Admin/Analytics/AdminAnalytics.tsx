@@ -14,14 +14,35 @@ import { MarketingTab } from './Marketing/MarketingTab';
 const formatVnd = (v: number) => `${v.toLocaleString('vi-VN')} VNĐ`;
 const formatVndSigned = (v: number) => `${v > 0 ? '+' : ''}${v.toLocaleString('vi-VN')} VNĐ`;
 const formatPercent = (v: number | null) => (v === null ? '—' : `${(v * 100).toFixed(1)}%`);
-const isoDate = (d: Date) => d.toISOString().slice(0, 10);
+// Ngày theo giờ địa phương (toISOString trả về UTC nên lệch 1 ngày trước 07:00 giờ VN).
+const isoDate = (d: Date) => {
+  const mm = String(d.getMonth() + 1).padStart(2, '0');
+  const dd = String(d.getDate()).padStart(2, '0');
+  return `${d.getFullYear()}-${mm}-${dd}`;
+};
+const parseIso = (iso: string) => {
+  const [y, m, d] = iso.split('-').map(Number);
+  return new Date(y, m - 1, d);
+};
+const MS_PER_DAY = 86_400_000;
 
-const RANGES = [
-  { id: 7, label: '7 ngày' },
-  { id: 30, label: '30 ngày' },
-  { id: 90, label: 'Quý này (90 ngày)' },
-  { id: 365, label: 'Năm nay (365 ngày)' },
+type PresetId = '7d' | '30d' | 'quarter' | 'year';
+
+/** DS §4.1.3: preset nhảy tới mốc kỳ kế toán thực (đầu quý / đầu năm), kết thúc ở hôm nay. */
+const PRESETS: { id: PresetId; label: string; startOf: (today: Date) => Date }[] = [
+  { id: '7d', label: '7 ngày', startOf: (t) => new Date(t.getFullYear(), t.getMonth(), t.getDate() - 6) },
+  { id: '30d', label: '30 ngày', startOf: (t) => new Date(t.getFullYear(), t.getMonth(), t.getDate() - 29) },
+  { id: 'quarter', label: 'Quý này', startOf: (t) => new Date(t.getFullYear(), Math.floor(t.getMonth() / 3) * 3, 1) },
+  { id: 'year', label: 'Năm nay', startOf: (t) => new Date(t.getFullYear(), 0, 1) },
 ];
+
+/** role="button" cần phản hồi Enter/Space như nút thật (a11y). */
+const activateOnKey = (action: () => void) => (e: React.KeyboardEvent) => {
+  if (e.target === e.currentTarget && (e.key === 'Enter' || e.key === ' ')) {
+    e.preventDefault();
+    action();
+  }
+};
 
 const PAYMENT_METHOD_LABEL: Record<string, string> = {
   payos: 'PayOS (VietQR / Thẻ)',
@@ -63,10 +84,7 @@ interface AdminAnalyticsProps {
 export const AdminAnalytics: React.FC<AdminAnalyticsProps> = ({ navigate }) => {
   const { toast } = useToast();
   const todayStr = useMemo(() => isoDate(new Date()), []);
-  const defaultStartStr = useMemo(() => {
-    const d = new Date(Date.now() - 29 * 86_400_000);
-    return isoDate(d);
-  }, []);
+  const defaultStartStr = useMemo(() => isoDate(PRESETS[1].startOf(new Date())), []);
 
   const [startDate, setStartDate] = useState(defaultStartStr);
   const [endDate, setEndDate] = useState(todayStr);
@@ -78,9 +96,7 @@ export const AdminAnalytics: React.FC<AdminAnalyticsProps> = ({ navigate }) => {
   const [selectedMetric, setSelectedMetric] = useState<MetricKey | null>(null);
 
   const days = useMemo(() => {
-    const from = new Date(startDate);
-    const to = new Date(endDate);
-    const diff = Math.round((to.getTime() - from.getTime()) / 86_400_000) + 1;
+    const diff = Math.round((parseIso(endDate).getTime() - parseIso(startDate).getTime()) / MS_PER_DAY) + 1;
     return diff > 0 ? diff : 1;
   }, [startDate, endDate]);
 
@@ -88,22 +104,17 @@ export const AdminAnalytics: React.FC<AdminAnalyticsProps> = ({ navigate }) => {
     return { date_from: startDate, date_to: endDate };
   }, [startDate, endDate]);
 
-  const applyPreset = useCallback((presetDays: number) => {
-    const end = new Date();
-    const start = new Date(end.getTime() - (presetDays - 1) * 86_400_000);
-    setStartDate(isoDate(start));
-    setEndDate(isoDate(end));
+  const applyPreset = useCallback((preset: (typeof PRESETS)[number]) => {
+    const today = new Date();
+    setStartDate(isoDate(preset.startOf(today)));
+    setEndDate(isoDate(today));
   }, []);
 
   const activePreset = useMemo(() => {
-    const endIso = isoDate(new Date());
-    if (endDate !== endIso) return null;
-    for (const r of RANGES) {
-      const start = new Date(new Date().getTime() - (r.id - 1) * 86_400_000);
-      if (isoDate(start) === startDate) return r.id;
-    }
-    return null;
-  }, [startDate, endDate]);
+    if (endDate !== todayStr) return null;
+    const today = new Date();
+    return PRESETS.find((p) => isoDate(p.startOf(today)) === startDate)?.id ?? null;
+  }, [startDate, endDate, todayStr]);
 
   const fetchData = useCallback(async (isManualRefresh = false) => {
     if (isManualRefresh) setRefreshing(true);
@@ -207,14 +218,16 @@ export const AdminAnalytics: React.FC<AdminAnalyticsProps> = ({ navigate }) => {
 
             {/* Bộ chọn nhanh khoảng thời gian */}
             <div className={styles.rangeButtonGroup}>
-              {RANGES.map((range) => (
+              {PRESETS.map((preset) => (
                 <button
-                  key={range.id}
-                  className={`${styles.rangeBtn} ${activePreset === range.id ? styles.active : ''}`}
-                  onClick={() => applyPreset(range.id)}
+                  key={preset.id}
+                  type="button"
+                  className={`${styles.rangeBtn} ${activePreset === preset.id ? styles.active : ''}`}
+                  aria-pressed={activePreset === preset.id}
+                  onClick={() => applyPreset(preset)}
                   disabled={loading}
                 >
-                  {range.label}
+                  {preset.label}
                 </button>
               ))}
             </div>
@@ -244,14 +257,12 @@ export const AdminAnalytics: React.FC<AdminAnalyticsProps> = ({ navigate }) => {
             onClick={() => setActiveTab('metrics')}
           >
             Chỉ số tài chính &amp; Tăng trưởng
-            <span className={styles.tabBadge}>18</span>
           </button>
           <button
             className={`${styles.tabBtn} ${activeTab === 'charts' ? styles.tabActive : ''}`}
             onClick={() => setActiveTab('charts')}
           >
             Biểu đồ phân tích
-            <span className={styles.tabBadge}>5</span>
           </button>
           <button
             className={`${styles.tabBtn} ${activeTab === 'marketing' ? styles.tabActive : ''}`}
@@ -276,6 +287,7 @@ export const AdminAnalytics: React.FC<AdminAnalyticsProps> = ({ navigate }) => {
             <div
               className={styles.heroCard}
               onClick={() => setSelectedMetric('mrr')}
+              onKeyDown={activateOnKey(() => setSelectedMetric('mrr'))}
               role="button"
               tabIndex={0}
               title="Bấm để xem công thức tính toán và nguồn dữ liệu kiểm toán"
@@ -299,6 +311,7 @@ export const AdminAnalytics: React.FC<AdminAnalyticsProps> = ({ navigate }) => {
             <div
               className={styles.heroCard}
               onClick={() => setSelectedMetric('revenue')}
+              onKeyDown={activateOnKey(() => setSelectedMetric('revenue'))}
               role="button"
               tabIndex={0}
               title="Bấm để xem công thức tính toán và nguồn dữ liệu kiểm toán"
@@ -323,6 +336,7 @@ export const AdminAnalytics: React.FC<AdminAnalyticsProps> = ({ navigate }) => {
             <div
               className={styles.heroCard}
               onClick={() => setSelectedMetric('gross_margin')}
+              onKeyDown={activateOnKey(() => setSelectedMetric('gross_margin'))}
               role="button"
               tabIndex={0}
               title="Bấm để xem công thức tính toán và nguồn dữ liệu kiểm toán"
@@ -346,6 +360,7 @@ export const AdminAnalytics: React.FC<AdminAnalyticsProps> = ({ navigate }) => {
             <div
               className={styles.heroCard}
               onClick={() => setSelectedMetric('paying_customers')}
+              onKeyDown={activateOnKey(() => setSelectedMetric('paying_customers'))}
               role="button"
               tabIndex={0}
               title="Bấm để xem công thức tính toán và nguồn dữ liệu kiểm toán"
@@ -389,6 +404,7 @@ export const AdminAnalytics: React.FC<AdminAnalyticsProps> = ({ navigate }) => {
                 <div
                   className={styles.metricCard}
                   onClick={() => setSelectedMetric('churn')}
+                  onKeyDown={activateOnKey(() => setSelectedMetric('churn'))}
                   role="button"
                   tabIndex={0}
                   title="Bấm để xem công thức tính toán và nguồn dữ liệu kiểm toán"
@@ -405,7 +421,7 @@ export const AdminAnalytics: React.FC<AdminAnalyticsProps> = ({ navigate }) => {
                     {loading ? <ThreeDotsLoader size="md" /> : formatPercent(data?.churn?.rate ?? null)}
                   </div>
                   <div className={styles.metricSubText}>
-                    {loading ? <ThreeDotsLoader size="sm" /> : data?.churn ? `${data.churn.churned} / ${data.churn.due} khách đến hạn không gia hạn` : 'Đang tính toán'}
+                    {loading ? <ThreeDotsLoader size="sm" /> : data?.churn ? `${data.churn.churned} / ${data.churn.due} khách đến hạn không gia hạn` : 'Chưa có dữ liệu'}
                   </div>
                 </div>
 
@@ -413,6 +429,7 @@ export const AdminAnalytics: React.FC<AdminAnalyticsProps> = ({ navigate }) => {
                 <div
                   className={styles.metricCard}
                   onClick={() => setSelectedMetric('retention')}
+                  onKeyDown={activateOnKey(() => setSelectedMetric('retention'))}
                   role="button"
                   tabIndex={0}
                   title="Bấm để xem công thức tính toán và nguồn dữ liệu kiểm toán"
@@ -429,7 +446,7 @@ export const AdminAnalytics: React.FC<AdminAnalyticsProps> = ({ navigate }) => {
                     {loading ? <ThreeDotsLoader size="md" /> : !data?.retention ? '—' : `${formatPercent(data.retention.nrr)} / ${formatPercent(data.retention.grr)}`}
                   </div>
                   <div className={styles.metricSubText}>
-                    {loading ? <ThreeDotsLoader size="sm" /> : data?.retention ? `Tháng ${data.retention.month} (xấp xỉ theo dòng tiền)` : 'Đang tính toán'}
+                    {loading ? <ThreeDotsLoader size="sm" /> : data?.retention ? `Tháng ${data.retention.month} (xấp xỉ theo dòng tiền)` : 'Chưa có dữ liệu'}
                   </div>
                 </div>
 
@@ -437,6 +454,7 @@ export const AdminAnalytics: React.FC<AdminAnalyticsProps> = ({ navigate }) => {
                 <div
                   className={styles.metricCard}
                   onClick={() => setSelectedMetric('repeat')}
+                  onKeyDown={activateOnKey(() => setSelectedMetric('repeat'))}
                   role="button"
                   tabIndex={0}
                   title="Bấm để xem công thức tính toán và nguồn dữ liệu kiểm toán"
@@ -453,7 +471,7 @@ export const AdminAnalytics: React.FC<AdminAnalyticsProps> = ({ navigate }) => {
                     {loading ? <ThreeDotsLoader size="md" /> : formatPercent(data?.repeat?.rate ?? null)}
                   </div>
                   <div className={styles.metricSubText}>
-                    {loading ? <ThreeDotsLoader size="sm" /> : data?.repeat ? `${data.repeat.repeat_customers}/${data.repeat.paying_customers} khách · ${data.repeat.not_yet_due} chưa đến kỳ` : 'Đang tính toán'}
+                    {loading ? <ThreeDotsLoader size="sm" /> : data?.repeat ? `${data.repeat.repeat_customers}/${data.repeat.paying_customers} khách · ${data.repeat.not_yet_due} chưa đến kỳ` : 'Chưa có dữ liệu'}
                   </div>
                 </div>
 
@@ -461,6 +479,7 @@ export const AdminAnalytics: React.FC<AdminAnalyticsProps> = ({ navigate }) => {
                 <div
                   className={styles.metricCard}
                   onClick={() => setSelectedMetric('free_to_paid')}
+                  onKeyDown={activateOnKey(() => setSelectedMetric('free_to_paid'))}
                   role="button"
                   tabIndex={0}
                   title="Bấm để xem công thức tính toán và nguồn dữ liệu kiểm toán"
@@ -477,7 +496,7 @@ export const AdminAnalytics: React.FC<AdminAnalyticsProps> = ({ navigate }) => {
                     {loading ? <ThreeDotsLoader size="md" /> : formatPercent(data?.free_to_paid?.rate ?? null)}
                   </div>
                   <div className={styles.metricSubText}>
-                    {loading ? <ThreeDotsLoader size="sm" /> : data?.free_to_paid ? `${data.free_to_paid.numerator} / ${data.free_to_paid.denominator} user đã xác thực` : 'Đang tính toán'}
+                    {loading ? <ThreeDotsLoader size="sm" /> : data?.free_to_paid ? `${data.free_to_paid.numerator} / ${data.free_to_paid.denominator} user đã xác thực` : 'Chưa có dữ liệu'}
                   </div>
                 </div>
               </div>
@@ -501,6 +520,7 @@ export const AdminAnalytics: React.FC<AdminAnalyticsProps> = ({ navigate }) => {
                 <div
                   className={styles.metricCard}
                   onClick={() => setSelectedMetric('outstanding')}
+                  onKeyDown={activateOnKey(() => setSelectedMetric('outstanding'))}
                   role="button"
                   tabIndex={0}
                   title="Bấm để xem công thức tính toán và nguồn dữ liệu kiểm toán"
@@ -525,6 +545,7 @@ export const AdminAnalytics: React.FC<AdminAnalyticsProps> = ({ navigate }) => {
                 <div
                   className={styles.metricCard}
                   onClick={() => setSelectedMetric('failed_payments')}
+                  onKeyDown={activateOnKey(() => setSelectedMetric('failed_payments'))}
                   role="button"
                   tabIndex={0}
                   title="Bấm để xem công thức tính toán và nguồn dữ liệu kiểm toán"
@@ -537,7 +558,7 @@ export const AdminAnalytics: React.FC<AdminAnalyticsProps> = ({ navigate }) => {
                     </div>
                     <span className={styles.cardClickBadge}>Chi tiết</span>
                   </div>
-                  <div className={styles.metricValue} style={{ color: (data?.failed_payments?.count_30d ?? 0) > 0 ? 'var(--color-crimson)' : undefined }}>
+                  <div className={`${styles.metricValue} ${(data?.failed_payments?.count_30d ?? 0) > 0 ? styles.metricValueDanger : ''}`}>
                     {loading ? <ThreeDotsLoader size="md" /> : `${data?.failed_payments?.count_30d ?? 0} giao dịch`}
                   </div>
                   <div className={styles.metricSubText}>
@@ -549,6 +570,7 @@ export const AdminAnalytics: React.FC<AdminAnalyticsProps> = ({ navigate }) => {
                 <div
                   className={styles.metricCard}
                   onClick={() => setSelectedMetric('discounts')}
+                  onKeyDown={activateOnKey(() => setSelectedMetric('discounts'))}
                   role="button"
                   tabIndex={0}
                   title="Bấm để xem công thức tính toán và nguồn dữ liệu kiểm toán"
@@ -573,6 +595,7 @@ export const AdminAnalytics: React.FC<AdminAnalyticsProps> = ({ navigate }) => {
                 <div
                   className={styles.metricCard}
                   onClick={() => setSelectedMetric('credit_revenue')}
+                  onKeyDown={activateOnKey(() => setSelectedMetric('credit_revenue'))}
                   role="button"
                   tabIndex={0}
                   title="Bấm để xem công thức tính toán và nguồn dữ liệu kiểm toán"
@@ -597,6 +620,7 @@ export const AdminAnalytics: React.FC<AdminAnalyticsProps> = ({ navigate }) => {
                 <div
                   className={styles.metricCard}
                   onClick={() => setSelectedMetric('vat')}
+                  onKeyDown={activateOnKey(() => setSelectedMetric('vat'))}
                   role="button"
                   tabIndex={0}
                   title="Bấm để xem công thức tính toán và nguồn dữ liệu kiểm toán"
@@ -621,6 +645,7 @@ export const AdminAnalytics: React.FC<AdminAnalyticsProps> = ({ navigate }) => {
                 <div
                   className={styles.metricCard}
                   onClick={() => setSelectedMetric('api_cost')}
+                  onKeyDown={activateOnKey(() => setSelectedMetric('api_cost'))}
                   role="button"
                   tabIndex={0}
                   title="Bấm để xem công thức tính toán và nguồn dữ liệu kiểm toán"
@@ -663,6 +688,7 @@ export const AdminAnalytics: React.FC<AdminAnalyticsProps> = ({ navigate }) => {
             <div
               className={`${styles.chartCard} ${styles.clickableChartCard}`}
               onClick={() => setSelectedMetric('monthly_series')}
+              onKeyDown={activateOnKey(() => setSelectedMetric('monthly_series'))}
               role="button"
               tabIndex={0}
               title="Bấm để xem công thức tính toán và nguồn dữ liệu kiểm toán"
@@ -687,7 +713,7 @@ export const AdminAnalytics: React.FC<AdminAnalyticsProps> = ({ navigate }) => {
               {loading ? (
                 <ThreeDotsBlockLoader text="Đang tải dữ liệu chuỗi doanh thu..." minHeight={200} />
               ) : data && data.revenue_series.length > 0 ? (
-                <div style={{ padding: '8px 0' }}>
+                <div className={styles.chartBody}>
                   <MrrAreaChart
                     points={data.revenue_series.map((point) => ({
                       label: point.month.slice(5),
@@ -709,6 +735,7 @@ export const AdminAnalytics: React.FC<AdminAnalyticsProps> = ({ navigate }) => {
               <div
                 className={`${styles.chartCard} ${styles.clickableChartCard}`}
                 onClick={() => setSelectedMetric('revenue_by_plan')}
+                onKeyDown={activateOnKey(() => setSelectedMetric('revenue_by_plan'))}
                 role="button"
                 tabIndex={0}
                 title="Bấm để xem công thức tính toán và nguồn dữ liệu kiểm toán"
@@ -744,6 +771,7 @@ export const AdminAnalytics: React.FC<AdminAnalyticsProps> = ({ navigate }) => {
               <div
                 className={`${styles.chartCard} ${styles.clickableChartCard}`}
                 onClick={() => setSelectedMetric('payment_methods')}
+                onKeyDown={activateOnKey(() => setSelectedMetric('payment_methods'))}
                 role="button"
                 tabIndex={0}
                 title="Bấm để xem công thức tính toán và nguồn dữ liệu kiểm toán"
@@ -782,6 +810,7 @@ export const AdminAnalytics: React.FC<AdminAnalyticsProps> = ({ navigate }) => {
               <div
                 className={`${styles.chartCard} ${styles.clickableChartCard}`}
                 onClick={() => setSelectedMetric('mrr_movement')}
+                onKeyDown={activateOnKey(() => setSelectedMetric('mrr_movement'))}
                 role="button"
                 tabIndex={0}
                 title="Bấm để xem công thức tính toán và nguồn dữ liệu kiểm toán"
@@ -813,6 +842,7 @@ export const AdminAnalytics: React.FC<AdminAnalyticsProps> = ({ navigate }) => {
               <div
                 className={`${styles.chartCard} ${styles.clickableChartCard}`}
                 onClick={() => setSelectedMetric('top_customers')}
+                onKeyDown={activateOnKey(() => setSelectedMetric('top_customers'))}
                 role="button"
                 tabIndex={0}
                 title="Bấm để xem công thức tính toán và nguồn dữ liệu kiểm toán"
@@ -871,7 +901,7 @@ export const AdminAnalytics: React.FC<AdminAnalyticsProps> = ({ navigate }) => {
           <div className={styles.reportsHub}>
             <div className={styles.reportsHubHeader}>
               <div className={styles.headerLeft}>
-                <h2 className={styles.pageTitle} style={{ fontSize: '1.2rem' }}>
+                <h2 className={styles.reportsHubTitle}>
                   Xuất báo cáo &amp; đối soát dữ liệu
                 </h2>
                 <p className={styles.pageSubtitle}>

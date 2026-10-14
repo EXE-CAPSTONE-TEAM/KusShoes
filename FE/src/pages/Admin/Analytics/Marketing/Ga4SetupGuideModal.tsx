@@ -95,7 +95,7 @@ GA4_CREDENTIALS_JSON_PATH=/path/to/service-account.json`}
               }`}
             >
               <div className={styles.resultHeader}>
-                <strong>{testResult.connected ? '✓ Kết nối thành công' : '⚠ Chưa kết nối được'}</strong>
+                <strong>{testResult.connected ? 'Kết nối thành công' : 'Chưa kết nối được'}</strong>
               </div>
               <p className={styles.resultMsg}>{testResult.message}</p>
               {testResult.property_id && (

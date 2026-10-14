@@ -25,9 +25,9 @@ const formatDuration = (seconds: number) => {
 };
 
 const EVAL_LABEL: Record<PlatformEvaluation, { text: string; className: string }> = {
-  high_performing: { text: '⭐ Rất tốt', className: styles.evalHigh },
-  moderate: { text: '👍 Ổn định', className: styles.evalModerate },
-  needs_attention: { text: '🔍 Cần chú ý', className: styles.evalNeeds },
+  high_performing: { text: 'Rất tốt', className: styles.evalHigh },
+  moderate: { text: 'Ổn định', className: styles.evalModerate },
+  needs_attention: { text: 'Cần chú ý', className: styles.evalNeeds },
 };
 
 export const MarketingTab: React.FC<MarketingTabProps> = ({ startDate, endDate }) => {
@@ -101,7 +101,7 @@ export const MarketingTab: React.FC<MarketingTabProps> = ({ startDate, endDate }
               data?.ga4_configured ? styles.connected : styles.unconfigured
             }`}
           >
-            {data?.ga4_configured ? '✓ GA4 Data API: Đã kết nối' : '⚠ GA4 Data API: Chưa cấu hình Key'}
+            {data?.ga4_configured ? 'GA4 Data API: Đã kết nối' : 'GA4 Data API: Chưa cấu hình Key'}
           </span>
           <button className={styles.guideBtn} onClick={() => setShowGuideModal(true)}>
             {data?.ga4_configured ? 'Kiểm tra kết nối' : 'Hướng dẫn kết nối GA4'}
@@ -119,7 +119,7 @@ export const MarketingTab: React.FC<MarketingTabProps> = ({ startDate, endDate }
             </span>
           </div>
           <span className={styles.heroSub}>
-            Trên tổng số {loading ? '...' : (hero?.active_users ?? 0).toLocaleString('vi-VN')} khách ghé thăm
+            Trên tổng số {loading ? <ThreeDotsLoader size="sm" /> : (hero?.active_users ?? 0).toLocaleString('vi-VN')} khách ghé thăm
           </span>
         </div>
 
@@ -145,7 +145,7 @@ export const MarketingTab: React.FC<MarketingTabProps> = ({ startDate, endDate }
             </span>
           </div>
           <span className={styles.heroSub}>
-            Tỷ lệ thoát: {loading ? '...' : formatPercent(hero?.bounce_rate ?? 0)}
+            Tỷ lệ thoát: {loading ? <ThreeDotsLoader size="sm" /> : formatPercent(hero?.bounce_rate ?? 0)}
           </span>
         </div>
 
@@ -157,7 +157,7 @@ export const MarketingTab: React.FC<MarketingTabProps> = ({ startDate, endDate }
             </span>
           </div>
           <span className={styles.heroSub}>
-            Tổng lượt xem trang: {loading ? '...' : (hero?.screen_page_views ?? 0).toLocaleString('vi-VN')}
+            Tổng lượt xem trang: {loading ? <ThreeDotsLoader size="sm" /> : (hero?.screen_page_views ?? 0).toLocaleString('vi-VN')}
           </span>
         </div>
       </div>
@@ -206,7 +206,7 @@ export const MarketingTab: React.FC<MarketingTabProps> = ({ startDate, endDate }
                     <td>{row.signup_rate === null ? '—' : formatPercent(row.signup_rate)}</td>
                     <td>{row.paying_customers.toLocaleString('vi-VN')}</td>
                     <td>
-                      <strong style={{ color: 'var(--color-orange)' }}>
+                      <strong className={styles.revenueCell}>
                         {formatVnd(row.revenue_vnd)}
                       </strong>
                     </td>
@@ -223,7 +223,7 @@ export const MarketingTab: React.FC<MarketingTabProps> = ({ startDate, endDate }
                 ))}
                 {(!data || data.scorecard.length === 0) && (
                   <tr>
-                    <td colSpan={10} style={{ textAlign: 'center', padding: 24 }}>
+                    <td colSpan={10} className={styles.emptyCell}>
                       Chưa có dữ liệu chuyển đổi trong kỳ này.
                     </td>
                   </tr>
@@ -240,7 +240,7 @@ export const MarketingTab: React.FC<MarketingTabProps> = ({ startDate, endDate }
         <div className={styles.panelCard}>
           <div className={styles.geoControls}>
             <div>
-              <h3 className={styles.sectionTitle} style={{ fontSize: '1rem' }}>
+              <h3 className={styles.sectionTitle}>
                 Khu vực &amp; Tỉnh/Thành phố
               </h3>
               <span className={styles.sectionSubtitle}>Khách hàng tập trung ở đâu</span>
@@ -283,7 +283,7 @@ export const MarketingTab: React.FC<MarketingTabProps> = ({ startDate, endDate }
         {/* Panel Phải: Phễu Chuyển đổi Marketing */}
         <div className={styles.panelCard}>
           <div>
-            <h3 className={styles.sectionTitle} style={{ fontSize: '1rem' }}>
+            <h3 className={styles.sectionTitle}>
               Phễu Chuyển đổi Marketing
             </h3>
             <span className={styles.sectionSubtitle}>
@@ -352,7 +352,7 @@ export const MarketingTab: React.FC<MarketingTabProps> = ({ startDate, endDate }
                     <td>{camp.signups.toLocaleString('vi-VN')}</td>
                     <td>{camp.paying_customers.toLocaleString('vi-VN')}</td>
                     <td>
-                      <strong style={{ color: 'var(--color-orange)' }}>
+                      <strong className={styles.revenueCell}>
                         {formatVnd(camp.revenue_vnd)}
                       </strong>
                     </td>

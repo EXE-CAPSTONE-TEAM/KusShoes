@@ -39,19 +39,13 @@
 
 .pageTitle {
   font-family: var(--font-admin, 'Roboto Variable', 'Roboto', sans-serif);
-  font-size: 1.35rem;
-  font-weight: 700;
+  font-size: 1.5rem;
+  font-weight: 800;
   color: var(--text-primary);
-  display: flex;
-  align-items: center;
-  gap: 10px;
   margin: 0;
   letter-spacing: -0.2px;
 }
 
-.titleIcon {
-  color: var(--text-secondary);
-}
 
 .liveTag {
   display: inline-flex;
@@ -161,6 +155,7 @@
   font-family: var(--font-mono);
   font-size: 0.65rem;
   font-weight: 700;
+  font-variant-numeric: tabular-nums;
   white-space: nowrap;
 }
 
@@ -229,14 +224,7 @@
   cursor: not-allowed;
 }
 
-.spinning {
-  animation: spin 0.9s linear infinite;
-}
 
-@keyframes spin {
-  from { transform: rotate(0deg); }
-  to { transform: rotate(360deg); }
-}
 
 /* Tab Navigation */
 .tabNav {
@@ -327,11 +315,6 @@
   gap: 12px;
 }
 
-.heroLabelGroup {
-  display: flex;
-  align-items: center;
-  gap: 8px;
-}
 
 .heroLabel {
   font-size: 0.74rem;
@@ -341,18 +324,6 @@
   color: var(--text-secondary);
 }
 
-.heroIconBox {
-  width: 36px;
-  height: 36px;
-  border-radius: var(--border-radius-sm);
-  background-color: var(--bg-tertiary);
-  color: var(--text-secondary);
-  border: 1px solid var(--glass-border);
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  flex-shrink: 0;
-}
 
 .heroValueRow {
   display: flex;
@@ -381,6 +352,7 @@
   font-size: 0.78rem;
   font-weight: 500;
   color: var(--text-secondary);
+  font-variant-numeric: tabular-nums;
 }
 
 .heroFooter strong {
@@ -396,6 +368,7 @@
   border-radius: var(--border-radius-full);
   font-size: 0.70rem;
   font-weight: 600;
+  font-variant-numeric: tabular-nums;
   font-family: var(--font-admin, 'Roboto Variable', 'Roboto', sans-serif);
 }
 
@@ -448,9 +421,6 @@
   margin: 0;
 }
 
-.sectionIcon {
-  color: var(--text-secondary);
-}
 
 .sectionSubtitle {
   font-size: 0.80rem;
@@ -533,10 +503,6 @@
   white-space: nowrap;
 }
 
-.metricMiniIcon {
-  color: var(--text-secondary);
-  flex-shrink: 0;
-}
 
 .metricValue {
   font-family: var(--font-admin, 'Roboto Variable', 'Roboto', sans-serif);
@@ -551,9 +517,10 @@
 
 .metricSubText {
   font-size: 0.76rem;
-  font-weight: 400;
+  font-weight: 500;
   color: var(--text-secondary);
   line-height: 1.4;
+  font-variant-numeric: tabular-nums;
 }
 
 /* Charts Grid */
@@ -626,6 +593,7 @@
   font-size: 0.72rem;
   font-weight: 600;
   font-family: var(--font-mono);
+  font-variant-numeric: tabular-nums;
 }
 
 /* Top Customer Items */
@@ -717,8 +685,9 @@
 
 .customerOrders {
   font-size: 0.74rem;
-  font-weight: 400;
+  font-weight: 500;
   color: var(--text-secondary);
+  font-variant-numeric: tabular-nums;
 }
 
 .customerAmount {
@@ -752,84 +721,15 @@
   border-bottom: 1px solid var(--glass-border);
 }
 
-.reportsGrid {
-  display: grid;
-  grid-template-columns: repeat(auto-fit, minmax(310px, 1fr));
-  gap: 14px;
-}
 
-.reportCard {
-  background-color: var(--bg-tertiary);
-  border: 1px solid var(--glass-border);
-  border-radius: var(--border-radius-sm);
-  padding: 16px 18px;
-  display: flex;
-  flex-direction: column;
-  justify-content: space-between;
-  gap: 14px;
-  transition: all var(--transition-fast);
-}
 
-.reportCard:hover {
-  border-color: var(--glass-border-hover);
-  background-color: var(--hover-bg-item);
-}
 
-.reportTop {
-  display: flex;
-  gap: 12px;
-}
 
-.reportIconBox {
-  width: 36px;
-  height: 36px;
-  border-radius: var(--border-radius-sm);
-  background-color: var(--bg-tertiary);
-  color: var(--text-secondary);
-  border: 1px solid var(--glass-border);
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  flex-shrink: 0;
-}
 
-.reportMeta {
-  display: flex;
-  flex-direction: column;
-  gap: 4px;
-  min-width: 0;
-}
 
-.reportTitleRow {
-  display: flex;
-  align-items: center;
-  gap: 8px;
-  flex-wrap: wrap;
-}
 
-.reportName {
-  font-family: var(--font-admin, 'Roboto Variable', 'Roboto', sans-serif);
-  font-size: 0.90rem;
-  font-weight: 700;
-  color: var(--text-primary);
-  margin: 0;
-}
 
-.reportDesc {
-  font-size: 0.78rem;
-  font-weight: 400;
-  color: var(--text-secondary);
-  line-height: 1.45;
-  margin: 0;
-}
 
-.reportActions {
-  display: flex;
-  align-items: center;
-  gap: 8px;
-  padding-top: 12px;
-  border-top: 1px solid var(--glass-border);
-}
 
 .exportBtn {
   display: inline-flex;
@@ -861,15 +761,6 @@
 }
 
 /* Loading & Empty states */
-.loadingOverlay {
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  gap: 12px;
-  padding: 48px;
-  color: var(--text-muted);
-  font-size: 0.88rem;
-}
 
 /* Responsive */
 @media (max-width: 1024px) {
@@ -887,9 +778,6 @@
     width: 100%;
     justify-content: space-between;
   }
-  .reportsGrid {
-    grid-template-columns: 1fr;
-  }
 }
 
 /* Dòng tiêu đề thẻ biểu đồ: tiêu đề + badge "Chi tiết" */
@@ -897,4 +785,19 @@
   display: flex;
   align-items: center;
   gap: 8px;
+}
+
+.metricValueDanger {
+  color: var(--fin-red);
+}
+
+.chartBody {
+  padding: 8px 0;
+}
+
+.reportsHubTitle {
+  font-size: 1.2rem;
+  font-weight: 800;
+  color: var(--text-primary);
+  margin: 0;
 }
