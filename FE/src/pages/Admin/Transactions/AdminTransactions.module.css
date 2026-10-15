@@ -1,0 +1,196 @@
+/* Bộ lọc giao dịch: lưới các ô lọc có nhãn, theo Admin Design System (phẳng, không hiệu ứng trang trí). */
+.filterPanel {
+  display: flex;
+  flex-direction: column;
+  gap: 14px;
+  padding: 16px 18px;
+  background-color: var(--bg-secondary);
+  border: 1px solid var(--glass-border);
+  border-radius: var(--border-radius-md);
+}
+
+.filterHeader {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  flex-wrap: wrap;
+}
+
+.filterTitle {
+  margin: 0;
+  font-size: 0.92rem;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.7px;
+  color: var(--text-primary);
+}
+
+.activeCount {
+  margin-left: 8px;
+  padding: 1px 8px;
+  border-radius: var(--border-radius-full);
+  background-color: var(--hover-bg-item);
+  border: 1px solid var(--glass-border);
+  color: var(--text-secondary);
+  font-size: 0.7rem;
+  font-weight: 700;
+  font-variant-numeric: tabular-nums;
+  letter-spacing: 0;
+}
+
+.presetGroup {
+  display: inline-flex;
+  align-items: center;
+  gap: 2px;
+  padding: 2px;
+  background-color: var(--bg-tertiary);
+  border: 1px solid var(--glass-border);
+  border-radius: var(--border-radius-sm);
+}
+
+.presetBtn {
+  background: transparent;
+  border: 1px solid transparent;
+  color: var(--text-secondary);
+  padding: 4px 11px;
+  border-radius: var(--border-radius-sm);
+  font-family: inherit;
+  font-size: 0.76rem;
+  font-weight: 500;
+  cursor: pointer;
+  white-space: nowrap;
+}
+
+.presetBtn:hover {
+  color: var(--text-primary);
+  background-color: var(--hover-bg-item);
+}
+
+.presetBtnActive {
+  background-color: var(--fin-blue-fill);
+  border-color: var(--fin-blue);
+  color: #ffffff;
+  font-weight: 600;
+}
+
+.filterGrid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(190px, 1fr));
+  gap: 12px 14px;
+}
+
+.field {
+  display: flex;
+  flex-direction: column;
+  gap: 5px;
+  min-width: 0;
+}
+
+.fieldWide {
+  grid-column: span 2;
+}
+
+.fieldLabel {
+  font-size: 0.72rem;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.4px;
+  color: var(--text-secondary);
+}
+
+.fieldInput {
+  width: 100%;
+  box-sizing: border-box;
+  background-color: var(--bg-tertiary);
+  border: 1px solid var(--glass-border);
+  color: var(--text-primary);
+  padding: 8px 10px;
+  border-radius: var(--border-radius-sm);
+  font-family: inherit;
+  font-size: 0.84rem;
+  font-variant-numeric: tabular-nums;
+  outline: none;
+  color-scheme: inherit;
+  transition: border-color var(--transition-fast);
+}
+
+.fieldInput:focus {
+  border-color: var(--fin-blue);
+}
+
+.fieldInputError {
+  border-color: var(--fin-red);
+}
+
+.fieldError {
+  font-size: 0.72rem;
+  font-weight: 500;
+  color: var(--fin-red);
+}
+
+/* Select dùng chung mặc định width:100% nên vừa khít ô lọc. */
+.field > [role='combobox'] {
+  width: 100%;
+  padding: 8px 10px;
+  font-size: 0.84rem;
+}
+
+.checkField {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  min-height: 36px;
+  font-size: 0.84rem;
+  color: var(--text-secondary);
+  cursor: pointer;
+  white-space: nowrap;
+}
+
+.resultNote {
+  font-size: 0.78rem;
+  font-weight: 500;
+  color: var(--text-secondary);
+  font-variant-numeric: tabular-nums;
+}
+
+.num {
+  font-variant-numeric: tabular-nums;
+  white-space: nowrap;
+}
+
+.numStrong {
+  font-variant-numeric: tabular-nums;
+  white-space: nowrap;
+  font-weight: 700;
+}
+
+.discountNote {
+  display: block;
+  font-size: 0.72rem;
+  color: var(--text-muted);
+  font-variant-numeric: tabular-nums;
+}
+
+.detailBtn {
+  background: transparent;
+  border: 1px solid var(--glass-border);
+  color: var(--text-primary);
+  padding: 4px 10px;
+  border-radius: var(--border-radius-sm);
+  font-family: inherit;
+  font-size: 0.76rem;
+  font-weight: 600;
+  cursor: pointer;
+  white-space: nowrap;
+}
+
+.detailBtn:hover {
+  background-color: var(--hover-bg-item);
+}
+
+@media (max-width: 640px) {
+  .fieldWide {
+    grid-column: span 1;
+  }
+}

@@ -8,6 +8,7 @@ import { AdminDashboard } from './Dashboard/AdminDashboard';
 import { AdminUsers } from './Users/AdminUsers';
 import { AdminPlans } from './Plans/AdminPlans';
 import { AdminBilling } from './Billing/AdminBilling';
+import { AdminTransactions } from './Transactions/AdminTransactions';
 import { AdminProjects } from './Projects/AdminProjects';
 import { AdminBakeJobs } from './BakeJobs/AdminBakeJobs';
 import { AdminExports } from './Exports/AdminExports';
@@ -20,7 +21,7 @@ import { AdminFeedbackPage } from './Feedback/AdminFeedbackPage';
 import { AdminSettings } from './Settings/AdminSettings';
 
 const VALID_PAGES = [
-  'dashboard', 'analytics', 'reports', 'users', 'plans', 'billing', 'projects',
+  'dashboard', 'analytics', 'reports', 'users', 'plans', 'billing', 'transactions', 'projects',
   'bake-jobs', 'exports', 'content', 'feedback', 'system', 'audit-logs', 'settings',
 ];
 
@@ -67,6 +68,7 @@ const AdminShell: React.FC = () => {
         {page === 'users' && <AdminUsers />}
         {page === 'plans' && <AdminPlans />}
         {page === 'billing' && <AdminBilling />}
+        {page === 'transactions' && <AdminTransactions />}
         {page === 'projects' && <AdminProjects />}
         {page === 'bake-jobs' && <AdminBakeJobs />}
         {page === 'exports' && <AdminExports />}

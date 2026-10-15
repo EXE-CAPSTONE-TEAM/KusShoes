@@ -1,7 +1,7 @@
 import uuid
 from datetime import datetime
 
-from sqlalchemy import or_, select, text
+from sqlalchemy import func, or_, select, text
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.models.invoice import Invoice
@@ -143,6 +143,13 @@ async def list_all(
     date_from: datetime | None = None,
     date_to: datetime | None = None,
     q: str | None = None,
+    plan_tier: str | None = None,
+    billing_cycle: str | None = None,
+    min_amount_vnd: int | None = None,
+    max_amount_vnd: int | None = None,
+    has_coupon: bool | None = None,
+    coupon_code: str | None = None,
+    is_upgrade: bool | None = None,
     limit: int = 20,
     before: datetime | None = None,
     before_id: uuid.UUID | None = None,
@@ -162,10 +169,28 @@ async def list_all(
         query = query.where(Invoice.created_at >= date_from)
     if date_to is not None:
         query = query.where(Invoice.created_at < date_to)
+    if plan_tier is not None:
+        query = query.where(Invoice.plan_tier == plan_tier)
+    if billing_cycle is not None:
+        query = query.where(Invoice.billing_cycle == billing_cycle)
+    if min_amount_vnd is not None:
+        query = query.where(Invoice.amount_vnd >= min_amount_vnd)
+    if max_amount_vnd is not None:
+        query = query.where(Invoice.amount_vnd <= max_amount_vnd)
+    if has_coupon is not None:
+        query = query.where(
+            Invoice.coupon_code.is_not(None) if has_coupon else Invoice.coupon_code.is_(None)
+        )
+    if coupon_code is not None and coupon_code.strip():
+        query = query.where(func.lower(Invoice.coupon_code) == coupon_code.strip().lower())
+    if is_upgrade is not None:
+        query = query.where(Invoice.is_upgrade.is_(is_upgrade))
     if q is not None and q.strip():
         search = q.strip()
         or_clauses = [
             Invoice.payment_reference.ilike(f"%{search}%"),
+            Invoice.receipt_number.ilike(f"%{search}%"),
+            User.email.ilike(f"%{search}%"),
             Invoice.gateway_metadata[("payos", "counterAccountName")].astext.ilike(f"%{search}%"),
         ]
         if search.isdigit():

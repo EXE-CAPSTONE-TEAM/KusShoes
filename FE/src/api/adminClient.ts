@@ -260,6 +260,15 @@ export interface InvoiceListQuery {
   payment_method?: 'payos' | 'momo' | 'manual';
   exclude_internal?: boolean;
   q?: string;
+  date_from?: string;
+  date_to?: string;
+  plan_tier?: 'free' | 'basic' | 'pro';
+  billing_cycle?: 'monthly' | 'yearly';
+  min_amount_vnd?: number;
+  max_amount_vnd?: number;
+  has_coupon?: boolean;
+  coupon_code?: string;
+  is_upgrade?: boolean;
   limit?: number;
   cursor?: string;
 }
