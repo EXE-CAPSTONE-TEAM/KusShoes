@@ -446,6 +446,23 @@ async def test_admin_invoice_detail_and_transfer(client, db, auth_headers, authe
     )
     assert any(i["id"] == str(invoice.id) for i in q_name.json()["items"])
 
+    # Structured filters narrow the list; an impossible amount range excludes the invoice
+    amount = inv_data["amount_vnd"]
+    in_range = await client.get(
+        f"/api/v1/admin/billing/invoices?min_amount_vnd={amount}&max_amount_vnd={amount}"
+        f"&plan_tier={inv_data['plan_tier']}&billing_cycle={inv_data['billing_cycle']}",
+        headers=admin_headers,
+    )
+    assert any(i["id"] == str(invoice.id) for i in in_range.json()["items"])
+    out_of_range = await client.get(
+        f"/api/v1/admin/billing/invoices?min_amount_vnd={amount + 1}", headers=admin_headers
+    )
+    assert all(i["id"] != str(invoice.id) for i in out_of_range.json()["items"])
+    by_email = await client.get(
+        f"/api/v1/admin/billing/invoices?q={authenticated_user.email}", headers=admin_headers
+    )
+    assert any(i["id"] == str(invoice.id) for i in by_email.json()["items"])
+
     # Admin subscriptions lists last_invoice_id
     subs = await client.get("/api/v1/admin/billing/subscriptions", headers=admin_headers)
     assert subs.status_code == 200

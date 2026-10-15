@@ -26,7 +26,12 @@ from app.schemas.finance import (
     ReportingPeriodCreate,
     ReportingPeriodResponse,
 )
-from app.schemas.subscription import AdminInvoiceResponse, AdminSubscriptionResponse, ReceiptResponse, RefundRequest
+from app.schemas.subscription import (
+    AdminInvoiceResponse,
+    AdminSubscriptionResponse,
+    ReceiptResponse,
+    RefundRequest,
+)
 from app.services import (
     billing_service,
     coupon_service,
@@ -75,6 +80,13 @@ async def list_invoices(
     date_from: datetime | None = None,
     date_to: datetime | None = None,
     q: str | None = None,
+    plan_tier: Literal["free", "basic", "pro"] | None = None,
+    billing_cycle: Literal["monthly", "yearly"] | None = None,
+    min_amount_vnd: int | None = Query(default=None, ge=0),
+    max_amount_vnd: int | None = Query(default=None, ge=0),
+    has_coupon: bool | None = None,
+    coupon_code: str | None = Query(default=None, max_length=40),
+    is_upgrade: bool | None = None,
     limit: int = Query(default=20, ge=1, le=100),
     cursor: str | None = None,
     db: AsyncSession = Depends(get_db),
@@ -97,6 +109,13 @@ async def list_invoices(
         date_from=date_from,
         date_to=date_to,
         q=q,
+        plan_tier=plan_tier,
+        billing_cycle=billing_cycle,
+        min_amount_vnd=min_amount_vnd,
+        max_amount_vnd=max_amount_vnd,
+        has_coupon=has_coupon,
+        coupon_code=coupon_code,
+        is_upgrade=is_upgrade,
         limit=limit,
         before=before,
         before_id=before_id,
