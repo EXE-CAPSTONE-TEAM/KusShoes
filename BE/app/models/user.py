@@ -67,6 +67,12 @@ class User(Base, TimestampMixin):
         DateTime(timezone=True), nullable=True
     )
 
+    # BR-109: feedback is only open to users who have actually saved a design in Studio.
+    # Stamped once on the first save and never cleared, so deleting projects keeps it.
+    first_studio_save_at: Mapped[datetime | None] = mapped_column(
+        DateTime(timezone=True), nullable=True
+    )
+
     # BR-12/13: 2FA. totp_secret is base32, only ever set server-side.
     two_factor_enabled: Mapped[bool] = mapped_column(Boolean, nullable=False, default=False)
     two_factor_method: Mapped[str | None] = mapped_column(String(20), nullable=True)

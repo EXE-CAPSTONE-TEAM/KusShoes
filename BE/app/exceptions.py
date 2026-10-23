@@ -604,6 +604,15 @@ class FeedbackNotFound(AppException):
         super().__init__(404, "FEEDBACK_NOT_FOUND", "Không tìm thấy phản hồi")
 
 
+class FeedbackRequiresStudioSave(AppException):
+    def __init__(self):
+        super().__init__(
+            403,
+            "FEEDBACK_REQUIRES_STUDIO_SAVE",
+            "Bạn cần lưu ít nhất một thiết kế trong KusStudio trước khi gửi phản hồi",
+        )
+
+
 class FeedbackTooSoon(AppException):
     def __init__(self, next_allowed_at):
         super().__init__(

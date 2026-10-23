@@ -252,8 +252,8 @@ DOCS: dict[str, tuple[str, str]] = {
     "GET /api/v1/public/artisan/{token}": ("Xem thông tin link nghệ nhân", "Tên dự án, định dạng, hạn và số lượt tải còn lại. Link sai/hết hạn/bị thu hồi/hết lượt đều trả 410 `ARTISAN_LINK_INVALID`. Giới hạn 30 lượt/phút/IP. " + _P),
     "POST /api/v1/public/artisan/{token}/download": ("Tải bản xuất qua link", "Trừ một lượt và trả URL tải có chữ ký tối đa 15 phút. Lỗi giống endpoint xem. " + _P),
     # ---- Feedback ----
-    "GET /api/v1/feedback/eligibility": ("Có được gửi phản hồi không", "Mỗi người 1 phiếu/14 ngày (BR-109); trả `next_allowed_at`. " + _B),
-    "POST /api/v1/feedback": ("Gửi phản hồi", "Điểm 1–5, nội dung và nhóm 4P. Gửi sớm trả 429 `FEEDBACK_TOO_SOON` kèm `next_allowed_at`. " + _B),
+    "GET /api/v1/feedback/eligibility": ("Có được gửi phản hồi không", "Chỉ mở khi tài khoản đã lưu ít nhất một thiết kế trong KusStudio (`has_used_studio`); mỗi người 1 phiếu/14 ngày (BR-109); trả `next_allowed_at`. " + _B),
+    "POST /api/v1/feedback": ("Gửi phản hồi", "Điểm 1–5, nội dung và nhóm 4P. Chưa từng lưu thiết kế trong KusStudio trả 403 `FEEDBACK_REQUIRES_STUDIO_SAVE`; gửi sớm trả 429 `FEEDBACK_TOO_SOON` kèm `next_allowed_at`. " + _B),
     "GET /api/v1/feedback/mine": ("Phản hồi của tôi", "Kèm trạng thái xử lý và 'đã thay đổi gì'. " + _B),
     # ---- Exports ----
     "GET /api/v1/exports": ("Lịch sử xuất file", "Lọc theo dự án/định dạng, phân trang con trỏ. " + _B),

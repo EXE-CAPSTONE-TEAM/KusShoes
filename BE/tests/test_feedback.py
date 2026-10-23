@@ -1,11 +1,14 @@
 import io
+import uuid
 from datetime import UTC, datetime, timedelta
 
 import bcrypt
 import pytest
+import pytest_asyncio
 from openpyxl import load_workbook
 
 from app.utils.jwt import create_access_token
+from tests.test_studio import _create_project, _save
 
 
 async def _admin(db):
@@ -25,8 +28,78 @@ async def _admin(db):
     return {"Authorization": f"Bearer {create_access_token(str(admin.id), role='admin')}"}
 
 
+@pytest_asyncio.fixture
+async def studio_user(db, authenticated_user):
+    """The default test user, already past their first KusStudio save."""
+    authenticated_user.first_studio_save_at = datetime.now(UTC)
+    await db.commit()
+    return authenticated_user
+
+
+async def _eligibility(client, headers):
+    return (await client.get("/api/v1/feedback/eligibility", headers=headers)).json()
+
+
 @pytest.mark.asyncio
-async def test_submit_and_cooldown(client, db, auth_headers):
+async def test_feedback_locked_until_first_studio_save(client, auth_headers, service_headers):
+    eligibility = await _eligibility(client, auth_headers)
+    assert eligibility["has_used_studio"] is False
+    assert eligibility["can_submit"] is False
+
+    blocked = await client.post(
+        "/api/v1/feedback", headers=auth_headers, json={"rating": 5, "message": "Chưa dùng"}
+    )
+    assert blocked.status_code == 403
+    assert blocked.json()["code"] == "FEEDBACK_REQUIRES_STUDIO_SAVE"
+
+    # Creating a project is not enough; the first save in Studio is what counts.
+    project_id = await _create_project(client, auth_headers)
+    assert (await _eligibility(client, auth_headers))["has_used_studio"] is False
+
+    assert (await _save(client, service_headers, project_id, {"color": "red"})).status_code == 200
+    eligibility = await _eligibility(client, auth_headers)
+    assert eligibility["has_used_studio"] is True
+    assert eligibility["can_submit"] is True
+    created = await client.post(
+        "/api/v1/feedback", headers=auth_headers, json={"rating": 5, "message": "Đã dùng"}
+    )
+    assert created.status_code == 201
+
+
+@pytest.mark.asyncio
+async def test_only_studio_saves_stamp_first_use(client, db, auth_headers, authenticated_user):
+    from app.repositories import project_repo
+
+    project = await project_repo.get_by_id(
+        db, uuid.UUID(await _create_project(client, auth_headers))
+    )
+
+    async def save_as(client_name):
+        await project_repo.save_design(
+            db,
+            project,
+            design_config={"saved_by": client_name},
+            thumbnail_path=None,
+            base_revision=project.current_design_revision,
+            author_user_id=authenticated_user.id,
+            client=client_name,
+        )
+        await db.refresh(authenticated_user)
+        return authenticated_user.first_studio_save_at
+
+    # Template apply / version restore ("web") and re-crop resets ("desktop") are not a Save.
+    assert await save_as("web") is None
+    assert await save_as("desktop") is None
+    assert await save_as("editor") is not None
+
+    # Later Studio saves never move the first-use moment.
+    first_use = datetime(2026, 1, 1, tzinfo=UTC)
+    authenticated_user.first_studio_save_at = first_use
+    await db.flush()
+    assert await save_as("service") == first_use
+
+@pytest.mark.asyncio
+async def test_submit_and_cooldown(client, db, auth_headers, studio_user):
     eligibility = await client.get("/api/v1/feedback/eligibility", headers=auth_headers)
     assert eligibility.json()["can_submit"] is True
 
@@ -76,7 +149,7 @@ async def test_rating_bounds_validated(client, auth_headers):
 
 
 @pytest.mark.asyncio
-async def test_admin_triage_summary_and_internal_exclusion(client, db, auth_headers):
+async def test_admin_triage_summary_and_internal_exclusion(client, db, auth_headers, studio_user):
     from app.repositories import user_repo
 
     admin_headers = await _admin(db)
@@ -96,6 +169,7 @@ async def test_admin_triage_summary_and_internal_exclusion(client, db, auth_head
     )
     internal.is_verified = True
     internal.is_internal = True
+    internal.first_studio_save_at = datetime.now(UTC)
     await db.commit()
     internal_headers = {"Authorization": f"Bearer {create_access_token(str(internal.id))}"}
     await client.post(
@@ -134,7 +208,7 @@ async def test_admin_triage_summary_and_internal_exclusion(client, db, auth_head
 
 
 @pytest.mark.asyncio
-async def test_export_xlsx_excludes_internal(client, db, auth_headers):
+async def test_export_xlsx_excludes_internal(client, db, auth_headers, studio_user):
     admin_headers = await _admin(db)
     await client.post(
         "/api/v1/feedback", headers=auth_headers, json={"rating": 5, "message": "Rất tốt"}
@@ -150,7 +224,7 @@ async def test_export_xlsx_excludes_internal(client, db, auth_headers):
 
 
 @pytest.mark.asyncio
-async def test_staff_cannot_update_feedback(client, db, auth_headers):
+async def test_staff_cannot_update_feedback(client, db, auth_headers, studio_user):
     from app.repositories import user_repo
 
     staff = await user_repo.create_email_user(

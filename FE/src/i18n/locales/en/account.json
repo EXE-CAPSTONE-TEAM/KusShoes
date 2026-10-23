@@ -197,6 +197,7 @@
     "sendError": "Unable to send your feedback.",
     "title": "Feedback",
     "shareTitle": "Share your thoughts",
+    "studioRequired": "Feedback opens once you have used KusStudio. Open a project and save your first design to unlock it.",
     "tooSoon": "You have sent feedback recently. You can send another on {{date}}.",
     "rateLabel": "How would you rate KusShoes?",
     "rating": "Rating",

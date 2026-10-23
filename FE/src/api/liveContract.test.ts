@@ -113,8 +113,19 @@ describe.skipIf(!live)('portal API against the live backend', () => {
     expect(restore.message).toBeTruthy();
   });
 
-  it('sends and lists feedback, then blocks a second submission within 14 days', async () => {
+  it('locks feedback until the account has saved a design in KusStudio', async () => {
     await api.login('fe.user@example.com', PASSWORD);
+    const eligibility = await studioApi.eligibility();
+    expect(eligibility.has_used_studio).toBe(false);
+    expect(eligibility.can_submit).toBe(false);
+    await expect(
+      studioApi.submitFeedback({ rating: 4, message: 'Never opened Studio', marketing_group: 'product' }),
+    ).rejects.toMatchObject({ status: 403, code: 'FEEDBACK_REQUIRES_STUDIO_SAVE' });
+  });
+
+  it('sends and lists feedback, then blocks a second submission within 14 days', async () => {
+    // fe.paid owns the seeded project with saved design versions, so it has used Studio.
+    await api.login('fe.paid@example.com', PASSWORD);
     expect((await studioApi.eligibility()).can_submit).toBe(true);
     const sent = await studioApi.submitFeedback({ rating: 4, message: 'Contract test feedback', marketing_group: 'product' });
     expect(sent.status).toBe('new');

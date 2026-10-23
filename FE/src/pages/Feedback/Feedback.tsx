@@ -1,5 +1,5 @@
 import React, { useCallback, useEffect, useState } from 'react';
-import { Clock, Send, Star } from 'lucide-react';
+import { Clock, Lock, Send, Star, type LucideIcon } from 'lucide-react';
 import { motion } from 'framer-motion';
 import { useTranslation } from 'react-i18next';
 import { ApiError } from '../../api/client';
@@ -30,6 +30,8 @@ const STATUS_KEYS: Record<string, string> = {
 };
 
 const MAX_LENGTH = 2000;
+// Errors meaning the eligibility on screen is stale; reloading it shows the matching notice.
+const ELIGIBILITY_CODES = ['FEEDBACK_TOO_SOON', 'FEEDBACK_REQUIRES_STUDIO_SAVE'];
 
 /** Status indicator adhering to docs/DESIGN.md Section 5.7 (6px dot + 12px label) */
 function FeedbackStatus({ status }: { status: string }) {
@@ -75,6 +77,15 @@ export const Feedback: React.FC = () => {
   const canSubmit =
     eligibility?.can_submit !== false && rating > 0 && message.trim().length >= 3 && !submitting;
 
+  // The Studio requirement comes first; the cooldown only matters once feedback is unlocked.
+  let notice: { Icon: LucideIcon; text: string } | null = null;
+  if (eligibility && !eligibility.has_used_studio) {
+    notice = { Icon: Lock, text: t('feedback.studioRequired') };
+  } else if (eligibility?.next_allowed_at) {
+    const date = formatDate(eligibility.next_allowed_at);
+    notice = { Icon: Clock, text: t('feedback.tooSoon', { date }) };
+  }
+
   const submit = async (event: React.FormEvent) => {
     event.preventDefault();
     if (!canSubmit) return;
@@ -86,7 +97,9 @@ export const Feedback: React.FC = () => {
       setMessage('');
       await load();
     } catch (caught) {
-      if (caught instanceof ApiError && caught.code === 'FEEDBACK_TOO_SOON') await load();
+      if (caught instanceof ApiError && caught.code && ELIGIBILITY_CODES.includes(caught.code)) {
+        await load();
+      }
       toast(caught instanceof Error ? caught.message : t('feedback.sendError'), 'error');
     } finally {
       setSubmitting(false);
@@ -119,12 +132,10 @@ export const Feedback: React.FC = () => {
             <h2 className={styles.cardTitle}>{t('feedback.shareTitle')}</h2>
           </div>
 
-          {eligibility && !eligibility.can_submit && (
+          {notice && (
             <div className={styles.notice} role="status">
-              <Clock size={16} className={styles.noticeIcon} />
-              <span>
-                {t('feedback.tooSoon', { date: formatDate(eligibility.next_allowed_at) })}
-              </span>
+              <notice.Icon size={16} className={styles.noticeIcon} />
+              <span>{notice.text}</span>
             </div>
           )}
 
