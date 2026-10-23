@@ -296,7 +296,7 @@ describe('Feedback page', () => {
     m(studioApi.myFeedback).mockResolvedValue([
       { id: '1', rating: 5, marketing_group: 'product', message: 'Great', status: 'done', changed_what: 'Added dark mode', created_at: '2026-09-01T00:00:00Z' },
     ]);
-    m(studioApi.eligibility).mockResolvedValue({ can_submit: true, next_allowed_at: null });
+    m(studioApi.eligibility).mockResolvedValue({ can_submit: true, next_allowed_at: null, has_used_studio: true });
     m(studioApi.submitFeedback).mockResolvedValue({});
     wrap(<Feedback />);
 
@@ -311,11 +311,25 @@ describe('Feedback page', () => {
     );
   });
 
-  it('explains the cooldown and blocks submission', async () => {
+  it.each([
+    {
+      reason: 'the cooldown',
+      eligibility: { can_submit: false, next_allowed_at: '2026-10-01T00:00:00Z', has_used_studio: true },
+      shown: /sent feedback recently/i,
+      hidden: /save your first design/i,
+    },
+    {
+      reason: 'the KusStudio requirement',
+      eligibility: { can_submit: false, next_allowed_at: null, has_used_studio: false },
+      shown: /save your first design/i,
+      hidden: /sent feedback recently/i,
+    },
+  ])('explains $reason and blocks submission', async ({ eligibility, shown, hidden }) => {
     m(studioApi.myFeedback).mockResolvedValue([]);
-    m(studioApi.eligibility).mockResolvedValue({ can_submit: false, next_allowed_at: '2026-10-01T00:00:00Z' });
+    m(studioApi.eligibility).mockResolvedValue(eligibility);
     wrap(<Feedback />);
-    expect(await screen.findByText(/sent feedback recently/i)).toBeInTheDocument();
+    expect(await screen.findByText(shown)).toBeInTheDocument();
+    expect(screen.queryByText(hidden)).not.toBeInTheDocument();
     fireEvent.click(screen.getByRole('radio', { name: /5 stars/i }));
     fireEvent.change(screen.getByLabelText(/your message/i), { target: { value: 'hello there' } });
     expect(screen.getByRole('button', { name: /send feedback/i })).toBeDisabled();
