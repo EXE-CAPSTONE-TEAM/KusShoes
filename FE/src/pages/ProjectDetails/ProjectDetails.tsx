@@ -2,7 +2,7 @@ import React, { useState, useEffect, useRef, useCallback } from 'react';
 import { useTranslation } from 'react-i18next';
 import {
   ArrowLeft, Laptop, RefreshCw, Check, Download, FileText,
-  Terminal, Share2, History, Lock, Droplets, Box
+  Terminal, Share2, History, Lock, Droplets, Box, MessageSquare
 } from 'lucide-react';
 import { ConfirmDialog } from '../../components/ConfirmDialog/ConfirmDialog';
 import { useToast } from '../../context/ToastContext';
@@ -10,6 +10,7 @@ import { api, type PortalProject, type ProjectExport, type WatermarkPolicy } fro
 import { VersionHistoryPanel } from './VersionHistoryPanel';
 import { ArtisanSharePanel } from './ArtisanSharePanel';
 import { ModelPanel } from './ModelPanel';
+import { FeedbackPanel } from './FeedbackPanel';
 import styles from './ProjectDetails.module.css';
 import { DESKTOP_INSTALLER_URL } from '../../utils/desktopRelease';
 
@@ -22,8 +23,8 @@ interface ProjectDetailsProps {
   setProjects: React.Dispatch<React.SetStateAction<PortalProject[]>>;
 }
 
-type DetailTab = 'overview' | 'model' | 'history' | 'share';
-const DETAIL_TABS: readonly DetailTab[] = ['overview', 'model', 'history', 'share'];
+type DetailTab = 'overview' | 'model' | 'history' | 'share' | 'feedback';
+const DETAIL_TABS: readonly DetailTab[] = ['overview', 'model', 'history', 'share', 'feedback'];
 
 /** `?tab=share` lets other screens (e.g. the project card's Share action) deep-link a tab. */
 function tabFromSearch(search: string): DetailTab {
@@ -257,6 +258,13 @@ export const ProjectDetails: React.FC<ProjectDetailsProps> = ({
               <Share2 size={14} />
               {t('page.tabShare')}
             </button>
+            <button
+              className={`${styles.tabBtn} ${activeTab === 'feedback' ? styles.tabBtnActive : ''}`}
+              onClick={() => setActiveTab('feedback')}
+            >
+              <MessageSquare size={14} />
+              {t('page.tabFeedback')}
+            </button>
           </div>
 
           {/* ========================= OVERVIEW TAB ========================= */}
@@ -411,6 +419,9 @@ export const ProjectDetails: React.FC<ProjectDetailsProps> = ({
           {activeTab === 'share' && (
             <ArtisanSharePanel projectId={project.id} onUpgrade={() => window.location.assign('/billing')} />
           )}
+
+          {/* ========================= FEEDBACK TAB ========================= */}
+          {activeTab === 'feedback' && <FeedbackPanel />}
 
         </div>
 

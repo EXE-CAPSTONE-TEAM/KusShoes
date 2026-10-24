@@ -197,7 +197,6 @@
     "sendError": "Không gửi được góp ý.",
     "title": "Góp ý",
     "shareTitle": "Chia sẻ ý kiến của bạn",
-    "studioRequired": "Chỉ những người đã thiết kế trong KusStudio mới có thể góp ý. Hãy mở một dự án và lưu thiết kế đầu tiên để mở khoá.",
     "tooSoon": "Bạn vừa gửi góp ý gần đây. Bạn có thể gửi tiếp vào {{date}}.",
     "rateLabel": "Bạn đánh giá KusShoes thế nào?",
     "rating": "Đánh giá",

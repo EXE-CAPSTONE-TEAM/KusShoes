@@ -1025,15 +1025,15 @@ Gửi và xem phản hồi của khách hàng.
 
 ### `GET /api/v1/feedback/eligibility` — Có được gửi phản hồi không
 
-Chỉ mở khi tài khoản đã lưu ít nhất một thiết kế trong KusStudio (`has_used_studio`); mỗi người 1 phiếu/14 ngày (BR-109); trả `next_allowed_at`. Bearer.
+Mỗi người 1 phiếu/14 ngày (BR-109); trả `next_allowed_at`. Bearer.
 
 Responses: `200` FeedbackEligibility, `401` ErrorResponse, `403` ErrorResponse
 
-Response fields: `can_submit`: boolean; `next_allowed_at`: date-time | null; `has_used_studio`: boolean
+Response fields: `can_submit`: boolean; `next_allowed_at`: date-time | null
 
 ### `POST /api/v1/feedback` — Gửi phản hồi
 
-Điểm 1–5, nội dung và nhóm 4P. Chưa từng lưu thiết kế trong KusStudio trả 403 `FEEDBACK_REQUIRES_STUDIO_SAVE`; gửi sớm trả 429 `FEEDBACK_TOO_SOON` kèm `next_allowed_at`. Bearer.
+Điểm 1–5, nội dung và nhóm 4P. Gửi sớm trả 429 `FEEDBACK_TOO_SOON` kèm `next_allowed_at`. Bearer.
 
 Request body: `rating`: integer; `message`: string; `marketing_group?`: string
 
