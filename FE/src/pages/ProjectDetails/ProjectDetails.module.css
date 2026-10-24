@@ -539,13 +539,21 @@
   border: 1px solid var(--glass-border);
   border-radius: var(--border-radius-sm);
   padding: 4px;
+  /* Labels never wrap; when the column is too narrow for every tab, the bar scrolls instead. */
+  overflow-x: auto;
+  scrollbar-width: none;
+}
+
+.tabNav::-webkit-scrollbar {
+  display: none;
 }
 
 .tabBtn {
   display: inline-flex;
   align-items: center;
   gap: 7px;
-  padding: 9px 18px;
+  padding: 9px 14px;
+  white-space: nowrap;
   border-radius: calc(var(--border-radius-sm) - 2px);
   border: none;
   background: transparent;
@@ -555,8 +563,12 @@
   font-weight: 600;
   cursor: pointer;
   transition: all var(--transition-fast);
-  flex: 1;
+  flex: 1 0 auto;
   justify-content: center;
+}
+
+.tabBtn svg {
+  flex-shrink: 0;
 }
 
 .tabBtn:hover {
@@ -1021,19 +1033,9 @@
   }
 
   /* Four tabs do not fit side by side: let the strip scroll instead of squeezing the labels */
-  .tabNav {
-    overflow-x: auto;
-    scrollbar-width: none;
-  }
-
-  .tabNav::-webkit-scrollbar {
-    display: none;
-  }
-
   .tabBtn {
     flex: 0 0 auto;
     min-height: 44px;
-    white-space: nowrap;
   }
 
   .metaRow {
