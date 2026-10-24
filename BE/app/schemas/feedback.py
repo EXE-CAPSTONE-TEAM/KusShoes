@@ -27,8 +27,6 @@ class FeedbackResponse(BaseModel):
 class FeedbackEligibility(BaseModel):
     can_submit: bool
     next_allowed_at: datetime | None
-    # False until the user's first design save in KusStudio (BR-109 anti-fake-feedback).
-    has_used_studio: bool
 
 
 class AdminFeedbackResponse(FeedbackResponse):

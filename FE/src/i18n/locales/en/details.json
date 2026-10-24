@@ -23,6 +23,7 @@
     "tabModel": "Model 3D",
     "tabHistory": "History & Templates",
     "tabShare": "Share with artisan",
+    "tabFeedback": "Feedback",
     "noDescription": "No description provided for this sneaker reconstruction scan. Open in KusStudio Desktop to write annotations and build textures.",
     "metaHeading": "Reconstruction Metadata",
     "metaDensity": "Reconstruction Density",

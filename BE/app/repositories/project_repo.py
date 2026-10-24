@@ -9,7 +9,6 @@ from app.exceptions import DesignRevisionConflict
 from app.models.design_revision import DesignRevision
 from app.models.project import Project
 from app.models.user import User
-from app.policy import STUDIO_SAVE_CLIENTS
 from app.types import JsonObject
 
 
@@ -174,13 +173,6 @@ async def save_design(
     project.thumbnail_path = thumbnail_path
     project.status = "in_progress"
     project.current_design_revision = next_revision
-    if client in STUDIO_SAVE_CLIENTS:
-        # Only the first Studio save is stamped; later saves keep the original moment.
-        await db.execute(
-            update(User)
-            .where(User.id == author_user_id, User.first_studio_save_at.is_(None))
-            .values(first_studio_save_at=func.now())
-        )
     await db.flush()
 
 

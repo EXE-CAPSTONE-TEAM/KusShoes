@@ -19,7 +19,6 @@ const USER_PAGES = new Set([
   'billing-checkout',
   'billing-bill',
   'settings',
-  'feedback',
   'project-details',
 ]);
 

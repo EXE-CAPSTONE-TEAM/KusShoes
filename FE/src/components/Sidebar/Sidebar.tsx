@@ -15,7 +15,6 @@ import {
   Eye,
   ChevronDown,
   Palette,
-  MessageSquare,
   PanelLeftClose,
   PanelLeftOpen,
   Menu,
@@ -104,7 +103,6 @@ export const Sidebar: React.FC<SidebarProps> = ({
     { id: 'trash', label: t('sidebar.trash'), icon: Trash2 },
     { id: 'exports', label: t('sidebar.exports'), icon: Download },
     { id: 'billing', label: t('sidebar.billing'), icon: CreditCard },
-    { id: 'feedback', label: t('sidebar.feedback'), icon: MessageSquare },
   ];
   const settingItems: Array<{ id: SettingTab; label: string; icon: typeof User }> = [
     { id: 'profile', label: t('sidebar.settingsProfile'), icon: User },

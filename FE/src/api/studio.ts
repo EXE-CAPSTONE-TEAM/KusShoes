@@ -79,8 +79,6 @@ export type Feedback = {
 export type FeedbackEligibility = {
   can_submit: boolean;
   next_allowed_at: string | null;
-  /** False until the account's first design save in KusStudio; feedback stays locked until then. */
-  has_used_studio: boolean;
 };
 
 // ---- Public artisan link viewer (no auth — opened by whoever received the shared link) -----

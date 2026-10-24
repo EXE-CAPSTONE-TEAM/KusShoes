@@ -36,8 +36,6 @@ const importBillingBill = () =>
   import('./pages/Billing/BillPage').then((m) => ({ default: m.BillPage }));
 const importSettings = () =>
   import('./pages/Settings/Settings').then((m) => ({ default: m.Settings }));
-const importFeedback = () =>
-  import('./pages/Feedback/Feedback').then((m) => ({ default: m.Feedback }));
 const importProjectDetails = () =>
   import('./pages/ProjectDetails/ProjectDetails').then((m) => ({ default: m.ProjectDetails }));
 const importProducts = () =>
@@ -62,7 +60,6 @@ const Billing = lazy(importBilling);
 const CheckoutReview = lazy(importBillingCheckout);
 const BillPage = lazy(importBillingBill);
 const Settings = lazy(importSettings);
-const Feedback = lazy(importFeedback);
 const ProjectDetails = lazy(importProjectDetails);
 const ProductsPage = lazy(importProducts);
 const PricingPage = lazy(importPricing);
@@ -86,7 +83,6 @@ const pageImporters: Record<string, (() => Promise<unknown>) | undefined> = {
   'billing-checkout': withPortalShell(importBillingCheckout),
   'billing-bill': withPortalShell(importBillingBill),
   settings: withPortalShell(importSettings),
-  feedback: withPortalShell(importFeedback),
   'project-details': withPortalShell(importProjectDetails),
   'products-info': importProducts,
   pricing: importPricing,
@@ -142,8 +138,6 @@ const getPageFromPath = (path: string): string => {
       return 'billing';
     case '/settings':
       return 'settings';
-    case '/feedback':
-      return 'feedback';
     case '/':
     default:
       return 'landing';
@@ -192,8 +186,6 @@ const getPathFromPage = (page: string): string => {
       return '/billing/success' + query;
     case 'settings':
       return '/settings' + query;
-    case 'feedback':
-      return '/feedback' + query;
     case 'admin':
       return '/admin' + query;
     case 'landing':
@@ -355,7 +347,6 @@ function App() {
     'billing-checkout',
     'billing-bill',
     'settings',
-    'feedback',
     'project-details',
   ].includes(activePage);
 
@@ -445,7 +436,6 @@ function App() {
             onTabChange={(tab) => navigate(`/settings?tab=${tab}`)}
           />
         )}
-        {activePage === 'feedback' && <Feedback />}
         {projectsError && isPortalView && (
           <div role="alert" style={{ margin: '24px', color: '#ef4444' }}>
             {projectsError}

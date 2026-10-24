@@ -121,7 +121,6 @@ export const PRIVATE_PATH_PREFIXES: readonly string[] = [
   '/exports',
   '/billing',
   '/settings',
-  '/feedback',
 ];
 
 export function findSeoPage(pathname: string): SeoPage | undefined {

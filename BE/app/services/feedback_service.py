@@ -4,7 +4,7 @@ from datetime import UTC, datetime, timedelta
 
 from sqlalchemy.ext.asyncio import AsyncSession
 
-from app.exceptions import FeedbackNotFound, FeedbackRequiresStudioSave, FeedbackTooSoon
+from app.exceptions import FeedbackNotFound, FeedbackTooSoon
 from app.repositories import feedback_repo
 from app.schemas.feedback import (
     AdminFeedbackResponse,
@@ -29,24 +29,12 @@ async def _next_allowed_at(db: AsyncSession, user_id: uuid.UUID) -> datetime | N
     return unlock if unlock > datetime.now(UTC) else None
 
 
-def _has_used_studio(user) -> bool:
-    """Only people who saved a design in KusStudio may rate it, so feedback stays genuine."""
-    return user.first_studio_save_at is not None
-
-
 async def get_eligibility(db: AsyncSession, user) -> FeedbackEligibility:
-    has_used_studio = _has_used_studio(user)
     next_allowed = await _next_allowed_at(db, user.id)
-    return FeedbackEligibility(
-        can_submit=has_used_studio and next_allowed is None,
-        next_allowed_at=next_allowed,
-        has_used_studio=has_used_studio,
-    )
+    return FeedbackEligibility(can_submit=next_allowed is None, next_allowed_at=next_allowed)
 
 
 async def submit(db: AsyncSession, user, body: FeedbackCreate):
-    if not _has_used_studio(user):
-        raise FeedbackRequiresStudioSave()
     next_allowed = await _next_allowed_at(db, user.id)
     if next_allowed is not None:
         raise FeedbackTooSoon(next_allowed)
