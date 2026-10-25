@@ -42,6 +42,15 @@ class Settings(BaseSettings):
     EDITOR_TOKEN_AUDIENCE: str = "kusshoes-editor"
     EDITOR_DESKTOP_URL_SCHEME: str = "kusshoes-editor"
     REFRESH_COOKIE_NAME: str = "kusshoes_refresh_token"
+    # KusStudio Desktop cannot use the refresh cookie (its webview is a different site), so
+    # these auth responses also carry the refresh token in the body — but only for requests whose
+    # browser-set Origin is the packaged Tauri webview AND that send `X-KusShoes-Client: desktop`.
+    # A script on the web app cannot forge Origin, so XSS there still never sees a refresh token.
+    DESKTOP_CLIENT_ORIGINS: list[str] = [
+        "http://tauri.localhost",
+        "https://tauri.localhost",
+        "tauri://localhost",
+    ]
     REFRESH_COOKIE_SAMESITE: str = "lax"
 
     # Reverse proxies in front of the API that append to X-Forwarded-For (nginx = 1).
