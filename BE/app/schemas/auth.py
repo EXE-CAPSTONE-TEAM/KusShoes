@@ -109,10 +109,21 @@ class LoginRequest(BaseModel):
     password: str
 
 
+def _omit_if_none(value: object) -> bool:
+    return value is None
+
+
+# Only set for KusStudio Desktop (see Settings.DESKTOP_CLIENT_ORIGINS); omitted otherwise, so web
+# and mobile responses keep exactly their previous shape.
+def _desktop_refresh_token():
+    return Field(default=None, exclude_if=_omit_if_none)
+
+
 class LoginResult(BaseModel):
     """Either tokens (no 2FA / already passed) or a challenge to complete."""
 
     access_token: str | None = None
+    refresh_token: str | None = _desktop_refresh_token()
     token_type: str = "bearer"
     mfa_required: bool = False
     challenge_token: str | None = None
@@ -173,6 +184,7 @@ class ResetPasswordRequest(BaseModel):
 class TokenResponse(BaseModel):
     access_token: str
     token_type: str = "bearer"
+    refresh_token: str | None = _desktop_refresh_token()
 
 
 class GoogleLoginResponse(TokenResponse):
@@ -191,6 +203,7 @@ class RefreshTokenRequest(BaseModel):
 class AccessTokenResponse(BaseModel):
     access_token: str
     token_type: str = "bearer"
+    refresh_token: str | None = _desktop_refresh_token()
 
 
 class LogoutRequest(BaseModel):
@@ -262,6 +275,9 @@ class EditorLaunchClaimResponse(BaseModel):
 class EditorLaunchExchangeRequest(BaseModel):
     authorization_code: str
     code_verifier: str
+    # KusStudio Desktop asks for a full user session too, so a launch from the web also signs the
+    # app in. Honoured only for a verified desktop client (Settings.DESKTOP_CLIENT_ORIGINS).
+    include_user_session: bool = False
 
     @field_validator("authorization_code")
     @classmethod
@@ -309,6 +325,8 @@ class EditorLaunchExchangeResponse(BaseModel):
     user_id: uuid.UUID
     project_id: uuid.UUID
     scopes: list[str]
+    user_access_token: str | None = Field(default=None, exclude_if=_omit_if_none)
+    refresh_token: str | None = _desktop_refresh_token()
 
 
 class EditorSessionResponse(BaseModel):

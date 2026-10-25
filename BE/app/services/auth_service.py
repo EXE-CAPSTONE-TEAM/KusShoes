@@ -1038,7 +1038,15 @@ async def exchange_editor_launch(
     *,
     authorization_code: str,
     code_verifier: str,
+    include_user_session: bool = False,
+    user_agent: str | None = None,
+    ip_address: str | None = None,
 ) -> EditorLaunchExchangeResponse:
+    """Trade the claimed launch for a project-scoped editor token.
+
+    With ``include_user_session`` (verified KusStudio Desktop only, decided by the router) it also
+    issues an ordinary user session, so opening a project from the web signs the app in.
+    """
     from app.config import settings
 
     record = await _consume_opaque_record(redis, "editor-auth-code", authorization_code)
@@ -1065,12 +1073,19 @@ async def exchange_editor_launch(
         str(project_id),
         EDITOR_SCOPES,
     )
+    user_tokens = (
+        await _issue_tokens(db, user, user_agent=user_agent, ip_address=ip_address)
+        if include_user_session
+        else None
+    )
     return EditorLaunchExchangeResponse(
         access_token=access_token,
         expires_in=settings.EDITOR_ACCESS_TOKEN_EXPIRE_MINUTES * 60,
         user_id=user_id,
         project_id=project_id,
         scopes=EDITOR_SCOPES,
+        user_access_token=user_tokens.access_token if user_tokens else None,
+        refresh_token=user_tokens.refresh_token if user_tokens else None,
     )
 
 

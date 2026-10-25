@@ -57,6 +57,29 @@ from app.utils.http import get_client_ip
 router = APIRouter()
 
 
+DESKTOP_CLIENT_HEADER = "x-kusshoes-client"
+_DEV_DESKTOP_ORIGINS = ("http://localhost:1420", "http://127.0.0.1:1420")  # `tauri dev`
+
+
+def _is_desktop_client(request: Request) -> bool:
+    """KusStudio Desktop: the opt-in header plus a browser-set Origin of the Tauri webview.
+
+    The header alone is not enough: a script on the web app could send it, but it cannot change
+    the Origin the browser attaches, so web XSS can never obtain a refresh token from a body.
+    """
+    if request.headers.get(DESKTOP_CLIENT_HEADER, "").strip().lower() != "desktop":
+        return False
+    allowed = set(settings.DESKTOP_CLIENT_ORIGINS)
+    if not settings.is_production:
+        allowed.update(_DEV_DESKTOP_ORIGINS)
+    return request.headers.get("origin", "") in allowed
+
+
+def _desktop_refresh_token(request: Request, refresh_token: str | None) -> str | None:
+    """The refresh token to put in a response body: only ever for a verified desktop client."""
+    return refresh_token if _is_desktop_client(request) else None
+
+
 def _set_refresh_cookie(response: Response, refresh_token: str | None) -> None:
     if not refresh_token:
         return
@@ -167,7 +190,11 @@ async def login(
     if isinstance(result, LoginResult):
         return result
     _set_refresh_cookie(response, result.refresh_token)
-    return LoginResult(access_token=result.access_token, token_type=result.token_type)
+    return LoginResult(
+        access_token=result.access_token,
+        token_type=result.token_type,
+        refresh_token=_desktop_refresh_token(request, result.refresh_token),
+    )
 
 
 @router.post("/2fa/verify", response_model=TokenResponse)
@@ -188,7 +215,11 @@ async def verify_two_factor_login(
         user_agent=request.headers.get("user-agent"),
     )
     _set_refresh_cookie(response, result.refresh_token)
-    return TokenResponse(access_token=result.access_token, token_type=result.token_type)
+    return TokenResponse(
+        access_token=result.access_token,
+        token_type=result.token_type,
+        refresh_token=_desktop_refresh_token(request, result.refresh_token),
+    )
 
 
 @router.get("/google")
@@ -411,6 +442,7 @@ async def google_mobile_exchange(
 @router.post("/google/desktop/exchange", response_model=TokenResponse)
 async def google_desktop_exchange(
     body: GoogleDesktopExchangeRequest,
+    request: Request,
     response: Response,
     redis: aioredis.Redis = Depends(get_redis),
 ):
@@ -419,7 +451,11 @@ async def google_desktop_exchange(
         redis, code=body.code, code_verifier=body.code_verifier
     )
     _set_refresh_cookie(response, tokens.refresh_token)
-    return TokenResponse(access_token=tokens.access_token, token_type=tokens.token_type)
+    return TokenResponse(
+        access_token=tokens.access_token,
+        token_type=tokens.token_type,
+        refresh_token=_desktop_refresh_token(request, tokens.refresh_token),
+    )
 
 
 @router.post("/refresh", response_model=AccessTokenResponse)
@@ -434,7 +470,11 @@ async def refresh_token(
         db, redis, _refresh_token_from_request(request, body), client_ip=_client_ip(request)
     )
     _set_refresh_cookie(response, result.refresh_token)
-    return AccessTokenResponse(access_token=result.access_token, token_type=result.token_type)
+    return AccessTokenResponse(
+        access_token=result.access_token,
+        token_type=result.token_type,
+        refresh_token=_desktop_refresh_token(request, result.refresh_token),
+    )
 
 
 @router.post("/logout")
@@ -534,6 +574,7 @@ async def claim_editor_launch(
 @router.post("/editor/launch/exchange", response_model=EditorLaunchExchangeResponse)
 async def exchange_editor_launch(
     body: EditorLaunchExchangeRequest,
+    request: Request,
     db: AsyncSession = Depends(get_db),
     redis: aioredis.Redis = Depends(get_redis),
 ):
@@ -542,6 +583,9 @@ async def exchange_editor_launch(
         redis,
         authorization_code=body.authorization_code,
         code_verifier=body.code_verifier,
+        include_user_session=body.include_user_session and _is_desktop_client(request),
+        user_agent=request.headers.get("user-agent"),
+        ip_address=_client_ip(request),
     )
 
 
