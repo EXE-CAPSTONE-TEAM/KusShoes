@@ -48,7 +48,13 @@ from app.schemas.project import (
     TriggerBakeRequest,
     UpdateProjectRequest,
 )
-from app.services import guardrail_service, job_service, quota_service, version_service
+from app.services import (
+    guardrail_service,
+    job_service,
+    onboarding_service,
+    quota_service,
+    version_service,
+)
 from app.services.project_access import require_owner
 
 
@@ -62,6 +68,11 @@ async def list_projects(
 ) -> ProjectListResponse:
     decoded = _decode_cursor(cursor) if cursor else None
     projects = await project_repo.list_for_user(db, user.id, limit, decoded)
+    if cursor is None and not projects:
+        seeded = await onboarding_service.ensure_onboarding_project_if_missing(db, user)
+        if seeded:
+            await db.commit()
+            projects = await project_repo.list_for_user(db, user.id, limit, decoded)
     has_next = len(projects) > limit
     page = projects[:limit]
     next_cursor = _encode_cursor(page[-1]) if has_next and page else None
