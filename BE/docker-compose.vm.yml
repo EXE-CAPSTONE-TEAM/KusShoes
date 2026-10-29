@@ -1,11 +1,50 @@
-# VM override (GCP e2-small, 2 vCPU / 2 GB): Neon + R2 managed, nginx on api.kusshoes.kietta.me (legacy: 136.85.55.175.sslip.io).
-# Use: docker compose -f docker-compose.prod.yml -f docker-compose.vm.yml up -d --build
-# First TLS certificate: see deploy/nginx-vm/README.md.
+# VM override (GCP e2-small, 2 vCPU / 2 GB): Local Postgres + R2 managed, nginx on api.kusshoes.kietta.me.
+# Use: docker compose -f docker-compose.prod.yml -f docker-compose.vm.yml up -d
 services:
+  db:
+    image: postgres:18-alpine
+    container_name: kusshoes_db
+    environment:
+      POSTGRES_USER: kusshoes
+      POSTGRES_PASSWORD: KusShoes_Db_2026_Secure!
+      POSTGRES_DB: kusshoes_feature
+    volumes:
+      - be_postgres_data:/var/lib/postgresql
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U kusshoes -d kusshoes_feature"]
+      interval: 5s
+      timeout: 3s
+      retries: 5
+    restart: unless-stopped
+
   api:
+    depends_on:
+      redis:
+        condition: service_healthy
+      db:
+        condition: service_healthy
     # Cold import of app.main takes ~55s on this VM; give uvicorn time to bind.
     healthcheck:
       start_period: 180s
+
+  worker:
+    depends_on:
+      redis:
+        condition: service_healthy
+      api:
+        condition: service_healthy
+      db:
+        condition: service_healthy
+
+  beat:
+    depends_on:
+      redis:
+        condition: service_healthy
+      api:
+        condition: service_healthy
+      db:
+        condition: service_healthy
+
   nginx:
     depends_on:
       - api
@@ -25,6 +64,9 @@ services:
     env_file: ../relay/.env.relay
     expose:
       - "8010"
+    depends_on:
+      db:
+        condition: service_healthy
     healthcheck:
       test: ["CMD", "python", "-c", "import urllib.request; urllib.request.urlopen('http://127.0.0.1:8010/health', timeout=5)"]
       interval: 30s
@@ -32,3 +74,8 @@ services:
       retries: 3
       start_period: 60s
     restart: unless-stopped
+
+volumes:
+  be_postgres_data:
+    external: true
+

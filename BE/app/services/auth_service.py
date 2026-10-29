@@ -3,6 +3,7 @@ import base64
 import hashlib
 import hmac
 import json
+import logging
 import re
 import secrets
 import uuid
@@ -85,7 +86,7 @@ from app.schemas.auth import (
     SSODesktopSessionResponse,
     SSOVerifyResponse,
 )
-from app.services import legal_service, twofa_service
+from app.services import legal_service, onboarding_service, twofa_service
 from app.utils.jwt import (
     create_access_token,
     create_editor_access_token,
@@ -97,6 +98,8 @@ from app.utils.jwt import (
     hash_token,
 )
 from app.utils.password import hash_password, verify_password
+
+logger = logging.getLogger(__name__)
 
 
 @dataclass(frozen=True)
@@ -246,6 +249,12 @@ async def verify_otp(
     await otp_store.delete_otp(redis, user_id)
 
     user = await user_repo.get_by_id(db, uid)
+    if user:
+        try:
+            await onboarding_service.seed_onboarding_project(db, user)
+            await db.commit()
+        except Exception:
+            logger.exception("Failed to seed onboarding demo project on OTP verification for user %s", uid)
     return await _issue_tokens(db, user, user_agent=user_agent, ip_address=ip_address)
 
 
@@ -756,6 +765,11 @@ async def handle_google_callback(
     await monthly_usage_repo.create_for_user(
         db, user_id=new_user.id, period_start=datetime.now(UTC)
     )
+    try:
+        await onboarding_service.seed_onboarding_project(db, new_user)
+        await db.commit()
+    except Exception:
+        logger.exception("Failed to seed onboarding demo project on Google registration for user %s", new_user.id)
 
     tokens = await _issue_tokens(db, new_user, user_agent=user_agent, ip_address=ip_address)
     return {**tokens.__dict__, "is_new_user": True, "linked": False}
