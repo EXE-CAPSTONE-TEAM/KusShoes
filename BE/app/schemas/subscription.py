@@ -144,6 +144,16 @@ class CouponPreviewResponse(BaseModel):
     vat: VatBreakdown  # BR-28 on the final payable amount
 
 
+class RedeemCodeRequest(BaseModel):
+    code: str = Field(min_length=3, max_length=40)
+
+
+class RedeemCodeResponse(BaseModel):
+    tier: str
+    expires_at: datetime
+    days: int
+
+
 class CheckoutQuoteRequest(BaseModel):
     tier: str
     billing_cycle: str

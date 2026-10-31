@@ -481,7 +481,7 @@ export interface ReportingPeriod {
 export interface AdminCoupon {
   id: string;
   code: string;
-  discount_type: 'percent' | 'fixed' | 'fixed_price';
+  discount_type: 'percent' | 'fixed' | 'fixed_price' | 'grant_plan';
   value: number;
   plan_tiers: string[] | null;
   max_uses: number | null;

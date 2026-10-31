@@ -1,5 +1,5 @@
 import uuid
-from datetime import datetime
+from datetime import UTC, datetime, timedelta
 
 from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
@@ -49,6 +49,30 @@ async def upsert_after_payment(
     subscription.cancel_at_period_end = cancel_at_period_end
     if last_invoice_id is not None:
         subscription.last_invoice_id = last_invoice_id
+    await db.flush()
+    return subscription
+
+
+async def apply_comp(
+    db: AsyncSession,
+    subscription: Subscription,
+    *,
+    plan,
+    tier: str,
+    billing_cycle: str,
+    days: int,
+) -> Subscription:
+    """BR-103: switch the account onto a COMP plan for `days`. No invoice, no revenue.
+    Does not commit — the caller owns the transaction."""
+    now = datetime.now(UTC)
+    subscription.plan_id = plan.id
+    subscription.tier = f"{tier}_{billing_cycle}"
+    subscription.status = "active"
+    subscription.expires_at = now + timedelta(days=days)
+    subscription.grace_until = None
+    subscription.is_comp = True
+    subscription.current_period_start = now
+    subscription.cancel_at_period_end = False
     await db.flush()
     return subscription
 

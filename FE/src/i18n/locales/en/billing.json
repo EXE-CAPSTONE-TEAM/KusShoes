@@ -163,6 +163,14 @@
     "apply": "Apply code",
     "remove": "Remove {{code}}"
   },
+  "redeem": {
+    "placeholder": "Enter activation code",
+    "label": "Activation code",
+    "activating": "Activating…",
+    "activate": "Activate",
+    "success": "Code accepted. Your plan is active for {{days}} days.",
+    "error": "Unable to activate this code."
+  },
   "cancelDialog": {
     "title": "Cancel subscription?",
     "desc": "Your access remains active until the end of the current billing cycle.",

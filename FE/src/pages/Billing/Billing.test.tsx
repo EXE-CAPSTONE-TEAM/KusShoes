@@ -22,6 +22,7 @@ vi.mock('../../api/client', async () => {
 vi.mock('../../api/billing', () => ({
   billingApi: {
     previewCoupon: vi.fn(),
+    redeemCode: vi.fn(),
     getReceipt: vi.fn(),
     getCreditBalance: vi.fn(),
     getCreditLedger: vi.fn(),
@@ -242,5 +243,99 @@ describe('Billing - Payment Transparency & Navigation', () => {
       });
       expect(screen.getByText('KUS-0021')).toBeInTheDocument();
     });
+  });
+});
+
+describe('Billing - activation code', () => {
+  afterEach(() => {
+    vi.clearAllMocks();
+  });
+
+  const seedSubscription = (tier: string) => {
+    const subscription = {
+      id: 'sub-1',
+      tier,
+      status: 'active',
+      started_at: new Date().toISOString(),
+      expires_at: null,
+      cancel_at_period_end: false,
+    };
+    m(api.listPlans).mockResolvedValue([]);
+    m(api.subscription).mockResolvedValue(subscription);
+    m(api.listInvoices).mockResolvedValue([]);
+    m(api.usage).mockResolvedValue({
+      tier,
+      max_projects: 10,
+      max_exports_per_month: 10,
+      projects_count: 0,
+      exports_count: 0,
+      ai_credits_used: 0,
+      ai_credits_limit: 100,
+    });
+    m(api.profile).mockResolvedValue({
+      id: 'user-1',
+      account_code: 'ACC-1',
+      email: 'user@example.com',
+      first_name: 'Test',
+      last_name: 'User',
+      username: 'testuser',
+      avatar_path: null,
+      phone_number: null,
+      bio: null,
+      language: 'en',
+      preferred_styles: [],
+      status: 'active',
+      member_since: new Date().toISOString(),
+      total_designs: 0,
+    });
+    m(billingApi.getCreditBalance).mockResolvedValue(null);
+    m(billingApi.getCreditLedger).mockResolvedValue({ items: [], next_cursor: null, has_next: false });
+    return subscription;
+  };
+
+  const openPlanModal = async () => {
+    fireEvent.click(await screen.findByRole('button', { name: /compare & change plan/i }));
+  };
+
+  it('lets a Free account redeem a code and refreshes the subscription', async () => {
+    seedSubscription('free');
+    m(billingApi.redeemCode).mockResolvedValue({
+      tier: 'basic_monthly',
+      expires_at: new Date().toISOString(),
+      days: 30,
+    });
+    wrap(<Billing />);
+    await openPlanModal();
+
+    const input = await screen.findByLabelText(/activation code/i);
+    fireEvent.change(input, { target: { value: 'showcase' } });
+    fireEvent.click(screen.getByRole('button', { name: /^activate$/i }));
+
+    await waitFor(() => expect(billingApi.redeemCode).toHaveBeenCalledWith('SHOWCASE'));
+    // subscription + usage are re-fetched after a successful redeem (initial load + refresh)
+    await waitFor(() => expect(m(api.subscription).mock.calls.length).toBeGreaterThanOrEqual(2));
+  });
+
+  it('shows the server error and keeps the modal open when the code is rejected', async () => {
+    seedSubscription('free');
+    m(billingApi.redeemCode).mockRejectedValue(new Error('Mã không hợp lệ'));
+    wrap(<Billing />);
+    await openPlanModal();
+
+    fireEvent.change(await screen.findByLabelText(/activation code/i), { target: { value: 'bad' } });
+    fireEvent.click(screen.getByRole('button', { name: /^activate$/i }));
+
+    expect(await screen.findByText('Mã không hợp lệ')).toBeInTheDocument();
+    expect(screen.getByLabelText(/activation code/i)).toBeInTheDocument();
+    expect(m(api.subscription).mock.calls.length).toBe(1);
+  });
+
+  it('hides the activation code field for accounts that already pay', async () => {
+    seedSubscription('basic_monthly');
+    wrap(<Billing />);
+    await openPlanModal();
+
+    await screen.findByLabelText(/promo code/i);
+    expect(screen.queryByLabelText(/activation code/i)).not.toBeInTheDocument();
   });
 });

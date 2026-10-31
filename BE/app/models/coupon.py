@@ -19,12 +19,14 @@ from app.models.base import TimestampMixin, utcnow
 
 
 class Coupon(Base, TimestampMixin):
-    """BR-26 promo code."""
+    """BR-26 promo code. `grant_plan` is an activation code: `value` = days of COMP access
+    to the single tier in `plan_tiers`, redeemed via /subscription/redeem-code — never
+    usable as a checkout discount."""
 
     __tablename__ = "coupons"
     __table_args__ = (
         CheckConstraint(
-            "discount_type IN ('percent', 'fixed', 'fixed_price')",
+            "discount_type IN ('percent', 'fixed', 'fixed_price', 'grant_plan')",
             name="ck_coupons_discount_type",
         ),
     )

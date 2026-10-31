@@ -367,6 +367,7 @@ const DISCOUNT_OPTIONS = [
   { value: 'percent', label: 'Giảm theo %' },
   { value: 'fixed', label: 'Giảm số tiền cố định' },
   { value: 'fixed_price', label: 'Đặt giá cố định' },
+  { value: 'grant_plan', label: 'Mã kích hoạt gói (miễn phí N ngày)' },
 ];
 
 const describeDiscount = (coupon: AdminCoupon) =>
@@ -374,7 +375,9 @@ const describeDiscount = (coupon: AdminCoupon) =>
     ? `-${coupon.value}%`
     : coupon.discount_type === 'fixed'
       ? `-${formatVnd(coupon.value)}`
-      : `Giá ${formatVnd(coupon.value)}`;
+      : coupon.discount_type === 'grant_plan'
+        ? `Tặng ${coupon.value} ngày`
+        : `Giá ${formatVnd(coupon.value)}`;
 
 export const CouponsPanel: React.FC = () => {
   const { toast } = useToast();
@@ -416,6 +419,11 @@ export const CouponsPanel: React.FC = () => {
   const create = () =>
     run(async () => {
       const tiers = [form.basic ? 'basic' : null, form.pro ? 'pro' : null].filter((tier): tier is string => tier !== null);
+      if (form.discount_type === 'grant_plan' && (tiers.length !== 1 || !form.max_uses)) {
+        // Mirrors the server rule: a free-access code must name one tier and a use limit.
+        toast('Mã kích hoạt cần chọn đúng một gói và đặt số lượt tối đa.', 'error');
+        return;
+      }
       await adminFinance.createCoupon({
         code: form.code.trim().toUpperCase(),
         discount_type: form.discount_type as AdminCoupon['discount_type'],
@@ -484,7 +492,7 @@ export const CouponsPanel: React.FC = () => {
           <Select value={form.discount_type} onValueChange={(value) => setForm({ ...form, discount_type: value })} options={DISCOUNT_OPTIONS} ariaLabel="Loại ưu đãi" />
         </div>
         <div className={shared.inputGroup}>
-          <label>{form.discount_type === 'percent' ? 'Phần trăm giảm' : 'Số tiền (VNĐ)'}</label>
+          <label>{form.discount_type === 'percent' ? 'Phần trăm giảm' : form.discount_type === 'grant_plan' ? 'Số ngày sử dụng (1–365)' : 'Số tiền (VNĐ)'}</label>
           <input className={shared.input} inputMode="numeric" value={form.value} onChange={(event) => setForm({ ...form, value: event.target.value.replace(/\D/g, '') })} />
         </div>
         <div className={shared.inputGroup}>

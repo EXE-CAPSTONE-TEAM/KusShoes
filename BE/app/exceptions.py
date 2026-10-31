@@ -496,6 +496,15 @@ class ReceiptUnavailable(AppException):
         super().__init__(409, "RECEIPT_UNAVAILABLE", "Biên nhận chỉ có cho giao dịch đã thanh toán")
 
 
+class CouponPlanNotEligible(AppException):
+    def __init__(self):
+        super().__init__(
+            409,
+            "COUPON_PLAN_NOT_ELIGIBLE",
+            "Mã kích hoạt chỉ dành cho tài khoản đang ở gói Free.",
+        )
+
+
 class CouponInvalid(AppException):
     def __init__(self):
         super().__init__(

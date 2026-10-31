@@ -11,6 +11,17 @@ async def get_by_code(db: AsyncSession, code: str) -> Coupon | None:
     return result.scalar_one_or_none()
 
 
+async def get_by_code_for_update(db: AsyncSession, code: str) -> Coupon | None:
+    """Row-locks the coupon so concurrent redemptions serialise on max_uses / one-per-account."""
+    result = await db.execute(
+        select(Coupon)
+        .where(func.upper(Coupon.code) == code.strip().upper())
+        .with_for_update()
+        .execution_options(populate_existing=True)
+    )
+    return result.scalar_one_or_none()
+
+
 async def get_by_id(db: AsyncSession, coupon_id: uuid.UUID) -> Coupon | None:
     return await db.get(Coupon, coupon_id)
 
