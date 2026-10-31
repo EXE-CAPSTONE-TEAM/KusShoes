@@ -176,6 +176,8 @@ export const Billing: React.FC<BillingProps> = ({ navigate }) => {
   const [appliedCoupon, setAppliedCoupon] = useState<string | null>(null);
   const [couponPreviews, setCouponPreviews] = useState<Record<string, CouponPreview>>({});
   const [applyingCoupon, setApplyingCoupon] = useState(false);
+  const [redeemInput, setRedeemInput] = useState('');
+  const [redeeming, setRedeeming] = useState(false);
   const [downloadingReceipt, setDownloadingReceipt] = useState<string | null>(null);
   const [creditBalance, setCreditBalance] = useState<CreditBalance | null>(null);
   const [creditLedger, setCreditLedger] = useState<CreditLedgerItem[]>([]);
@@ -320,6 +322,26 @@ export const Billing: React.FC<BillingProps> = ({ navigate }) => {
       toast(t('toast.couponApplied'));
     } finally {
       setApplyingCoupon(false);
+    }
+  };
+
+  const redeemCode = async (event: React.FormEvent) => {
+    event.preventDefault();
+    const code = redeemInput.trim();
+    if (!code) return;
+    setRedeeming(true);
+    try {
+      const result = await billingApi.redeemCode(code);
+      const [nextSubscription, nextUsage] = await Promise.all([api.subscription(), api.usage()]);
+      setSubscription(nextSubscription);
+      setUsage(nextUsage);
+      setRedeemInput('');
+      setShowUpgradeModal(false);
+      toast(t('redeem.success', { days: result.days }));
+    } catch (caught) {
+      toast(caught instanceof Error ? caught.message : t('redeem.error'), 'error');
+    } finally {
+      setRedeeming(false);
     }
   };
 
@@ -847,6 +869,28 @@ export const Billing: React.FC<BillingProps> = ({ navigate }) => {
               </div>
 
               <div className={styles.modalBody}>
+                {/* Activation code: Free accounts only (the server enforces it too) */}
+                {(subscription?.tier ?? 'free') === 'free' && (
+                  <form onSubmit={redeemCode} className={styles.couponForm}>
+                    <Tag size={14} className={styles.cardIcon} />
+                    <input
+                      className={styles.couponInput}
+                      placeholder={t('redeem.placeholder')}
+                      value={redeemInput}
+                      onChange={(event) => setRedeemInput(event.target.value.toUpperCase())}
+                      maxLength={40}
+                      aria-label={t('redeem.label')}
+                    />
+                    <button
+                      type="submit"
+                      className={styles.btnSecondary}
+                      disabled={redeeming || !redeemInput.trim()}
+                    >
+                      {redeeming ? t('redeem.activating') : t('redeem.activate')}
+                    </button>
+                  </form>
+                )}
+
                 {/* Promo Code Form */}
                 <form onSubmit={applyCoupon} className={styles.couponForm}>
                   <Tag size={14} className={styles.cardIcon} />

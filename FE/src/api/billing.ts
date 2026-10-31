@@ -52,6 +52,9 @@ export type CreditLedgerPage = {
   has_next: boolean;
 };
 
+/** Activation code redeemed: the account is now on a COMP plan until `expires_at`. */
+export type RedeemCodeResult = { tier: string; expires_at: string; days: number };
+
 /** Which checkout gateways accept a payment right now (MoMo is switched on server-side). */
 export type PaymentGateways = { payos: boolean; momo: boolean };
 
@@ -63,6 +66,13 @@ export const billingApi = {
     request<CouponPreview>("/api/v1/subscription/coupon/preview", {
       method: "POST",
       body: JSON.stringify({ tier, billing_cycle: billingCycle, coupon_code: couponCode }),
+    }),
+
+  /** Activation code -> free plan for N days (Free accounts only, no payment). */
+  redeemCode: (code: string) =>
+    request<RedeemCodeResult>("/api/v1/subscription/redeem-code", {
+      method: "POST",
+      body: JSON.stringify({ code }),
     }),
 
   /** Signed link (15 minutes) to the immutable KUS-xxxxx receipt PDF (BR-31). */

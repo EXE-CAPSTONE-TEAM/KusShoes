@@ -27,9 +27,11 @@ from app.schemas.subscription import (
     PaymentGatewaysResponse,
     PlanResponse,
     ReceiptResponse,
+    RedeemCodeRequest,
+    RedeemCodeResponse,
     SubscriptionResponse,
 )
-from app.services import billing_service, credit_service
+from app.services import billing_service, coupon_service, credit_service
 
 router = APIRouter()
 
@@ -164,6 +166,21 @@ async def preview_coupon(
         coupon_code=body.coupon_code,
         redis=redis,
     )
+
+
+@router.post(
+    "/subscription/redeem-code",
+    response_model=RedeemCodeResponse,
+    dependencies=[Depends(forbid_impersonation)],
+)
+async def redeem_code(
+    body: RedeemCodeRequest,
+    db: AsyncSession = Depends(get_db),
+    redis: aioredis.Redis = Depends(get_redis),
+    user=Depends(get_current_user),
+):
+    """Activation code: a Free account gets a COMP plan for N days, no payment."""
+    return await coupon_service.redeem_plan_code(db, user, body.code, redis=redis)
 
 
 # --- BR-94 / UC-27 scan Credits (SRS_v2.2.txt:1617) ---

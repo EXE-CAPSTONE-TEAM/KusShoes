@@ -178,6 +178,14 @@
     "apply": "Áp dụng",
     "remove": "Bỏ mã {{code}}"
   },
+  "redeem": {
+    "placeholder": "Nhập mã kích hoạt",
+    "label": "Mã kích hoạt",
+    "activating": "Đang kích hoạt…",
+    "activate": "Kích hoạt",
+    "success": "Mã hợp lệ. Gói của bạn được kích hoạt trong {{days}} ngày.",
+    "error": "Không thể kích hoạt mã này."
+  },
   "cancelDialog": {
     "title": "Huỷ gói dịch vụ?",
     "desc": "Bạn vẫn dùng được gói đến hết kỳ thanh toán hiện tại.",

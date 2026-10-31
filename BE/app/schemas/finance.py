@@ -49,7 +49,8 @@ class ReportingPeriodResponse(BaseModel):
 
 class CouponCreate(BaseModel):
     code: str = Field(min_length=3, max_length=40)
-    discount_type: Literal["percent", "fixed", "fixed_price"]
+    # grant_plan: `value` = days of COMP access, plan_tiers = exactly one tier, max_uses required.
+    discount_type: Literal["percent", "fixed", "fixed_price", "grant_plan"]
     value: int = Field(gt=0)
     plan_tiers: list[Literal["basic", "pro"]] | None = None
     max_uses: int | None = Field(default=None, gt=0)

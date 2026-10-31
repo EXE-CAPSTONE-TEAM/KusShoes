@@ -271,6 +271,7 @@ DOCS: dict[str, tuple[str, str]] = {
     "POST /api/v1/subscription/checkout/quote": ("Báo giá trước khi thanh toán", "Tính giá niêm yết, giảm giá (mã giảm giá hoặc nâng cấp giữa chu kỳ, BR-24/26), số phải trả, VAT và thời hạn mới mà không tạo hóa đơn; dùng cùng phép tính với checkout. " + _B),
     "POST /api/v1/subscription/credits/quote": ("Báo giá mua Credit", "Tính tổng tiền và VAT cho số Credit muốn mua, kiểm tra điều kiện mua và giới hạn mỗi chu kỳ (BR-94) mà không tạo hóa đơn. " + _B),
     "POST /api/v1/subscription/coupon/preview": ("Xem trước mã giảm giá", "Tính giá sau giảm cho một gói mà không tạo hóa đơn; mỗi tài khoản dùng một mã một lần. " + _B),
+    "POST /api/v1/subscription/redeem-code": ("Nhập mã kích hoạt gói", "Tài khoản đang ở gói Free nhập mã kích hoạt để nhận gói COMP trong số ngày của mã, không thanh toán và không tạo hóa đơn. Mã sai, hết hạn, hết lượt hoặc đã dùng trả `COUPON_INVALID` (MSG27); tài khoản đang có gói trả phí trả `COUPON_PLAN_NOT_ELIGIBLE`. Giới hạn 10 lần thử/phút. " + _B),
     # ---- Webhooks ----
     "POST /api/v1/webhooks/payos": ("Webhook PayOS", "Xác thực chữ ký HMAC-SHA256, khớp số tiền, idempotent. Không dùng Bearer. " + _P),
     "POST /api/v1/webhooks/momo": ("Webhook (IPN) MoMo", "Xác thực chữ ký HMAC-SHA256, khớp số tiền, idempotent. Không dùng Bearer. " + _P),

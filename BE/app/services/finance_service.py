@@ -1,6 +1,6 @@
 """UC-28: manual (off-gateway) transactions with maker/checker approval (BR-95)."""
 import uuid
-from datetime import UTC, date, datetime, time, timedelta
+from datetime import UTC, date, datetime, time
 
 from sqlalchemy.ext.asyncio import AsyncSession
 
@@ -147,16 +147,9 @@ async def grant_comp_plan(
     subscription = await subscription_repo.get_by_user(db, user_id)
     if not plan or not subscription:
         raise SubPlanNotFound()
-    now = datetime.now(UTC)
-    subscription.plan_id = plan.id
-    subscription.tier = f"{tier}_{billing_cycle}"
-    subscription.status = "active"
-    subscription.expires_at = now + timedelta(days=days)
-    subscription.grace_until = None
-    subscription.is_comp = True
-    subscription.current_period_start = now
-    subscription.cancel_at_period_end = False
-    await db.flush()
+    await subscription_repo.apply_comp(
+        db, subscription, plan=plan, tier=tier, billing_cycle=billing_cycle, days=days
+    )
     await project_repo.unlock_all_for_user(db, user_id)
     await record_audit(
         db, admin, "subscription.grant_comp", target_type="user", target_id=user_id,
